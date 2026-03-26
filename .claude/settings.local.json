@@ -21,7 +21,17 @@
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(npm start:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof -ti:3001)",
+      "Bash(xargs kill:*)",
+      "Bash(npm list:*)",
+      "Bash(cd client:*)",
+      "Bash(npm config:*)",
+      "Bash(cd /c/Users/mlekw/Desktop/Demo project)",
+      "Bash(ls:*)",
+      "Bash(npm ci:*)"
     ]
   }
 }

@@ -6,6 +6,7 @@ import Login from './pages/Login.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
 import LeaderDashboard from './pages/LeaderDashboard.jsx';
 import PastorDashboard from './pages/PastorDashboard.jsx';
+import ChangePasswordPage from './pages/ChangePasswordPage.jsx';
 import './index.css';
 
 function ProtectedRoute({ children, allowedRoles }) {
@@ -55,6 +56,14 @@ function AppRoutes() {
         <ProtectedRoute allowedRoles={['pastor']}>
           <Layout>
             <PastorDashboard />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/change-password" element={
+        <ProtectedRoute allowedRoles={['admin', 'leader', 'pastor']}>
+          <Layout showNav={false}>
+            <ChangePasswordPage />
           </Layout>
         </ProtectedRoute>
       } />

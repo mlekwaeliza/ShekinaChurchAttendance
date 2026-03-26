@@ -400,4 +400,39 @@ router.get('/leaders', async (req, res) => {
   }
 });
 
+// POST reset leader password
+router.post('/leaders/:id/reset-password', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get leader's user account
+    const leader = await new Promise((resolve, reject) => {
+      db.get('SELECT user_id FROM leaders WHERE id = ?', [id], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+
+    if (!leader) {
+      return res.status(404).json({ error: 'Leader not found' });
+    }
+
+    // Generate temporary password
+    const tempPassword = `temp_${uuidv4().substring(0, 8)}`;
+    const passwordHash = bcrypt.hashSync(tempPassword, 10);
+
+    // Update user password
+    await run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [passwordHash, leader.user_id]);
+
+    res.json({
+      message: 'Password reset successful',
+      temp_password: tempPassword,
+      username: `Leader ID: ${id}`
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
 module.exports = router;

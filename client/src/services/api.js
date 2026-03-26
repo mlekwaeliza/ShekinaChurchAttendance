@@ -5,6 +5,12 @@ const api = axios.create({
   withCredentials: true
 });
 
+// Auth API
+export const authAPI = {
+  changePassword: (currentPassword, newPassword) =>
+    api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword })
+};
+
 // Admin API
 export const adminAPI = {
   uploadCSV: (file) => {
@@ -25,7 +31,8 @@ export const adminAPI = {
     const params = new URLSearchParams(filters).toString();
     window.open(`/api/admin/export?${params}`, '_blank');
   },
-  getLeaders: () => api.get('/admin/leaders')
+  getLeaders: () => api.get('/admin/leaders'),
+  resetLeaderPassword: (leaderId) => api.post(`/admin/leaders/${leaderId}/reset-password`)
 };
 
 // Leader API

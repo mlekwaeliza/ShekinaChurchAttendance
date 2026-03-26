@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const Layout = ({ children }) => {
+const Layout = ({ children, showNav = true }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -40,6 +40,12 @@ const Layout = ({ children }) => {
             </div>
             <div className="flex items-center space-x-4">
               <span className="hidden sm:block">{user?.full_name}</span>
+              <Link
+                to="/change-password"
+                className="text-primary-100 hover:text-white text-sm transition"
+              >
+                Change Password
+              </Link>
               <button
                 onClick={logout}
                 className="bg-primary-700 hover:bg-primary-800 px-4 py-2 rounded text-sm transition"
@@ -53,7 +59,7 @@ const Layout = ({ children }) => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation */}
-        {currentNav.length > 0 && (
+        {showNav && currentNav.length > 0 && (
           <nav className="mb-8 bg-white rounded-lg shadow p-4">
             <div className="flex flex-wrap gap-2">
               {currentNav.map((item) => (
