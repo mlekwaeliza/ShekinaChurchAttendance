@@ -1,13 +1,15 @@
 # Stage 1: Build client
 FROM node:18-alpine AS client-builder
 
-WORKDIR /app/client
+WORKDIR /app
 
-COPY client/package*.json ./
-RUN npm ci
+COPY package*.json ./
+COPY client/package*.json ./client/
+COPY server/package*.json ./server/
+RUN npm ci --workspace client
 
-COPY client/ ./
-RUN npm run build
+COPY client/ ./client/
+RUN npm run build --workspace client
 
 # Stage 2: Production server
 FROM node:18-alpine AS production
@@ -18,8 +20,9 @@ WORKDIR /app
 RUN apk add --no-cache dumb-init
 
 # Copy server dependencies
+COPY package*.json ./
 COPY server/package*.json ./server/
-RUN cd server && npm ci --production && npm cache clean --force
+RUN npm ci --omit=dev --workspace server && npm cache clean --force
 
 # Copy server code
 COPY server/ ./server/
