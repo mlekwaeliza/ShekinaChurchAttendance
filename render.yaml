@@ -8,6 +8,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 3001
       - key: DB_CLIENT
         value: postgres
       - key: PGSSL
