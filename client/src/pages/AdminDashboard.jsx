@@ -1,331 +1,441 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { adminAPI } from '../services/api';
+import useAdminData from '../hooks/useAdminData';
+import { useBreadcrumbs } from '../context/BreadcrumbContext';
 import MemberEditModal from '../components/MemberEditModal';
 
+// Admin sub-views
+import DashboardOverview from '../components/admin/DashboardOverview';
+import MemberDirectory from '../components/admin/MemberDirectory';
+import LeaderDirectory from '../components/admin/LeaderDirectory';
+import AttendanceReports from '../components/admin/AttendanceReports';
+import SubmissionHistory from '../components/admin/SubmissionHistory';
+import AnalyticsView from '../components/admin/AnalyticsView';
+import RewardsView from '../components/admin/RewardsView';
+import SettingsView from '../components/admin/SettingsView';
+import LeaderDrilldown from '../components/admin/LeaderDrilldown';
+import SectionManagement from '../components/admin/SectionManagement';
+import LeaderEditModal from '../components/admin/LeaderEditModal';
+import AuditLog from '../components/admin/AuditLog';
+import BirthdayModule from '../components/admin/BirthdayModule';
+import ServiceAssignmentsModal from '../components/admin/ServiceAssignmentsModal';
+import AnnouncementCenter from '../components/admin/AnnouncementCenter';
+import FollowUpsView from '../components/admin/FollowUpsView';
+import VisitorIntake from '../components/admin/VisitorIntake';
+import SyncCenter from '../components/admin/SyncCenter';
+
+import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
+
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [members, setMembers] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [leaders, setLeaders] = useState([]);
-  const [uploadResult, setUploadResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [leadersLoading, setLeadersLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [editingMember, setEditingMember] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { tab } = useParams();
+  const navigate = useNavigate();
+  const activeTab = tab || 'dashboard';
+  const { user } = useAuth();
+  const data = useAdminData();
+  const { setCrumbs, clearCrumbs } = useBreadcrumbs();
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const [sectionsRes, membersRes] = await Promise.all([
-        adminAPI.getSections(),
-        adminAPI.getMembers()
+  // Handle Dynamic Breadcrumbs for Sections
+  React.useEffect(() => {
+    if (activeTab === 'leaders' && data.leaderSectionFilter) {
+      setCrumbs([
+        { label: data.leaderSectionFilter, path: `/admin/leaders`, icon: 'Layers' }
       ]);
-      setSections(sectionsRes.data);
-      setMembers(membersRes.data);
-    } catch (error) {
-      console.error('Failed to load data:', error);
+    } else {
+      clearCrumbs();
     }
-  };
+    
+    return () => clearCrumbs();
+  }, [activeTab, data.leaderSectionFilter, setCrumbs, clearCrumbs]);
 
-  const loadLeaders = async () => {
-    setLeadersLoading(true);
-    try {
-      const response = await adminAPI.getLeaders();
-      setLeaders(response.data);
-    } catch (error) {
-      console.error('Failed to load leaders:', error);
-      setMessage('Failed to load leaders');
-    } finally {
-      setLeadersLoading(false);
-    }
-  };
+  // Member modal state
+  const [editingMember, setEditingMember] = useState(null);
+  const [memberMode, setMemberMode] = useState('edit');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deletingMember, setDeletingMember] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const handleResetPassword = async (leaderId) => {
-    if (!window.confirm('Reset this leader\'s password? A new temporary password will be generated.')) {
-      return;
-    }
-
-    try {
-      const response = await adminAPI.resetLeaderPassword(leaderId);
-      const tempPass = response.data.temp_password;
-      alert(`New temporary password: ${tempPass}\n\nPlease share this with the leader. They will be prompted to change it on first login.`);
-      setMessage(`Password reset for ${response.data.username}`);
-      setTimeout(() => setMessage(''), 5000);
-    } catch (error) {
-      alert(`Failed to reset password: ${error.response?.data?.error || error.message}`);
-    }
-  };
-
+  // Member CRUD handlers
   const handleEditClick = (member) => {
     setEditingMember(member);
+    setMemberMode('edit');
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
+  const handleAddClick = () => {
     setEditingMember(null);
+    setMemberMode('add');
+    setIsModalOpen(true);
   };
 
   const handleSaveMember = async (memberId, updatedData) => {
     try {
-      await adminAPI.updateMember(memberId, updatedData);
-      // Refresh members list
-      const membersRes = await adminAPI.getMembers();
-      setMembers(membersRes.data);
-      setMessage('Member updated successfully');
-      setTimeout(() => setMessage(''), 3000);
+      if (memberMode === 'edit') {
+        await adminAPI.updateMember(memberId, updatedData);
+        data.showMessage('Member updated successfully');
+      } else {
+        await adminAPI.createMember(updatedData);
+        data.showMessage('Member added successfully');
+      }
+      data.loadCoreData();
     } catch (error) {
-      setMessage(`Failed to update member: ${error.response?.data?.error || error.message}`);
-      throw error; // Re-throw for modal to handle
+      alert(`Failed to save: ${error.response?.data?.error || error.message}`);
+      throw error;
     }
   };
 
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    if (tab === 'leaders' && leaders.length === 0) {
-      loadLeaders();
-    }
+  const handleDeleteClick = (member) => {
+    setDeletingMember(member);
+    setShowDeleteConfirm(true);
   };
 
-  const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setLoading(true);
+  const handleConfirmDelete = async () => {
+    if (!deletingMember) return;
+    setDeleteLoading(true);
     try {
-      const result = await adminAPI.uploadCSV(file);
-      setUploadResult(result.data);
-      loadData();
+      await adminAPI.deleteMember(deletingMember.id);
+      data.loadCoreData();
+      data.showMessage('Member deleted successfully');
+      setShowDeleteConfirm(false);
     } catch (error) {
-      alert(`Upload failed: ${error.response?.data?.error || error.message}`);
+      alert(`Failed to delete: ${error.response?.data?.error || error.message}`);
     } finally {
-      setLoading(false);
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleViewLeaders = (sectionName) => {
+    data.setLeaderSectionFilter(sectionName);
+    navigate('/admin/leaders');
+  };
+
+  const handleViewMembers = (sectionName) => {
+    data.setMemberSectionFilter(sectionName);
+    navigate('/admin/members');
+  };
+
+  // Tab-to-component mapping
+  const renderTab = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <DashboardOverview
+            allMembers={data.allMembers}
+            sections={data.sections}
+            leaders={data.leaders}
+            pastorName={user?.full_name}
+            dashboardMetrics={data.dashboardMetrics}
+            metricsLoading={data.metricsLoading}
+            serviceTypes={data.serviceTypes}
+            selectedServiceId={data.selectedServiceId}
+            onServiceChange={data.setSelectedServiceId}
+            onRefresh={data.loadDashboardMetrics}
+            onAssignDutyRoster={(date) => {
+              data.setSelectedInstanceDate(date);
+              data.loadServiceInstance(date, data.selectedServiceId);
+              data.setIsAssignmentModalOpen(true);
+            }}
+            lastUpdated={data.lastUpdated}
+          />
+        );
+
+      case 'sections':
+        return (
+          <SectionManagement
+            sections={data.sections}
+            allMembers={data.allMembers}
+            leaders={data.leaders}
+            editingSection={data.editingSection}
+            setEditingSection={data.setEditingSection}
+            isSectionModalOpen={data.isSectionModalOpen}
+            setIsSectionModalOpen={data.setIsSectionModalOpen}
+            deletingSection={data.deletingSection}
+            setDeletingSection={data.setDeletingSection}
+            sectionSaving={data.sectionSaving}
+            onSave={data.handleSectionSave}
+            onDelete={data.handleSectionDelete}
+            onViewLeaders={handleViewLeaders}
+            onViewMembers={handleViewMembers}
+            loading={data.loading}
+          />
+        );
+
+      case 'members':
+        return (
+          <MemberDirectory
+            allMembers={data.allMembers}
+            sections={data.sections}
+            leaders={data.leaders}
+            sectionFilter={data.memberSectionFilter}
+            onSectionFilterChange={data.setMemberSectionFilter}
+            onEdit={handleEditClick}
+            onAdd={handleAddClick}
+            onDelete={handleDeleteClick}
+            onRefresh={data.loadCoreData}
+            loading={data.loading}
+          />
+        );
+
+      case 'leaders':
+        return (
+          <LeaderDirectory
+            leaders={data.leaders}
+            leadersLoading={data.leadersLoading}
+            allMembers={data.allMembers}
+            sections={data.sections}
+            sectionFilter={data.leaderSectionFilter}
+            setSectionFilter={data.setLeaderSectionFilter}
+            onViewAnalytics={data.openLeaderDashboard}
+            onAdd={() => { data.setEditingLeader(null); data.setIsLeaderModalOpen(true); }}
+            onEdit={(leader) => { data.setEditingLeader(leader); data.setIsLeaderModalOpen(true); }}
+            onDelete={(leader) => data.setDeletingLeader(leader)}
+          />
+        );
+
+      case 'reports':
+        return (
+          <AttendanceReports
+            filterType={data.filterType}
+            setFilterType={data.setFilterType}
+            filterValue={data.filterValue}
+            setFilterValue={data.setFilterValue}
+            overviewData={data.overviewData}
+            overviewLoading={data.overviewLoading}
+            serviceTypes={data.serviceTypes}
+            selectedServiceId={data.selectedServiceId}
+            onServiceChange={data.setSelectedServiceId}
+            loadOverview={data.loadOverview}
+            onLeaderClick={data.openLeaderDashboard}
+          />
+        );
+
+      case 'history':
+        return (
+          <SubmissionHistory
+            history={data.history}
+            historyLoading={data.historyLoading}
+            serviceTypes={data.serviceTypes}
+            selectedServiceId={data.selectedServiceId}
+            onServiceChange={data.setSelectedServiceId}
+            loadHistory={data.loadHistory}
+          />
+        );
+
+      case 'analytics':
+        return (
+          <AnalyticsView
+            trends={data.trends}
+            trendsLoading={data.trendsLoading}
+            loadTrends={data.loadTrends}
+          />
+        );
+
+      case 'rewards':
+        return (
+          <RewardsView
+            rewardsYear={data.rewardsYear}
+            setRewardsYear={data.setRewardsYear}
+            rewardsMode={data.rewardsMode}
+            setRewardsMode={data.setRewardsMode}
+            rewardsWeek={data.rewardsWeek}
+            setRewardsWeek={data.setRewardsWeek}
+            topMembers={data.topMembers}
+            topLeaders={data.topLeaders}
+            rewardsLoading={data.rewardsLoading}
+            loadRewards={data.loadRewards}
+          />
+        );
+
+      case 'settings':
+        return (
+          <SettingsView
+            leaders={data.leaders}
+            loadCoreData={data.loadCoreData}
+            loadLeaders={data.loadLeaders}
+            showMessage={data.showMessage}
+          />
+        );
+
+      case 'sync':
+        return (
+          <SyncCenter
+            serviceTypes={data.serviceTypes}
+            showMessage={data.showMessage}
+          />
+        );
+
+      case 'audit':
+        return <AuditLog />;
+
+      case 'birthdays':
+        return <BirthdayModule />;
+
+      case 'announcements':
+        return (
+          <AnnouncementCenter
+            sections={data.sections}
+            leaders={data.leaders}
+            showMessage={data.showMessage}
+          />
+        );
+
+      case 'follow-ups':
+        return (
+          <FollowUpsView
+            dashboardMetrics={data.dashboardMetrics}
+            leaders={data.leaders}
+            allMembers={data.allMembers}
+            showMessage={data.showMessage}
+          />
+        );
+
+      case 'visitors':
+        return (
+          <VisitorIntake
+            sections={data.sections}
+            showMessage={data.showMessage}
+          />
+        );
+
+      default:
+        return (
+          <DashboardOverview
+            allMembers={data.allMembers}
+            sections={data.sections}
+            leaders={data.leaders}
+            dashboardMetrics={data.dashboardMetrics}
+            metricsLoading={data.metricsLoading}
+            serviceTypes={data.serviceTypes}
+            selectedServiceId={data.selectedServiceId}
+            onServiceChange={data.setSelectedServiceId}
+            onRefresh={data.loadDashboardMetrics}
+          />
+        );
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold mb-4">Admin Dashboard</h2>
-
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-6 border-b">
-          {['dashboard', 'members', 'upload', 'leaders'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => handleTabChange(tab)}
-              className={`px-4 py-2 font-medium transition ${
-                activeTab === tab
-                  ? 'text-primary-600 border-b-2 border-primary-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
+    <>
+      {/* Toast Message */}
+      {data.message && (
+        <div className="toast-success mb-6">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{data.message}</span>
         </div>
+      )}
 
-        {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2">Total Members</h3>
-              <p className="text-4xl font-bold text-blue-600">{members.length}</p>
-            </div>
-            <div className="bg-green-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2">Total Sections</h3>
-              <p className="text-4xl font-bold text-green-600">{sections.length}</p>
-            </div>
-            <div className="bg-purple-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2">Recent Activity</h3>
-              <p className="text-2xl font-bold text-purple-600">System Active</p>
-            </div>
-          </div>
-        )}
+      {/* Active Tab Content */}
+      {renderTab()}
 
-        {/* Members Tab */}
-        {activeTab === 'members' && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">All Members</h3>
-              <input
-                type="text"
-                placeholder="Search members..."
-                className="border rounded px-3 py-2"
-                onChange={(e) => {
-                  const term = e.target.value.toLowerCase();
-                  const filtered = members.filter(m =>
-                    m.full_name.toLowerCase().includes(term) ||
-                    m.membership_id.toLowerCase().includes(term) ||
-                    m.section_name?.toLowerCase().includes(term)
-                  );
-                  setMembers(filtered);
-                }}
-              />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Leader</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {members.map((member) => (
-                    <tr key={member.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{member.membership_id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap font-medium">{member.full_name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{member.section_name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{member.leader_name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">{member.phone || '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleEditClick(member)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
-                          Edit
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Upload Tab */}
-        {activeTab === 'upload' && (
-          <div>
-            <h3 className="text-xl font-semibold mb-4">Upload CSV</h3>
-            <p className="text-gray-600 mb-4">
-              Upload a CSV file with member data. Expected columns:
-              MembershipID, FullName, Section, LeaderName, Phone, Email, Gender, AgeGroup
-            </p>
-
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleUpload}
-                disabled={loading}
-                className="hidden"
-                id="csv-upload"
-              />
-              <label
-                htmlFor="csv-upload"
-                className="cursor-pointer inline-block"
-              >
-                <div className="text-6xl mb-4">📁</div>
-                <p className="text-lg font-medium text-gray-700">
-                  {loading ? 'Processing...' : 'Click to upload CSV file'}
-                </p>
-                <p className="text-sm text-gray-500">or drag and drop</p>
-              </label>
-            </div>
-
-            {uploadResult && (
-              <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-                <h4 className="font-semibold text-green-800 mb-2">Upload Complete!</h4>
-                <ul className="text-sm text-green-700 space-y-1">
-                  <li>Sections created: {uploadResult.results.sectionsCreated}</li>
-                  <li>Leaders created: {uploadResult.results.leadersCreated}</li>
-                  <li>Members created: {uploadResult.results.membersCreated}</li>
-                  {uploadResult.tempPasswords && (
-                    <li className="font-bold text-orange-600">⚠️ Temporary passwords generated for new leader accounts</li>
-                  )}
-                </ul>
-                {uploadResult.results.errors.length > 0 && (
-                  <details className="mt-2">
-                    <summary className="cursor-pointer text-red-600 font-medium">View Errors ({uploadResult.results.errors.length})</summary>
-                    <ul className="mt-2 text-sm text-red-700 space-y-1">
-                      {uploadResult.results.errors.map((err, i) => (
-                        <li key={i}>{err}</li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Leaders Tab */}
-        {activeTab === 'leaders' && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Section Leaders</h3>
-              <button
-                onClick={loadLeaders}
-                disabled={leadersLoading}
-                className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded transition disabled:opacity-50"
-              >
-                {leadersLoading ? 'Loading...' : 'Refresh'}
-              </button>
-            </div>
-
-            {leadersLoading ? (
-              <div className="text-center py-8">Loading leaders...</div>
-            ) : leaders.length === 0 ? (
-              <p className="text-gray-500">No leaders found. Upload a CSV to create leader accounts.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {leaders.map((leader) => (
-                      <tr key={leader.id}>
-                        <td className="px-6 py-4 whitespace-nowrap font-medium">{leader.full_name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">{leader.username}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">{leader.section_name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">{leader.phone || '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">{leader.email || '-'}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => handleResetPassword(leader.id)}
-                            className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
-                            title="Reset password"
-                          >
-                            Reset Password
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Leader Drilldown */}
+      <LeaderDrilldown
+        drilldownData={data.drilldownData}
+        onClose={() => data.setDrilldownData(null)}
+      />
 
       {/* Member Edit Modal */}
       <MemberEditModal
-        member={editingMember}
-        sections={sections}
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        member={editingMember}
+        mode={memberMode}
+        sections={data.sections}
+        leaders={data.leaders}
+        onClose={() => setIsModalOpen(false)}
         onSave={handleSaveMember}
       />
-    </div>
+
+      {/* Leader Edit Modal */}
+      <LeaderEditModal
+        isOpen={data.isLeaderModalOpen}
+        leader={data.editingLeader}
+        sections={data.sections}
+        loading={data.leaderSaving}
+        onClose={() => data.setIsLeaderModalOpen(false)}
+        onSave={data.handleLeaderSave}
+      />
+
+      {/* Delete Leader Confirmation */}
+      {data.deletingLeader && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-sm text-center">
+            <div className="p-8">
+              <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
+                <ShieldAlert className="w-7 h-7 text-rose-500" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Remove Leader?</h3>
+              <p className="text-sm text-slate-500 mb-8">
+                Are you sure you want to remove <strong className="text-slate-800">{data.deletingLeader.full_name}</strong>?
+                <br /><small className="text-rose-600 font-medium mt-1 inline-block">This will also deactivate their login account.</small>
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => data.setDeletingLeader(null)}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={data.handleLeaderDelete}
+                  disabled={data.leaderSaving}
+                  className="btn-danger flex-1"
+                >
+                  {data.leaderSaving ? 'Removing...' : 'Confirm Remove'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {showDeleteConfirm && deletingMember && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-sm text-center">
+            <div className="p-8">
+              <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
+                <AlertTriangle className="w-7 h-7 text-rose-500" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Member?</h3>
+              <p className="text-sm text-slate-500 mb-8">
+                This action cannot be undone. Are you sure you want to remove{' '}
+                <strong className="text-slate-800">{deletingMember.full_name}</strong>?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteLoading}
+                  className="btn-danger flex-1"
+                >
+                  {deleteLoading ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service Assignments Modal */}
+      <ServiceAssignmentsModal
+        isOpen={data.isAssignmentModalOpen}
+        onClose={() => data.setIsAssignmentModalOpen(false)}
+        selectedDate={data.selectedInstanceDate}
+        selectedServiceId={data.selectedServiceId}
+        serviceTypes={data.serviceTypes}
+        leaders={data.leaders}
+        sections={data.sections}
+        assignedLeaderIds={data.assignedLeaderIds}
+        onSave={data.handleSaveServiceAssignments}
+        loading={data.assignmentsLoading}
+      />
+    </>
   );
 };
 

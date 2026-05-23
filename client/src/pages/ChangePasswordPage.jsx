@@ -38,7 +38,10 @@ const ChangePasswordPage = () => {
       await authAPI.changePassword(formData.current_password, formData.new_password);
       setMessage({ type: 'success', text: 'Password changed successfully' });
       setFormData({ current_password: '', new_password: '', confirm_password: '' });
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => {
+        const dashboardPath = user?.role === 'admin' ? '/admin' : user?.role === 'leader' ? '/leader' : '/pastor';
+        navigate(dashboardPath);
+      }, 2000);
     } catch (error) {
       setMessage({
         type: 'error',
@@ -51,18 +54,18 @@ const ChangePasswordPage = () => {
 
   return (
     <div className="max-w-md mx-auto mt-8">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold mb-6">Change Password</h2>
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow dark:shadow-slate-900/50 p-6">
+        <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-slate-100">Change Password</h2>
 
-        <p className="text-gray-600 mb-4">
+        <p className="text-gray-600 dark:text-slate-400 mb-4">
           logged in as <strong>{user?.username}</strong>
         </p>
 
         {message.text && (
           <div className={`mb-4 px-4 py-3 rounded ${
             message.type === 'success'
-              ? 'bg-green-50 text-green-700 border border-green-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
+              ? 'bg-green-50 dark:bg-emerald-900/30 text-green-700 dark:text-emerald-400 border border-green-200 dark:border-emerald-700'
+              : 'bg-red-50 dark:bg-rose-900/30 text-red-700 dark:text-rose-400 border border-red-200 dark:border-rose-700'
           }`}>
             {message.text}
           </div>
@@ -70,7 +73,7 @@ const ChangePasswordPage = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Current Password
             </label>
             <input
@@ -79,13 +82,13 @@ const ChangePasswordPage = () => {
               value={formData.current_password}
               onChange={handleChange}
               required
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded px-3 py-2"
               placeholder="Enter current password"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               New Password
             </label>
             <input
@@ -95,13 +98,13 @@ const ChangePasswordPage = () => {
               onChange={handleChange}
               required
               minLength={6}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded px-3 py-2"
               placeholder="Enter new password"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Confirm New Password
             </label>
             <input
@@ -111,7 +114,7 @@ const ChangePasswordPage = () => {
               onChange={handleChange}
               required
               minLength={6}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded px-3 py-2"
               placeholder="Re-enter new password"
             />
           </div>
@@ -120,7 +123,7 @@ const ChangePasswordPage = () => {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 border border-slate-200 dark:border-slate-600 rounded text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>

@@ -1,26 +1,104 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { queries } = require('../database');
+const multer = require('multer');
+const path = require('path');
+const crypto = require('crypto');
+const fs = require('fs');
+const { queries, get } = require('../database');
 
 const router = express.Router();
+
+const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, '../uploads/profiles/'))
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = crypto.randomBytes(16).toString('hex');
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return cb(new Error('Invalid file type. Only JPG, PNG, GIF, and WebP images are allowed.'));
+    }
+    cb(null, req.session.userId + '-' + uniqueSuffix + ext)
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images are allowed'));
+    }
+  }
+});
 
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
+    username = username.trim();
+    password = password.trim();
+
+    const logEntry = (msg) => {
+      const timestamp = new Date().toISOString();
+      fs.appendFileSync(path.join(__dirname, '../debug.log'), `[${timestamp}] ${msg}\n`);
+    };
+
+    logEntry(`Login attempt - Username: "${username}" (Len: ${username.length}), PassLen: ${password.length}`);
+
     const user = await queries.findUserByUsername(username);
     if (!user) {
+      logEntry(`Login failed: User "${username}" not found in database.`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Check if account is locked
+    if (user.locked_until) {
+      const lockExpiry = new Date(user.locked_until);
+      if (new Date() < lockExpiry) {
+        const minutesLeft = Math.ceil((lockExpiry - new Date()) / 60000);
+        return res.status(423).json({ error: `Account locked. Try again in ${minutesLeft} minutes.` });
+      } else {
+        await queries.resetFailedLogin(user.id);
+      }
+    }
+
     const validPassword = bcrypt.compareSync(password, user.password_hash);
+    logEntry(`Password check for "${username}": ${validPassword ? 'MATCH' : 'FAIL'}`);
     if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      const attempts = (user.failed_login_attempts || 0) + 1;
+      await queries.incrementFailedLogin(user.id);
+
+      if (attempts >= 5) {
+        const lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+        await queries.lockUser(user.id, lockUntil.toISOString());
+        return res.status(423).json({ error: 'Account locked due to too many failed attempts. Try again in 30 minutes.' });
+      }
+
+      return res.status(401).json({ error: `Invalid credentials. ${5 - attempts} attempts remaining.` });
+    }
+
+    await queries.resetFailedLogin(user.id);
+
+    // Check if 2FA is enabled
+    if (user.totp_enabled) {
+      req.session.pending2FAUserId = user.id;
+      req.session.pending2FAUsername = user.username;
+      req.session.twoFactorVerified = false;
+      return res.json({
+        message: '2FA required',
+        requires2FA: true,
+        userId: user.id
+      });
     }
 
     // Store user info in session (exclude password)
@@ -29,8 +107,11 @@ router.post('/login', async (req, res) => {
       id: user.id,
       username: user.username,
       role: user.role,
-      full_name: user.full_name
+      full_name: user.full_name,
+      profile_picture: user.profile_picture,
+      is_head: user.is_head
     };
+    req.session.twoFactorVerified = true;
 
     res.json({
       message: 'Login successful',
@@ -48,14 +129,33 @@ router.post('/logout', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to logout' });
     }
+    res.clearCookie('connect.sid');
     res.json({ message: 'Logged out successfully' });
   });
 });
 
 // Check session
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   if (req.session.user) {
-    res.json({ user: req.session.user });
+    if (req.session.twoFactorVerified) {
+      try {
+        const user = await queries.findUserByUsername(req.session.user.username);
+        if (user) {
+          req.session.user.profile_picture = user.profile_picture;
+          req.session.user.full_name = user.full_name;
+          req.session.user.is_head = user.is_head;
+        }
+        res.json({ user: req.session.user });
+      } catch (e) {
+        res.json({ user: req.session.user });
+      }
+    } else {
+      const user2FA = await queries.getUser2FA(req.session.userId);
+      if (user2FA?.totp_enabled) {
+        return res.json({ requires2FA: true, userId: req.session.userId });
+      }
+      res.json({ user: req.session.user });
+    }
   } else {
     res.status(401).json({ error: 'Not authenticated' });
   }
@@ -79,7 +179,8 @@ router.post('/change-password', async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
-    const user = await queries.findUserByUsername(req.session.user.username);
+    // Use session user ID to get user directly
+    const user = await get('SELECT * FROM users WHERE id = ?', [req.session.userId]);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -99,6 +200,63 @@ router.post('/change-password', async (req, res) => {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Failed to change password' });
   }
+});
+
+// Update profile details
+router.put('/profile', async (req, res) => {
+  try {
+    const { full_name } = req.body;
+    if (!full_name || full_name.trim().length === 0) {
+      return res.status(400).json({ error: 'Name cannot be empty' });
+    }
+    if (!req.session.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+    await queries.updateUserFullName(full_name.trim(), req.session.userId);
+    req.session.user.full_name = full_name.trim();
+    res.json({ message: 'Profile updated', full_name: full_name.trim() });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+});
+
+// Upload profile picture
+router.post('/profile-picture', async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  upload.single('image')(req, res, async (err) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    try {
+      // Create the URL path to save in DB
+      const pictureUrl = `/uploads/profiles/${req.file.filename}`;
+      
+      // Update database
+      await queries.updateUserProfilePicture(pictureUrl, req.session.userId);
+      
+      // Update session
+      req.session.user.profile_picture = pictureUrl;
+      
+      res.json({ 
+        message: 'Profile picture updated successfully',
+        profile_picture: pictureUrl
+      });
+    } catch (error) {
+      console.error('Profile picture update error:', error);
+      res.status(500).json({ error: 'Failed to update profile picture' });
+    }
+  });
 });
 
 module.exports = router;

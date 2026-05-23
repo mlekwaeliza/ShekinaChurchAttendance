@@ -1,235 +1,723 @@
-import React, { useState, useEffect } from 'react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Cell,
+} from 'recharts';
+import {
+  Activity,
+  AlertTriangle,
+  CalendarRange,
+  CheckCircle2,
+  Download,
+  FileText,
+  ShieldAlert,
+  TrendingUp,
+  Users,
+} from 'lucide-react';
+
 import { pastorAPI } from '../services/api';
+import BirthdayModule from '../components/admin/BirthdayModule';
+import PastorEngagement from '../components/pastor/PastorEngagement';
+import PastorInsights from '../components/pastor/PastorInsights';
+import PastorWeeklySummary from '../components/pastor/PastorWeeklySummary';
+import ReportBuilderModal from '../components/pastor/ReportBuilderModal';
+import Badge from '../components/ui/Badge';
+import ChartCard from '../components/ui/ChartCard';
+import DataTable from '../components/ui/DataTable';
+import LoadingSkeleton from '../components/ui/LoadingSkeleton';
+import StatCard from '../components/ui/StatCard';
+import { addDays, formatDisplayDate, formatLocalDate } from '../utils/date';
+
+const SECTION_COLORS = ['#2563eb', '#7c3aed', '#14b8a6', '#f97316', '#ec4899', '#22c55e'];
+
+function numberOrZero(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sanitizeFilename(value) {
+  return String(value || 'ministry-report')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'ministry-report';
+}
+
+function rateVariant(rate) {
+  if (rate >= 90) return 'success';
+  if (rate >= 75) return 'warning';
+  return 'danger';
+}
 
 const PastorDashboard = () => {
+  const { tab } = useParams();
+  const activeTab = tab || 'overview';
+  const isOverview = activeTab === 'overview' || activeTab === 'dashboard';
+
   const [stats, setStats] = useState(null);
   const [trends, setTrends] = useState([]);
   const [leaderMetrics, setLeaderMetrics] = useState([]);
   const [atRiskMembers, setAtRiskMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState({
-    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
-  });
+  const [error, setError] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [dateRange, setDateRange] = useState(() => ({
+    start: formatLocalDate(addDays(new Date(), -30)),
+    end: formatLocalDate(),
+  }));
 
-  useEffect(() => {
-    loadAllData();
-  }, [dateRange]);
-
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     setLoading(true);
+    setError('');
+
     try {
+      const filters = {
+        start_date: dateRange.start,
+        end_date: dateRange.end,
+      };
+
       const [statsRes, trendsRes, leadersRes, atRiskRes] = await Promise.all([
-        pastorAPI.getDashboardStats(dateRange),
-        pastorAPI.getTrends(dateRange),
-        pastorAPI.getLeaderMetrics(dateRange),
-        pastorAPI.getAtRiskMembers()
+        pastorAPI.getDashboardStats(filters),
+        pastorAPI.getTrends(filters),
+        pastorAPI.getLeaderMetrics(filters),
+        pastorAPI.getAtRiskMembers(),
       ]);
+
       setStats(statsRes.data);
       setTrends(trendsRes.data);
       setLeaderMetrics(leadersRes.data);
       setAtRiskMembers(atRiskRes.data);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+    } catch (requestError) {
+      console.error('Failed to load pastor dashboard data:', requestError);
+      setError('We could not load the latest pastor overview. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange.end, dateRange.start]);
 
-  const exportData = () => {
-    pastorAPI.exportAttendance(dateRange);
-  };
+  useEffect(() => {
+    if (isOverview) {
+      loadAllData();
+    }
+  }, [isOverview, loadAllData]);
 
-  if (loading) {
-    return <div className="text-center py-8">Loading dashboard...</div>;
-  }
+  const overviewTrend = useMemo(() => {
+    const grouped = new Map();
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+    trends.forEach((row) => {
+      const key = row.date;
+      const current = grouped.get(key) || { date: key, present: 0, total: 0 };
+      current.present += numberOrZero(row.present);
+      current.total += numberOrZero(row.total);
+      grouped.set(key, current);
+    });
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Pastor Dashboard</h2>
-          <p className="text-gray-600">Overview of attendance and engagement</p>
+    return Array.from(grouped.values())
+      .sort((left, right) => left.date.localeCompare(right.date))
+      .map((row) => ({
+        date: row.date,
+        attendance_rate: row.total > 0 ? Number(((row.present / row.total) * 100).toFixed(1)) : 0,
+      }));
+  }, [trends]);
+
+  const sectionBreakdown = useMemo(
+    () => [...(stats?.sectionBreakdown || [])].sort(
+      (left, right) => numberOrZero(right.attendance_rate) - numberOrZero(left.attendance_rate)
+    ),
+    [stats]
+  );
+
+  const rankedLeaders = useMemo(
+    () => [...leaderMetrics].sort(
+      (left, right) => numberOrZero(right.attendance_rate) - numberOrZero(left.attendance_rate)
+    ),
+    [leaderMetrics]
+  );
+
+  const prioritizedMembers = useMemo(
+    () => [...atRiskMembers].sort(
+      (left, right) => numberOrZero(right.absence_count) - numberOrZero(left.absence_count)
+    ),
+    [atRiskMembers]
+  );
+
+  const summaryMetrics = useMemo(() => {
+    const attendanceRows = stats?.overallAttendance || [];
+    const averageAttendance = attendanceRows.length
+      ? Math.round(attendanceRows.reduce((sum, row) => {
+          const present = numberOrZero(row.present_count ?? row.present);
+          const total = numberOrZero(row.total_members ?? row.total);
+          return total > 0 ? sum + (present / total) * 100 : sum;
+        }, 0) / attendanceRows.length)
+      : 0;
+
+    return {
+      latestDateLabel: stats?.latestDate ? formatDisplayDate(stats.latestDate) : 'No records yet',
+      averageAttendance,
+      submissionRate: numberOrZero(stats?.completion?.rate),
+      leadersSubmitted: numberOrZero(stats?.completion?.leadersSubmitted),
+      totalLeaders: numberOrZero(stats?.completion?.totalLeaders),
+      trackedSections: sectionBreakdown.length,
+    };
+  }, [sectionBreakdown.length, stats]);
+
+  const reportSummary = useMemo(() => {
+    const strongestSection = sectionBreakdown[0] || null;
+    const weakestSection = sectionBreakdown[sectionBreakdown.length - 1] || null;
+    const topLeader = rankedLeaders[0] || null;
+    const trendDelta = overviewTrend.length >= 2
+      ? Number((overviewTrend[overviewTrend.length - 1].attendance_rate - overviewTrend[0].attendance_rate).toFixed(1))
+      : 0;
+
+    const completionGap = Math.max(summaryMetrics.totalLeaders - summaryMetrics.leadersSubmitted, 0);
+    const actionItems = [];
+
+    if (completionGap > 0) {
+      actionItems.push(`Follow up with ${completionGap} leader${completionGap === 1 ? '' : 's'} who have not submitted in the selected range.`);
+    }
+
+    if (trendDelta <= -3) {
+      actionItems.push(`Review the ${Math.abs(trendDelta)} point attendance slide across the current reporting window.`);
+    }
+
+    if (weakestSection && numberOrZero(weakestSection.attendance_rate) < 75) {
+      actionItems.push(`Coach ${weakestSection.section_name} on consistency after its ${weakestSection.attendance_rate}% attendance rate.`);
+    }
+
+    if (prioritizedMembers.length > 0) {
+      actionItems.push(`Prioritize pastoral follow-up for ${Math.min(prioritizedMembers.length, 10)} members showing repeated recent absences.`);
+    }
+
+    if (topLeader && numberOrZero(topLeader.attendance_rate) >= 90) {
+      actionItems.push(`Recognize ${topLeader.leader_name} and ${topLeader.section_name} for sustained strong reporting discipline.`);
+    }
+
+    if (actionItems.length === 0) {
+      actionItems.push('Maintain the current follow-up rhythm and keep section reporting steady through the next review cycle.');
+    }
+
+    return {
+      strongestSection,
+      weakestSection,
+      topLeader,
+      topLeaders: rankedLeaders.slice(0, 12),
+      atRiskMembers: prioritizedMembers.slice(0, 12),
+      trendDelta,
+      actionItems,
+      windowLabel: `${formatDisplayDate(dateRange.start)} to ${formatDisplayDate(dateRange.end)}`,
+    };
+  }, [dateRange.end, dateRange.start, overviewTrend, prioritizedMembers, rankedLeaders, sectionBreakdown, summaryMetrics.leadersSubmitted, summaryMetrics.totalLeaders]);
+
+  const exportData = useCallback(() => {
+    pastorAPI.exportAttendance({
+      start_date: dateRange.start,
+      end_date: dateRange.end,
+    });
+  }, [dateRange.end, dateRange.start]);
+
+  const generateReport = useCallback(async (form) => {
+    setReportLoading(true);
+
+    try {
+      const [{ default: jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      const autoTable = autoTableModule.default;
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 42;
+      const contentWidth = pageWidth - margin * 2;
+      const generatedOn = formatDisplayDate(formatLocalDate());
+
+      let cursorY = 56;
+
+      const ensureSpace = (heightNeeded = 80) => {
+        if (cursorY + heightNeeded <= pageHeight - 42) {
+          return;
+        }
+        doc.addPage();
+        cursorY = 56;
+      };
+
+      const addHeading = (label) => {
+        ensureSpace(48);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(15, 23, 42);
+        doc.text(label, margin, cursorY);
+        cursorY += 14;
+      };
+
+      const addParagraph = (text) => {
+        ensureSpace(40);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(71, 85, 105);
+        const lines = doc.splitTextToSize(text, contentWidth);
+        doc.text(lines, margin, cursorY);
+        cursorY += lines.length * 13 + 8;
+      };
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(15, 23, 42);
+      doc.text(form.title, margin, cursorY);
+
+      cursorY += 20;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Window: ${reportSummary.windowLabel}`, margin, cursorY);
+      cursorY += 14;
+      doc.text(`Generated: ${generatedOn}`, margin, cursorY);
+      cursorY += 14;
+
+      if (form.preparedBy.trim()) {
+        doc.text(`Prepared by: ${form.preparedBy.trim()}`, margin, cursorY);
+        cursorY += 14;
+      }
+
+      cursorY += 10;
+
+      autoTable(doc, {
+        startY: cursorY,
+        theme: 'grid',
+        head: [['Metric', 'Value']],
+        body: [
+          ['Latest attendance day', summaryMetrics.latestDateLabel],
+          ['Average attendance', `${summaryMetrics.averageAttendance}%`],
+          ['Submission rate', `${summaryMetrics.submissionRate}% (${summaryMetrics.leadersSubmitted}/${summaryMetrics.totalLeaders})`],
+          ['Tracked sections', String(summaryMetrics.trackedSections)],
+          ['Members needing attention', String(prioritizedMembers.length)],
+          ['Trend delta', `${reportSummary.trendDelta > 0 ? '+' : ''}${reportSummary.trendDelta}%`],
+        ],
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 10, cellPadding: 8, textColor: [30, 41, 59] },
+        headStyles: { fillColor: [37, 99, 235] },
+      });
+
+      cursorY = doc.lastAutoTable.finalY + 26;
+
+      if (form.includeActionItems) {
+        addHeading('Priority Actions');
+        reportSummary.actionItems.forEach((item) => {
+          addParagraph(`- ${item}`);
+        });
+      }
+
+      if (form.includeSectionBreakdown && sectionBreakdown.length > 0) {
+        addHeading('Section Breakdown');
+        autoTable(doc, {
+          startY: cursorY,
+          theme: 'striped',
+          head: [['Section', 'Attendance Rate', 'Present', 'Total']],
+          body: sectionBreakdown.map((section) => [
+            section.section_name,
+            `${numberOrZero(section.attendance_rate)}%`,
+            String(numberOrZero(section.present)),
+            String(numberOrZero(section.total)),
+          ]),
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 10, cellPadding: 7 },
+          headStyles: { fillColor: [79, 70, 229] },
+        });
+        cursorY = doc.lastAutoTable.finalY + 26;
+      }
+
+      if (form.includeLeaderPerformance && reportSummary.topLeaders.length > 0) {
+        addHeading('Leader Performance');
+        autoTable(doc, {
+          startY: cursorY,
+          theme: 'striped',
+          head: [['Leader', 'Section', 'Attendance Rate', 'Reporting Days', 'Records']],
+          body: reportSummary.topLeaders.map((leader) => [
+            leader.leader_name,
+            leader.section_name,
+            `${numberOrZero(leader.attendance_rate)}%`,
+            String(numberOrZero(leader.reporting_days)),
+            String(numberOrZero(leader.total_records)),
+          ]),
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 9, cellPadding: 7 },
+          headStyles: { fillColor: [13, 148, 136] },
+        });
+        cursorY = doc.lastAutoTable.finalY + 26;
+      }
+
+      if (form.includeAtRiskMembers && reportSummary.atRiskMembers.length > 0) {
+        addHeading('Members Requiring Follow-Up');
+        autoTable(doc, {
+          startY: cursorY,
+          theme: 'striped',
+          head: [['Member', 'Section', 'Leader', 'Absences']],
+          body: reportSummary.atRiskMembers.map((member) => [
+            member.full_name,
+            member.section_name,
+            member.leader_name,
+            String(numberOrZero(member.absence_count)),
+          ]),
+          margin: { left: margin, right: margin },
+          styles: { fontSize: 9, cellPadding: 7 },
+          headStyles: { fillColor: [225, 29, 72] },
+        });
+      }
+
+      doc.save(`${sanitizeFilename(form.title)}-${formatLocalDate()}.pdf`);
+      setIsReportModalOpen(false);
+    } finally {
+      setReportLoading(false);
+    }
+  }, [prioritizedMembers.length, reportSummary, sectionBreakdown, summaryMetrics, prioritizedMembers]);
+
+  const renderOverview = () => {
+    if (loading) {
+      return (
+        <div className="space-y-8 animate-fade-in">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div>
+              <LoadingSkeleton type="card" count={1} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+            <LoadingSkeleton type="card" count={4} />
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
+            <LoadingSkeleton type="chart" count={2} />
+          </div>
+          <LoadingSkeleton type="table" count={1} rows={5} cols={5} />
         </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <label>From:</label>
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-              className="border rounded px-2 py-1"
-            />
+      );
+    }
+
+    return (
+      <div className="space-y-8 animate-fade-in">
+        <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary-50 dark:bg-primary-900/20 px-3 py-1 text-xs font-semibold text-primary-700 dark:text-primary-300">
+              <CalendarRange className="w-3.5 h-3.5" />
+              <span>{reportSummary.windowLabel}</span>
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Pastor Overview</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Attendance health, leader reporting, and follow-up priorities in one working view.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <label>To:</label>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-              className="border rounded px-2 py-1"
-            />
+
+          <div className="w-full xl:w-auto flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <input
+                type="date"
+                value={dateRange.start}
+                max={dateRange.end}
+                onChange={(event) => setDateRange((current) => ({ ...current, start: event.target.value }))}
+                className="bg-transparent border-none p-0 focus:ring-0 text-sm text-slate-700 dark:text-slate-300"
+              />
+              <span className="text-slate-300 dark:text-slate-600 text-sm">to</span>
+              <input
+                type="date"
+                value={dateRange.end}
+                min={dateRange.start}
+                onChange={(event) => setDateRange((current) => ({ ...current, end: event.target.value }))}
+                className="bg-transparent border-none p-0 focus:ring-0 text-sm text-slate-700 dark:text-slate-300"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsReportModalOpen(true)}
+                disabled={!stats || reportLoading}
+                className="btn-primary btn-sm gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span>{reportLoading ? 'Preparing...' : 'Report'}</span>
+              </button>
+              <button onClick={exportData} className="btn-secondary btn-sm gap-2">
+                <Download className="w-4 h-4" />
+                <span>CSV</span>
+              </button>
+            </div>
           </div>
-          <button
-            onClick={exportData}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition"
+        </div>
+
+        {error && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-900/40 px-5 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-rose-700 dark:text-rose-300">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <span className="text-sm font-medium">{error}</span>
+            </div>
+            <button onClick={loadAllData} className="btn-secondary btn-sm">
+              Retry
+            </button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+          <StatCard icon={CalendarRange} label="Latest Attendance Day" value={summaryMetrics.latestDateLabel} variant="info" />
+          <StatCard icon={Activity} label="Average Attendance" value={`${summaryMetrics.averageAttendance}%`} variant={rateVariant(summaryMetrics.averageAttendance)} />
+          <StatCard icon={CheckCircle2} label="Submission Rate" value={`${summaryMetrics.submissionRate}%`} trendLabel={`${summaryMetrics.leadersSubmitted}/${summaryMetrics.totalLeaders} leaders`} variant={rateVariant(summaryMetrics.submissionRate)} />
+          <StatCard icon={AlertTriangle} label="At-Risk Members" value={prioritizedMembers.length} variant={prioritizedMembers.length > 0 ? 'danger' : 'success'} />
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
+          <section className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-5">
+              <ShieldAlert className="w-5 h-5 text-amber-500" />
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Priority Actions</h3>
+            </div>
+            <div className="space-y-3">
+              {reportSummary.actionItems.map((item) => (
+                <div key={item} className="flex items-start gap-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 px-4 py-3">
+                  <div className="mt-1 w-2 h-2 rounded-full bg-primary-500 shrink-0" />
+                  <p className="text-sm text-slate-600 dark:text-slate-300">{item}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-5">
+              <TrendingUp className="w-5 h-5 text-emerald-500" />
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Report Snapshot</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-500 dark:text-slate-400">Trend delta</span>
+                <Badge variant={reportSummary.trendDelta >= 0 ? 'success' : 'danger'}>
+                  {reportSummary.trendDelta > 0 ? '+' : ''}
+                  {reportSummary.trendDelta}%
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-slate-500 dark:text-slate-400">Strongest section</span>
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {reportSummary.strongestSection?.section_name || 'No data'}
+                  </div>
+                  {reportSummary.strongestSection && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {reportSummary.strongestSection.attendance_rate}%
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-slate-500 dark:text-slate-400">Needs support</span>
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {reportSummary.weakestSection?.section_name || 'No data'}
+                  </div>
+                  {reportSummary.weakestSection && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {reportSummary.weakestSection.attendance_rate}%
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-slate-500 dark:text-slate-400">Top leader</span>
+                <div className="text-right">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {reportSummary.topLeader?.leader_name || 'No data'}
+                  </div>
+                  {reportSummary.topLeader && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {reportSummary.topLeader.section_name} · {reportSummary.topLeader.attendance_rate}%
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <ChartCard
+            title="Attendance Trend"
+            subtitle="Average attendance rate across the selected reporting window"
+            icon={TrendingUp}
+            empty={overviewTrend.length === 0}
+            emptyMessage="Attendance trend data will appear after submissions are recorded."
           >
-            Export CSV
-          </button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-gray-500 text-sm font-medium">Latest Date</h3>
-            <p className="text-2xl font-bold">{stats.latestDate || 'N/A'}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-gray-500 text-sm font-medium">Avg Attendance</h3>
-            <p className="text-2xl font-bold">
-              {stats.overallAttendance?.length > 0
-                ? Math.round(
-                    stats.overallAttendance.reduce((sum, d) => sum + (d.present_count / d.total_members) * 100, 0) /
-                    stats.overallAttendance.length
-                  ) + '%'
-                : 'N/A'}
-            </p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-gray-500 text-sm font-medium">Submission Rate</h3>
-            <p className={`text-2xl font-bold ${stats.completion?.rate >= 90 ? 'text-green-600' : stats.completion?.rate >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
-              {stats.completion?.rate}%
-            </p>
-            <p className="text-sm text-gray-500">{stats.completion?.leadersSubmitted}/{stats.completion?.totalLeaders} leaders</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-gray-500 text-sm font-medium">At-Risk Members</h3>
-            <p className="text-2xl font-bold text-red-600">{atRiskMembers.length}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Attendance Trend Chart */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Attendance Trends</h3>
-          {trends.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={trends}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="attendance_rate" stroke="#3b82f6" name="Attendance %" />
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={overviewTrend} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tickFormatter={(value) => formatDisplayDate(value, { month: 'short', day: 'numeric' })}
+                />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} domain={[0, 100]} />
+                <Tooltip
+                  formatter={(value) => [`${value}%`, 'Attendance']}
+                  labelFormatter={(value) => formatDisplayDate(value)}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="attendance_rate"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
               </LineChart>
             </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500">No data available</p>
-          )}
-        </div>
+          </ChartCard>
 
-        {/* Latest Section Performance */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Section Performance</h3>
-          {stats?.sectionBreakdown?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.sectionBreakdown}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="section_name" tick={{ fontSize: 12 }} />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="attendance_rate" fill="#3b82f6" name="Attendance %" />
+          <ChartCard
+            title="Section Performance"
+            subtitle="Latest section attendance rates ranked from strongest to weakest"
+            icon={Users}
+            empty={sectionBreakdown.length === 0}
+            emptyMessage="Section performance will appear once attendance has been captured."
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sectionBreakdown} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="section_name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tickFormatter={(value) => (value.length > 11 ? `${value.slice(0, 11)}...` : value)}
+                />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} domain={[0, 100]} />
+                <Tooltip formatter={(value) => [`${value}%`, 'Attendance Rate']} />
+                <Bar dataKey="attendance_rate" radius={[8, 8, 0, 0]}>
+                  {sectionBreakdown.map((section, index) => (
+                    <Cell
+                      key={section.section_name}
+                      fill={SECTION_COLORS[index % SECTION_COLORS.length]}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500">No data available</p>
-          )}
+          </ChartCard>
         </div>
-      </div>
 
-      {/* Leader Metrics Table */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Leader Performance</h3>
-        {leaderMetrics.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Leader</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reporting Days</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Records</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Present Count</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Attendance Rate</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {leaderMetrics.map((leader, idx) => (
-                  <tr key={idx}>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">{leader.leader_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{leader.section_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{leader.reporting_days}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{leader.total_records}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{leader.total_present}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`font-bold ${leader.attendance_rate >= 90 ? 'text-green-600' : leader.attendance_rate >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {leader.attendance_rate}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500">No metrics available</p>
-        )}
-      </div>
+        <DataTable
+          columns={[
+            {
+              accessor: 'leader_name',
+              header: 'Leader',
+              sortable: true,
+              render: (row) => <span className="font-semibold text-slate-900 dark:text-slate-100">{row.leader_name}</span>,
+            },
+            {
+              accessor: 'section_name',
+              header: 'Section',
+              sortable: true,
+              render: (row) => <Badge variant="info">{row.section_name}</Badge>,
+            },
+            {
+              accessor: 'reporting_days',
+              header: 'Reporting Days',
+              sortable: true,
+              align: 'center',
+            },
+            {
+              accessor: 'total_records',
+              header: 'Records',
+              sortable: true,
+              align: 'center',
+            },
+            {
+              accessor: 'attendance_rate',
+              header: 'Attendance Rate',
+              sortable: true,
+              align: 'center',
+              render: (row) => (
+                <Badge variant={rateVariant(numberOrZero(row.attendance_rate))}>
+                  {row.attendance_rate}%
+                </Badge>
+              ),
+            },
+          ]}
+          data={rankedLeaders}
+          searchable
+          searchPlaceholder="Search leaders or sections..."
+          searchKeys={['leader_name', 'section_name']}
+          emptyTitle="No leader performance data"
+          emptyDescription="Leader performance will populate once attendance history is available."
+        />
 
-      {/* At-Risk Members */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4 text-red-600">At-Risk Members (3+ absences in last 30 days)</h3>
-        {atRiskMembers.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-red-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Membership ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Leader</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Absences (30 days)</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {atRiskMembers.map((member, idx) => (
-                  <tr key={idx} className="hover:bg-red-50">
-                    <td className="px-6 py-4 whitespace-nowrap">{member.membership_id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap font-medium">{member.full_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{member.section_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">{member.leader_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-sm font-bold">
-                        {member.absence_count}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500">No at-risk members in the last 30 days</p>
-        )}
+        <DataTable
+          columns={[
+            {
+              accessor: 'membership_id',
+              header: 'Membership ID',
+              sortable: true,
+            },
+            {
+              accessor: 'full_name',
+              header: 'Member',
+              sortable: true,
+              render: (row) => <span className="font-semibold text-slate-900 dark:text-slate-100">{row.full_name}</span>,
+            },
+            {
+              accessor: 'section_name',
+              header: 'Section',
+              sortable: true,
+            },
+            {
+              accessor: 'leader_name',
+              header: 'Leader',
+              sortable: true,
+            },
+            {
+              accessor: 'absence_count',
+              header: 'Absences',
+              sortable: true,
+              align: 'center',
+              render: (row) => <Badge variant="danger">{row.absence_count}</Badge>,
+            },
+          ]}
+          data={prioritizedMembers}
+          searchable
+          searchPlaceholder="Search members, leaders, or sections..."
+          searchKeys={['membership_id', 'full_name', 'section_name', 'leader_name']}
+          emptyTitle="No members currently flagged"
+          emptyDescription="Members with repeated recent absences will appear here."
+        />
+
+        <ReportBuilderModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          dateRange={dateRange}
+          onGenerate={generateReport}
+          loading={reportLoading}
+        />
       </div>
-    </div>
-  );
+    );
+  };
+
+  switch (activeTab) {
+    case 'insights':
+      return <PastorInsights />;
+    case 'engagement':
+      return <PastorEngagement />;
+    case 'weekly':
+      return <PastorWeeklySummary />;
+    case 'birthdays':
+      return <BirthdayModule />;
+    default:
+      return renderOverview();
+  }
 };
 
 export default PastorDashboard;
