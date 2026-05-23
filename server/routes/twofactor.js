@@ -1,5 +1,4 @@
 const express = require('express');
-const { generateSecret, generateSync, verifySync, generateURI } = require('otplib');
 const qrcode = require('qrcode');
 const crypto = require('crypto');
 const { queries, get } = require('../database');
@@ -17,6 +16,79 @@ const toSessionUser = (user) => ({
 });
 
 const normalizeBackupCode = (code) => String(code || '').toUpperCase().replace(/\s/g, '');
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function base32Encode(buffer) {
+  let bits = '';
+  for (const byte of buffer) {
+    bits += byte.toString(2).padStart(8, '0');
+  }
+
+  let output = '';
+  for (let i = 0; i < bits.length; i += 5) {
+    const chunk = bits.slice(i, i + 5).padEnd(5, '0');
+    output += BASE32_ALPHABET[parseInt(chunk, 2)];
+  }
+  return output;
+}
+
+function base32Decode(value) {
+  const clean = String(value || '').toUpperCase().replace(/=+$/g, '').replace(/\s/g, '');
+  let bits = '';
+  for (const char of clean) {
+    const index = BASE32_ALPHABET.indexOf(char);
+    if (index === -1) throw new Error('Invalid base32 character');
+    bits += index.toString(2).padStart(5, '0');
+  }
+
+  const bytes = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  }
+  return Buffer.from(bytes);
+}
+
+function generateTotpSecret() {
+  return base32Encode(crypto.randomBytes(20));
+}
+
+function generateTotpUri({ issuer, label, secret }) {
+  const issuerValue = encodeURIComponent(issuer);
+  const labelValue = `${issuerValue}:${encodeURIComponent(label)}`;
+  return `otpauth://totp/${labelValue}?secret=${encodeURIComponent(secret)}&issuer=${issuerValue}&algorithm=SHA1&digits=6&period=30`;
+}
+
+function generateTotp(secret, counter) {
+  const key = base32Decode(secret);
+  const buffer = Buffer.alloc(8);
+  buffer.writeUInt32BE(Math.floor(counter / 0x100000000), 0);
+  buffer.writeUInt32BE(counter >>> 0, 4);
+
+  const hmac = crypto.createHmac('sha1', key).update(buffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code = (
+    ((hmac[offset] & 0x7f) << 24) |
+    ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) |
+    (hmac[offset + 3] & 0xff)
+  ) % 1000000;
+  return String(code).padStart(6, '0');
+}
+
+function verifyTotp({ secret, token, window = 1 }) {
+  const cleanToken = String(token || '').replace(/\s/g, '');
+  if (!/^\d{6}$/.test(cleanToken)) return false;
+
+  const currentCounter = Math.floor(Date.now() / 30000);
+  for (let offset = -window; offset <= window; offset++) {
+    const expected = generateTotp(secret, currentCounter + offset);
+    if (crypto.timingSafeEqual(Buffer.from(cleanToken), Buffer.from(expected))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const hashBackupCode = (code) => crypto
   .createHash('sha256')
   .update(`${process.env.SESSION_SECRET || 'dev-session-secret'}:${normalizeBackupCode(code)}`)
@@ -69,8 +141,9 @@ router.post('/verify-login', async (req, res) => {
       } catch (error) {}
     }
 
-    const result = verifySync({ secret: user2FA.totp_secret, token: normalizedToken });
-    if (!result.valid) return res.status(400).json({ error: 'Invalid token' });
+    if (!verifyTotp({ secret: user2FA.totp_secret, token: normalizedToken })) {
+      return res.status(400).json({ error: 'Invalid token' });
+    }
 
     const fullUser = await get('SELECT id, username, role, full_name, profile_picture, is_head FROM users WHERE id = ?', [pendingUserId]);
     if (!fullUser) return res.status(404).json({ error: 'User not found' });
@@ -94,9 +167,9 @@ router.post('/setup', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
     if (user.totp_enabled) return res.status(400).json({ error: '2FA already enabled' });
 
-    const secret = generateSecret();
+    const secret = generateTotpSecret();
     req.session.pendingTotpSecret = secret;
-    const otpauth = generateURI({
+    const otpauth = generateTotpUri({
       issuer: 'Church Attendance System',
       label: req.session.user.username,
       secret,
@@ -121,8 +194,9 @@ router.post('/verify', async (req, res) => {
     const setupSecret = req.session.pendingTotpSecret || user.totp_secret;
     if (!setupSecret) return res.status(400).json({ error: 'No 2FA secret found. Complete setup first.' });
 
-    const result = verifySync({ secret: setupSecret, token });
-    if (!result.valid) return res.status(400).json({ error: 'Invalid token' });
+    if (!verifyTotp({ secret: setupSecret, token })) {
+      return res.status(400).json({ error: 'Invalid token' });
+    }
 
     const backupCodes = generateBackupCodes();
 
