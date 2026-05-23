@@ -64,6 +64,12 @@ From your local server folder, set the online database URL:
 
 ```powershell
 cd "C:\Users\mlekw\Desktop\antigravity\Demo project\Demo project\server"
+.\migrate-to-online-postgres.ps1
+```
+
+Or run the commands manually:
+
+```powershell
 $env:DB_CLIENT="postgres"
 $env:DATABASE_URL="<your online DATABASE_URL>"
 $env:PGSSL="true"
