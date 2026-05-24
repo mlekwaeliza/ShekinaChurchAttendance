@@ -341,6 +341,46 @@ router.get('/members', async (req, res) => {
   }
 });
 
+// PUT bulk-update members. This must be registered before /members/:id.
+router.put('/members/bulk-update', async (req, res) => {
+  try {
+    const { member_ids, section_id, leader_id } = req.body;
+    if (!Array.isArray(member_ids) || member_ids.length === 0) {
+      return res.status(400).json({ error: 'member_ids array required' });
+    }
+
+    const sectionId = Number(section_id);
+    const leaderId = Number(leader_id);
+    const memberIds = member_ids.map((id) => Number(id));
+    if (!Number.isInteger(sectionId) || !Number.isInteger(leaderId) || memberIds.some((id) => !Number.isInteger(id))) {
+      return res.status(400).json({ error: 'Invalid section, leader, or member selection' });
+    }
+
+    const leader = await get('SELECT id, section_id FROM leaders WHERE id = ?', [leaderId]);
+    if (!leader || Number(leader.section_id) !== sectionId) {
+      return res.status(400).json({ error: 'Leader does not belong to the selected section' });
+    }
+
+    const placeholders = memberIds.map(() => '?').join(',');
+    const params = [sectionId, leaderId, ...memberIds];
+    await new Promise((resolve, reject) => {
+      db.run(`UPDATE members SET section_id = ?, leader_id = ? WHERE id IN (${placeholders})`, params, (err) => {
+        if (err) reject(err); else resolve();
+      });
+    });
+
+    const userId = req.session?.userId;
+    for (const memberId of memberIds) {
+      queries.createAuditEntry(userId, 'update', 'member', memberId, null, { section_id: sectionId, leader_id: leaderId }, req.ip, req.headers['user-agent']).catch(() => {});
+    }
+
+    res.json({ message: `${memberIds.length} member(s) updated` });
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    res.status(500).json({ error: 'Failed to bulk update members' });
+  }
+});
+
 // PUT update member
 router.put('/members/:id', async (req, res) => {
   try {
@@ -1754,46 +1794,6 @@ router.get('/birthdays/export', async (req, res) => {
      res.status(500).json({ error: 'Failed to export birthdays' });
    }
  });
-
-// Bulk member operations
-router.put('/members/bulk-update', async (req, res) => {
-  try {
-    const { member_ids, section_id, leader_id } = req.body;
-    if (!Array.isArray(member_ids) || member_ids.length === 0) {
-      return res.status(400).json({ error: 'member_ids array required' });
-    }
-
-    const sectionId = Number(section_id);
-    const leaderId = Number(leader_id);
-    const memberIds = member_ids.map((id) => Number(id));
-    if (!Number.isInteger(sectionId) || !Number.isInteger(leaderId) || memberIds.some((id) => !Number.isInteger(id))) {
-      return res.status(400).json({ error: 'Invalid section, leader, or member selection' });
-    }
-
-    const leader = await get('SELECT id, section_id FROM leaders WHERE id = ?', [leaderId]);
-    if (!leader || Number(leader.section_id) !== sectionId) {
-      return res.status(400).json({ error: 'Leader does not belong to the selected section' });
-    }
-
-    const placeholders = memberIds.map(() => '?').join(',');
-    const params = [sectionId, leaderId, ...memberIds];
-    await new Promise((resolve, reject) => {
-      db.run(`UPDATE members SET section_id = ?, leader_id = ? WHERE id IN (${placeholders})`, params, (err) => {
-        if (err) reject(err); else resolve();
-      });
-    });
-
-    const userId = req.session?.userId;
-    for (const memberId of memberIds) {
-      queries.createAuditEntry(userId, 'update', 'member', memberId, null, { section_id: sectionId, leader_id: leaderId }, req.ip, req.headers['user-agent']).catch(() => {});
-    }
-
-    res.json({ message: `${memberIds.length} member(s) updated` });
-  } catch (error) {
-    console.error('Bulk update error:', error);
-    res.status(500).json({ error: 'Failed to bulk update members' });
-  }
-});
 
 // Member CSV export
 router.get('/members/export', async (req, res) => {
