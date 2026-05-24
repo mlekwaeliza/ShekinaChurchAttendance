@@ -1325,6 +1325,9 @@ const queries = {
   createAuditLog: (userId, action, entityType, entityId, oldValue, newValue, ipAddress, userAgent) =>
     run('INSERT INTO audit_log (user_id, action, entity_type, entity_id, old_value, new_value, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [userId, action, entityType, entityId, oldValue ? JSON.stringify(oldValue) : null, newValue ? JSON.stringify(newValue) : null, ipAddress, userAgent]),
+  createAuditEntry: (userId, action, entityType, entityId, oldValue, newValue, ipAddress, userAgent) =>
+    run('INSERT INTO audit_log (user_id, action, entity_type, entity_id, old_value, new_value, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [userId, action, entityType, entityId, oldValue ? JSON.stringify(oldValue) : null, newValue ? JSON.stringify(newValue) : null, ipAddress, userAgent]),
 
   // Member export
   getAllMembersForExport: () => all(`
