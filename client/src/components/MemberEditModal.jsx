@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { adminAPI } from '../services/api';
 import { History, User, Calendar } from 'lucide-react';
 
@@ -120,9 +121,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
   if (!isOpen) return null;
   if (mode === 'edit' && !member) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center overflow-y-auto z-50 p-4 animate-fade-in">
-      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full p-8 border border-gray-100 dark:border-slate-700 max-h-none my-auto overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center overflow-y-auto z-[9999] p-3 sm:p-5 animate-fade-in">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-5xl w-full p-5 sm:p-8 border border-gray-100 dark:border-slate-700 max-h-[calc(100vh-2rem)] overflow-y-auto">
         <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-slate-700 pb-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
@@ -412,7 +413,8 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

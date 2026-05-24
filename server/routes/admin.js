@@ -902,8 +902,14 @@ router.post('/members', async (req, res) => {
       return res.status(400).json({ error: 'Membership ID already exists' });
     }
 
+    const sectionId = Number(section_id);
+    const leaderId = Number(leader_id);
+    if (!Number.isInteger(sectionId) || !Number.isInteger(leaderId)) {
+      return res.status(400).json({ error: 'Invalid section or leader selection' });
+    }
+
     const section = await new Promise((resolve, reject) => {
-      db.get('SELECT id FROM sections WHERE id = ?', [section_id], (err, row) => {
+      db.get('SELECT id FROM sections WHERE id = ?', [sectionId], (err, row) => {
         if (err) reject(err); else resolve(row);
       });
     });
@@ -912,19 +918,19 @@ router.post('/members', async (req, res) => {
     }
 
     const leader = await new Promise((resolve, reject) => {
-      db.get('SELECT id, section_id FROM leaders WHERE id = ?', [leader_id], (err, row) => {
+      db.get('SELECT id, section_id FROM leaders WHERE id = ?', [leaderId], (err, row) => {
         if (err) reject(err); else resolve(row);
       });
     });
     if (!leader) {
       return res.status(400).json({ error: 'Invalid leader ID' });
     }
-    if (leader.section_id !== section_id) {
+    if (Number(leader.section_id) !== sectionId) {
       return res.status(400).json({ error: 'Leader does not belong to the specified section' });
     }
 
     await queries.createMember(
-      membership_id, full_name, section_id, leader_id, 
+      membership_id, full_name, sectionId, leaderId, 
       phone || null, email || null, gender || null, age_group || null,
       date_of_birth || null, 
       show_age_to_leaders ? 1 : 0, 
