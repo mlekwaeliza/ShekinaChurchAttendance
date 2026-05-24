@@ -552,8 +552,12 @@ const MemberDirectory = ({
           members={allMembers}
           sections={sections}
           leaders={leaders}
+          initialSelectedIds={Array.from(selectedMembers)}
           onClose={() => setShowBulkEdit(false)}
-          onRefresh={onRefresh}
+          onRefresh={() => {
+            setSelectedMembers(new Set());
+            onRefresh();
+          }}
         />
       )}
     </div>

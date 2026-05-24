@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Users, Check } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 
-const BulkEditModal = ({ members, sections, leaders, onClose, onRefresh }) => {
+const BulkEditModal = ({ members, sections, leaders, initialSelectedIds = [], onClose, onRefresh }) => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [targetSection, setTargetSection] = useState('');
   const [targetLeader, setTargetLeader] = useState('');
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setSelectedIds(initialSelectedIds);
+  }, [initialSelectedIds]);
 
   const filteredMembers = members.filter(m =>
     m.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -28,6 +34,7 @@ const BulkEditModal = ({ members, sections, leaders, onClose, onRefresh }) => {
 
   const handleSave = async () => {
     if (selectedIds.length === 0 || !targetSection || !targetLeader) return;
+    setError('');
     setSaving(true);
     try {
       await adminAPI.bulkUpdateMembers(selectedIds, targetSection, targetLeader);
@@ -35,14 +42,15 @@ const BulkEditModal = ({ members, sections, leaders, onClose, onRefresh }) => {
       onClose();
     } catch (e) {
       console.error('Bulk update failed:', e);
+      setError(e.response?.data?.error || 'Failed to update selected members.');
     } finally {
       setSaving(false);
     }
   };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content max-w-2xl" onClick={(e) => e.stopPropagation()}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-5" onClick={onClose}>
+      <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5 text-slate-400 dark:text-slate-500" />
@@ -61,8 +69,14 @@ const BulkEditModal = ({ members, sections, leaders, onClose, onRefresh }) => {
             placeholder="Search members..."
           />
 
+          {error && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+              {error}
+            </div>
+          )}
+
           {/* Member Selection */}
-          <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+          <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden max-h-72 overflow-y-auto">
             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
               <input
                 type="checkbox"
@@ -129,7 +143,8 @@ const BulkEditModal = ({ members, sections, leaders, onClose, onRefresh }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
