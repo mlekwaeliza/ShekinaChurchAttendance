@@ -351,19 +351,35 @@ router.put('/members/:id', async (req, res) => {
     } = req.body;
     const { id } = req.params;
 
+    if (!full_name || !section_id || !leader_id) {
+      return res.status(400).json({ error: 'Name, Section, and Leader are required' });
+    }
+
+    const sectionId = Number(section_id);
+    const leaderId = Number(leader_id);
+    if (!Number.isInteger(sectionId) || !Number.isInteger(leaderId)) {
+      return res.status(400).json({ error: 'Invalid section or leader selection' });
+    }
+
+    const leader = await get('SELECT id, section_id FROM leaders WHERE id = ?', [leaderId]);
+    if (!leader || Number(leader.section_id) !== sectionId) {
+      return res.status(400).json({ error: 'Leader does not belong to the selected section' });
+    }
+
     await queries.updateMember(
       full_name, phone, email, gender, age_group, 
-      date_of_birth, show_age_to_leaders ? 1 : 0, 
+      date_of_birth || null, show_age_to_leaders ? 1 : 0, 
       hide_from_birthday_list ? 1 : 0, 
       JSON.stringify(opt_out_services || []),
       req.body.address || null,
-      section_id,
-      leader_id,
+      sectionId,
+      leaderId,
       id
     );
     
     res.json({ message: 'Member updated' });
   } catch (error) {
+    console.error('Update member error:', error);
     res.status(500).json({ error: 'Failed to update member' });
   }
 });

@@ -92,6 +92,8 @@ router.put('/members/:id', async (req, res) => {
       member.date_of_birth, member.show_age_to_leaders, member.hide_from_birthday_list,
       member.opt_out_services || '[]',
       address || member.address,
+      member.section_id,
+      member.leader_id,
       id
     );
     res.json({ message: 'Member updated successfully' });
