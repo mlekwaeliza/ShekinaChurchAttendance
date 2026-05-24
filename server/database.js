@@ -847,7 +847,7 @@ const queries = {
     FROM members
     WHERE is_active = 1
       AND LOWER(TRIM(full_name)) = LOWER(TRIM(?))
-      AND (? IS NULL OR id != ?)
+      AND (CAST(? AS INTEGER) IS NULL OR id != CAST(? AS INTEGER))
     LIMIT 1
   `, [fullName, excludeMemberId, excludeMemberId]),
 
