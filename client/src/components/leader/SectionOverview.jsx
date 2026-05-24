@@ -34,10 +34,17 @@ const SectionOverview = ({
       align: 'center',
       render: (row) =>
         row.submitted ? (
-          <Badge variant="success">
-            <CheckCircle2 className="w-3 h-3" />
-            Verified
-          </Badge>
+          <div className="flex flex-col items-center gap-1">
+            <Badge variant={row.submitted_on_behalf ? 'warning' : 'success'}>
+              <CheckCircle2 className="w-3 h-3" />
+              {row.submitted_on_behalf ? 'Covered' : 'Verified'}
+            </Badge>
+            {row.submitted_by_name && (
+              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                by {row.submitted_by_name}
+              </span>
+            )}
+          </div>
         ) : (
           <Badge variant="neutral">Pending</Badge>
         ),

@@ -11,12 +11,19 @@ const TakeAttendance = ({
   onServiceChange,
   submitted,
   submitting,
+  submitError,
   onStatusChange,
   onSubmit,
   isOnline,
   queuedForDate,
   isUnauthorized,
   leaderAssignments,
+  isHead = false,
+  sectionLeaders = [],
+  attendanceLeaderId,
+  attendanceLeaderName,
+  actingOnBehalf = false,
+  onAttendanceLeaderChange,
   onDownloadOfflinePackage
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -150,7 +157,31 @@ const TakeAttendance = ({
       </div>
 
       {/* Context & Selection */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {isHead && sectionLeaders.length > 0 && (
+          <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <UserCheck className="w-4 h-4 text-emerald-500" />
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300">Roster Owner</label>
+            </div>
+            <select
+              value={attendanceLeaderId || ''}
+              onChange={(event) => onAttendanceLeaderChange?.(event.target.value)}
+              disabled={submitted}
+              className="input w-full bg-slate-50 dark:bg-slate-900 shadow-inner"
+            >
+              {sectionLeaders.map((leader) => (
+                <option key={leader.id} value={leader.id}>
+                  {leader.full_name}{leader.is_head ? ' (Head)' : ''}
+                </option>
+              ))}
+            </select>
+            <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+              Select a subleader here when they are absent and you need to submit their roster.
+            </p>
+          </div>
+        )}
+
         {/* Date Selector */}
         <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
@@ -199,6 +230,18 @@ const TakeAttendance = ({
           </p>
         </div>
       </div>
+
+      {actingOnBehalf && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+          You are marking attendance for {attendanceLeaderName}. The record will show that you submitted it on their behalf.
+        </div>
+      )}
+
+      {submitError && (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+          {submitError}
+        </div>
+      )}
 
       {members.length > 0 && !isUnauthorized && (
         <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">

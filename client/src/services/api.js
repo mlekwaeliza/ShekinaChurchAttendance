@@ -153,13 +153,25 @@ export const calendarAPI = {
 
 // Leader API
 export const leaderAPI = {
-  getMembers: () => api.get('/leader/members'),
+  getMembers: (targetLeaderId) => api.get('/leader/members', {
+    params: targetLeaderId ? { target_leader_id: targetLeaderId } : {}
+  }),
   createMember: (data) => api.post('/leader/members', data),
   updateMember: (id, data) => api.put(`/leader/members/${id}`, data),
   deleteMember: (id) => api.delete(`/leader/members/${id}`),
-  getAttendanceStatus: (date, serviceId) => api.get(`/leader/attendance/${date}`, { params: { service_id: serviceId } }),
+  getAttendanceStatus: (date, serviceId, targetLeaderId) => api.get(`/leader/attendance/${date}`, {
+    params: {
+      service_id: serviceId,
+      ...(targetLeaderId ? { target_leader_id: targetLeaderId } : {})
+    }
+  }),
   getServiceTypes: () => api.get('/leader/service-types'),
-  submitAttendance: (date, attendance, service_id) => api.post('/leader/attendance', { date, attendance, service_id }),
+  submitAttendance: (date, attendance, service_id, target_leader_id) => api.post('/leader/attendance', {
+    date,
+    attendance,
+    service_id,
+    ...(target_leader_id ? { target_leader_id } : {})
+  }),
   syncOfflinePackage: (offlinePackage) => api.post('/leader/offline-sync', { package: offlinePackage }),
   getHistory: () => api.get('/leader/history'),
   getSectionOverview: (date) => api.get(`/leader/section-overview/${date}`),

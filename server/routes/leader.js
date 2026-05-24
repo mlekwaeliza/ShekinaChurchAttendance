@@ -8,25 +8,67 @@ const { upsertAttendanceSql } = require('../utils/sqlDialect');
 const router = express.Router();
 router.use(isAuthenticated);
 
+async function getTargetLeaderRecord(currentLeader, targetLeaderId) {
+  if (!targetLeaderId || Number(targetLeaderId) === Number(currentLeader.id)) {
+    return currentLeader;
+  }
+
+  if (!currentLeader.is_head) {
+    const error = new Error('Only head leaders can submit for another leader');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const target = await new Promise((resolve, reject) => {
+    db.get(`
+      SELECT l.*, s.name as section_name, u.username, u.full_name
+      FROM leaders l
+      JOIN sections s ON l.section_id = s.id
+      JOIN users u ON l.user_id = u.id
+      WHERE l.id = ?
+    `, [targetLeaderId], (err, row) => {
+      if (err) reject(err); else resolve(row);
+    });
+  });
+
+  if (!target || Number(target.section_id) !== Number(currentLeader.section_id)) {
+    const error = new Error('Selected leader does not belong to your section');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return target;
+}
+
 // GET members assigned to this leader
 router.get('/members', async (req, res) => {
   try {
+    const { target_leader_id } = req.query;
     const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
     if (!leaderRecord) {
       return res.status(404).json({ error: 'Leader record not found' });
     }
 
-    const members = await queries.getMembersByLeader(leaderRecord.id);
+    const targetLeader = await getTargetLeaderRecord(leaderRecord, target_leader_id);
+    const members = await queries.getMembersByLeader(targetLeader.id);
+    const sectionLeaders = leaderRecord.is_head
+      ? await queries.getLeadersBySection(leaderRecord.section_id)
+      : [];
+
     res.json({
       section_id: leaderRecord.section_id,
       section_name: leaderRecord.section_name,
       leader_id: leaderRecord.id,
       leader_name: req.session.user.full_name,
+      attendance_leader_id: targetLeader.id,
+      attendance_leader_name: targetLeader.full_name || req.session.user.full_name,
+      acting_on_behalf: Number(targetLeader.id) !== Number(leaderRecord.id),
+      section_leaders: sectionLeaders,
       is_head: Boolean(leaderRecord.is_head),
       members
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch members' });
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to fetch members' });
   }
 });
 
@@ -148,15 +190,17 @@ router.delete('/members/:id', async (req, res) => {
 router.get('/attendance/:date', validateDate('date'), async (req, res) => {
   try {
     const { date } = req.params;
-    const { service_id = 1 } = req.query;
+    const { service_id = 1, target_leader_id } = req.query;
     const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+    const targetLeader = await getTargetLeaderRecord(leaderRecord, target_leader_id);
     
     // --- AUTHORIZATION CHECK ---
     if (String(service_id) !== '1') {
       const instance = await queries.getServiceInstance(service_id, date);
       if (instance) {
         const assignedIds = JSON.parse(instance.assigned_leader_ids || '[]');
-        if (!assignedIds.includes(leaderRecord.id)) {
+        if (!assignedIds.includes(leaderRecord.id) && !assignedIds.includes(targetLeader.id)) {
            return res.json({ unauthorized: true, submitted: false, attendance: [] });
         }
       } else {
@@ -166,7 +210,7 @@ router.get('/attendance/:date', validateDate('date'), async (req, res) => {
       const instance = await queries.getServiceInstance(service_id, date);
       if (instance) {
         const assignedIds = JSON.parse(instance.assigned_leader_ids || '[]');
-        if (!assignedIds.includes(leaderRecord.id)) {
+        if (!assignedIds.includes(leaderRecord.id) && !assignedIds.includes(targetLeader.id)) {
            return res.json({ unauthorized: true, submitted: false, attendance: [] });
         }
       }
@@ -174,21 +218,32 @@ router.get('/attendance/:date', validateDate('date'), async (req, res) => {
     
     const submission = await new Promise((resolve, reject) => {
       db.get('SELECT id FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?', 
-        [leaderRecord.id, date, service_id], (err, row) => {
+        [targetLeader.id, date, service_id], (err, row) => {
           if (err) reject(err); else resolve(row);
         });
     });
 
     const attendance = await new Promise((resolve, reject) => {
-      db.all('SELECT member_id, status FROM attendance WHERE submitted_by = ? AND date = ? AND service_type_id = ?', 
-        [req.session.userId, date, service_id], (err, rows) => {
+      db.all(`
+        SELECT a.member_id, a.status, submitter.full_name as submitted_by_name
+        FROM attendance a
+        JOIN members m ON m.id = a.member_id
+        JOIN users submitter ON submitter.id = a.submitted_by
+        WHERE m.leader_id = ? AND a.date = ? AND a.service_type_id = ?
+      `, [targetLeader.id, date, service_id], (err, rows) => {
           if (err) reject(err); else resolve(rows);
         });
     });
 
-    res.json({ submitted: !!submission, attendance });
+    res.json({
+      submitted: !!submission,
+      attendance,
+      attendance_leader_id: targetLeader.id,
+      attendance_leader_name: targetLeader.full_name || leaderRecord.section_name,
+      submitted_by_name: attendance[0]?.submitted_by_name || null
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to check attendance status' });
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to check attendance status' });
   }
 });
 
@@ -250,12 +305,15 @@ router.get('/section-overview/:date', validateDate('date'), async (req, res) => 
         if (a.status === 'absent') { lStats.absent++; stats.absent++; }
         if (a.status === 'excused') { lStats.excused++; stats.excused++; }
       });
+      const submittedByNames = [...new Set(leaderAttendance.map(a => a.submitted_by_name).filter(Boolean))];
 
       return {
         leader_id: l.id,
         leader_name: l.full_name,
         phone: l.phone,
         submitted: submittedLeaderIds.has(l.id),
+        submitted_by_name: submittedByNames[0] || null,
+        submitted_on_behalf: submittedByNames.length > 0 && !submittedByNames.includes(l.full_name),
         stats: lStats
       };
     });
@@ -274,7 +332,7 @@ router.get('/section-overview/:date', validateDate('date'), async (req, res) => 
 // Submit attendance for a service
 router.post('/attendance', async (req, res) => {
   try {
-    const { date, attendance, service_id = 1 } = req.body;
+    const { date, attendance, service_id = 1, target_leader_id } = req.body;
 
     if (!date || !Array.isArray(attendance) || attendance.length === 0) {
       return res.status(400).json({ error: 'Date and attendance array required' });
@@ -284,13 +342,14 @@ router.post('/attendance', async (req, res) => {
     if (!leaderRecord) {
       return res.status(404).json({ error: 'Leader record not found' });
     }
+    const targetLeader = await getTargetLeaderRecord(leaderRecord, target_leader_id);
 
     // --- AUTHORIZATION CHECK ---
     if (String(service_id) !== '1') {
       const instance = await queries.getServiceInstance(service_id, date);
       if (instance) {
         const assignedIds = JSON.parse(instance.assigned_leader_ids || '[]');
-        if (!assignedIds.includes(leaderRecord.id)) {
+        if (!assignedIds.includes(leaderRecord.id) && !assignedIds.includes(targetLeader.id)) {
            return res.status(403).json({ error: 'You are not assigned to take attendance for this service.' });
         }
       } else {
@@ -300,7 +359,7 @@ router.post('/attendance', async (req, res) => {
       const instance = await queries.getServiceInstance(service_id, date);
       if (instance) {
         const assignedIds = JSON.parse(instance.assigned_leader_ids || '[]');
-        if (!assignedIds.includes(leaderRecord.id)) {
+        if (!assignedIds.includes(leaderRecord.id) && !assignedIds.includes(targetLeader.id)) {
            return res.status(403).json({ error: 'You are not assigned to this Main Service instance.' });
         }
       }
@@ -309,13 +368,32 @@ router.post('/attendance', async (req, res) => {
     // Check if already submitted for this date + service
     const existingSubmission = await new Promise((resolve, reject) => {
       db.get('SELECT id FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?', 
-        [leaderRecord.id, date, service_id], (err, row) => {
+        [targetLeader.id, date, service_id], (err, row) => {
           if (err) reject(err); else resolve(row);
         });
     });
     
     if (existingSubmission) {
       return res.status(400).json({ error: 'Attendance already submitted for this service today' });
+    }
+
+    const memberIds = attendance.map((record) => Number(record.member_id));
+    const memberCount = await new Promise((resolve, reject) => {
+      if (memberIds.some((id) => !Number.isInteger(id))) {
+        return resolve({ count: -1 });
+      }
+      const placeholders = memberIds.map(() => '?').join(',');
+      db.get(
+        `SELECT COUNT(*) as count FROM members WHERE leader_id = ? AND id IN (${placeholders})`,
+        [targetLeader.id, ...memberIds],
+        (err, row) => {
+          if (err) reject(err); else resolve(row);
+        }
+      );
+    });
+
+    if (memberCount.count !== attendance.length) {
+      return res.status(400).json({ error: 'Attendance contains members outside the selected leader roster' });
     }
 
     // Begin transaction
@@ -356,7 +434,7 @@ router.post('/attendance', async (req, res) => {
               // Log the submission with service_id
               db.run(
                 'INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)',
-                [leaderRecord.id, leaderRecord.section_id, date, service_id],
+                [targetLeader.id, targetLeader.section_id, date, service_id],
                 (err) => {
                   if (err) {
                     db.run('ROLLBACK');
@@ -380,9 +458,13 @@ router.post('/attendance', async (req, res) => {
       });
     });
 
-    res.json({ message: 'Attendance submitted successfully' });
+    res.json({
+      message: Number(targetLeader.id) === Number(leaderRecord.id)
+        ? 'Attendance submitted successfully'
+        : `Attendance submitted on behalf of ${targetLeader.full_name}`
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to submit attendance', details: error.message });
+    res.status(error.statusCode || 500).json({ error: 'Failed to submit attendance', details: error.message });
   }
 });
 
@@ -428,14 +510,19 @@ router.get('/history', async (req, res) => {
       const safeLimit = Number.isInteger(limit) && limit > 0 && limit <= 1000 ? limit : 100;
 
       db.all(`
-        SELECT sl.date, sl.created_at as submitted_at, sl.service_id, st.name as service_name, u.full_name as leader_name, COUNT(a.id) as records_count
+        SELECT sl.date, sl.created_at as submitted_at, sl.service_id, st.name as service_name,
+               u.full_name as leader_name,
+               submitter.full_name as submitted_by_name,
+               COUNT(a.id) as records_count
         FROM submission_log sl
         JOIN leaders l ON sl.leader_id = l.id
         JOIN users u ON l.user_id = u.id
         LEFT JOIN service_types st ON sl.service_id = st.id
-        LEFT JOIN attendance a ON sl.date = a.date AND a.submitted_by = u.id AND a.service_type_id = sl.service_id
+        LEFT JOIN members m ON m.leader_id = l.id
+        LEFT JOIN attendance a ON a.member_id = m.id AND sl.date = a.date AND a.service_type_id = sl.service_id
+        LEFT JOIN users submitter ON submitter.id = a.submitted_by
         WHERE ${whereClause}
-        GROUP BY sl.date, sl.leader_id, sl.service_id
+        GROUP BY sl.date, sl.leader_id, sl.service_id, st.name, u.full_name, submitter.full_name, sl.created_at
         ORDER BY sl.date DESC, sl.created_at DESC
         LIMIT ${safeLimit}
       `, [filterParam], (err, rows) => {

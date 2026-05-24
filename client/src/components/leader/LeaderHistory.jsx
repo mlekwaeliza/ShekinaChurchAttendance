@@ -34,12 +34,19 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
       ? [
           {
             accessor: 'leader_name',
-            header: 'Leader',
+            header: 'Roster',
             sortable: true,
             render: (row) => (
-              <span className="font-semibold text-primary-600 dark:text-primary-400">
-                {row.leader_name}
-              </span>
+              <div>
+                <span className="font-semibold text-primary-600 dark:text-primary-400">
+                  {row.leader_name}
+                </span>
+                {row.submitted_by_name && row.submitted_by_name !== row.leader_name && (
+                  <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                    submitted by {row.submitted_by_name}
+                  </p>
+                )}
+              </div>
             ),
           },
         ]

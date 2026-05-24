@@ -42,6 +42,10 @@ const useLeaderData = () => {
   const [members, setMembers] = useState([]);
   const [isHead, setIsHead] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sectionLeaders, setSectionLeaders] = useState([]);
+  const [attendanceLeaderId, setAttendanceLeaderId] = useState(null);
+  const [attendanceLeaderName, setAttendanceLeaderName] = useState('');
+  const [actingOnBehalf, setActingOnBehalf] = useState(false);
 
   const [serviceTypes, setServiceTypes] = useState([]);
   const [selectedServiceId, setSelectedServiceId] = useState(1);
@@ -140,7 +144,7 @@ const useLeaderData = () => {
     setLoading(true);
     try {
       const [membersRes, servicesRes] = await Promise.all([
-        leaderAPI.getMembers(),
+        leaderAPI.getMembers(attendanceLeaderId),
         leaderAPI.getServiceTypes()
       ]);
       
@@ -152,6 +156,10 @@ const useLeaderData = () => {
       });
       setMembers(membersRes.data.members);
       setIsHead(Boolean(membersRes.data.is_head));
+      setSectionLeaders(membersRes.data.section_leaders || []);
+      setAttendanceLeaderId((current) => current || membersRes.data.attendance_leader_id);
+      setAttendanceLeaderName(membersRes.data.attendance_leader_name || membersRes.data.leader_name);
+      setActingOnBehalf(Boolean(membersRes.data.acting_on_behalf));
       setServiceTypes(servicesRes.data);
       setAttendance({});
     } catch (error) {
@@ -159,6 +167,12 @@ const useLeaderData = () => {
     } finally {
       setLoading(false);
     }
+  }, [attendanceLeaderId]);
+
+  const handleAttendanceLeaderSelection = useCallback((leaderId) => {
+    setAttendanceLeaderId(leaderId ? Number(leaderId) : null);
+    setAttendance({});
+    setSubmitted(false);
   }, []);
 
   const loadAssignments = useCallback(async () => {
@@ -252,7 +266,7 @@ const useLeaderData = () => {
 
   const checkSubmission = useCallback(async () => {
     try {
-      const response = await leaderAPI.getAttendanceStatus(selectedDate, selectedServiceId);
+      const response = await leaderAPI.getAttendanceStatus(selectedDate, selectedServiceId, attendanceLeaderId);
       if (response.data.unauthorized) {
         setIsUnauthorized(true);
         setSubmitted(false);
@@ -273,7 +287,7 @@ const useLeaderData = () => {
     } catch (error) {
       console.error('Failed to check submission:', error);
     }
-  }, [selectedDate, selectedServiceId]);
+  }, [selectedDate, selectedServiceId, attendanceLeaderId]);
 
   // --- Attendance Handlers ---
   const handleStatusChange = useCallback(
@@ -297,6 +311,10 @@ const useLeaderData = () => {
   }), [selectedDate, selectedServiceId, serviceTypes, sectionInfo, eligibleMembers, attendance]);
 
   const handleDownloadOfflinePackage = useCallback(() => {
+    if (actingOnBehalf) {
+      setSubmitError('Offline packages are only available for your own roster. Please reconnect before submitting for another leader.');
+      return false;
+    }
     if (Object.keys(attendance).length !== eligibleMembers.length) {
       setSubmitError('Mark every eligible member before downloading the offline package.');
       return false;
@@ -305,7 +323,7 @@ const useLeaderData = () => {
     downloadOfflineAttendancePackage(offlinePackage);
     showMessage('Offline attendance package downloaded');
     return true;
-  }, [attendance, eligibleMembers.length, buildOfflinePackage, showMessage]);
+  }, [actingOnBehalf, attendance, eligibleMembers.length, buildOfflinePackage, showMessage]);
 
   const handleSubmit = useCallback(async () => {
     setSubmitError('');
@@ -330,6 +348,10 @@ const useLeaderData = () => {
       );
 
       if (!isOnline) {
+        if (actingOnBehalf) {
+          setSubmitError('Please reconnect before submitting attendance on behalf of another leader.');
+          return false;
+        }
         const offlinePackage = buildOfflinePackage();
         const result = await queueSubmission({
           date: selectedDate,
@@ -353,7 +375,7 @@ const useLeaderData = () => {
         return false;
       }
 
-      await leaderAPI.submitAttendance(selectedDate, attendanceArray, selectedServiceId);
+      await leaderAPI.submitAttendance(selectedDate, attendanceArray, selectedServiceId, attendanceLeaderId);
       setSubmitted(true);
       loadHistory();
       showMessage('Attendance submitted successfully!');
@@ -366,7 +388,7 @@ const useLeaderData = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [submitted, attendance, eligibleMembers.length, selectedDate, selectedServiceId, loadHistory, showMessage, isOnline, queueSubmission, buildOfflinePackage]);
+  }, [submitted, attendance, eligibleMembers.length, selectedDate, selectedServiceId, attendanceLeaderId, actingOnBehalf, loadHistory, showMessage, isOnline, queueSubmission, buildOfflinePackage]);
 
   // --- Member CRUD Handlers ---
   const openAddMember = useCallback(() => {
@@ -523,6 +545,11 @@ const useLeaderData = () => {
     isOnline,
     isUnauthorized,
     leaderAssignments,
+    sectionLeaders,
+    attendanceLeaderId,
+    attendanceLeaderName,
+    actingOnBehalf,
+    handleAttendanceLeaderSelection,
     handleStatusChange,
     handleSubmit,
     handleDownloadOfflinePackage,

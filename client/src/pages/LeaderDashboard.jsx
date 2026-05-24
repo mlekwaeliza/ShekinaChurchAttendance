@@ -84,8 +84,15 @@ const LeaderDashboard = () => {
             onServiceChange={data.handleServiceSelection}
             submitted={data.submitted}
             submitting={data.submitting}
+            submitError={data.submitError}
             isUnauthorized={data.isUnauthorized}
             leaderAssignments={data.leaderAssignments}
+            isHead={data.isHead}
+            sectionLeaders={data.sectionLeaders}
+            attendanceLeaderId={data.attendanceLeaderId}
+            attendanceLeaderName={data.attendanceLeaderName}
+            actingOnBehalf={data.actingOnBehalf}
+            onAttendanceLeaderChange={data.handleAttendanceLeaderSelection}
             onStatusChange={data.handleStatusChange}
             onSubmit={handleSubmitAndRedirect}
             onDownloadOfflinePackage={data.handleDownloadOfflinePackage}

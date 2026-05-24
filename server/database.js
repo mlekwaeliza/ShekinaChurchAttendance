@@ -866,11 +866,12 @@ const queries = {
   logSubmission: (leaderId, sectionId, date) =>
     run('INSERT INTO submission_log (leader_id, section_id, date) VALUES (?, ?, ?)', [leaderId, sectionId, date]),
   getAttendanceByDateAndSection: (date, sectionId, serviceId = 1) => all(`
-    SELECT a.status, m.full_name, m.membership_id, u.full_name as leader_name
+    SELECT a.status, m.full_name, m.membership_id, u.full_name as leader_name, submitter.full_name as submitted_by_name
     FROM attendance a
     JOIN members m ON a.member_id = m.id
     JOIN leaders l ON m.leader_id = l.id
     JOIN users u ON l.user_id = u.id
+    JOIN users submitter ON submitter.id = a.submitted_by
     WHERE a.date = ? AND m.section_id = ? AND (a.service_type_id = ? OR ? = 'all')
   `, [date, sectionId, serviceId, serviceId]),
 
