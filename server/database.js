@@ -842,6 +842,14 @@ const queries = {
     `, [fullName, phone, email, gender, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId]),
   deleteMember: (id) => run('DELETE FROM members WHERE id = ?', [id]),
   getMemberByMembershipId: (membershipId) => get('SELECT * FROM members WHERE membership_id = ?', [membershipId]),
+  findActiveMemberByName: (fullName, excludeMemberId = null) => get(`
+    SELECT id, membership_id, full_name
+    FROM members
+    WHERE is_active = 1
+      AND LOWER(TRIM(full_name)) = LOWER(TRIM(?))
+      AND (? IS NULL OR id != ?)
+    LIMIT 1
+  `, [fullName, excludeMemberId, excludeMemberId]),
 
   // Attendance queries
   getAttendanceByLeaderAndDate: (leaderId, date) => all(`

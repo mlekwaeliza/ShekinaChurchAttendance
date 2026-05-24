@@ -395,6 +395,11 @@ router.put('/members/:id', async (req, res) => {
       return res.status(400).json({ error: 'Name, Section, and Leader are required' });
     }
 
+    const duplicateName = await queries.findActiveMemberByName(full_name, id);
+    if (duplicateName) {
+      return res.status(400).json({ error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})` });
+    }
+
     const sectionId = Number(section_id);
     const leaderId = Number(leader_id);
     if (!Number.isInteger(sectionId) || !Number.isInteger(leaderId)) {
@@ -651,6 +656,12 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
         const address = getValue(row, ['address', 'addressline1']);
 
         if (existingMember) {
+          const duplicateName = await queries.findActiveMemberByName(fullName, existingMember.id);
+          if (duplicateName) {
+            results.errors.push(`Row skipped: member name "${fullName}" already exists as ${duplicateName.membership_id}`);
+            continue;
+          }
+
           await queries.updateMember(
             fullName,
             memberPhone,
@@ -662,8 +673,16 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
             existingMember.hide_from_birthday_list,
             existingMember.opt_out_services,
             address || existingMember.address,
+            sectionId,
+            leaderId,
             existingMember.id
           );
+          continue;
+        }
+
+        const duplicateName = await queries.findActiveMemberByName(fullName);
+        if (duplicateName) {
+          results.errors.push(`Row skipped: member name "${fullName}" already exists as ${duplicateName.membership_id}`);
           continue;
         }
 
@@ -940,6 +959,11 @@ router.post('/members', async (req, res) => {
     const existingMember = await queries.getMemberByMembershipId(membership_id);
     if (existingMember) {
       return res.status(400).json({ error: 'Membership ID already exists' });
+    }
+
+    const duplicateName = await queries.findActiveMemberByName(full_name);
+    if (duplicateName) {
+      return res.status(400).json({ error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})` });
     }
 
     const sectionId = Number(section_id);

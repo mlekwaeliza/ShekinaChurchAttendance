@@ -50,6 +50,11 @@ router.post('/members', async (req, res) => {
       return res.status(400).json({ error: 'Membership ID already exists' });
     }
 
+    const duplicateName = await queries.findActiveMemberByName(full_name);
+    if (duplicateName) {
+      return res.status(400).json({ error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})` });
+    }
+
     await queries.createMember(
       membership_id, full_name, leaderRecord.section_id, leaderRecord.id,
       phone || null, email || null, gender || null, age_group || null,
@@ -85,6 +90,11 @@ router.put('/members/:id', async (req, res) => {
     if (!member) return res.status(404).json({ error: 'Member not found' });
     if (member.leader_id !== leaderRecord.id) {
       return res.status(403).json({ error: 'Access denied: Member belongs to another leader' });
+    }
+
+    const duplicateName = await queries.findActiveMemberByName(full_name, id);
+    if (duplicateName) {
+      return res.status(400).json({ error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})` });
     }
 
     await queries.updateMember(
