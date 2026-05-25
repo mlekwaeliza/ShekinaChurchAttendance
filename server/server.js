@@ -135,7 +135,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 app.use(express.static(clientDist, {
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.html')) {
+    if (filePath.endsWith('sw.js') || filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
