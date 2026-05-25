@@ -1103,7 +1103,13 @@ router.get('/history', async (req, res) => {
         JOIN users u ON l.user_id = u.id
         JOIN sections s ON sl.section_id = s.id
         JOIN service_types st ON sl.service_id = st.id
-        LEFT JOIN attendance a ON sl.date = a.date AND a.submitted_by = u.id AND a.service_type_id = sl.service_id
+        LEFT JOIN attendance a
+          ON sl.date = a.date
+         AND a.service_type_id = sl.service_id
+         AND (
+           a.submitted_by = u.id
+           OR a.member_id IN (SELECT id FROM members WHERE leader_id = sl.leader_id)
+         )
         WHERE (sl.service_id = ? OR ? = 'all')
         GROUP BY sl.id
         ORDER BY sl.date DESC, sl.created_at DESC
@@ -1253,17 +1259,22 @@ router.get('/aggregated-overview', async (req, res) => {
     const stats = { present: 0, absent: 0, excused: 0, total_submitted_leaders: 0, total_leaders: allLeaders.length };
     
     const logs = await new Promise((resolve, reject) => {
-       db.all(`SELECT leader_id FROM submission_log a WHERE ${dateCondition} AND (a.service_id = ? OR ? = 'all')`, [...params, service_id, service_id], (err, rows) => {
+       db.all(`SELECT leader_id, date FROM submission_log a WHERE ${dateCondition} AND (a.service_id = ? OR ? = 'all')`, [...params, service_id, service_id], (err, rows) => {
           if(err) resolve([]); else resolve(rows);
        });
     });
     
-    const submittedCount = {};
-    logs.forEach(log => {
-       submittedCount[log.leader_id] = (submittedCount[log.leader_id] || 0) + 1;
-    });
+    const submittedDatesByLeader = {};
+    const addSubmittedDate = (leaderId, date) => {
+      if (!leaderId) return;
+      if (!submittedDatesByLeader[leaderId]) submittedDatesByLeader[leaderId] = new Set();
+      submittedDatesByLeader[leaderId].add(String(date || 'unknown'));
+    };
 
-    let submittedLeadersSet = new Set(logs.map(l => l.leader_id));
+    logs.forEach(log => addSubmittedDate(log.leader_id, log.date));
+    attendance.forEach(row => addSubmittedDate(row.leader_id, row.date));
+
+    let submittedLeadersSet = new Set(Object.keys(submittedDatesByLeader).map(Number));
     stats.total_submitted_leaders = submittedLeadersSet.size;
 
       const subleaderReport = allLeaders.map(l => {
@@ -1280,7 +1291,7 @@ router.get('/aggregated-overview', async (req, res) => {
         leader_name: l.full_name,
         section_name: l.section_name,
         phone: l.phone,
-          submissions_count: submittedCount[l.id] || 0,
+          submissions_count: submittedDatesByLeader[l.id]?.size || 0,
           stats: lStats
         };
       }).sort((left, right) => {
