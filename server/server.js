@@ -109,6 +109,13 @@ app.use('/api/', csrfProtect());
 // Audit logging for state-changing requests
 app.use('/api/', auditLog);
 
+app.use('/api/', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // API Routes
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);

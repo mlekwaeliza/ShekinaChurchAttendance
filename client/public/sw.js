@@ -1,4 +1,4 @@
-const CACHE_NAME = 'church-attendance-v2';
+const CACHE_NAME = 'church-attendance-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -37,25 +37,28 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request);
-        })
-    );
+    event.respondWith(fetch(request, { cache: 'no-store' }));
     return;
   }
 
   if (url.origin === location.origin) {
+    if (request.headers.get('Accept')?.includes('text/html')) {
+      event.respondWith(
+        fetch(request, { cache: 'no-store' })
+          .then((response) => {
+            if (response.ok) {
+              const responseClone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put('/index.html', responseClone);
+              });
+            }
+            return response;
+          })
+          .catch(() => caches.match('/index.html'))
+      );
+      return;
+    }
+
     event.respondWith(
       caches.match(request).then((cached) => {
         return cached || fetch(request).then((response) => {
