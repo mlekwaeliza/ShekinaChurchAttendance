@@ -55,6 +55,7 @@ const Layout = ({ children, showNav = true }) => {
   const [profileDropdown, setProfileDropdown] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileImgKey, setProfileImgKey] = useState(0);
+  const [refreshingApp, setRefreshingApp] = useState(false);
 
   // Live clock
   useEffect(() => {
@@ -87,6 +88,29 @@ const Layout = ({ children, showNav = true }) => {
       alert('Failed to upload: ' + (err.response?.data?.error || err.message));
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleRefreshApp = async () => {
+    setRefreshingApp(true);
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(async (registration) => {
+          await registration.update();
+          if (registration.waiting) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }));
+      }
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+      }
+    } catch (error) {
+      console.warn('App refresh preparation failed:', error);
+    } finally {
+      window.location.reload();
     }
   };
 
@@ -402,6 +426,16 @@ const Layout = ({ children, showNav = true }) => {
                 </span>
               </button>
             )}
+
+            <button
+              onClick={handleRefreshApp}
+              disabled={refreshingApp}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-wait disabled:opacity-70 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:shadow-none dark:hover:border-primary-400/50 dark:hover:bg-primary-500/10 dark:hover:text-white"
+              title="Refresh app"
+              aria-label="Refresh app"
+            >
+              <RefreshCw className={`w-5 h-5 ${refreshingApp ? 'animate-spin' : ''}`} />
+            </button>
 
             {/* Notification bell */}
             <NotificationBell user={user} />
