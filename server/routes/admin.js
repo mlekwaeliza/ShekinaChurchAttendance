@@ -1122,7 +1122,7 @@ router.get('/history', async (req, res) => {
            OR a.member_id IN (SELECT id FROM members WHERE leader_id = sl.leader_id)
          )
         ${serviceCondition}
-        GROUP BY sl.id
+        GROUP BY sl.id, sl.date, sl.created_at, u.full_name, s.name, st.name
         ORDER BY sl.date DESC, sl.created_at DESC
         LIMIT 200
       `, params, (err, rows) => {
