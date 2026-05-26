@@ -1236,7 +1236,7 @@ router.get('/section-overview/:date', validateDate('date'), async (req, res) => 
 // GET aggregated overview for weekly, monthly, yearly
 router.get('/aggregated-overview', async (req, res) => {
   try {
-    let { filterType, filterValue, service_id = 'all', fallback_latest = 'false' } = req.query;
+    let { filterType, filterValue, service_id = 'all', fallback_latest } = req.query;
     
     if (!['weekly', 'monthly', 'yearly'].includes(filterType) || !filterValue) {
       return res.status(400).json({ error: 'Valid filterType and filterValue required' });
@@ -1270,7 +1270,7 @@ router.get('/aggregated-overview', async (req, res) => {
     let usedFallback = false;
     let effectiveServiceId = service_id;
 
-    if (attendance.length === 0 && fallback_latest === 'true' && filterType === 'weekly') {
+    if (attendance.length === 0 && fallback_latest !== 'false' && filterType === 'weekly') {
       const latest = await new Promise((resolve, reject) => {
         const q = service_id === 'all'
           ? `SELECT MAX(date) AS latest_date FROM attendance`
