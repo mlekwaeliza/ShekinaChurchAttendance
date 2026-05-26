@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   FileText,
   Radio,
@@ -87,6 +87,15 @@ const AttendanceReports = ({
   const [offlinePreview, setOfflinePreview] = useState(null);
   const [offlineStatus, setOfflineStatus] = useState('');
   const [offlineBusy, setOfflineBusy] = useState(false);
+  const initializedServiceRef = useRef(false);
+
+  useEffect(() => {
+    if (initializedServiceRef.current) return;
+    initializedServiceRef.current = true;
+    if (selectedServiceId !== 'all') {
+      onServiceChange('all');
+    }
+  }, [onServiceChange, selectedServiceId]);
 
   const handleOfflineFile = async (event) => {
     const file = event.target.files?.[0];
@@ -304,6 +313,17 @@ const AttendanceReports = ({
       <div className="flex flex-col gap-6 xl:flex-row xl:items-center">
         <div className="flex max-w-full shrink-0 items-center gap-2 overflow-x-auto rounded-2xl border border-slate-200/60 bg-white p-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="flex gap-1">
+            <button
+              onClick={() => onServiceChange('all')}
+              className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-[11px] font-bold transition-all duration-300 ${
+                selectedServiceId === 'all'
+                  ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
+              }`}
+            >
+              All
+            </button>
+
             {serviceTypes.map((service) => (
               <button
                 key={service.id}
@@ -317,17 +337,6 @@ const AttendanceReports = ({
                 {service.name === 'Main Service' ? 'Main' : service.name.split(' ')[0]}
               </button>
             ))}
-
-            <button
-              onClick={() => onServiceChange('all')}
-              className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-[11px] font-bold transition-all duration-300 ${
-                selectedServiceId === 'all'
-                  ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700'
-              }`}
-            >
-              All
-            </button>
           </div>
         </div>
 

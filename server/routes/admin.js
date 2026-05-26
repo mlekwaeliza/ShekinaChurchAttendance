@@ -1099,31 +1099,29 @@ router.get('/history', async (req, res) => {
   try {
     const { service_id = 'all' } = req.query;
     const history = await new Promise((resolve, reject) => {
-      const serviceCondition = service_id === 'all' ? '' : 'WHERE sl.service_id = ?';
+      const serviceCondition = service_id === 'all' ? '' : 'WHERE a.service_type_id = ?';
       const params = service_id === 'all' ? [] : [service_id];
       db.all(`
         SELECT 
-          sl.date, 
-          sl.created_at as submitted_at, 
+          a.date,
+          COALESCE(MAX(sl.created_at), MAX(a.submitted_at)) as submitted_at,
           u.full_name as leader_name, 
           s.name as section_name, 
-          st.name as service_name,
+          COALESCE(st.name, 'Selected service') as service_name,
           COUNT(DISTINCT a.id) as records_count
-        FROM submission_log sl
-        JOIN leaders l ON sl.leader_id = l.id
+        FROM attendance a
+        JOIN members m ON a.member_id = m.id
+        JOIN leaders l ON m.leader_id = l.id
         JOIN users u ON l.user_id = u.id
-        JOIN sections s ON sl.section_id = s.id
-        JOIN service_types st ON sl.service_id = st.id
-        LEFT JOIN attendance a
-          ON sl.date = a.date
-         AND a.service_type_id = sl.service_id
-         AND (
-           a.submitted_by = u.id
-           OR a.member_id IN (SELECT id FROM members WHERE leader_id = sl.leader_id)
-         )
+        JOIN sections s ON m.section_id = s.id
+        LEFT JOIN service_types st ON a.service_type_id = st.id
+        LEFT JOIN submission_log sl
+          ON sl.leader_id = l.id
+         AND sl.date = a.date
+         AND sl.service_id = a.service_type_id
         ${serviceCondition}
-        GROUP BY sl.id, sl.date, sl.created_at, u.full_name, s.name, st.name
-        ORDER BY sl.date DESC, sl.created_at DESC
+        GROUP BY a.date, a.service_type_id, st.name, l.id, u.full_name, s.name
+        ORDER BY a.date DESC, submitted_at DESC
         LIMIT 200
       `, params, (err, rows) => {
         if (err) reject(err);

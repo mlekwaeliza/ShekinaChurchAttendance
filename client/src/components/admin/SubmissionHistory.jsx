@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, CalendarDays, FileText, Users, Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { addDays, formatDisplayDate, formatLocalDate, parseLocalDate } from '../../utils/date';
 
@@ -10,6 +10,16 @@ const SubmissionHistory = ({
   onServiceChange,
   loadHistory 
 }) => {
+  const initializedServiceRef = useRef(false);
+
+  useEffect(() => {
+    if (initializedServiceRef.current) return;
+    initializedServiceRef.current = true;
+    if (selectedServiceId !== 'all') {
+      onServiceChange('all');
+    }
+  }, [onServiceChange, selectedServiceId]);
+
   useEffect(() => {
     loadHistory();
   }, [selectedServiceId, loadHistory]);
@@ -93,46 +103,50 @@ const SubmissionHistory = ({
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-            <Clock className="w-5 h-5 text-white" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 p-6 text-white shadow-xl shadow-amber-500/20">
+        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
+        <div className="relative z-10 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Submission History</h2>
+              <p className="text-sm text-white/80">
+                {totalSubmissions} submissions &middot; {totalRecords} records tracked
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Submission History</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {totalSubmissions} submissions · {totalRecords} records tracked
-            </p>
-          </div>
-        </div>
 
-        {/* Service Selector */}
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-700 shadow-sm shrink-0 no-scrollbar overflow-x-auto max-w-full">
-          <div className="flex gap-1">
-            {serviceTypes.map(service => (
+          {/* Service Selector */}
+          <div className="flex max-w-full shrink-0 items-center gap-2 overflow-x-auto rounded-2xl border border-white/20 bg-white/10 p-1.5 shadow-sm backdrop-blur-sm">
+            <div className="flex gap-1">
               <button
-                key={service.id}
-                onClick={() => onServiceChange(service.id)}
-                className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all duration-300 whitespace-nowrap ${
-                  selectedServiceId === service.id
-                    ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                onClick={() => onServiceChange('all')}
+                className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-[11px] font-bold transition-all duration-300 ${
+                  selectedServiceId === 'all'
+                    ? 'bg-white text-orange-600 shadow-md shadow-orange-900/10'
+                    : 'text-white/80 hover:bg-white/15 hover:text-white'
                 }`}
               >
-                {service.name === 'Main Service' ? 'Main' : service.name.split(' ')[0]}
+                All
               </button>
-            ))}
 
-            <button
-              onClick={() => onServiceChange('all')}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all duration-300 whitespace-nowrap ${
-                selectedServiceId === 'all'
-                  ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-              }`}
-            >
-              All
-            </button>
+              {serviceTypes.map(service => (
+                <button
+                  key={service.id}
+                  onClick={() => onServiceChange(service.id)}
+                  className={`whitespace-nowrap rounded-xl px-3 py-1.5 text-[11px] font-bold transition-all duration-300 ${
+                    selectedServiceId === service.id
+                      ? 'bg-white text-orange-600 shadow-md shadow-orange-900/10'
+                      : 'text-white/80 hover:bg-white/15 hover:text-white'
+                  }`}
+                >
+                  {service.name === 'Main Service' ? 'Main' : service.name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
