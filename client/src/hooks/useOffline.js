@@ -83,8 +83,8 @@ const useOffline = () => {
         } catch (error) {
           const errorMsg = error.response?.data?.error || '';
           if (errorMsg.includes('already submitted') || errorMsg.includes('Already')) {
-            await markAsConflict(record.id);
-            conflictCount++;
+            await markAsSynced(record.id);
+            synced++;
           } else {
             failed++;
           }

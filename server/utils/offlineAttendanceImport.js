@@ -184,10 +184,24 @@ async function commitPackage(pkg, options = {}) {
   await transaction(async (tx) => {
     for (const row of summary.rows) {
       if (row.action !== 'insert') continue;
-      await tx.run(
-        'INSERT INTO attendance (member_id, date, status, service_type_id, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
-        [row.member_id, normalized.date, row.status, normalized.service_id, options.importedByUserId || null]
+      const insertResult = await tx.run(
+        `INSERT INTO attendance (member_id, date, status, service_type_id, submitted_by, submitted_at)
+         SELECT ?, ?, ?, ?, ?, CURRENT_TIMESTAMP
+         WHERE NOT EXISTS (
+           SELECT 1 FROM attendance WHERE member_id = ? AND date = ? AND service_type_id = ?
+         )`,
+        [
+          row.member_id,
+          normalized.date,
+          row.status,
+          normalized.service_id,
+          options.importedByUserId || null,
+          row.member_id,
+          normalized.date,
+          normalized.service_id
+        ]
       );
+      if (!insertResult.changes) continue;
       imported++;
 
       const points = row.status === 'present' ? pointsConfig.present : row.status === 'excused' ? pointsConfig.excused : 0;
