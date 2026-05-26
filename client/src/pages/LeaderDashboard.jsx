@@ -50,7 +50,7 @@ const LeaderDashboard = () => {
   const handleSubmitAndRedirect = async () => {
     const success = await data.handleSubmit();
     if (success) {
-      navigate('/leader/history');
+      navigate('/leader');
     }
   };
 
