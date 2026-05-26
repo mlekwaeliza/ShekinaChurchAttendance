@@ -92,25 +92,38 @@ const Layout = ({ children, showNav = true }) => {
   };
 
   const handleRefreshApp = async () => {
+    if (refreshingApp) return;
     setRefreshingApp(true);
+    const forceReload = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_refresh', Date.now().toString());
+      window.location.replace(url.toString());
+    };
+
     try {
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map(async (registration) => {
-          await registration.update();
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-          }
-        }));
-      }
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
-      }
+      const refreshPrep = async () => {
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(async (registration) => {
+            await registration.update();
+            if (registration.waiting) {
+              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          }));
+        }
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+        }
+      };
+      await Promise.race([
+        refreshPrep(),
+        new Promise((resolve) => setTimeout(resolve, 1200))
+      ]);
     } catch (error) {
       console.warn('App refresh preparation failed:', error);
     } finally {
-      window.location.reload();
+      forceReload();
     }
   };
 
@@ -436,6 +449,11 @@ const Layout = ({ children, showNav = true }) => {
             >
               <RefreshCw className={`w-5 h-5 ${refreshingApp ? 'animate-spin' : ''}`} />
             </button>
+            {refreshingApp && (
+              <span className="hidden md:inline-flex items-center rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
+                Refreshing...
+              </span>
+            )}
 
             {/* Notification bell */}
             <NotificationBell user={user} />
