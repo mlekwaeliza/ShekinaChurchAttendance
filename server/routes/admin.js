@@ -1258,8 +1258,10 @@ router.get('/aggregated-overview', async (req, res) => {
     }
 
     const loadAttendance = (condition, conditionParams) => new Promise((resolve, reject) => {
-        const q = `SELECT a.*, l.id as leader_id FROM attendance a JOIN members m ON a.member_id = m.id JOIN leaders l ON m.leader_id = l.id WHERE ${condition} AND (a.service_type_id = ? OR ? = 'all')`;
-        db.all(q, [...conditionParams, service_id, service_id], (err, rows) => {
+        const serviceCondition = service_id === 'all' ? '' : ' AND a.service_type_id = ?';
+        const q = `SELECT a.*, l.id as leader_id FROM attendance a JOIN members m ON a.member_id = m.id JOIN leaders l ON m.leader_id = l.id WHERE ${condition}${serviceCondition}`;
+        const queryParams = service_id === 'all' ? conditionParams : [...conditionParams, service_id];
+        db.all(q, queryParams, (err, rows) => {
           if (err) reject(err); else resolve(rows);
         });
     });
@@ -1270,9 +1272,13 @@ router.get('/aggregated-overview', async (req, res) => {
 
     if (attendance.length === 0 && fallback_latest === 'true' && filterType === 'weekly') {
       const latest = await new Promise((resolve, reject) => {
+        const q = service_id === 'all'
+          ? `SELECT MAX(date) AS latest_date FROM attendance`
+          : `SELECT MAX(date) AS latest_date FROM attendance WHERE service_type_id = ?`;
+        const queryParams = service_id === 'all' ? [] : [service_id];
         db.get(
-          `SELECT MAX(date) AS latest_date FROM attendance WHERE (service_type_id = ? OR ? = 'all')`,
-          [service_id, service_id],
+          q,
+          queryParams,
           (err, row) => err ? reject(err) : resolve(row?.latest_date)
         );
       });
@@ -1306,7 +1312,9 @@ router.get('/aggregated-overview', async (req, res) => {
     const stats = { present: 0, absent: 0, excused: 0, total_submitted_leaders: 0, total_leaders: allLeaders.length };
     
     const logs = await new Promise((resolve, reject) => {
-       db.all(`SELECT leader_id, date FROM submission_log a WHERE ${dateCondition} AND (a.service_id = ? OR ? = 'all')`, [...params, service_id, service_id], (err, rows) => {
+       const serviceCondition = service_id === 'all' ? '' : ' AND a.service_id = ?';
+       const queryParams = service_id === 'all' ? params : [...params, service_id];
+       db.all(`SELECT leader_id, date FROM submission_log a WHERE ${dateCondition}${serviceCondition}`, queryParams, (err, rows) => {
           if(err) resolve([]); else resolve(rows);
        });
     });
