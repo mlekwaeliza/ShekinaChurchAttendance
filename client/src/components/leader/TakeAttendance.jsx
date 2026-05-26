@@ -329,11 +329,11 @@ const TakeAttendance = ({
           <button
             type="button"
             onClick={onDownloadOfflinePackage}
-            disabled={unmarked.length > 0 || members.length === 0 || submitted}
+            disabled={unmarked.length > 0 || members.length === 0 || (submitted && !isOfflineSubmit)}
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-600 dark:hover:bg-indigo-500 sm:w-auto"
           >
             <Download className="h-4 w-4" />
-            Download Package
+            {isOfflineSubmit ? 'Download Queued Package' : 'Download Package'}
           </button>
         </div>
       </div>

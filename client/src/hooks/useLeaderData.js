@@ -34,6 +34,31 @@ const getScheduledServiceId = (services, dateString) => {
   return scheduledService?.id || getFallbackServiceId(services);
 };
 
+const LEADER_CORE_CACHE_PREFIX = 'leader-core-cache';
+
+const getLeaderCoreCacheKey = (leaderId) => `${LEADER_CORE_CACHE_PREFIX}:${leaderId || 'default'}`;
+
+const readLeaderCoreCache = (leaderId) => {
+  try {
+    const cached = localStorage.getItem(getLeaderCoreCacheKey(leaderId)) ||
+      localStorage.getItem(getLeaderCoreCacheKey('latest'));
+    return cached ? JSON.parse(cached) : null;
+  } catch (error) {
+    console.warn('Failed to read offline leader cache:', error);
+    return null;
+  }
+};
+
+const writeLeaderCoreCache = (leaderId, snapshot) => {
+  try {
+    const serialized = JSON.stringify({ ...snapshot, cached_at: new Date().toISOString() });
+    localStorage.setItem(getLeaderCoreCacheKey(leaderId), serialized);
+    localStorage.setItem(getLeaderCoreCacheKey('latest'), serialized);
+  } catch (error) {
+    console.warn('Failed to save offline leader cache:', error);
+  }
+};
+
 const useLeaderData = () => {
   const { isOnline, queueSubmission, syncPending } = useOffline();
 
@@ -147,27 +172,53 @@ const useLeaderData = () => {
         leaderAPI.getMembers(attendanceLeaderId),
         leaderAPI.getServiceTypes()
       ]);
-      
-      setSectionInfo({
-        section_id: membersRes.data.section_id,
-        name: membersRes.data.section_name,
-        leader_id: membersRes.data.leader_id,
-        leader: membersRes.data.leader_name,
-      });
-      setMembers(membersRes.data.members);
-      setIsHead(Boolean(membersRes.data.is_head));
-      setSectionLeaders(membersRes.data.section_leaders || []);
-      setAttendanceLeaderId((current) => current || membersRes.data.attendance_leader_id);
-      setAttendanceLeaderName(membersRes.data.attendance_leader_name || membersRes.data.leader_name);
-      setActingOnBehalf(Boolean(membersRes.data.acting_on_behalf));
-      setServiceTypes(servicesRes.data);
+
+      const snapshot = {
+        sectionInfo: {
+          section_id: membersRes.data.section_id,
+          name: membersRes.data.section_name,
+          leader_id: membersRes.data.leader_id,
+          leader: membersRes.data.leader_name,
+        },
+        members: membersRes.data.members,
+        isHead: Boolean(membersRes.data.is_head),
+        sectionLeaders: membersRes.data.section_leaders || [],
+        attendanceLeaderId: membersRes.data.attendance_leader_id,
+        attendanceLeaderName: membersRes.data.attendance_leader_name || membersRes.data.leader_name,
+        actingOnBehalf: Boolean(membersRes.data.acting_on_behalf),
+        serviceTypes: servicesRes.data,
+      };
+
+      setSectionInfo(snapshot.sectionInfo);
+      setMembers(snapshot.members);
+      setIsHead(snapshot.isHead);
+      setSectionLeaders(snapshot.sectionLeaders);
+      setAttendanceLeaderId((current) => current || snapshot.attendanceLeaderId);
+      setAttendanceLeaderName(snapshot.attendanceLeaderName);
+      setActingOnBehalf(snapshot.actingOnBehalf);
+      setServiceTypes(snapshot.serviceTypes);
       setAttendance({});
+      writeLeaderCoreCache(snapshot.attendanceLeaderId || attendanceLeaderId, snapshot);
     } catch (error) {
       console.error('Failed to load leader core data:', error);
+      const cached = readLeaderCoreCache(attendanceLeaderId);
+      if (cached) {
+        setSectionInfo(cached.sectionInfo);
+        setMembers(cached.members || []);
+        setIsHead(Boolean(cached.isHead));
+        setSectionLeaders(cached.sectionLeaders || []);
+        setAttendanceLeaderId((current) => current || cached.attendanceLeaderId);
+        setAttendanceLeaderName(cached.attendanceLeaderName || cached.sectionInfo?.leader || '');
+        setActingOnBehalf(Boolean(cached.actingOnBehalf));
+        setServiceTypes(cached.serviceTypes || []);
+        showMessage('Offline roster loaded. You can mark attendance and sync later.', 6000);
+      } else {
+        showMessage('No offline roster found. Open this page once while online before using it offline.', 7000);
+      }
     } finally {
       setLoading(false);
     }
-  }, [attendanceLeaderId]);
+  }, [attendanceLeaderId, showMessage]);
 
   const handleAttendanceLeaderSelection = useCallback((leaderId) => {
     setAttendanceLeaderId(leaderId ? Number(leaderId) : null);
@@ -523,6 +574,9 @@ const useLeaderData = () => {
         }
         if (result.conflicts > 0) {
           showMessage(`${result.conflicts} record(s) had conflicts — check sync status`, 6000);
+        }
+        if (result.failed > 0) {
+          showMessage(`${result.failed} offline submission(s) could not sync. Download the queued package and send it to admin.`, 7000);
         }
       });
     }
