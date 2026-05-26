@@ -1099,6 +1099,8 @@ router.get('/history', async (req, res) => {
   try {
     const { service_id = 'all' } = req.query;
     const history = await new Promise((resolve, reject) => {
+      const serviceCondition = service_id === 'all' ? '' : 'WHERE sl.service_id = ?';
+      const params = service_id === 'all' ? [] : [service_id];
       db.all(`
         SELECT 
           sl.date, 
@@ -1106,7 +1108,7 @@ router.get('/history', async (req, res) => {
           u.full_name as leader_name, 
           s.name as section_name, 
           st.name as service_name,
-          COUNT(a.id) as records_count
+          COUNT(DISTINCT a.id) as records_count
         FROM submission_log sl
         JOIN leaders l ON sl.leader_id = l.id
         JOIN users u ON l.user_id = u.id
@@ -1119,11 +1121,11 @@ router.get('/history', async (req, res) => {
            a.submitted_by = u.id
            OR a.member_id IN (SELECT id FROM members WHERE leader_id = sl.leader_id)
          )
-        WHERE (sl.service_id = ? OR ? = 'all')
+        ${serviceCondition}
         GROUP BY sl.id
         ORDER BY sl.date DESC, sl.created_at DESC
         LIMIT 200
-      `, [service_id, service_id], (err, rows) => {
+      `, params, (err, rows) => {
         if (err) reject(err);
         else resolve(rows);
       });
