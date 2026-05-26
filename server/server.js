@@ -63,7 +63,7 @@ app.use(cors({
 // Rate limiting - general
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // allow normal dashboard navigation while login remains strictly limited
   skip: isLocalRequest
 });
 app.use('/api/', limiter);

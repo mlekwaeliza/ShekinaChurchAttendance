@@ -97,6 +97,7 @@ const useAdminData = () => {
 
   const messageTimerRef = useRef(null);
   const latestReportInitializedRef = useRef(false);
+  const overviewRequestRef = useRef(0);
   const showMessage = useCallback((msg, duration = 3000) => {
     setMessage(msg);
     if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
@@ -212,9 +213,13 @@ const useAdminData = () => {
 
   const loadOverview = useCallback(async () => {
     if (!filterValue) return;
+    const requestId = overviewRequestRef.current + 1;
+    overviewRequestRef.current = requestId;
     setOverviewLoading(true);
     try {
       const res = await adminAPI.getAggregatedOverview(filterType, filterValue, selectedServiceId);
+      if (requestId !== overviewRequestRef.current) return;
+
       setOverviewData(res.data);
       if (res.data?.usedFallback && res.data.filterValue && res.data.filterValue !== filterValue) {
         setFilterValue(res.data.filterValue);
@@ -225,9 +230,10 @@ const useAdminData = () => {
       }
     } catch (error) {
       console.error('Failed to load overview:', error);
-      setOverviewData(null);
     } finally {
-      setOverviewLoading(false);
+      if (requestId === overviewRequestRef.current) {
+        setOverviewLoading(false);
+      }
     }
   }, [filterType, filterValue, selectedServiceId, updateSearchParam]);
 
