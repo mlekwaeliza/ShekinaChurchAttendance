@@ -86,7 +86,7 @@ export const adminAPI = {
   getSettingsConfig: () => api.get('/admin/settings/config'),
   updateSettingsConfig: (config) => api.put('/admin/settings/config', { config }),
   getAggregatedOverview: (filterType, filterValue, serviceId) => api.get('/admin/aggregated-overview', { 
-    params: { filterType, filterValue, service_id: serviceId } 
+    params: { filterType, filterValue, service_id: serviceId, fallback_latest: true } 
   }),
   getLeaderDashboard: (id) => api.get(`/admin/leader-dashboard/${id}`),
   submitAttendance: (date, attendance, leader_id, section_id) => api.post('/admin/attendance', { date, attendance, leader_id, section_id }),

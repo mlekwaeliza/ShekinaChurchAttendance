@@ -52,6 +52,15 @@ function getISOWeekRange(weekStr) {
   return { start, end };
 }
 
+function getISOWeekString(dateValue) {
+  const date = new Date(`${formatLocalDate(new Date(dateValue))}T12:00:00`);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+  const week1 = new Date(date.getFullYear(), 0, 4);
+  const week = 1 + Math.round(((date - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+  return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
 // --- Announcements ---
 router.get('/announcements', async (req, res) => {
   try {
@@ -1227,7 +1236,7 @@ router.get('/section-overview/:date', validateDate('date'), async (req, res) => 
 // GET aggregated overview for weekly, monthly, yearly
 router.get('/aggregated-overview', async (req, res) => {
   try {
-    const { filterType, filterValue, service_id = 'all' } = req.query;
+    let { filterType, filterValue, service_id = 'all', fallback_latest = 'false' } = req.query;
     
     if (!['weekly', 'monthly', 'yearly'].includes(filterType) || !filterValue) {
       return res.status(400).json({ error: 'Valid filterType and filterValue required' });
@@ -1248,12 +1257,50 @@ router.get('/aggregated-overview', async (req, res) => {
       params.push(start, end);
     }
 
-    const attendance = await new Promise((resolve, reject) => {
-        let q = `SELECT a.*, l.id as leader_id FROM attendance a JOIN members m ON a.member_id = m.id JOIN leaders l ON m.leader_id = l.id WHERE ${dateCondition} AND (a.service_type_id = ? OR ? = 'all')`;
-        db.all(q, [...params, service_id, service_id], (err, rows) => {
+    const loadAttendance = (condition, conditionParams) => new Promise((resolve, reject) => {
+        const q = `SELECT a.*, l.id as leader_id FROM attendance a JOIN members m ON a.member_id = m.id JOIN leaders l ON m.leader_id = l.id WHERE ${condition} AND (a.service_type_id = ? OR ? = 'all')`;
+        db.all(q, [...conditionParams, service_id, service_id], (err, rows) => {
           if (err) reject(err); else resolve(rows);
         });
     });
+
+    let attendance = await loadAttendance(dateCondition, params);
+    let usedFallback = false;
+    let effectiveServiceId = service_id;
+
+    if (attendance.length === 0 && fallback_latest === 'true' && filterType === 'weekly') {
+      const latest = await new Promise((resolve, reject) => {
+        db.get(
+          `SELECT MAX(date) AS latest_date FROM attendance WHERE (service_type_id = ? OR ? = 'all')`,
+          [service_id, service_id],
+          (err, row) => err ? reject(err) : resolve(row?.latest_date)
+        );
+      });
+
+      let latestDate = latest;
+      if (!latestDate && service_id !== 'all') {
+        latestDate = await new Promise((resolve, reject) => {
+          db.get(
+            `SELECT MAX(date) AS latest_date FROM attendance`,
+            [],
+            (err, row) => err ? reject(err) : resolve(row?.latest_date)
+          );
+        });
+        if (latestDate) {
+          service_id = 'all';
+          effectiveServiceId = 'all';
+        }
+      }
+
+      if (latestDate) {
+        filterValue = getISOWeekString(latestDate);
+        const { start, end } = getISOWeekRange(filterValue);
+        dateCondition = "a.date BETWEEN ? AND ?";
+        params = [start, end];
+        attendance = await loadAttendance(dateCondition, params);
+        usedFallback = true;
+      }
+    }
 
     const allLeaders = await queries.getAllLeaders();
     const stats = { present: 0, absent: 0, excused: 0, total_submitted_leaders: 0, total_leaders: allLeaders.length };
@@ -1308,7 +1355,7 @@ router.get('/aggregated-overview', async (req, res) => {
         return left.leader_name.localeCompare(right.leader_name);
       });
 
-      res.json({ filterType, filterValue, stats, subleaders: subleaderReport });
+      res.json({ filterType, filterValue, requestedFilterValue: req.query.filterValue, service_id: effectiveServiceId, usedFallback, stats, subleaders: subleaderReport });
     } catch (error) {
       console.error('Aggregated overview error:', error);
       res.status(500).json({ error: 'Failed to aggregate overview' });

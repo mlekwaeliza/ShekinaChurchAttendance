@@ -216,13 +216,20 @@ const useAdminData = () => {
     try {
       const res = await adminAPI.getAggregatedOverview(filterType, filterValue, selectedServiceId);
       setOverviewData(res.data);
+      if (res.data?.usedFallback && res.data.filterValue && res.data.filterValue !== filterValue) {
+        setFilterValue(res.data.filterValue);
+        updateSearchParam('period', res.data.filterValue);
+      }
+      if (res.data?.usedFallback && res.data.service_id && res.data.service_id !== selectedServiceId) {
+        setSelectedServiceId(res.data.service_id === 'all' ? 'all' : parseInt(res.data.service_id));
+      }
     } catch (error) {
       console.error('Failed to load overview:', error);
       setOverviewData(null);
     } finally {
       setOverviewLoading(false);
     }
-  }, [filterType, filterValue, selectedServiceId]);
+  }, [filterType, filterValue, selectedServiceId, updateSearchParam]);
 
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true);
