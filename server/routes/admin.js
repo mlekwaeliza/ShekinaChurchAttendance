@@ -1283,23 +1283,8 @@ router.get('/aggregated-overview', async (req, res) => {
         );
       });
 
-      let latestDate = latest;
-      if (!latestDate && service_id !== 'all') {
-        latestDate = await new Promise((resolve, reject) => {
-          db.get(
-            `SELECT MAX(date) AS latest_date FROM attendance`,
-            [],
-            (err, row) => err ? reject(err) : resolve(row?.latest_date)
-          );
-        });
-        if (latestDate) {
-          service_id = 'all';
-          effectiveServiceId = 'all';
-        }
-      }
-
-      if (latestDate) {
-        filterValue = getISOWeekString(latestDate);
+      if (latest) {
+        filterValue = getISOWeekString(latest);
         const { start, end } = getISOWeekRange(filterValue);
         dateCondition = "a.date BETWEEN ? AND ?";
         params = [start, end];

@@ -225,9 +225,6 @@ const useAdminData = () => {
         setFilterValue(res.data.filterValue);
         updateSearchParam('period', res.data.filterValue);
       }
-      if (res.data?.usedFallback && res.data.service_id && res.data.service_id !== selectedServiceId) {
-        setSelectedServiceId(res.data.service_id === 'all' ? 'all' : parseInt(res.data.service_id));
-      }
     } catch (error) {
       console.error('Failed to load overview:', error);
     } finally {
