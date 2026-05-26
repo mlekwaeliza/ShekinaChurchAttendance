@@ -250,23 +250,21 @@ const useAdminData = () => {
     if (filterType !== 'weekly') return;
 
     try {
-      const res = await adminAPI.getHistory(selectedServiceId);
+      const res = await adminAPI.getHistory('all');
       let latestDate = res.data?.[0]?.date;
-
-      if (!latestDate && selectedServiceId !== 'all') {
-        const allServicesRes = await adminAPI.getHistory('all');
-        latestDate = allServicesRes.data?.[0]?.date;
-      }
 
       if (!latestDate) return;
 
-      const latestWeek = getWeekString(new Date(`${latestDate}T12:00:00`));
+      const latestDateOnly = String(latestDate).split('T')[0];
+      const latestWeek = getWeekString(new Date(`${latestDateOnly}T12:00:00`));
+      setSelectedServiceId('all');
       setFilterValue(latestWeek);
       updateSearchParam('period', latestWeek);
+      updateSearchParam('service', 'all');
     } catch (error) {
       console.warn('Failed to load latest report window:', error);
     }
-  }, [filterType, selectedServiceId, updateSearchParam]);
+  }, [filterType, updateSearchParam]);
 
   const loadTrends = useCallback(async () => {
     setTrendsLoading(true);
