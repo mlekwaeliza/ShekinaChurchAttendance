@@ -36,6 +36,7 @@ import {
   MessageSquare,
   Cake,
   Calendar,
+  Home,
   Megaphone,
   ClipboardCheck,
   UserPlus,
@@ -137,6 +138,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/sections', label: 'Sections', icon: Layers },
         { path: '/admin/members', label: 'Members', icon: Users },
         { path: '/admin/leaders', label: 'Leaders', icon: UserCog },
+        { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
       ]},
       { section: 'INSIGHTS', items: [
         { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
@@ -161,6 +163,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
         { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
         { path: '/leader/members', label: 'My Members', icon: Users },
+        { path: '/leader/home-cells', label: 'Home Cell Members', icon: Home },
         { path: '/leader/outreach', label: 'Outreach', icon: MessageSquare },
         { path: '/leader/history', label: 'History', icon: Clock },
         { path: '/leader/reports', label: 'Reports', icon: BarChart3 },

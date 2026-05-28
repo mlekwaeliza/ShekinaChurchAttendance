@@ -26,6 +26,7 @@ import FollowUpsView from '../components/admin/FollowUpsView';
 import VisitorIntake from '../components/admin/VisitorIntake';
 import SyncCenter from '../components/admin/SyncCenter';
 import ChurchCalendar from '../components/ChurchCalendar';
+import HomeCellsView from '../components/admin/HomeCellsView';
 
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
 
@@ -194,6 +195,9 @@ const AdminDashboard = () => {
             onDelete={(leader) => data.setDeletingLeader(leader)}
           />
         );
+
+      case 'home-cells':
+        return <HomeCellsView leaders={data.leaders} />;
 
       case 'reports':
         return (

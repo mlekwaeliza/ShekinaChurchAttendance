@@ -13,6 +13,7 @@ import LeaderOutreach from '../components/leader/LeaderOutreach';
 import SectionOverview from '../components/leader/SectionOverview';
 import ConflictResolutionModal from '../components/leader/ConflictResolutionModal';
 import ChurchCalendar from '../components/ChurchCalendar';
+import HomeCellMembers from '../components/leader/HomeCellMembers';
 
 const LeaderDashboard = () => {
   const { tab } = useParams();
@@ -126,6 +127,9 @@ const LeaderDashboard = () => {
             onUpdateFollowUp={data.handleUpdateFollowUp}
           />
         );
+
+      case 'home-cells':
+        return <HomeCellMembers />;
 
       case 'history':
         return (

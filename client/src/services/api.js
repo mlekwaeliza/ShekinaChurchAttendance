@@ -121,6 +121,8 @@ export const adminAPI = {
   updateServiceType: (id, data) => api.put(`/admin/service-types/${id}`, data),
   getServiceInstance: (date, serviceId) => api.get(`/admin/service-instances/${date}`, { params: { service_id: serviceId } }),
   saveServiceInstance: (date, serviceId, assignedLeaderIds) => api.post('/admin/service-instances', { date, service_id: serviceId, assigned_leader_ids: assignedLeaderIds }),
+  getHomeCells: () => api.get('/admin/home-cells'),
+  updateHomeCellLeaders: (cellId, leaderIds) => api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
   previewOfflineImport: (offlinePackage) => api.post('/admin/offline-import/preview', { package: offlinePackage }),
   commitOfflineImport: (offlinePackage, originalFilename) => api.post('/admin/offline-import/commit', {
     package: offlinePackage,
@@ -159,6 +161,9 @@ export const leaderAPI = {
   createMember: (data) => api.post('/leader/members', data),
   updateMember: (id, data) => api.put(`/leader/members/${id}`, data),
   deleteMember: (id) => api.delete(`/leader/members/${id}`),
+  getHomeCells: () => api.get('/leader/home-cells'),
+  createHomeCellMember: (data) => api.post('/leader/home-cell-members', data),
+  deleteHomeCellMember: (id) => api.delete(`/leader/home-cell-members/${id}`),
   getAttendanceStatus: (date, serviceId, targetLeaderId) => api.get(`/leader/attendance/${date}`, {
     params: {
       service_id: serviceId,

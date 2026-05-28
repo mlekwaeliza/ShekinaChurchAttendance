@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
-const { queries, run, get, db } = require('../database');
+const { queries, run, get, all, db } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate } = require('../utils/date');
 const { inspectPackage, commitPackage, listRecentImports } = require('../utils/offlineAttendanceImport');
@@ -25,6 +25,10 @@ router.use(requireRole(['admin']));
 
 const allowedPriorities = new Set(['normal', 'important', 'urgent']);
 const allowedFollowUpTypes = new Set(['Member', 'Visitor']);
+
+const parseLeaderIds = (value) => Array.isArray(value)
+  ? value.map((id) => Number(id)).filter((id) => Number.isInteger(id))
+  : [];
 
 // Helper for date calculations
 function getISOWeekRange(weekStr) {
@@ -111,6 +115,66 @@ router.delete('/announcements/:id', async (req, res) => {
   } catch (error) {
     console.error('Delete announcement error:', error);
     res.status(500).json({ error: 'Failed to remove announcement' });
+  }
+});
+
+// --- Home Cells ---
+router.get('/home-cells', async (req, res) => {
+  try {
+    const cells = await all(`
+      SELECT hc.*, COALESCE(COUNT(DISTINCT hcm.id), 0) AS member_count
+      FROM home_cells hc
+      LEFT JOIN home_cell_members hcm ON hcm.cell_id = hc.id AND hcm.is_active = 1
+      WHERE hc.is_active = 1
+      GROUP BY hc.id, hc.name, hc.cell_number, hc.is_active, hc.created_at
+      ORDER BY hc.cell_number
+    `);
+
+    const leaders = await all(`
+      SELECT hcl.cell_id, l.id AS leader_id, u.full_name, s.name AS section_name
+      FROM home_cell_leaders hcl
+      JOIN leaders l ON l.id = hcl.leader_id
+      JOIN users u ON u.id = l.user_id
+      JOIN sections s ON s.id = l.section_id
+      WHERE l.is_active = 1
+      ORDER BY u.full_name
+    `);
+
+    res.json(cells.map((cell) => ({
+      ...cell,
+      leaders: leaders.filter((leader) => Number(leader.cell_id) === Number(cell.id))
+    })));
+  } catch (error) {
+    console.error('Fetch home cells error:', error);
+    res.status(500).json({ error: 'Failed to fetch home cells' });
+  }
+});
+
+router.put('/home-cells/:id/leaders', async (req, res) => {
+  try {
+    const cellId = Number(req.params.id);
+    const leaderIds = parseLeaderIds(req.body.leader_ids);
+    if (!Number.isInteger(cellId)) {
+      return res.status(400).json({ error: 'Invalid home cell' });
+    }
+
+    const cell = await get('SELECT id FROM home_cells WHERE id = ? AND is_active = 1', [cellId]);
+    if (!cell) {
+      return res.status(404).json({ error: 'Home cell not found' });
+    }
+
+    await run('DELETE FROM home_cell_leaders WHERE cell_id = ?', [cellId]);
+    for (const leaderId of leaderIds) {
+      const leader = await get('SELECT id FROM leaders WHERE id = ? AND is_active = 1', [leaderId]);
+      if (leader) {
+        await run('INSERT INTO home_cell_leaders (cell_id, leader_id) VALUES (?, ?)', [cellId, leaderId]);
+      }
+    }
+
+    res.json({ message: 'Home cell leaders updated' });
+  } catch (error) {
+    console.error('Update home cell leaders error:', error);
+    res.status(500).json({ error: 'Failed to update home cell leaders' });
   }
 });
 

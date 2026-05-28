@@ -1,5 +1,5 @@
 const express = require('express');
-const { db, queries } = require('../database');
+const { db, queries, get, all, run } = require('../database');
 const { isAuthenticated, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate, getWeekStartString } = require('../utils/date');
 const { commitPackage } = require('../utils/offlineAttendanceImport');
@@ -7,6 +7,12 @@ const { upsertAttendanceSql } = require('../utils/sqlDialect');
 
 const router = express.Router();
 router.use(isAuthenticated);
+
+const normalizePersonKey = (name, phone = '') => {
+  const normalizedName = String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const normalizedPhone = String(phone || '').replace(/\D/g, '');
+  return `${normalizedName}|${normalizedPhone}`;
+};
 
 async function getTargetLeaderRecord(currentLeader, targetLeaderId) {
   if (!targetLeaderId || Number(targetLeaderId) === Number(currentLeader.id)) {
@@ -183,6 +189,127 @@ router.delete('/members/:id', async (req, res) => {
   } catch (error) {
     console.error('Delete member error:', error);
     res.status(500).json({ error: 'Failed to delete member' });
+  }
+});
+
+// GET home cells assigned to this leader
+router.get('/home-cells', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const cells = await all(`
+      SELECT hc.*
+      FROM home_cells hc
+      JOIN home_cell_leaders hcl ON hcl.cell_id = hc.id
+      WHERE hcl.leader_id = ? AND hc.is_active = 1
+      ORDER BY hc.cell_number
+    `, [leaderRecord.id]);
+
+    const members = await all(`
+      SELECT hcm.*, hc.name AS cell_name, m.membership_id AS church_membership_id
+      FROM home_cell_members hcm
+      JOIN home_cells hc ON hc.id = hcm.cell_id
+      JOIN home_cell_leaders hcl ON hcl.cell_id = hc.id
+      LEFT JOIN members m ON m.id = hcm.church_member_id
+      WHERE hcl.leader_id = ? AND hcm.is_active = 1
+      ORDER BY hc.cell_number, hcm.full_name
+    `, [leaderRecord.id]);
+
+    res.json({ cells, members });
+  } catch (error) {
+    console.error('Fetch leader home cells error:', error);
+    res.status(500).json({ error: 'Failed to fetch home cells' });
+  }
+});
+
+router.post('/home-cell-members', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const cellId = Number(req.body.cell_id);
+    const fullName = String(req.body.full_name || '').trim();
+    const phone = req.body.phone || null;
+    const churchMembershipId = String(req.body.membership_id || '').trim();
+
+    if (!Number.isInteger(cellId) || !fullName) {
+      return res.status(400).json({ error: 'Home cell and full name are required' });
+    }
+
+    const assignment = await get(
+      'SELECT id FROM home_cell_leaders WHERE cell_id = ? AND leader_id = ?',
+      [cellId, leaderRecord.id]
+    );
+    if (!assignment) {
+      return res.status(403).json({ error: 'You are not assigned to this home cell' });
+    }
+
+    let churchMember = null;
+    if (churchMembershipId) {
+      churchMember = await queries.getMemberByMembershipId(churchMembershipId);
+      if (!churchMember) {
+        return res.status(400).json({ error: 'Church member ID was not found' });
+      }
+    }
+
+    const duplicateKey = churchMember
+      ? `member:${churchMember.id}`
+      : `person:${normalizePersonKey(fullName, phone)}`;
+
+    const duplicate = await get(
+      'SELECT id, full_name FROM home_cell_members WHERE duplicate_key = ? AND is_active = 1',
+      [duplicateKey]
+    );
+    if (duplicate) {
+      return res.status(400).json({ error: `${duplicate.full_name} is already registered in a home cell` });
+    }
+
+    await run(`
+      INSERT INTO home_cell_members
+        (cell_id, church_member_id, full_name, phone, email, address, duplicate_key, added_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      cellId,
+      churchMember?.id || null,
+      fullName,
+      phone,
+      req.body.email || null,
+      req.body.address || null,
+      duplicateKey,
+      req.session.userId
+    ]);
+
+    res.status(201).json({ message: 'Home cell member added' });
+  } catch (error) {
+    console.error('Create home cell member error:', error);
+    if (String(error.message || '').includes('UNIQUE')) {
+      return res.status(400).json({ error: 'This person is already registered in a home cell' });
+    }
+    res.status(500).json({ error: 'Failed to add home cell member' });
+  }
+});
+
+router.delete('/home-cell-members/:id', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const member = await get(`
+      SELECT hcm.id
+      FROM home_cell_members hcm
+      JOIN home_cell_leaders hcl ON hcl.cell_id = hcm.cell_id
+      WHERE hcm.id = ? AND hcl.leader_id = ?
+    `, [req.params.id, leaderRecord.id]);
+    if (!member) {
+      return res.status(404).json({ error: 'Home cell member not found' });
+    }
+
+    await run('UPDATE home_cell_members SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Home cell member removed' });
+  } catch (error) {
+    console.error('Delete home cell member error:', error);
+    res.status(500).json({ error: 'Failed to remove home cell member' });
   }
 });
 
