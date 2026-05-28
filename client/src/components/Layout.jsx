@@ -139,7 +139,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/leaders', label: 'Leaders', icon: UserCog },
       ]},
       { section: 'INSIGHTS', items: [
-        { path: '/calendar', label: 'Calendar', icon: Calendar },
+        { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
         { path: '/admin/reports', label: 'Reports', icon: FileText },
         { path: '/admin/history', label: 'History', icon: Clock },
         { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
@@ -158,7 +158,7 @@ const Layout = ({ children, showNav = true }) => {
     leader: [
       { section: 'MAIN', items: [
         { path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-        { path: '/calendar', label: 'Calendar', icon: Calendar },
+        { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
         { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
         { path: '/leader/members', label: 'My Members', icon: Users },
         { path: '/leader/outreach', label: 'Outreach', icon: MessageSquare },
@@ -170,7 +170,7 @@ const Layout = ({ children, showNav = true }) => {
     pastor: [
       { section: 'MAIN', items: [
         { path: '/pastor', label: 'Overview', icon: LayoutDashboard, exact: true },
-        { path: '/calendar', label: 'Calendar', icon: Calendar },
+        { path: '/pastor/calendar', label: 'Calendar', icon: Calendar },
         { path: '/pastor/insights', label: 'Insights', icon: Activity },
         { path: '/pastor/engagement', label: 'Engagement', icon: MessageSquare },
         { path: '/pastor/weekly', label: 'Weekly Summary', icon: Calendar },

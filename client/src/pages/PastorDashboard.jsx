@@ -26,6 +26,7 @@ import {
 
 import { pastorAPI } from '../services/api';
 import BirthdayModule from '../components/admin/BirthdayModule';
+import ChurchCalendar from '../components/ChurchCalendar';
 import PastorEngagement from '../components/pastor/PastorEngagement';
 import PastorInsights from '../components/pastor/PastorInsights';
 import PastorWeeklySummary from '../components/pastor/PastorWeeklySummary';
@@ -707,6 +708,8 @@ const PastorDashboard = () => {
   };
 
   switch (activeTab) {
+    case 'calendar':
+      return <ChurchCalendar />;
     case 'insights':
       return <PastorInsights />;
     case 'engagement':

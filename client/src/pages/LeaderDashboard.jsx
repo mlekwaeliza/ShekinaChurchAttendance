@@ -12,6 +12,7 @@ import LeaderReports from '../components/leader/LeaderReports';
 import LeaderOutreach from '../components/leader/LeaderOutreach';
 import SectionOverview from '../components/leader/SectionOverview';
 import ConflictResolutionModal from '../components/leader/ConflictResolutionModal';
+import ChurchCalendar from '../components/ChurchCalendar';
 
 const LeaderDashboard = () => {
   const { tab } = useParams();
@@ -100,6 +101,9 @@ const LeaderDashboard = () => {
             queuedForDate={data.queuedForDate}
           />
         );
+
+      case 'calendar':
+        return <ChurchCalendar />;
 
       case 'members':
         return (

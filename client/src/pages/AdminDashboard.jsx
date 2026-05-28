@@ -25,6 +25,7 @@ import AnnouncementCenter from '../components/admin/AnnouncementCenter';
 import FollowUpsView from '../components/admin/FollowUpsView';
 import VisitorIntake from '../components/admin/VisitorIntake';
 import SyncCenter from '../components/admin/SyncCenter';
+import ChurchCalendar from '../components/ChurchCalendar';
 
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
 
@@ -210,6 +211,9 @@ const AdminDashboard = () => {
             onLeaderClick={data.openLeaderDashboard}
           />
         );
+
+      case 'calendar':
+        return <ChurchCalendar />;
 
       case 'history':
         return (
