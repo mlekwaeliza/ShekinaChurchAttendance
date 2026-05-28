@@ -122,7 +122,10 @@ export const adminAPI = {
   getServiceInstance: (date, serviceId) => api.get(`/admin/service-instances/${date}`, { params: { service_id: serviceId } }),
   saveServiceInstance: (date, serviceId, assignedLeaderIds) => api.post('/admin/service-instances', { date, service_id: serviceId, assigned_leader_ids: assignedLeaderIds }),
   getHomeCells: () => api.get('/admin/home-cells'),
+  createHomeCell: (data) => api.post('/admin/home-cells', data),
   updateHomeCellLeaders: (cellId, leaderIds) => api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
+  createHomeCellMember: (data) => api.post('/admin/home-cell-members', data),
+  deleteHomeCellMember: (id) => api.delete(`/admin/home-cell-members/${id}`),
   previewOfflineImport: (offlinePackage) => api.post('/admin/offline-import/preview', { package: offlinePackage }),
   commitOfflineImport: (offlinePackage, originalFilename) => api.post('/admin/offline-import/commit', {
     package: offlinePackage,

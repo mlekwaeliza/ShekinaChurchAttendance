@@ -197,7 +197,7 @@ const AdminDashboard = () => {
         );
 
       case 'home-cells':
-        return <HomeCellsView leaders={data.leaders} />;
+        return <HomeCellsView leaders={data.leaders} allMembers={data.allMembers} />;
 
       case 'reports':
         return (
