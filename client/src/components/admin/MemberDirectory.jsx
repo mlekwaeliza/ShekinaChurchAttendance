@@ -459,6 +459,9 @@ const MemberDirectory = ({
                             {member.age_group && (
                               <Badge variant="neutral" className="text-[10px] px-1.5 py-0.5">{member.age_group}</Badge>
                             )}
+                            {member.home_cell_name && (
+                              <Badge variant="success" className="text-[10px] px-1.5 py-0.5">{member.home_cell_name}</Badge>
+                            )}
                           </div>
                         </td>
                         {/* Actions */}
@@ -501,6 +504,10 @@ const MemberDirectory = ({
                               <div className="space-y-1">
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Leader</p>
                                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.leader_name || '—'}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Home Cell</p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.home_cell_name || '—'}</p>
                               </div>
                               <div className="space-y-1">
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Phone</p>

@@ -36,6 +36,67 @@ const normalizePersonKey = (name, phone = '') => {
   return `${normalizedName}|${normalizedPhone}`;
 };
 
+async function syncChurchMemberHomeCell(memberId, cellId, userId) {
+  const parsedMemberId = Number(memberId);
+  const parsedCellId = cellId ? Number(cellId) : null;
+  if (!Number.isInteger(parsedMemberId)) return;
+
+  if (!Number.isInteger(parsedCellId)) {
+    await run(
+      'UPDATE home_cell_members SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE church_member_id = ? AND is_active = 1',
+      [parsedMemberId]
+    );
+    return;
+  }
+
+  const member = await get('SELECT id, membership_id, full_name, phone, email, address FROM members WHERE id = ? AND is_active = 1', [parsedMemberId]);
+  if (!member) return;
+
+  const cell = await get('SELECT id FROM home_cells WHERE id = ? AND is_active = 1', [parsedCellId]);
+  if (!cell) {
+    const error = new Error('Selected home cell does not exist');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const duplicate = await get(`
+    SELECT id, full_name
+    FROM home_cell_members
+    WHERE church_member_id = ? AND is_active = 1 AND cell_id != ?
+  `, [parsedMemberId, parsedCellId]);
+  if (duplicate) {
+    const error = new Error(`${duplicate.full_name} is already assigned to another home cell`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const active = await get('SELECT id FROM home_cell_members WHERE church_member_id = ? AND is_active = 1', [parsedMemberId]);
+  const duplicateKey = `member:${parsedMemberId}`;
+  if (active) {
+    await run(`
+      UPDATE home_cell_members
+      SET cell_id = ?, full_name = ?, phone = ?, email = ?, address = ?, duplicate_key = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [parsedCellId, member.full_name, member.phone || null, member.email || null, member.address || null, duplicateKey, active.id]);
+    return;
+  }
+
+  await run(`
+    INSERT INTO home_cell_members
+      (cell_id, church_member_id, full_name, phone, email, address, duplicate_key, added_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    parsedCellId,
+    parsedMemberId,
+    member.full_name,
+    member.phone || null,
+    member.email || null,
+    member.address || null,
+    duplicateKey,
+    userId || null
+  ]);
+}
+
 // Helper for date calculations
 function getISOWeekRange(weekStr) {
   const parts = weekStr.split('-W');
@@ -621,11 +682,13 @@ router.put('/members/:id', async (req, res) => {
       leaderId,
       id
     );
+
+    await syncChurchMemberHomeCell(id, req.body.home_cell_id || null, req.session.userId);
     
     res.json({ message: 'Member updated' });
   } catch (error) {
     console.error('Update member error:', error);
-    res.status(500).json({ error: 'Failed to update member' });
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to update member' });
   }
 });
 
@@ -1193,7 +1256,7 @@ router.post('/members', async (req, res) => {
       return res.status(400).json({ error: 'Leader does not belong to the specified section' });
     }
 
-    await queries.createMember(
+    const created = await queries.createMember(
       membership_id, full_name, sectionId, leaderId, 
       phone || null, email || null, gender || null, age_group || null,
       date_of_birth || null, 
@@ -1203,10 +1266,17 @@ router.post('/members', async (req, res) => {
       address || null
     );
 
+    let memberId = created.lastID;
+    if (!memberId) {
+      const createdMember = await queries.getMemberByMembershipId(membership_id);
+      memberId = createdMember?.id;
+    }
+    await syncChurchMemberHomeCell(memberId, req.body.home_cell_id || null, req.session.userId);
+
     res.json({ message: 'Member created successfully' });
   } catch (error) {
     console.error('Create member error:', error);
-    res.status(500).json({ error: 'Failed to create member' });
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to create member' });
   }
 });
 
