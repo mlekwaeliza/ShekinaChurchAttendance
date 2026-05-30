@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
-const fs = require('fs');
 const { queries, get } = require('../database');
 
 const router = express.Router();
@@ -48,16 +47,8 @@ router.post('/login', async (req, res) => {
     username = username.trim();
     password = password.trim();
 
-    const logEntry = (msg) => {
-      const timestamp = new Date().toISOString();
-      fs.appendFileSync(path.join(__dirname, '../debug.log'), `[${timestamp}] ${msg}\n`);
-    };
-
-    logEntry(`Login attempt - Username: "${username}" (Len: ${username.length}), PassLen: ${password.length}`);
-
     const user = await queries.findUserByUsername(username);
     if (!user) {
-      logEntry(`Login failed: User "${username}" not found in database.`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -73,7 +64,6 @@ router.post('/login', async (req, res) => {
     }
 
     const validPassword = bcrypt.compareSync(password, user.password_hash);
-    logEntry(`Password check for "${username}": ${validPassword ? 'MATCH' : 'FAIL'}`);
     if (!validPassword) {
       const attempts = (user.failed_login_attempts || 0) + 1;
       await queries.incrementFailedLogin(user.id);
