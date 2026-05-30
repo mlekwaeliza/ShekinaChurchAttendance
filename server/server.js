@@ -17,7 +17,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const { queries, db, all, ensureHomeCellSchema } = require('./database');
+const { queries, db, all, ensureAttendanceServiceUniqueness, ensureHomeCellSchema } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const authRoutes = require('./routes/auth');
@@ -311,6 +311,7 @@ async function startServer() {
       });
     });
     console.log('Database connection established');
+    await ensureAttendanceServiceUniqueness();
     await ensureHomeCellSchema();
     await initializeAdmin();
     await generateNotifications();

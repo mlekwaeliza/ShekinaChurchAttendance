@@ -1689,7 +1689,7 @@ router.post('/attendance', async (req, res) => {
       return res.status(400).json({ error: 'Date, leader_id, section_id, and attendance array required' });
     }
 
-    const existingSubmission = await queries.checkSubmissionExists(leader_id, date);
+    const existingSubmission = await queries.checkSubmissionExists(leader_id, date, service_id);
     if (existingSubmission) {
       return res.status(400).json({ error: 'Attendance already submitted for this leader on this date' });
     }
