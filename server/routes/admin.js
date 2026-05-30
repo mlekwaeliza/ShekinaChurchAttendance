@@ -14,6 +14,7 @@ const {
   inspectServerSyncPackage,
   commitServerSyncPackage
 } = require('../utils/serverSyncPackage');
+const { generateTemporaryPassword } = require('../utils/passwordPolicy');
 const { yearEquals, monthEquals, weekEquals, upsertAttendanceSql } = require('../utils/sqlDialect');
 
 const router = express.Router();
@@ -715,9 +716,8 @@ router.post('/leaders', async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ error: 'Username already taken' });
     }
-    // Default password for new leaders
-    const crypto = require('crypto');
-    const tempPassword = `temp_${crypto.randomBytes(8).toString('hex')}`;
+    // Temporary password for new leaders
+    const tempPassword = generateTemporaryPassword('Leader');
     const passwordHash = bcrypt.hashSync(tempPassword, 10);
     const { lastID: userId } = await queries.createUser(username, passwordHash, 'leader', full_name);
     await queries.createLeader(userId, section_id, phone, email, is_head ? 1 : 0);
@@ -882,7 +882,7 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
           let leaderUser = await queries.findUserByUsername(leaderUsername);
 
           if (!leaderUser) {
-            const tempPassword = `temp_${uuidv4().substring(0, 8)}`;
+            const tempPassword = generateTemporaryPassword('Leader');
             const passwordHash = bcrypt.hashSync(tempPassword, 10);
             try {
               await queries.createUser(leaderUsername, passwordHash, 'leader', leaderNameOrId);
@@ -1189,7 +1189,7 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
     }
 
     // Generate temporary password
-    const tempPassword = `temp_${uuidv4().substring(0, 8)}`;
+    const tempPassword = generateTemporaryPassword('Leader');
     const passwordHash = bcrypt.hashSync(tempPassword, 10);
 
     // Update user password

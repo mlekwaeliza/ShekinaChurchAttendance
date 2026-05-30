@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 const { queries, get } = require('../database');
+const { validatePasswordPolicy } = require('../utils/passwordPolicy');
 
 const router = express.Router();
 
@@ -160,8 +161,9 @@ router.post('/change-password', async (req, res) => {
       return res.status(400).json({ error: 'Current password and new password required' });
     }
 
-    if (new_password.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    const passwordPolicy = validatePasswordPolicy(new_password);
+    if (!passwordPolicy.valid) {
+      return res.status(400).json({ error: passwordPolicy.message });
     }
 
     // Get user from session
