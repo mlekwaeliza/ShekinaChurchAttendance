@@ -84,10 +84,10 @@ CREATE TABLE IF NOT EXISTS attendance (
   date DATE NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'excused')),
   submitted_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  service_type_id INTEGER NOT NULL DEFAULT 1 REFERENCES service_types(id) ON DELETE RESTRICT,
+  service_type_id INTEGER REFERENCES service_types(id) ON DELETE SET NULL,
   service_type TEXT DEFAULT 'main',
   submitted_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (member_id, date, service_type_id)
+  UNIQUE (member_id, date)
 );
 
 CREATE TABLE IF NOT EXISTS submission_log (

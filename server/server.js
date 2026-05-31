@@ -17,7 +17,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const { queries, db, all, ensureAttendanceServiceUniqueness, ensureHomeCellSchema } = require('./database');
+const { queries, db, all, ensureHomeCellSchema } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const authRoutes = require('./routes/auth');
@@ -33,7 +33,6 @@ const calendarRoutes = require('./routes/calendar');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
-const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
 const trustProxy = String(process.env.TRUST_PROXY || '').toLowerCase() === 'true';
 const cookieSecure = isProduction || String(process.env.COOKIE_SECURE || '').toLowerCase() === 'true';
 const clientUrl = process.env.CLIENT_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000';
@@ -92,7 +91,7 @@ if (!sessionSecret) {
   process.exit(1);
 }
 
-const sessionConfig = {
+app.use(session({
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
@@ -102,19 +101,7 @@ const sessionConfig = {
     sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
-};
-
-if (dbClient === 'postgres') {
-  const PgSession = require('connect-pg-simple')(session);
-  const { pool } = require('./db/postgres');
-  sessionConfig.store = new PgSession({
-    pool,
-    tableName: 'user_sessions',
-    createTableIfMissing: true
-  });
-}
-
-app.use(session(sessionConfig));
+}));
 
 // CSRF Protection (for authenticated state-changing requests)
 app.use('/api/', csrfProtect());
@@ -161,6 +148,7 @@ app.use(express.static(clientDist, {
 // Health check
 app.get('/api/health', async (req, res) => {
   const uptime = process.uptime();
+  const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
   const memory = {
     rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,
     heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
@@ -323,7 +311,6 @@ async function startServer() {
       });
     });
     console.log('Database connection established');
-    await ensureAttendanceServiceUniqueness();
     await ensureHomeCellSchema();
     await initializeAdmin();
     await generateNotifications();

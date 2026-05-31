@@ -87,13 +87,10 @@ db.serialize(() => {
       date DATE NOT NULL,
       status TEXT NOT NULL CHECK(status IN ('present', 'absent', 'excused')),
       submitted_by INTEGER NOT NULL,
-      service_type_id INTEGER DEFAULT 1,
-      service_type TEXT DEFAULT 'main',
       submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
       FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (service_type_id) REFERENCES service_types(id) ON DELETE SET NULL,
-      UNIQUE(member_id, date, service_type_id)
+      UNIQUE(member_id, date)
     );
 
     CREATE TABLE IF NOT EXISTS submission_log (
@@ -689,47 +686,6 @@ async function ensureHomeCellSchema() {
       'INSERT INTO home_cells (name, cell_number, is_active) VALUES (?, ?, 1) ON CONFLICT DO NOTHING',
       [`Home Cell ${number}`, number]
     );
-  }
-}
-
-async function ensureAttendanceServiceUniqueness() {
-  if (!usePostgres) return;
-
-  await run('ALTER TABLE attendance ALTER COLUMN service_type_id SET DEFAULT 1');
-  await run('UPDATE attendance SET service_type_id = 1 WHERE service_type_id IS NULL');
-  await run('ALTER TABLE attendance ALTER COLUMN service_type_id SET NOT NULL');
-
-  const oldConstraints = await all(`
-    SELECT conname
-    FROM pg_constraint
-    WHERE conrelid = 'attendance'::regclass
-      AND contype = 'u'
-      AND (
-        SELECT array_agg(att.attname ORDER BY ord.ordinality)
-        FROM unnest(conkey) WITH ORDINALITY AS ord(attnum, ordinality)
-        JOIN pg_attribute att ON att.attrelid = conrelid AND att.attnum = ord.attnum
-      ) = ARRAY['member_id', 'date']
-  `);
-
-  for (const constraint of oldConstraints) {
-    const constraintName = String(constraint.conname || '').replace(/"/g, '""');
-    await run(`ALTER TABLE attendance DROP CONSTRAINT "${constraintName}"`);
-  }
-
-  const serviceConstraint = await get(`
-    SELECT conname
-    FROM pg_constraint
-    WHERE conrelid = 'attendance'::regclass
-      AND contype = 'u'
-      AND (
-        SELECT array_agg(att.attname ORDER BY ord.ordinality)
-        FROM unnest(conkey) WITH ORDINALITY AS ord(attnum, ordinality)
-        JOIN pg_attribute att ON att.attrelid = conrelid AND att.attnum = ord.attnum
-      ) = ARRAY['member_id', 'date', 'service_type_id']
-  `);
-
-  if (!serviceConstraint) {
-    await run('ALTER TABLE attendance ADD CONSTRAINT attendance_member_date_service_unique UNIQUE (member_id, date, service_type_id)');
   }
 }
 
@@ -1784,6 +1740,5 @@ module.exports = {
   get,
   all,
   transaction,
-  ensureAttendanceServiceUniqueness,
   ensureHomeCellSchema
 };

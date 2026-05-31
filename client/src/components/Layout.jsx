@@ -103,18 +103,15 @@ const Layout = ({ children, showNav = true }) => {
 
     try {
       const refreshPrep = async () => {
-        // 1. Unregister all service workers to force release control immediately
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
           await Promise.all(registrations.map(async (registration) => {
+            await registration.update();
             if (registration.waiting) {
               registration.waiting.postMessage({ type: 'SKIP_WAITING' });
             }
-            const unregistered = await registration.unregister();
-            console.log('Service worker unregistered:', unregistered);
           }));
         }
-        // 2. Nuke all caches
         if ('caches' in window) {
           const cacheNames = await caches.keys();
           await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
@@ -122,7 +119,7 @@ const Layout = ({ children, showNav = true }) => {
       };
       await Promise.race([
         refreshPrep(),
-        new Promise((resolve) => setTimeout(resolve, 1500))
+        new Promise((resolve) => setTimeout(resolve, 1200))
       ]);
     } catch (error) {
       console.warn('App refresh preparation failed:', error);

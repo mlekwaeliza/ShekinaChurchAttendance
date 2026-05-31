@@ -14,17 +14,6 @@ const ChangePasswordPage = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const validatePasswordPolicy = (password) => {
-    const failures = [];
-    if (password.length < 12) failures.push('at least 12 characters');
-    if (!/[a-z]/.test(password)) failures.push('one lowercase letter');
-    if (!/[A-Z]/.test(password)) failures.push('one uppercase letter');
-    if (!/\d/.test(password)) failures.push('one number');
-    if (!/[^A-Za-z0-9]/.test(password)) failures.push('one symbol');
-    if (/\s/.test(password)) failures.push('no spaces');
-    return failures;
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -39,9 +28,8 @@ const ChangePasswordPage = () => {
       return;
     }
 
-    const passwordFailures = validatePasswordPolicy(formData.new_password);
-    if (passwordFailures.length > 0) {
-      setMessage({ type: 'error', text: `New password must contain ${passwordFailures.join(', ')}.` });
+    if (formData.new_password.length < 6) {
+      setMessage({ type: 'error', text: 'New password must be at least 6 characters' });
       return;
     }
 
@@ -109,13 +97,10 @@ const ChangePasswordPage = () => {
               value={formData.new_password}
               onChange={handleChange}
               required
-              minLength={12}
+              minLength={6}
               className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded px-3 py-2"
               placeholder="Enter new password"
             />
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Use 12+ characters with uppercase, lowercase, number, and symbol.
-            </p>
           </div>
 
           <div>
@@ -128,7 +113,7 @@ const ChangePasswordPage = () => {
               value={formData.confirm_password}
               onChange={handleChange}
               required
-              minLength={12}
+              minLength={6}
               className="w-full border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded px-3 py-2"
               placeholder="Re-enter new password"
             />

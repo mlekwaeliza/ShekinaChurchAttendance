@@ -26,4 +26,3 @@ client/dev-client*.log
 client/build_output*.txt
 client/build_output*.log
 .DS_Store
-corrupted_git/
