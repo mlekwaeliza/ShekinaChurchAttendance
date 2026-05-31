@@ -88,6 +88,7 @@ const useAdminData = () => {
   const [leaderSaving, setLeaderSaving] = useState(false);
   const [leaderSectionFilter, setLeaderSectionFilter] = useState(() => getSearchValue('section'));
   const [memberSectionFilter, setMemberSectionFilter] = useState(() => getSearchValue('section'));
+  const [memberLeaderFilter, setMemberLeaderFilter] = useState(() => getSearchValue('leader'));
 
   // Service Assignments Modal
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
@@ -119,6 +120,11 @@ const useAdminData = () => {
   const handleMemberSectionFilter = useCallback((sectionName) => {
     setMemberSectionFilter(sectionName);
     updateSearchParam('section', sectionName);
+  }, [updateSearchParam]);
+
+  const handleMemberLeaderFilter = useCallback((leaderName) => {
+    setMemberLeaderFilter(leaderName);
+    updateSearchParam('leader', leaderName);
   }, [updateSearchParam]);
 
   const handleLeaderSectionFilter = useCallback((sectionName) => {
@@ -517,6 +523,7 @@ const useAdminData = () => {
     handleLeaderSave, handleLeaderDelete,
     leaderSectionFilter, setLeaderSectionFilter: handleLeaderSectionFilter,
     memberSectionFilter, setMemberSectionFilter: handleMemberSectionFilter,
+    memberLeaderFilter, setMemberLeaderFilter: handleMemberLeaderFilter,
     // Service Assignments
     isAssignmentModalOpen, setIsAssignmentModalOpen,
     selectedInstanceDate, setSelectedInstanceDate,

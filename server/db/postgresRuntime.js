@@ -22,6 +22,25 @@ function normalizeArgs(params, callback) {
   return { params: params || [], callback };
 }
 
+// Sequential Execution Queue to prevent PG command concurrency errors
+let queryQueue = Promise.resolve();
+
+function enqueue(fn) {
+  const next = new Promise((resolve, reject) => {
+    queryQueue.then(async () => {
+      try {
+        const result = await fn();
+        resolve(result);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+  // Ensure the chain always resolves so subsequent queries can run even if this one failed
+  queryQueue = next.catch(() => {});
+  return next;
+}
+
 async function execute(sql, params = []) {
   const normalizedSql = toPostgresSql(sql);
   const client = transactionClient || pool;
@@ -29,57 +48,63 @@ async function execute(sql, params = []) {
 }
 
 async function runAsync(sql, params = []) {
-  const command = sql.trim().toUpperCase();
+  return enqueue(async () => {
+    const command = sql.trim().toUpperCase();
 
-  if (command === 'BEGIN TRANSACTION' || command === 'BEGIN') {
-    if (transactionClient) {
-      throw new Error('A PostgreSQL transaction is already active');
-    }
-    transactionClient = await pool.connect();
-    await transactionClient.query('BEGIN');
-    return { changes: 0, lastID: null };
-  }
-
-  if (command === 'COMMIT') {
-    if (!transactionClient) return { changes: 0, lastID: null };
-    const client = transactionClient;
-    transactionClient = null;
-    try {
-      await client.query('COMMIT');
+    if (command === 'BEGIN TRANSACTION' || command === 'BEGIN') {
+      if (transactionClient) {
+        throw new Error('A PostgreSQL transaction is already active');
+      }
+      transactionClient = await pool.connect();
+      await transactionClient.query('BEGIN');
       return { changes: 0, lastID: null };
-    } finally {
-      client.release();
     }
-  }
 
-  if (command === 'ROLLBACK') {
-    if (!transactionClient) return { changes: 0, lastID: null };
-    const client = transactionClient;
-    transactionClient = null;
-    try {
-      await client.query('ROLLBACK');
-      return { changes: 0, lastID: null };
-    } finally {
-      client.release();
+    if (command === 'COMMIT') {
+      if (!transactionClient) return { changes: 0, lastID: null };
+      const client = transactionClient;
+      transactionClient = null;
+      try {
+        await client.query('COMMIT');
+        return { changes: 0, lastID: null };
+      } finally {
+        client.release();
+      }
     }
-  }
 
-  const result = await execute(maybeReturningId(sql), params);
-  return {
-    changes: result.rowCount,
-    lastID: result.rows[0]?.id || null,
-    rows: result.rows
-  };
+    if (command === 'ROLLBACK') {
+      if (!transactionClient) return { changes: 0, lastID: null };
+      const client = transactionClient;
+      transactionClient = null;
+      try {
+        await client.query('ROLLBACK');
+        return { changes: 0, lastID: null };
+      } finally {
+        client.release();
+      }
+    }
+
+    const result = await execute(maybeReturningId(sql), params);
+    return {
+      changes: result.rowCount,
+      lastID: result.rows[0]?.id || null,
+      rows: result.rows
+    };
+  });
 }
 
 async function getAsync(sql, params = []) {
-  const result = await execute(sql, params);
-  return result.rows[0] || null;
+  return enqueue(async () => {
+    const result = await execute(sql, params);
+    return result.rows[0] || null;
+  });
 }
 
 async function allAsync(sql, params = []) {
-  const result = await execute(sql, params);
-  return result.rows;
+  return enqueue(async () => {
+    const result = await execute(sql, params);
+    return result.rows;
+  });
 }
 
 function callbackify(promise, callback, context = {}) {
@@ -123,7 +148,8 @@ const db = {
   },
 
   exec(sql, callback) {
-    callbackify(execute(sql), callback);
+    const nextExec = () => enqueue(() => execute(sql));
+    callbackify(nextExec(), callback);
   },
 
   close(callback) {

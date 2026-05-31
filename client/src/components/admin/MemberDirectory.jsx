@@ -25,6 +25,8 @@ const MemberDirectory = ({
   onRefresh,
   sectionFilter: externalSectionFilter,
   onSectionFilterChange,
+  leaderFilter: externalLeaderFilter,
+  onLeaderFilterChange,
   loading = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,7 +38,12 @@ const MemberDirectory = ({
     if (onSectionFilterChange) onSectionFilterChange(val);
     else setLocalSectionFilter(val);
   };
-  const [leaderFilter, setLeaderFilter] = useState('');
+  const [localLeaderFilter, setLocalLeaderFilter] = useState('');
+  const leaderFilter = externalLeaderFilter !== undefined ? externalLeaderFilter : localLeaderFilter;
+  const handleLeaderFilterChange = (val) => {
+    if (onLeaderFilterChange) onLeaderFilterChange(val);
+    else setLocalLeaderFilter(val);
+  };
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState('full_name');
@@ -251,7 +258,7 @@ const MemberDirectory = ({
 
             <select
               value={leaderFilter}
-              onChange={(e) => setLeaderFilter(e.target.value)}
+              onChange={(e) => handleLeaderFilterChange(e.target.value)}
               className="select w-auto text-sm h-9 rounded-lg"
             >
               <option value="">All Leaders</option>
@@ -262,7 +269,7 @@ const MemberDirectory = ({
 
             {hasActiveFilters && (
               <button
-                onClick={() => { handleSectionFilterChange(''); setLeaderFilter(''); }}
+                onClick={() => { handleSectionFilterChange(''); handleLeaderFilterChange(''); }}
                 className="flex items-center gap-1 text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 font-medium"
               >
                 <X className="w-3.5 h-3.5" />
@@ -280,6 +287,21 @@ const MemberDirectory = ({
           <button
             type="button"
             onClick={() => handleSectionFilterChange('')}
+            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-slate-800 dark:text-primary-300"
+          >
+            <X className="h-3 w-3" />
+            Clear
+          </button>
+        </div>
+      )}
+
+      {leaderFilter && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-700 dark:border-primary-800/60 dark:bg-primary-900/20 dark:text-primary-300">
+          <span className="font-semibold">Filtered by leader:</span>
+          <span>{leaderFilter}</span>
+          <button
+            type="button"
+            onClick={() => handleLeaderFilterChange('')}
             className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-slate-800 dark:text-primary-300"
           >
             <X className="h-3 w-3" />

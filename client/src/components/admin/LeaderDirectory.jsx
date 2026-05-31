@@ -32,6 +32,7 @@ const LeaderDirectory = ({
   sectionFilter,
   setSectionFilter,
   onViewAnalytics,
+  onViewMembers,
   onAdd,
   onEdit,
   onDelete
@@ -260,14 +261,22 @@ const LeaderDirectory = ({
                               <Users className="w-3.5 h-3.5" />
                               <span>{membersByLeader[leader.id]?.length || 0} Members</span>
                             </div>
-                            {membersByLeader[leader.id]?.length > 0 && (
+                            <div className="flex items-center gap-3">
                               <button
-                                onClick={() => toggleLeaderRoster(leader.id)}
+                                onClick={() => onViewMembers(leader)}
                                 className={`text-xs font-bold ${style.text} hover:underline decoration-2 underline-offset-4`}
                               >
-                                {expandedLeaderRosters.has(leader.id) ? 'Hide Roster' : 'View Roster'}
+                                View Members
                               </button>
-                            )}
+                              {membersByLeader[leader.id]?.length > 0 && (
+                                <button
+                                  onClick={() => toggleLeaderRoster(leader.id)}
+                                  className={`text-xs font-bold ${style.text} hover:underline decoration-2 underline-offset-4`}
+                                >
+                                  {expandedLeaderRosters.has(leader.id) ? 'Hide Roster' : 'View Roster'}
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           {/* Expandable Roster */}
@@ -301,28 +310,37 @@ const LeaderDirectory = ({
                           </div>
 
                           {/* Actions */}
-                          <div className="flex items-center gap-1 pt-3 border-t border-slate-100 dark:border-slate-700">
+                          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
                             <button
                               onClick={() => onViewAnalytics(leader.id)}
-                              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium ${style.text} ${style.bg} hover:shadow-sm transition-all`}
+                              className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium ${style.text} ${style.bg} hover:shadow-sm transition-all`}
                             >
                               <Eye className="w-3 h-3" />
                               Analytics
                             </button>
                             <button
-                              onClick={() => onEdit(leader)}
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                              title="Edit"
+                              onClick={() => onViewMembers(leader)}
+                              className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold ${style.text} ${style.bg} hover:shadow-sm transition-all`}
                             >
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Users className="w-3 h-3" />
+                              View Members
                             </button>
-                            <button
-                              onClick={() => onDelete(leader)}
-                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="col-span-2 flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => onEdit(leader)}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => onDelete(leader)}
+                                className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>

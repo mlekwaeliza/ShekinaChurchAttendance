@@ -118,6 +118,12 @@ const AdminDashboard = () => {
     navigate('/admin/members');
   };
 
+  const handleViewMembersOfLeader = (leader) => {
+    data.setMemberSectionFilter(leader.section_name);
+    data.setMemberLeaderFilter(leader.full_name);
+    navigate('/admin/members');
+  };
+
   // Tab-to-component mapping
   const renderTab = () => {
     switch (activeTab) {
@@ -172,6 +178,8 @@ const AdminDashboard = () => {
             leaders={data.leaders}
             sectionFilter={data.memberSectionFilter}
             onSectionFilterChange={data.setMemberSectionFilter}
+            leaderFilter={data.memberLeaderFilter}
+            onLeaderFilterChange={data.setMemberLeaderFilter}
             onEdit={handleEditClick}
             onAdd={handleAddClick}
             onDelete={handleDeleteClick}
@@ -190,6 +198,7 @@ const AdminDashboard = () => {
             sectionFilter={data.leaderSectionFilter}
             setSectionFilter={data.setLeaderSectionFilter}
             onViewAnalytics={data.openLeaderDashboard}
+            onViewMembers={handleViewMembersOfLeader}
             onAdd={() => { data.setEditingLeader(null); data.setIsLeaderModalOpen(true); }}
             onEdit={(leader) => { data.setEditingLeader(leader); data.setIsLeaderModalOpen(true); }}
             onDelete={(leader) => data.setDeletingLeader(leader)}
