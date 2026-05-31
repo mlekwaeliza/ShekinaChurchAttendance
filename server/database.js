@@ -1147,7 +1147,7 @@ const queries = {
       SELECT member_id, full_name, membership_id, section_name,
              MIN(CASE WHEN status != 'present' THEN rn END) as first_break
       FROM member_attendance
-      GROUP BY member_id
+      GROUP BY member_id, full_name, membership_id, section_name
     ),
     streaks AS (
       SELECT sb.member_id, sb.full_name, sb.membership_id, sb.section_name,
@@ -1179,7 +1179,7 @@ const queries = {
     JOIN sections s ON l.section_id = s.id
     LEFT JOIN attendance a ON sl.date = a.date AND a.submitted_by = u.id
     WHERE sl.date BETWEEN ? AND ?
-    GROUP BY l.id
+    GROUP BY l.id, s.name, u.full_name
     ORDER BY avg_rate DESC
   `, [startDate, endDate]),
   getUpcomingBirthdays: (days = 30, referenceMonthDay = formatMonthDay()) => {
@@ -1222,7 +1222,7 @@ const queries = {
       JOIN attendance a ON m.id = a.member_id
       JOIN sections s ON m.section_id = s.id
       WHERE a.date >= ?
-      GROUP BY m.id
+      GROUP BY m.id, m.full_name, m.membership_id, s.name
     ),
     member_streaks AS (
       SELECT m.id as member_id,
@@ -1254,12 +1254,12 @@ const queries = {
            COALESCE(ms.first_break - 1, mc.total_records) as streak,
            COALESCE(mt.recent_rate, 0) as recent_rate,
            COALESCE(mt.prior_rate, 0) as prior_rate,
-           ROUND(
-             (mc.consistency * 0.4) +
-             (MIN(COALESCE(ms.first_break - 1, mc.total_records), 12) / 12.0 * 100 * 0.3) +
-             (COALESCE(mt.recent_rate, 0) * 0.3),
-             1
-           ) as engagement_score
+            ROUND(
+              (mc.consistency * 0.4) +
+              ((CASE WHEN COALESCE(ms.first_break - 1, mc.total_records) < 12 THEN COALESCE(ms.first_break - 1, mc.total_records) ELSE 12 END) / 12.0 * 100 * 0.3) +
+              (COALESCE(mt.recent_rate, 0) * 0.3),
+              1
+            ) as engagement_score
     FROM member_consistency mc
     LEFT JOIN member_streaks ms ON mc.member_id = ms.member_id
     LEFT JOIN member_trend mt ON mc.member_id = mt.member_id
@@ -1400,7 +1400,7 @@ const queries = {
              COUNT(*) as streak
       FROM member_absences
       WHERE rn <= 10
-      GROUP BY member_id
+      GROUP BY member_id, full_name, membership_id, section_name
       HAVING streak >= 2
     )
     SELECT * FROM consecutive ORDER BY streak DESC
@@ -1548,13 +1548,13 @@ const queries = {
            COALESCE(lf.contacted_count, 0) as followups_completed,
            COALESCE(lf.total_followups, 0) as total_followups,
            COALESCE(la.section_rate, 0) as section_attendance_rate,
-           ROUND(
-             (COALESCE(ls.submission_rate, 0) * 0.35) +
-             (CASE WHEN COALESCE(lo.total_outreach, 0) > 0 THEN MIN(COALESCE(lo.members_contacted, 0) * 1.0 / NULLIF((SELECT COUNT(*) FROM members WHERE leader_id = l.id), 0) * 100, 100) ELSE 0 END * 0.30) +
-             (CASE WHEN COALESCE(lf.total_followups, 0) > 0 THEN COALESCE(lf.contacted_count, 0) * 1.0 / lf.total_followups * 100 ELSE 0 END * 0.20) +
-             (COALESCE(la.section_rate, 0) * 0.15),
-             1
-           ) as engagement_score
+            ROUND(
+              (COALESCE(ls.submission_rate, 0) * 0.35) +
+              (CASE WHEN COALESCE(lo.total_outreach, 0) > 0 THEN (CASE WHEN (COALESCE(lo.members_contacted, 0) * 1.0 / NULLIF((SELECT COUNT(*) FROM members WHERE leader_id = l.id), 0) * 100) > 100 THEN 100 ELSE (COALESCE(lo.members_contacted, 0) * 1.0 / NULLIF((SELECT COUNT(*) FROM members WHERE leader_id = l.id), 0) * 100) END) ELSE 0 END * 0.30) +
+              (CASE WHEN COALESCE(lf.total_followups, 0) > 0 THEN COALESCE(lf.contacted_count, 0) * 1.0 / lf.total_followups * 100 ELSE 0 END * 0.20) +
+              (COALESCE(la.section_rate, 0) * 0.15),
+              1
+            ) as engagement_score
     FROM leaders l
     JOIN users u ON l.user_id = u.id
     JOIN sections s ON l.section_id = s.id

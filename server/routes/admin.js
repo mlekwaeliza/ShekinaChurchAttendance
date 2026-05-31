@@ -1799,7 +1799,7 @@ router.get('/rewards/top-members', async (req, res) => {
           LEFT JOIN attendance a
             ON a.member_id = m.id
             AND a.date IN (SELECT date FROM service_days)
-          GROUP BY m.id
+          GROUP BY m.id, m.membership_id, m.full_name, s.name, u.full_name
         )
         SELECT
           id, membership_id, full_name, section_name, leader_name,
@@ -1858,7 +1858,7 @@ router.get('/rewards/top-leaders', async (req, res) => {
           JOIN users    u ON l.user_id    = u.id
           JOIN sections s ON l.section_id = s.id
           LEFT JOIN submission_log sl ON sl.leader_id = l.id
-          GROUP BY l.id
+          GROUP BY l.id, u.full_name, s.name
         )
         SELECT
           id, leader_name, section_name,
