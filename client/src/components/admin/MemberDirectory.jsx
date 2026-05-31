@@ -25,6 +25,8 @@ const MemberDirectory = ({
   onRefresh,
   sectionFilter: externalSectionFilter,
   onSectionFilterChange,
+  leaderFilter: externalLeaderFilter,
+  onLeaderFilterChange,
   loading = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -36,7 +38,12 @@ const MemberDirectory = ({
     if (onSectionFilterChange) onSectionFilterChange(val);
     else setLocalSectionFilter(val);
   };
-  const [leaderFilter, setLeaderFilter] = useState('');
+  const [localLeaderFilter, setLocalLeaderFilter] = useState('');
+  const leaderFilter = externalLeaderFilter !== undefined ? externalLeaderFilter : localLeaderFilter;
+  const handleLeaderFilterChange = (val) => {
+    if (onLeaderFilterChange) onLeaderFilterChange(val);
+    else setLocalLeaderFilter(val);
+  };
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState('full_name');
@@ -94,9 +101,16 @@ const MemberDirectory = ({
   }, [sections]);
 
   const uniqueLeaders = useMemo(() => {
-    const names = [...new Set(allMembers.map((m) => m.leader_name).filter(Boolean))];
-    return names.sort();
-  }, [allMembers]);
+    return [...leaders]
+      .filter((leader) => leader.id && leader.full_name)
+      .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  }, [leaders]);
+
+  const selectedLeaderName = useMemo(() => {
+    if (!leaderFilter) return '';
+    const selected = leaders.find((leader) => String(leader.id) === String(leaderFilter));
+    return selected?.full_name || '';
+  }, [leaderFilter, leaders]);
 
   const filteredMembers = useMemo(() => {
     let result = [...allMembers];
@@ -114,7 +128,7 @@ const MemberDirectory = ({
       result = result.filter((m) => m.section_name === sectionFilter);
     }
     if (leaderFilter) {
-      result = result.filter((m) => m.leader_name === leaderFilter);
+      result = result.filter((m) => String(m.leader_id) === String(leaderFilter));
     }
     // Sort
     result.sort((a, b) => {
@@ -251,18 +265,18 @@ const MemberDirectory = ({
 
             <select
               value={leaderFilter}
-              onChange={(e) => setLeaderFilter(e.target.value)}
+              onChange={(e) => handleLeaderFilterChange(e.target.value)}
               className="select w-auto text-sm h-9 rounded-lg"
             >
               <option value="">All Leaders</option>
-              {uniqueLeaders.map((name) => (
-                <option key={name} value={name}>{name}</option>
+              {uniqueLeaders.map((leader) => (
+                <option key={leader.id} value={leader.id}>{leader.full_name}</option>
               ))}
             </select>
 
             {hasActiveFilters && (
               <button
-                onClick={() => { handleSectionFilterChange(''); setLeaderFilter(''); }}
+                onClick={() => { handleSectionFilterChange(''); handleLeaderFilterChange(''); }}
                 className="flex items-center gap-1 text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 font-medium"
               >
                 <X className="w-3.5 h-3.5" />
@@ -281,6 +295,21 @@ const MemberDirectory = ({
             type="button"
             onClick={() => handleSectionFilterChange('')}
             className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-slate-800 dark:text-primary-300"
+          >
+            <X className="h-3 w-3" />
+            Clear
+          </button>
+        </div>
+      )}
+
+      {leaderFilter && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-900/20 dark:text-emerald-300">
+          <span className="font-semibold">Filtered by leader:</span>
+          <span>{selectedLeaderName || 'Selected leader'}</span>
+          <button
+            type="button"
+            onClick={() => handleLeaderFilterChange('')}
+            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-emerald-700 shadow-sm hover:bg-emerald-100 dark:bg-slate-800 dark:text-emerald-300"
           >
             <X className="h-3 w-3" />
             Clear

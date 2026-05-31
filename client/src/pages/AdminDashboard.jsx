@@ -58,6 +58,7 @@ const AdminDashboard = () => {
   const [deletingMember, setDeletingMember] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [memberLeaderFilter, setMemberLeaderFilter] = useState('');
 
   // Member CRUD handlers
   const handleEditClick = (member) => {
@@ -115,6 +116,13 @@ const AdminDashboard = () => {
 
   const handleViewMembers = (sectionName) => {
     data.setMemberSectionFilter(sectionName);
+    setMemberLeaderFilter('');
+    navigate('/admin/members');
+  };
+
+  const handleViewLeaderMembers = (leader) => {
+    data.setMemberSectionFilter(leader.section_name || '');
+    setMemberLeaderFilter(String(leader.id));
     navigate('/admin/members');
   };
 
@@ -172,6 +180,8 @@ const AdminDashboard = () => {
             leaders={data.leaders}
             sectionFilter={data.memberSectionFilter}
             onSectionFilterChange={data.setMemberSectionFilter}
+            leaderFilter={memberLeaderFilter}
+            onLeaderFilterChange={setMemberLeaderFilter}
             onEdit={handleEditClick}
             onAdd={handleAddClick}
             onDelete={handleDeleteClick}
@@ -190,6 +200,7 @@ const AdminDashboard = () => {
             sectionFilter={data.leaderSectionFilter}
             setSectionFilter={data.setLeaderSectionFilter}
             onViewAnalytics={data.openLeaderDashboard}
+            onViewMembers={handleViewLeaderMembers}
             onAdd={() => { data.setEditingLeader(null); data.setIsLeaderModalOpen(true); }}
             onEdit={(leader) => { data.setEditingLeader(leader); data.setIsLeaderModalOpen(true); }}
             onDelete={(leader) => data.setDeletingLeader(leader)}
