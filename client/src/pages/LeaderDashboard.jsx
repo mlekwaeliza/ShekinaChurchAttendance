@@ -52,6 +52,7 @@ const LeaderDashboard = () => {
   const handleSubmitAndRedirect = async () => {
     const success = await data.handleSubmit();
     if (success) {
+      alert('Attendance submitted successfully!');
       navigate('/leader');
     }
   };

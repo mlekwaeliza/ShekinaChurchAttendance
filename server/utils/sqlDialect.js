@@ -57,7 +57,7 @@ function upsertAttendanceSql({ includeServiceType = false } = {}) {
     return includeServiceType
       ? `INSERT INTO attendance (member_id, date, status, service_type_id, submitted_by, submitted_at)
          VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-         ON CONFLICT (member_id, date, service_type_id)
+         ON CONFLICT (member_id, date)
          DO UPDATE SET status = EXCLUDED.status,
                        service_type_id = EXCLUDED.service_type_id,
                        submitted_by = EXCLUDED.submitted_by,
