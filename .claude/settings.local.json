@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill //F //PID 7084)",
+      "Bash(taskkill //F //PID 13956)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill:*)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -s http://localhost:3001/)",
+      "Bash(tasklist:*)",
+      "Bash(powershell -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 3000\\).OwningProcess | Select-Object -ExpandProperty ProcessName\")",
+      "Bash(powershell -Command \"try { \\(Invoke-WebRequest -Uri http://localhost:3000 -UseBasicParsing\\).Content.Substring\\(0, [Math]::Min\\(500, \\(Invoke-WebRequest -Uri http://localhost:3000 -UseBasicParsing\\).Content.Length\\)\\) } catch { Write-Host 'Error: ' + $_.Exception.Message }\")",
+      "Bash(timeout 5 curl -I http://localhost:3000)",
+      "Bash(ls -1 *.js)",
+      "Bash(npm run:*)",
+      "Bash(findstr :3001)",
+      "Bash(curl:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(npm start:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof -ti:3001)",
+      "Bash(xargs kill:*)",
+      "Bash(npm list:*)",
+      "Bash(cd client:*)",
+      "Bash(npm config:*)",
+      "Bash(cd /c/Users/mlekw/Desktop/Demo project)",
+      "Bash(ls:*)",
+      "Bash(npm ci:*)",
+      "Bash(xargs -r kill)",
+      "Bash(xargs -r taskkill //F //PID)"
+    ]
+  }
+}

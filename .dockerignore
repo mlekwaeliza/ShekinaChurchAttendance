@@ -1,0 +1,17 @@
+node_modules
+client/node_modules
+server/node_modules
+client/dist
+server/backups
+server/uploads
+server/temp
+*.log
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+.env
+server/.env
+.git
+.claude
+scratch
