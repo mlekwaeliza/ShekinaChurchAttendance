@@ -175,7 +175,10 @@ async function commitPackage(pkg, options = {}) {
     return { ...summary, status: 'duplicate_package', imported: 0 };
   }
   if (summary.invalid > 0) {
-    throw new Error('Offline package contains invalid rows');
+    console.warn(`[Offline Import] Skipping ${summary.invalid} invalid or stale rows in offline package ${normalized.package_id}`);
+    if (summary.insertable === 0 && summary.duplicates === 0 && summary.conflicts === 0) {
+      throw new Error('Offline package contains no valid rows to import');
+    }
   }
 
   const pointsConfig = JSON.parse(service.points_config || '{"present":10,"excused":3}');
