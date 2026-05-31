@@ -777,15 +777,20 @@ const queries = {
       (SELECT COUNT(*) FROM leaders WHERE is_active = 1) as total_leaders
   `, [monthStart]),
 
-  getTodayAttendanceStats: (serviceId = 1, today = formatLocalDate()) => get(`
-    SELECT 
-      SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-      SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-      SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
-    FROM attendance
-    WHERE date = ?
-    AND (service_type_id = ? OR ? = 'all')
-  `, [today, serviceId, serviceId]),
+  getTodayAttendanceStats: (serviceId = 1, today = formatLocalDate()) => {
+    const isAll = String(serviceId) === 'all';
+    const query = `
+      SELECT 
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
+      FROM attendance
+      WHERE date = ?
+      ${isAll ? '' : 'AND service_type_id = ?'}
+    `;
+    const params = isAll ? [today] : [today, serviceId];
+    return get(query, params);
+  },
 
   getNeedsAttention: async (serviceId = 1, today = formatLocalDate()) => {
     const todayMonthDay = formatMonthDay(today);
@@ -875,15 +880,20 @@ const queries = {
     return [...birthdays, ...visitors, ...Array.from(absenteesMap.values())].slice(0, 50);
   },
 
-  getAttendanceSparkline: (serviceId = 1, startDate = formatLocalDate(addDays(new Date(), -28))) => all(`
-    SELECT date, COUNT(*) as present_count
-    FROM attendance
-    WHERE status = 'present'
-    AND (service_type_id = ? OR ? = 'all')
-    AND date >= ?
-    GROUP BY date
-    ORDER BY date ASC
-  `, [serviceId, serviceId, startDate]),
+  getAttendanceSparkline: (serviceId = 1, startDate = formatLocalDate(addDays(new Date(), -28))) => {
+    const isAll = String(serviceId) === 'all';
+    const query = `
+      SELECT date, COUNT(*) as present_count
+      FROM attendance
+      WHERE status = 'present'
+      ${isAll ? '' : 'AND service_type_id = ?'}
+      AND date >= ?
+      GROUP BY date
+      ORDER BY date ASC
+    `;
+    const params = isAll ? [startDate] : [serviceId, startDate];
+    return all(query, params);
+  },
 
   getHallOfFameSummary: (year) => all(`
     SELECT m.id, m.full_name, m.hall_of_fame_points as points, s.name as section_name
@@ -971,15 +981,21 @@ const queries = {
   checkSubmissionExists: (leaderId, date, serviceId) => get('SELECT * FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?', [leaderId, date, serviceId]),
   logSubmission: (leaderId, sectionId, date) =>
     run('INSERT INTO submission_log (leader_id, section_id, date) VALUES (?, ?, ?)', [leaderId, sectionId, date]),
-  getAttendanceByDateAndSection: (date, sectionId, serviceId = 1) => all(`
-    SELECT a.status, m.full_name, m.membership_id, u.full_name as leader_name, submitter.full_name as submitted_by_name
-    FROM attendance a
-    JOIN members m ON a.member_id = m.id
-    JOIN leaders l ON m.leader_id = l.id
-    JOIN users u ON l.user_id = u.id
-    JOIN users submitter ON submitter.id = a.submitted_by
-    WHERE a.date = ? AND m.section_id = ? AND (a.service_type_id = ? OR ? = 'all')
-  `, [date, sectionId, serviceId, serviceId]),
+  getAttendanceByDateAndSection: (date, sectionId, serviceId = 1) => {
+    const isAll = String(serviceId) === 'all';
+    const query = `
+      SELECT a.status, m.full_name, m.membership_id, u.full_name as leader_name, submitter.full_name as submitted_by_name
+      FROM attendance a
+      JOIN members m ON a.member_id = m.id
+      JOIN leaders l ON m.leader_id = l.id
+      JOIN users u ON l.user_id = u.id
+      JOIN users submitter ON submitter.id = a.submitted_by
+      WHERE a.date = ? AND m.section_id = ?
+      ${isAll ? '' : 'AND a.service_type_id = ?'}
+    `;
+    const params = isAll ? [date, sectionId] : [date, sectionId, serviceId];
+    return all(query, params);
+  },
 
   // Dashboard/Stats queries
   getOverallAttendanceStats: () => all(`

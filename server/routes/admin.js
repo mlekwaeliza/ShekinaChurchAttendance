@@ -14,7 +14,7 @@ const {
   inspectServerSyncPackage,
   commitServerSyncPackage
 } = require('../utils/serverSyncPackage');
-const { yearEquals, monthEquals, weekEquals, upsertAttendanceSql } = require('../utils/sqlDialect');
+const { yearEquals, monthEquals, weekEquals, dateOnly, upsertAttendanceSql } = require('../utils/sqlDialect');
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -1009,7 +1009,10 @@ router.get('/attendance', async (req, res) => {
     const params = [];
 
     if (req.query.filterType && req.query.filterValue) {
-      if (req.query.filterType === 'yearly') {
+      if (req.query.filterType === 'daily') {
+        query += ` AND ${dateOnly('a.date')} = ?`;
+        params.push(req.query.filterValue);
+      } else if (req.query.filterType === 'yearly') {
         query += ` AND ${yearEquals('a.date')}`;
         params.push(req.query.filterValue);
       } else if (req.query.filterType === 'monthly') {
@@ -1499,14 +1502,17 @@ router.get('/aggregated-overview', async (req, res) => {
   try {
     let { filterType, filterValue, service_id = 'all', fallback_latest } = req.query;
     
-    if (!['weekly', 'monthly', 'yearly'].includes(filterType) || !filterValue) {
+    if (!['daily', 'weekly', 'monthly', 'yearly'].includes(filterType) || !filterValue) {
       return res.status(400).json({ error: 'Valid filterType and filterValue required' });
     }
 
     let dateCondition = '';
     let params = [];
     
-    if (filterType === 'yearly') {
+    if (filterType === 'daily') {
+      dateCondition = `${dateOnly('a.date')} = ?`;
+      params.push(filterValue);
+    } else if (filterType === 'yearly') {
       dateCondition = yearEquals('a.date');
       params.push(filterValue);
     } else if (filterType === 'monthly') {
