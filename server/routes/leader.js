@@ -504,23 +504,31 @@ router.post('/attendance', async (req, res) => {
       return res.status(400).json({ error: 'Attendance already submitted for this service today' });
     }
 
-    const memberIds = attendance.map((record) => Number(record.member_id));
-    const memberCount = await new Promise((resolve, reject) => {
-      if (memberIds.some((id) => !Number.isInteger(id))) {
-        return resolve({ count: -1 });
-      }
-      const placeholders = memberIds.map(() => '?').join(',');
-      db.get(
-        `SELECT COUNT(*) as count FROM members WHERE leader_id = ? AND id IN (${placeholders})`,
-        [targetLeader.id, ...memberIds],
-        (err, row) => {
-          if (err) reject(err); else resolve(row);
+    const leaderMembers = await new Promise((resolve, reject) => {
+      db.all(
+        'SELECT id FROM members WHERE leader_id = ?',
+        [targetLeader.id],
+        (err, rows) => {
+          if (err) reject(err); else resolve(rows || []);
         }
       );
     });
 
-    if (memberCount.count !== attendance.length) {
-      return res.status(400).json({ error: 'Attendance contains members outside the selected leader roster' });
+    const validMemberIds = new Set(leaderMembers.map((m) => Number(m.id)));
+
+    // Filter submitted attendance to only include members that belong to this leader
+    const filteredAttendance = attendance.filter((record) =>
+      validMemberIds.has(Number(record.member_id))
+    );
+
+    if (filteredAttendance.length === 0) {
+      return res.status(400).json({ error: 'Attendance contains no valid members for the selected leader roster' });
+    }
+
+    if (filteredAttendance.length !== attendance.length) {
+      console.warn(
+        `[Attendance] Filtered out ${attendance.length - filteredAttendance.length} member IDs from submission that do not belong to leader ${targetLeader.id}`
+      );
     }
 
     // Begin transaction
@@ -540,7 +548,7 @@ router.post('/attendance', async (req, res) => {
               const pointsConfig = JSON.parse(serviceRow.points_config || '{"present":10,"excused":3}');
 
               // Insert/replace attendance records and award points
-              attendance.forEach(record => {
+              filteredAttendance.forEach(record => {
                 if (!['present', 'absent', 'excused'].includes(record.status)) {
                   throw new Error(`Invalid status for member ${record.member_id}`);
                 }
