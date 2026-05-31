@@ -417,7 +417,7 @@ const useLeaderData = () => {
           downloadOfflineAttendancePackage(offlinePackage);
           setQueuedForDate(selectedDate);
           setSubmitted(true);
-          showMessage('Attendance saved offline — will sync when you reconnect');
+          showMessage('Attendance saved offline only. It is not in admin reports until sync completes.', 7000);
           return true;
         } else if (result.reason === 'already_queued') {
           setSubmitError('Attendance already queued for this date');
@@ -427,8 +427,12 @@ const useLeaderData = () => {
       }
 
       await leaderAPI.submitAttendance(selectedDate, attendanceArray, selectedServiceId, attendanceLeaderId);
+      const confirmation = await leaderAPI.getAttendanceStatus(selectedDate, selectedServiceId, attendanceLeaderId);
+      if (!confirmation.data?.submitted) {
+        throw new Error('Attendance was sent, but the server did not confirm it. Please refresh and try again.');
+      }
       setSubmitted(true);
-      loadHistory();
+      await loadHistory();
       showMessage('Attendance submitted successfully!');
       return true;
     } catch (error) {
@@ -565,6 +569,10 @@ const useLeaderData = () => {
         } else {
           const syncedServiceId = record.service_id || getScheduledServiceId(serviceTypes, record.date);
           await leaderAPI.submitAttendance(record.date, record.attendance, syncedServiceId);
+          const confirmation = await leaderAPI.getAttendanceStatus(record.date, syncedServiceId);
+          if (!confirmation.data?.submitted) {
+            throw new Error('Server did not confirm synced attendance');
+          }
         }
       }).then((result) => {
         if (result.synced > 0) {

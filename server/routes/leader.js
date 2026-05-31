@@ -1,5 +1,5 @@
 const express = require('express');
-const { db, queries, get, all, run } = require('../database');
+const { db, queries, get, all, run, transaction } = require('../database');
 const { isAuthenticated, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate, getWeekStartString } = require('../utils/date');
 const { commitPackage } = require('../utils/offlineAttendanceImport');
@@ -523,66 +523,35 @@ router.post('/attendance', async (req, res) => {
       return res.status(400).json({ error: 'Attendance contains members outside the selected leader roster' });
     }
 
-    // Begin transaction
-    await new Promise((resolve, reject) => {
-      db.serialize(() => {
-        db.run('BEGIN TRANSACTION', (err) => {
-          if (err) return reject(err);
+    await transaction(async (tx) => {
+      const serviceRow = await tx.get('SELECT points_config FROM service_types WHERE id = ?', [service_id]);
+      if (!serviceRow) {
+        throw new Error('Service type not found');
+      }
 
-          try {
-            // Fetch service-specific points config
-            db.get('SELECT points_config FROM service_types WHERE id = ?', [service_id], (err, serviceRow) => {
-              if (err || !serviceRow) {
-                db.run('ROLLBACK');
-                return reject(err || new Error('Service type not found'));
-              }
+      const pointsConfig = JSON.parse(serviceRow.points_config || '{"present":10,"excused":3}');
 
-              const pointsConfig = JSON.parse(serviceRow.points_config || '{"present":10,"excused":3}');
+      for (const record of attendance) {
+        if (!['present', 'absent', 'excused'].includes(record.status)) {
+          throw new Error(`Invalid status for member ${record.member_id}`);
+        }
 
-              // Insert/replace attendance records and award points
-              attendance.forEach(record => {
-                if (!['present', 'absent', 'excused'].includes(record.status)) {
-                  throw new Error(`Invalid status for member ${record.member_id}`);
-                }
-                
-                db.run(
-                  upsertAttendanceSql({ includeServiceType: true }),
-                  [record.member_id, date, record.status, service_id, req.session.userId]
-                );
+        await tx.run(
+          upsertAttendanceSql({ includeServiceType: true }),
+          [record.member_id, date, record.status, service_id, req.session.userId]
+        );
 
-                // Increment Hall of Fame points based on service configuration
-                if (record.status === 'present' && pointsConfig.present > 0) {
-                  db.run('UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?', [pointsConfig.present, record.member_id]);
-                } else if (record.status === 'excused' && pointsConfig.excused > 0) {
-                  db.run('UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?', [pointsConfig.excused, record.member_id]);
-                }
-              });
+        if (record.status === 'present' && pointsConfig.present > 0) {
+          await tx.run('UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?', [pointsConfig.present, record.member_id]);
+        } else if (record.status === 'excused' && pointsConfig.excused > 0) {
+          await tx.run('UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?', [pointsConfig.excused, record.member_id]);
+        }
+      }
 
-              // Log the submission with service_id
-              db.run(
-                'INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)',
-                [targetLeader.id, targetLeader.section_id, date, service_id],
-                (err) => {
-                  if (err) {
-                    db.run('ROLLBACK');
-                    return reject(err);
-                  }
-                  db.run('COMMIT', (commitErr) => {
-                    if (commitErr) {
-                      db.run('ROLLBACK');
-                      return reject(commitErr);
-                    }
-                    resolve();
-                  });
-                }
-              );
-            });
-          } catch (err) {
-            db.run('ROLLBACK');
-            reject(err);
-          }
-        });
-      });
+      await tx.run(
+        'INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)',
+        [targetLeader.id, targetLeader.section_id, date, service_id]
+      );
     });
 
     res.json({
