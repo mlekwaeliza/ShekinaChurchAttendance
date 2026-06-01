@@ -152,7 +152,6 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
       ]},
       { section: 'SYSTEM', items: [
-        { path: '/admin/sync', label: 'Sync', icon: RefreshCw },
         { path: '/admin/audit', label: 'Audit Log', icon: ShieldCheck },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
       ]},

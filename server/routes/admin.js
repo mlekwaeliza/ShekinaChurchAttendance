@@ -8,12 +8,6 @@ const bcrypt = require('bcryptjs');
 const { queries, run, get, all, db } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate } = require('../utils/date');
-const { inspectPackage, commitPackage, listRecentImports } = require('../utils/offlineAttendanceImport');
-const {
-  createServerSyncPackage,
-  inspectServerSyncPackage,
-  commitServerSyncPackage
-} = require('../utils/serverSyncPackage');
 const { yearEquals, monthEquals, weekEquals, dateOnly, upsertAttendanceSql } = require('../utils/sqlDialect');
 
 const router = express.Router();
@@ -1280,81 +1274,6 @@ router.post('/members', async (req, res) => {
   } catch (error) {
     console.error('Create member error:', error);
     res.status(error.statusCode || 500).json({ error: error.message || 'Failed to create member' });
-  }
-});
-
-router.post('/offline-import/preview', async (req, res) => {
-  try {
-    const { package: offlinePackage } = req.body;
-    const { summary } = await inspectPackage(offlinePackage);
-    res.json(summary);
-  } catch (error) {
-    res.status(400).json({ error: error.message || 'Failed to inspect offline package' });
-  }
-});
-
-router.post('/offline-import/commit', async (req, res) => {
-  try {
-    const { package: offlinePackage, original_filename } = req.body;
-    const summary = await commitPackage(offlinePackage, {
-      source: 'admin_upload',
-      importedByUserId: req.session.userId,
-      originalFilename: original_filename || null
-    });
-    res.json({ message: 'Offline attendance processed', summary });
-  } catch (error) {
-    console.error('Offline import error:', error);
-    res.status(400).json({ error: error.message || 'Failed to import offline package' });
-  }
-});
-
-router.get('/offline-imports', async (req, res) => {
-  try {
-    const limit = req.query.limit ? Math.min(Number.parseInt(req.query.limit, 10) || 20, 100) : 20;
-    const imports = await listRecentImports(limit);
-    res.json(imports);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch offline imports' });
-  }
-});
-
-router.get('/sync/export', async (req, res) => {
-  try {
-    const syncPackage = await createServerSyncPackage({
-      startDate: req.query.start_date,
-      endDate: req.query.end_date,
-      serviceId: req.query.service_id || 'all'
-    });
-    const datePart = new Date().toISOString().slice(0, 10);
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="church-attendance-sync-${datePart}.json"`);
-    res.json(syncPackage);
-  } catch (error) {
-    console.error('Sync export error:', error);
-    res.status(400).json({ error: error.message || 'Failed to export sync package' });
-  }
-});
-
-router.post('/sync/preview', async (req, res) => {
-  try {
-    const summary = await inspectServerSyncPackage(req.body.package);
-    res.json(summary);
-  } catch (error) {
-    console.error('Sync preview error:', error);
-    res.status(400).json({ error: error.message || 'Failed to preview sync package' });
-  }
-});
-
-router.post('/sync/import', async (req, res) => {
-  try {
-    const summary = await commitServerSyncPackage(req.body.package, {
-      importedByUserId: req.session.userId,
-      originalFilename: req.body.original_filename || null
-    });
-    res.json({ message: 'Sync package imported', summary });
-  } catch (error) {
-    console.error('Sync import error:', error);
-    res.status(400).json({ error: error.message || 'Failed to import sync package' });
   }
 });
 

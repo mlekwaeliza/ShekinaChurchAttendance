@@ -3,7 +3,6 @@ import { leaderAPI } from '../services/api';
 import { getQueuedSubmissionForDate } from '../services/offlineDB';
 import useOffline from './useOffline';
 import { formatLocalDate } from '../utils/date';
-import { createOfflineAttendancePackage, downloadOfflineAttendancePackage } from '../utils/offlineAttendancePackage';
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -352,30 +351,6 @@ const useLeaderData = () => {
   const [submitError, setSubmitError] = useState('');
   const [queuedForDate, setQueuedForDate] = useState(null);
 
-  const buildOfflinePackage = useCallback(() => createOfflineAttendancePackage({
-    date: selectedDate,
-    serviceId: selectedServiceId,
-    serviceTypes,
-    sectionInfo,
-    members: eligibleMembers,
-    attendance
-  }), [selectedDate, selectedServiceId, serviceTypes, sectionInfo, eligibleMembers, attendance]);
-
-  const handleDownloadOfflinePackage = useCallback(() => {
-    if (actingOnBehalf) {
-      setSubmitError('Offline packages are only available for your own roster. Please reconnect before submitting for another leader.');
-      return false;
-    }
-    if (Object.keys(attendance).length !== eligibleMembers.length) {
-      setSubmitError('Mark every eligible member before downloading the offline package.');
-      return false;
-    }
-    const offlinePackage = buildOfflinePackage();
-    downloadOfflineAttendancePackage(offlinePackage);
-    showMessage('Offline attendance package downloaded');
-    return true;
-  }, [actingOnBehalf, attendance, eligibleMembers.length, buildOfflinePackage, showMessage]);
-
   const handleSubmit = useCallback(async () => {
     setSubmitError('');
     if (submitted) {
@@ -403,18 +378,14 @@ const useLeaderData = () => {
           setSubmitError('Please reconnect before submitting attendance on behalf of another leader.');
           return false;
         }
-        const offlinePackage = buildOfflinePackage();
         const result = await queueSubmission({
           date: selectedDate,
           service_id: selectedServiceId,
           attendance: attendanceArray,
-          leader_id: offlinePackage.leader.id,
-          section_id: offlinePackage.section.id,
-          package_id: offlinePackage.package_id,
-          package: offlinePackage
+          leader_id: sectionInfo?.leader_id,
+          section_id: sectionInfo?.section_id
         });
         if (result.success) {
-          downloadOfflineAttendancePackage(offlinePackage);
           setQueuedForDate(selectedDate);
           setSubmitted(true);
           showMessage('Attendance saved offline — will sync when you reconnect');
@@ -439,7 +410,7 @@ const useLeaderData = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [submitted, attendance, eligibleMembers.length, selectedDate, selectedServiceId, attendanceLeaderId, actingOnBehalf, loadHistory, showMessage, isOnline, queueSubmission, buildOfflinePackage]);
+  }, [submitted, attendance, eligibleMembers.length, selectedDate, selectedServiceId, attendanceLeaderId, actingOnBehalf, sectionInfo, loadHistory, showMessage, isOnline, queueSubmission]);
 
   // --- Member CRUD Handlers ---
   const openAddMember = useCallback(() => {
@@ -560,15 +531,11 @@ const useLeaderData = () => {
   useEffect(() => {
     if (isOnline) {
       syncPending(async (record) => {
-        if (record.package) {
-          await leaderAPI.syncOfflinePackage(record.package);
-        } else {
-          const syncedServiceId = record.service_id || getScheduledServiceId(serviceTypes, record.date);
-          await leaderAPI.submitAttendance(record.date, record.attendance, syncedServiceId);
-        }
+        const syncedServiceId = record.service_id || getScheduledServiceId(serviceTypes, record.date);
+        await leaderAPI.submitAttendance(record.date, record.attendance, syncedServiceId);
       }).then((result) => {
         if (result.synced > 0) {
-          showMessage(`${result.synced} offline package(s) checked and synced successfully`);
+          showMessage(`${result.synced} offline attendance submission(s) synced successfully`);
           loadHistory();
           checkSubmission();
         }
@@ -576,7 +543,7 @@ const useLeaderData = () => {
           showMessage(`${result.conflicts} record(s) had conflicts — check sync status`, 6000);
         }
         if (result.failed > 0) {
-          showMessage(`${result.failed} offline submission(s) could not sync. Download the queued package and send it to admin.`, 7000);
+          showMessage(`${result.failed} offline submission(s) could not sync. Keep the app open online and try refresh.`, 7000);
         }
       });
     }
@@ -606,7 +573,6 @@ const useLeaderData = () => {
     handleAttendanceLeaderSelection,
     handleStatusChange,
     handleSubmit,
-    handleDownloadOfflinePackage,
     queuedForDate,
     submitError,
     // History

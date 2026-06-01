@@ -24,7 +24,6 @@ import ServiceAssignmentsModal from '../components/admin/ServiceAssignmentsModal
 import AnnouncementCenter from '../components/admin/AnnouncementCenter';
 import FollowUpsView from '../components/admin/FollowUpsView';
 import VisitorIntake from '../components/admin/VisitorIntake';
-import SyncCenter from '../components/admin/SyncCenter';
 import ChurchCalendar from '../components/ChurchCalendar';
 import HomeCellsView from '../components/admin/HomeCellsView';
 
@@ -271,14 +270,6 @@ const AdminDashboard = () => {
             leaders={data.leaders}
             loadCoreData={data.loadCoreData}
             loadLeaders={data.loadLeaders}
-            showMessage={data.showMessage}
-          />
-        );
-
-      case 'sync':
-        return (
-          <SyncCenter
-            serviceTypes={data.serviceTypes}
             showMessage={data.showMessage}
           />
         );

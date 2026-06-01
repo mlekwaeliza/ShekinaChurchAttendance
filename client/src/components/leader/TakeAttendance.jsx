@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle2, Loader2, WifiOff, CloudOff, UserCheck, UserX, Clock, XCircle, Download, Search } from 'lucide-react';
+import { CheckCircle2, Loader2, WifiOff, CloudOff, UserCheck, UserX, Clock, XCircle, Search } from 'lucide-react';
 
 const TakeAttendance = ({
   members,
@@ -23,8 +23,7 @@ const TakeAttendance = ({
   attendanceLeaderId,
   attendanceLeaderName,
   actingOnBehalf = false,
-  onAttendanceLeaderChange,
-  onDownloadOfflinePackage
+  onAttendanceLeaderChange
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('all');
@@ -317,26 +316,6 @@ const TakeAttendance = ({
           </p>
         </div>
       )}
-
-      <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Offline Data Package</h3>
-            <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-              Download a JSON package after marking everyone. Send it as a document by WhatsApp, email, or USB; admin import and reconnect sync both crosscheck the package ID before saving.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onDownloadOfflinePackage}
-            disabled={unmarked.length > 0 || members.length === 0 || (submitted && !isOfflineSubmit)}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-600 dark:hover:bg-indigo-500 sm:w-auto"
-          >
-            <Download className="h-4 w-4" />
-            {isOfflineSubmit ? 'Download Queued Package' : 'Download Package'}
-          </button>
-        </div>
-      </div>
 
       {/* Attendance Cards */}
       {isUnauthorized ? (

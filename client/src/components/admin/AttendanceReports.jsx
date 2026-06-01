@@ -10,8 +10,6 @@ import {
   ChevronLeft,
   Download,
   Printer,
-  Upload,
-  AlertTriangle,
   Calendar,
   Edit2,
 } from 'lucide-react';
@@ -102,11 +100,6 @@ const AttendanceReports = ({
   const periodLabel = formatPeriodLabel(filterType, filterValue);
   const leaders = overviewData?.subleaders || [];
   const hasReportData = Boolean(overviewData && filterValue);
-  const [offlinePackage, setOfflinePackage] = useState(null);
-  const [offlineFilename, setOfflineFilename] = useState('');
-  const [offlinePreview, setOfflinePreview] = useState(null);
-  const [offlineStatus, setOfflineStatus] = useState('');
-  const [offlineBusy, setOfflineBusy] = useState(false);
   const initializedServiceRef = useRef(false);
 
   useEffect(() => {
@@ -116,105 +109,6 @@ const AttendanceReports = ({
       onServiceChange('all');
     }
   }, [onServiceChange, selectedServiceId]);
-
-  const handleOfflineFile = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setOfflineBusy(true);
-    setOfflineStatus('');
-    setOfflinePreview(null);
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      const response = await adminAPI.previewOfflineImport(parsed);
-      setOfflinePackage(parsed);
-      setOfflineFilename(file.name);
-      setOfflinePreview(response.data);
-      setOfflineStatus(response.data.already_imported
-        ? 'This package is already recorded in the admin dashboard.'
-        : 'Package preview ready. Review the counts before importing.');
-    } catch (error) {
-      setOfflinePackage(null);
-      setOfflineFilename('');
-      setOfflineStatus(error.response?.data?.error || error.message || 'Unable to read offline package.');
-    } finally {
-      setOfflineBusy(false);
-      event.target.value = '';
-    }
-  };
-
-  const commitOfflinePackage = async () => {
-    if (!offlinePackage) return;
-    setOfflineBusy(true);
-    setOfflineStatus('');
-    try {
-      const response = await adminAPI.commitOfflineImport(offlinePackage, offlineFilename);
-      setOfflinePreview(response.data.summary);
-      setOfflineStatus(`Import complete: ${response.data.summary.imported || 0} new rows saved, ${response.data.summary.duplicates || 0} duplicates ignored.`);
-      if (filterValue) loadOverview();
-    } catch (error) {
-      setOfflineStatus(error.response?.data?.error || error.message || 'Import failed.');
-    } finally {
-      setOfflineBusy(false);
-    }
-  };
-
-  const offlineImportPanel = (
-    <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
-            <Upload className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Import Offline Attendance</h3>
-            <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-              Upload the JSON package sent by a head leader or sub leader. The server checks the package ID and each member/date/service row, then ignores duplicates.
-            </p>
-            {offlinePreview && (
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
-                {[
-                  ['New', offlinePreview.insertable ?? offlinePreview.imported ?? 0, 'text-emerald-600'],
-                  ['Duplicates', offlinePreview.duplicates || 0, 'text-slate-700 dark:text-slate-200'],
-                  ['Conflicts', offlinePreview.conflicts || 0, 'text-amber-600'],
-                  ['Invalid', offlinePreview.invalid || 0, 'text-rose-600'],
-                  ['Rows', offlinePreview.total_rows || 0, 'text-slate-900 dark:text-slate-100'],
-                ].map(([label, value, color]) => (
-                  <div key={label} className="rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900/40">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-                    <p className={`text-lg font-black ${color}`}>{value}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-            {offlineStatus && (
-              <div className="mt-4 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-900/40 dark:text-slate-300">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                <span>{offlineStatus}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex w-full flex-col gap-2 sm:w-auto">
-          <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
-            <Upload className="h-4 w-4" />
-            Choose Package
-            <input type="file" accept=".json,application/json" onChange={handleOfflineFile} className="hidden" />
-          </label>
-          <button
-            type="button"
-            onClick={commitOfflinePackage}
-            disabled={!offlinePackage || offlineBusy || offlinePreview?.already_imported || offlinePreview?.invalid > 0}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {offlineBusy ? 'Processing...' : 'Import Package'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   const generatePdfReport = async () => {
     if (!overviewData) return;
@@ -399,8 +293,6 @@ const AttendanceReports = ({
           )}
         </div>
       </div>
-
-      {offlineImportPanel}
 
       {overviewLoading ? (
         <div className="flex justify-center py-20">

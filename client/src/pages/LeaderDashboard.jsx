@@ -98,7 +98,6 @@ const LeaderDashboard = () => {
             onAttendanceLeaderChange={data.handleAttendanceLeaderSelection}
             onStatusChange={data.handleStatusChange}
             onSubmit={handleSubmitAndRedirect}
-            onDownloadOfflinePackage={data.handleDownloadOfflinePackage}
             isOnline={data.isOnline}
             queuedForDate={data.queuedForDate}
           />

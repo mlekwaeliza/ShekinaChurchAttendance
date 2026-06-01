@@ -126,26 +126,6 @@ export const adminAPI = {
   updateHomeCellLeaders: (cellId, leaderIds) => api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
   createHomeCellMember: (data) => api.post('/admin/home-cell-members', data),
   deleteHomeCellMember: (id) => api.delete(`/admin/home-cell-members/${id}`),
-  previewOfflineImport: (offlinePackage) => api.post('/admin/offline-import/preview', { package: offlinePackage }),
-  commitOfflineImport: (offlinePackage, originalFilename) => api.post('/admin/offline-import/commit', {
-    package: offlinePackage,
-    original_filename: originalFilename
-  }),
-  getOfflineImports: (limit = 20) => api.get('/admin/offline-imports', { params: { limit } }),
-  exportSyncPackage: (filters = {}) => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        params.append(key, String(value));
-      }
-    });
-    window.open(`/api/admin/sync/export?${params.toString()}`, '_blank');
-  },
-  previewSyncPackage: (syncPackage) => api.post('/admin/sync/preview', { package: syncPackage }),
-  importSyncPackage: (syncPackage, originalFilename) => api.post('/admin/sync/import', {
-    package: syncPackage,
-    original_filename: originalFilename
-  }),
 };
 
 // Shared church calendar API
@@ -180,7 +160,6 @@ export const leaderAPI = {
     service_id,
     ...(target_leader_id ? { target_leader_id } : {})
   }),
-  syncOfflinePackage: (offlinePackage) => api.post('/leader/offline-sync', { package: offlinePackage }),
   getHistory: () => api.get('/leader/history'),
   getSectionOverview: (date) => api.get(`/leader/section-overview/${date}`),
   getAttendanceTrends: (days = 90) => api.get(`/leader/attendance-trends?days=${days}`),

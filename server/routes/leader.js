@@ -2,7 +2,6 @@ const express = require('express');
 const { db, queries, get, all, run } = require('../database');
 const { isAuthenticated, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate, getWeekStartString } = require('../utils/date');
-const { commitPackage } = require('../utils/offlineAttendanceImport');
 const { upsertAttendanceSql } = require('../utils/sqlDialect');
 
 const router = express.Router();
@@ -600,32 +599,6 @@ router.post('/attendance', async (req, res) => {
     });
   } catch (error) {
     res.status(error.statusCode || 500).json({ error: 'Failed to submit attendance', details: error.message });
-  }
-});
-
-router.post('/offline-sync', async (req, res) => {
-  try {
-    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
-    if (!leaderRecord) {
-      return res.status(404).json({ error: 'Leader record not found' });
-    }
-
-    const { package: offlinePackage } = req.body;
-    const summary = await commitPackage(offlinePackage, {
-      source: 'leader_sync',
-      importedByUserId: req.session.userId,
-      expectedLeaderId: leaderRecord.id
-    });
-
-    res.json({
-      message: summary.status === 'duplicate_package'
-        ? 'Offline package already exists in admin dashboard'
-        : 'Offline package synced',
-      summary
-    });
-  } catch (error) {
-    console.error('Offline sync error:', error);
-    res.status(400).json({ error: error.message || 'Failed to sync offline package' });
   }
 });
 

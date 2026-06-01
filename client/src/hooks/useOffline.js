@@ -111,11 +111,7 @@ const useOffline = () => {
       const record = all.find(r => r.id === id);
       if (record) {
         try {
-          if (record.package) {
-            await leaderAPI.syncOfflinePackage(record.package);
-          } else {
-            await leaderAPI.submitAttendance(record.date, record.attendance, record.service_id);
-          }
+          await leaderAPI.submitAttendance(record.date, record.attendance, record.service_id);
           await markAsSynced(record.id);
         } catch (e) {
           console.error('Failed to overwrite:', e);
