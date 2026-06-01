@@ -42,9 +42,22 @@ const DashboardOverview = ({
   });
 
   const currentService = serviceTypes.find((service) => service.id === selectedServiceId);
+  const attendanceContext = dashboardMetrics?.attendanceContext || { mode: 'today' };
+  const isLatestAttendance = attendanceContext.mode === 'latest';
+  const attendanceDateLabel = attendanceContext.date
+    ? new Date(attendanceContext.date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : '';
   const serviceLabel = selectedServiceId === 'all'
-    ? 'All Services Today'
+    ? (isLatestAttendance ? 'All Services' : 'All Services Today')
     : (currentService?.name || 'Loading...');
+  const attendanceTitle = isLatestAttendance ? 'Latest Attendance Session' : "Today's Attendance";
+  const showingLabel = isLatestAttendance && attendanceDateLabel
+    ? `${serviceLabel} - ${attendanceDateLabel}`
+    : serviceLabel;
 
   const { comparisons, needsAttention, sparkline, hallOfFame } = dashboardMetrics || {};
   const welcomeName = pastorName?.trim() || 'Pastor';
@@ -94,12 +107,12 @@ const DashboardOverview = ({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            Today's Attendance
+            {attendanceTitle}
             <Sparkles className="w-5 h-5 text-amber-500" />
           </h3>
           <div className="mt-1 flex items-center gap-3">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Showing: <span className="text-primary-600 dark:text-primary-400">{serviceLabel}</span>
+              Showing: <span className="text-primary-600 dark:text-primary-400">{showingLabel}</span>
             </p>
             {selectedServiceId !== 'all' && (
               <button

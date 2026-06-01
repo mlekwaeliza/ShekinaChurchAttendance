@@ -221,19 +221,44 @@ router.get('/dashboard-metrics', async (req, res) => {
       queries.getTodayAttendanceStats(serviceId)
     ]);
 
-    // Fetch last session for this service (for empty state UI)
+    // Fetch last session for this service/filter and use it as the dashboard
+    // attendance display when today has no records.
     const { all: allDb } = require('../database');
     let lastSession = null;
-    if (serviceId !== 'all') {
-      const lastSessions = await allDb(
-        `SELECT date, COUNT(*) as total, SUM(CASE WHEN status='present' THEN 1 ELSE 0 END) as present
-         FROM attendance WHERE service_type_id = ? GROUP BY date ORDER BY date DESC LIMIT 1`,
-        [serviceId]
-      );
-      if (lastSessions.length > 0) {
-        lastSession = lastSessions[0];
-      }
+    const latestSessionSql = `
+      SELECT
+        date,
+        COUNT(*) as total,
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
+      FROM attendance
+      ${serviceId === 'all' ? '' : 'WHERE service_type_id = ?'}
+      GROUP BY date
+      ORDER BY date DESC
+      LIMIT 1
+    `;
+    const latestSessions = await allDb(
+      latestSessionSql,
+      serviceId === 'all' ? [] : [serviceId]
+    );
+    if (latestSessions.length > 0) {
+      lastSession = latestSessions[0];
     }
+
+    const normalizeStats = (stats = {}) => ({
+      present: Number(stats.present || 0),
+      absent: Number(stats.absent || 0),
+      excused: Number(stats.excused || 0)
+    });
+    const todayStatsNormalized = normalizeStats(todayStats);
+    const todayTotal = todayStatsNormalized.present + todayStatsNormalized.absent + todayStatsNormalized.excused;
+    const displayStats = todayTotal > 0 || !lastSession
+      ? todayStatsNormalized
+      : normalizeStats(lastSession);
+    const attendanceContext = todayTotal > 0 || !lastSession
+      ? { mode: 'today', date: formatLocalDate(), isLatestFallback: false }
+      : { mode: 'latest', date: lastSession.date, isLatestFallback: true };
 
     // Format output
     res.json({
@@ -247,7 +272,8 @@ router.get('/dashboard-metrics', async (req, res) => {
       hallOfFame,
       settings: settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {}),
       lastSession,
-      todayStats: todayStats || { present: 0, absent: 0, excused: 0 }
+      attendanceContext,
+      todayStats: displayStats
     });
   } catch (error) {
     console.error('Dashboard metrics error:', error);
