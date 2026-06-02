@@ -7,6 +7,9 @@ import { BreadcrumbProvider } from '../context/BreadcrumbContext';
 import Breadcrumbs from './ui/Breadcrumbs';
 import NotificationBell from './NotificationBell';
 import { authAPI } from '../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import useEventStream from '../hooks/useEventStream';
+import { useToast } from '../context/ToastContext';
 import {
   LayoutDashboard,
   Users,
@@ -353,7 +356,8 @@ const Layout = ({ children, showNav = true }) => {
 
   return (
     <BreadcrumbProvider>
-      <div className="min-h-screen bg-slate-50 dark:bg-[#070b16]">
+      <RealtimeBridge user={user}>
+        <div className="min-h-screen bg-slate-50 dark:bg-[#070b16]">
         {/* Hidden file input for profile uploads */}
         <input type="file" id="profile-upload" className="hidden" accept="image/*" onChange={handleProfileUpload} disabled={uploading} />
 
@@ -487,8 +491,55 @@ const Layout = ({ children, showNav = true }) => {
         </main>
       </div>
     </div>
+      </RealtimeBridge>
   </BreadcrumbProvider>
 );
 };
 
 export default Layout;
+
+// Pulls events from the SSE stream and:
+//  - Invalidates TanStack Query caches so the notification bell refreshes
+//  - Shows a transient toast for new notifications
+//  - Invalidates attendance caches for admin/pastor dashboards
+function RealtimeBridge({ user, children }) {
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+
+  useEventStream(user ? '/api/events' : '', {
+    notification: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+      showToast({
+        type: 'info',
+        title: data?.title || 'New notification',
+        message: data?.message || '',
+        duration: 6000,
+        action: {
+          label: 'View',
+          onClick: () => window.dispatchEvent(new CustomEvent('app:navigate-notifications'))
+        }
+      });
+    },
+    'attendance-submitted': (data) => {
+      // Admin/pastor dashboards watch these keys
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'submission-history'] });
+      queryClient.invalidateQueries({ queryKey: ['pastor', 'dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
+      if (user?.role === 'admin' || user?.role === 'pastor') {
+        showToast({
+          type: 'success',
+          title: 'Attendance submitted',
+          message: data?.leader_name
+            ? `${data.leader_name} submitted for ${data.date || 'today'}`
+            : 'A new submission was just received.',
+          duration: 4000
+        });
+      }
+    }
+  });
+
+  return children;
+}

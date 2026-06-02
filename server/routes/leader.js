@@ -3,6 +3,7 @@ const { db, queries, get, all, run, transaction } = require('../database');
 const { isAuthenticated, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate, getWeekStartString } = require('../utils/date');
 const { upsertAttendanceSql } = require('../utils/sqlDialect');
+const realtimeBus = require('../realtime/bus');
 
 const router = express.Router();
 router.use(isAuthenticated);
@@ -595,6 +596,26 @@ router.post('/attendance', async (req, res) => {
     };
     if (idemKey) idemCacheSet(idemKey, 200, responseBody);
     res.json(responseBody);
+
+    // Real-time: broadcast to admins/pastors so their dashboards update
+    // without polling. Best-effort — a publish failure does not affect
+    // the submission that just succeeded.
+    try {
+      const present = filteredAttendance.filter(r => r.status === 'present').length;
+      const absent = filteredAttendance.filter(r => r.status === 'absent').length;
+      const excused = filteredAttendance.filter(r => r.status === 'excused').length;
+      realtimeBus.broadcast('attendance-submitted', {
+        leader_id: targetLeader.id,
+        leader_name: targetLeader.full_name,
+        section_id: targetLeader.section_id,
+        section_name: targetLeader.section_name,
+        date,
+        service_id,
+        counts: { present, absent, excused, total: filteredAttendance.length },
+        submitted_by: req.session.userId,
+        ts: Date.now()
+      });
+    } catch (e) { /* publish is best-effort */ }
   } catch (error) {
     res.status(error.statusCode || 500).json({ error: 'Failed to submit attendance', details: error.message });
   }
