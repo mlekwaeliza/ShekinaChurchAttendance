@@ -1,0 +1,17 @@
+{
+  "root": true,
+  "env": { "browser": true, "es2022": true, "node": true },
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "prettier"
+  ],
+  "parserOptions": { "ecmaVersion": 2022, "sourceType": "module", "ecmaFeatures": { "jsx": true } },
+  "settings": { "react": { "version": "detect" } },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": "off"
+  },
+  "ignorePatterns": ["client/dist", "client/node_modules", "server/node_modules", "**/coverage", "**/.next", "**/build"]
+}

@@ -1,0 +1,15 @@
+node_modules/
+client/dist/
+server/node_modules/
+client/node_modules/
+*.log
+.env
+.env.local
+coverage/
+build/
+.next/
+.DS_Store
+database.sqlite
+corrupted_git/
+client/src/**/*.test.js
+client/src/**/*.test.jsx

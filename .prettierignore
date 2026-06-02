@@ -1,0 +1,12 @@
+node_modules/
+client/dist/
+client/node_modules/
+server/node_modules/
+*.log
+.env
+.env.local
+coverage/
+build/
+.next/
+.DS_Store
+database.sqlite

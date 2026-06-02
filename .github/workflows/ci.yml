@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  backend:
+    name: Backend lint & schema check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+          cache: 'npm'
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Schema check (offline)
+        working-directory: server
+        env:
+          DATABASE_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder'
+          DB_CLIENT: postgres
+          SESSION_SECRET: 'ci-only-not-secret'
+        run: node scripts/postgres-check.js
+
+  client:
+    name: Client lint & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20.18.1'
+          cache: 'npm'
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        working-directory: client
+        env:
+          CI: 'true'
+        run: npm run build

@@ -287,7 +287,7 @@ app.get('/api/health', async (req, res) => {
 
   if (dbClient === 'postgres') {
     try {
-      const { checkConnection } = require('./db/postgres');
+      const { checkConnection, pool } = require('./db/postgres');
       const check = await checkConnection();
       return res.json({
         status: 'ok',
@@ -298,9 +298,18 @@ app.get('/api/health', async (req, res) => {
           status: 'connected',
           latency_ms: check.latency_ms,
           name: check.database,
-          user: check.user
+          user: check.user,
+          pool: {
+            total: pool.totalCount,
+            idle: pool.idleCount,
+            waiting: pool.waitingCount
+          }
         },
-        memory
+        memory,
+        node: {
+          version: process.version,
+          env: process.env.NODE_ENV || 'development'
+        }
       });
     } catch (err) {
       return res.json({

@@ -64,11 +64,24 @@ function backupPostgres() {
       return;
     }
 
+    // pg_dump is a native libpq client and rejects parameters it does
+    // not understand (e.g. uselibpqcompat, channel_binding are pg client
+    // extensions). Strip them to get a clean libpq URL.
+    let cleanUrl = databaseUrl;
+    try {
+      const u = new URL(cleanUrl);
+      u.searchParams.delete('uselibpqcompat');
+      u.searchParams.delete('channel_binding');
+      cleanUrl = u.toString();
+    } catch (_) {
+      // Fallback: leave as-is
+    }
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupPath = path.join(BACKUP_DIR, `backup-${timestamp}.sql`);
     const pgDump = findPgDump();
 
-    execFile(pgDump, [databaseUrl, '--file', backupPath, '--format', 'plain'], (error, stdout, stderr) => {
+    execFile(pgDump, [cleanUrl, '--file', backupPath, '--format', 'plain'], (error, stdout, stderr) => {
       if (error) {
         console.error('PostgreSQL backup failed:', stderr || error.message);
         reject(error);

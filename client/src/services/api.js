@@ -29,6 +29,24 @@ api.interceptors.request.use(config => {
   return config;
 }, error => Promise.reject(error));
 
+// Global response error handler — convert non-2xx to a plain Error so
+// TanStack Query's onError gets a useful message.
+api.interceptors.response.use(
+  (r) => r,
+  (err) => {
+    const status = err.response?.status;
+    const message =
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      err.message ||
+      'Request failed';
+    const e = new Error(`${status ? `[${status}] ` : ''}${message}`);
+    e.status = status;
+    e.original = err;
+    return Promise.reject(e);
+  }
+);
+
 // Auth API
 export const authAPI = {
   changePassword: (currentPassword, newPassword) =>
