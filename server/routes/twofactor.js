@@ -123,36 +123,45 @@ router.post('/verify-login', async (req, res) => {
     }
 
     const normalizedToken = normalizeBackupCode(token);
+    let consumedBackupCode = false;
+    let remainingCodes = null;
+
     if (user2FA.backup_codes) {
       try {
         const codes = JSON.parse(user2FA.backup_codes);
         if (Array.isArray(codes) && codes.some((code) => backupCodeMatches(code, normalizedToken))) {
-          const remaining = codes.filter((code) => !backupCodeMatches(code, normalizedToken));
-          await queries.updateUser2FA(pendingUserId, user2FA.totp_secret, true, remaining);
-          const fullUser = await get('SELECT id, username, role, full_name, profile_picture, is_head FROM users WHERE id = ?', [pendingUserId]);
-          if (!fullUser) return res.status(404).json({ error: 'User not found' });
-          req.session.userId = pendingUserId;
-          req.session.user = toSessionUser(fullUser);
-          req.session.twoFactorVerified = true;
-          delete req.session.pending2FAUserId;
-          delete req.session.pending2FAUsername;
-          return res.json({ message: 'Login successful', user: req.session.user });
+          consumedBackupCode = true;
+          remainingCodes = codes.filter((code) => !backupCodeMatches(code, normalizedToken));
         }
       } catch (error) {}
     }
 
-    if (!verifyTotp({ secret: user2FA.totp_secret, token: normalizedToken })) {
+    if (!consumedBackupCode && !verifyTotp({ secret: user2FA.totp_secret, token: normalizedToken })) {
       return res.status(400).json({ error: 'Invalid token' });
     }
 
     const fullUser = await get('SELECT id, username, role, full_name, profile_picture, is_head FROM users WHERE id = ?', [pendingUserId]);
     if (!fullUser) return res.status(404).json({ error: 'User not found' });
-    req.session.userId = pendingUserId;
-    req.session.user = toSessionUser(fullUser);
-    req.session.twoFactorVerified = true;
-    delete req.session.pending2FAUserId;
-    delete req.session.pending2FAUsername;
-    res.json({ message: 'Login successful', user: req.session.user });
+
+    if (consumedBackupCode) {
+      await queries.updateUser2FA(pendingUserId, user2FA.totp_secret, true, remainingCodes);
+    }
+
+    const sessionUser = toSessionUser(fullUser);
+
+    req.session.regenerate((err) => {
+      if (err) return res.status(500).json({ error: 'Session error' });
+      req.session.userId = pendingUserId;
+      req.session.user = sessionUser;
+      req.session.twoFactorVerified = true;
+      req.session.createdAt = Date.now();
+      delete req.session.pending2FAUserId;
+      delete req.session.pending2FAUsername;
+      req.session.save((saveErr) => {
+        if (saveErr) return res.status(500).json({ error: 'Session error' });
+        res.json({ message: 'Login successful', user: sessionUser });
+      });
+    });
   } catch (error) {
     console.error('2FA login verify error:', error);
     res.status(500).json({ error: 'Failed to verify 2FA' });

@@ -18,24 +18,48 @@ const ACTION_MAP = {
   PATCH: 'update',
 };
 
+const PII_FIELDS = new Set([
+  'password', 'password_hash', 'password_reset_token', 'password_reset_expires',
+  'phone', 'email', 'address', 'date_of_birth', 'dob',
+  'profile_picture', 'profile_picture_url',
+]);
+
+const SAFE_FIELDS_BY_ENTITY = {
+  member: new Set(['section_id', 'leader_id', 'is_active', 'status', 'flags', 'opt_out_services', 'hide_from_birthday_list', 'show_age_to_leaders']),
+  leader: new Set(['section_id', 'is_head', 'is_active', 'phone_last4']),
+  section: new Set(['name']),
+  user: new Set(['full_name', 'role']),
+  attendance: new Set(['date', 'status', 'service_type_id', 'service_id']),
+};
+
+function hashValue(value) {
+  if (value == null) return null;
+  const crypto = require('crypto');
+  return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 16);
+}
+
+function sanitizeBody(body, entityType) {
+  if (!body || typeof body !== 'object') return body;
+  const sanitized = {};
+  const safe = SAFE_FIELDS_BY_ENTITY[entityType] || new Set();
+  for (const [key, value] of Object.entries(body)) {
+    if (key.startsWith('_')) continue;
+    if (PII_FIELDS.has(key)) continue;
+    if (safe.has(key) || /_id$/.test(key) || key === 'id') {
+      sanitized[key] = value;
+    } else {
+      // Unknown fields are stored as a short hash so we can still detect changes without leaking PII.
+      sanitized[`${key}_hash`] = hashValue(value);
+    }
+  }
+  return sanitized;
+}
+
 function auditLog(req, res, next) {
   const method = req.method;
   if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
     return next();
   }
-
-  const originalJson = res.json.bind(res);
-  const originalSend = res.send.bind(res);
-
-  let capturedBody = null;
-  res.json = (body) => {
-    capturedBody = body;
-    return originalJson(body);
-  };
-  res.send = (body) => {
-    capturedBody = body;
-    return originalSend(body);
-  };
 
   const logEntry = () => {
     try {
@@ -49,7 +73,7 @@ function auditLog(req, res, next) {
       const userId = req.session?.userId || null;
 
       const oldValue = method !== 'POST' && req.body?._oldValue ? req.body._oldValue : null;
-      const newValue = method !== 'DELETE' ? sanitizeBody(req.body) : null;
+      const newValue = method !== 'DELETE' ? sanitizeBody(req.body, entityType) : null;
 
       queries.createAuditEntry(userId, action, entityType, entityId, oldValue, newValue, ipAddress, userAgent).catch((err) => {
         console.error('Audit log write failed:', err.message);
@@ -77,13 +101,4 @@ function extractEntityId(path, entityType) {
   return Number.isNaN(id) ? null : id;
 }
 
-function sanitizeBody(body) {
-  if (!body || typeof body !== 'object') return body;
-  const sanitized = { ...body };
-  delete sanitized._oldValue;
-  delete sanitized.password;
-  delete sanitized.password_hash;
-  return sanitized;
-}
-
-module.exports = { auditLog };
+module.exports = { auditLog, sanitizeBody };

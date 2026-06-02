@@ -1096,9 +1096,6 @@ const queries = {
   getUser2FA: (userId) => get('SELECT id, totp_secret, totp_enabled, backup_codes FROM users WHERE id = ?', [userId]),
   disableUser2FA: (userId) =>
     run('UPDATE users SET totp_secret = NULL, totp_enabled = 0, backup_codes = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [userId]),
-  consumeBackupCode: (userId, code) =>
-    run('UPDATE users SET backup_codes = ? WHERE id = ? AND backup_codes IS NOT NULL',
-      [JSON.stringify(code), userId]),
 
   // Advanced Analytics queries
   getAttendancePrediction: (weeks = 4) => all(`
@@ -1400,27 +1397,38 @@ const queries = {
     run('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?', [notificationId, userId]),
   markAllNotificationsRead: (userId) =>
     run('UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0', [userId]),
-  getConsecutiveAbsentMembers: (leaderId) => all(`
+  getConsecutiveAbsentMembers: (leaderId, minStreak = 2) => all(`
     WITH member_absences AS (
       SELECT m.id as member_id, m.full_name, m.membership_id, s.name as section_name,
-             a.date,
-             ROW_NUMBER() OVER (PARTITION BY m.id ORDER BY a.date DESC) as rn
+             a.date
       FROM members m
       JOIN attendance a ON m.id = a.member_id
       JOIN sections s ON m.section_id = s.id
       WHERE m.leader_id = ? AND a.status = 'absent'
     ),
-    consecutive AS (
-      SELECT member_id, full_name, membership_id, section_name,
-             MAX(date) as last_absent,
-             COUNT(*) as streak
+    ordered AS (
+      SELECT member_id, full_name, membership_id, section_name, date,
+             LAG(date) OVER (PARTITION BY member_id ORDER BY date DESC) AS prev_date
       FROM member_absences
-      WHERE rn <= 10
-      GROUP BY member_id, full_name, membership_id, section_name
-      HAVING streak >= 2
+    ),
+    runs AS (
+      SELECT member_id, full_name, membership_id, section_name, date,
+             SUM(CASE WHEN prev_date IS NULL OR (julianday(prev_date) - julianday(date)) > 9 THEN 1 ELSE 0 END)
+               OVER (PARTITION BY member_id ORDER BY date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run_id
+      FROM ordered
+    ),
+    streaks AS (
+      SELECT member_id, full_name, membership_id, section_name,
+             MAX(date) AS last_absent,
+             COUNT(*) AS streak
+      FROM runs
+      GROUP BY member_id, full_name, membership_id, section_name, run_id
     )
-    SELECT * FROM consecutive ORDER BY streak DESC
-  `, [leaderId]),
+    SELECT member_id, full_name, membership_id, section_name, last_absent, streak
+    FROM streaks
+    WHERE streak >= ?
+    ORDER BY streak DESC, last_absent DESC
+  `, [leaderId, minStreak]),
 
   // Follow-up queries
   createFollowUp: (memberId, leaderId, absenceDate) =>

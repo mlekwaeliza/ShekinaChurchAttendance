@@ -82,6 +82,17 @@ function backupPostgres() {
   });
 }
 
+function safeBackupName(input) {
+  const safe = path.basename(String(input || ''));
+  if (!safe || safe !== input || !/^[\w.\-]+$/.test(safe)) {
+    throw new Error('Invalid backup filename');
+  }
+  if (!/\.(sqlite|sql)$/i.test(safe)) {
+    throw new Error('Invalid backup file extension');
+  }
+  return safe;
+}
+
 function restoreDatabase(backupFile) {
   return new Promise((resolve, reject) => {
     if (String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres') {
@@ -89,7 +100,13 @@ function restoreDatabase(backupFile) {
       return;
     }
 
-    const backupPath = path.join(BACKUP_DIR, backupFile);
+    let safeName;
+    try {
+      safeName = safeBackupName(backupFile);
+    } catch (err) {
+      return reject(err);
+    }
+    const backupPath = path.join(BACKUP_DIR, safeName);
     const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.sqlite');
 
     if (!fs.existsSync(backupPath)) {
@@ -130,12 +147,13 @@ function listBackups() {
 }
 
 function deleteBackup(filename) {
-  const filePath = path.join(BACKUP_DIR, filename);
+  const safeName = safeBackupName(filename);
+  const filePath = path.join(BACKUP_DIR, safeName);
   if (!fs.existsSync(filePath)) {
-    throw new Error(`Backup file not found: ${filename}`);
+    throw new Error(`Backup file not found: ${safeName}`);
   }
   fs.unlinkSync(filePath);
-  console.log(`Deleted backup: ${filename}`);
+  console.log(`Deleted backup: ${safeName}`);
 }
 
 function cleanupOldBackups() {

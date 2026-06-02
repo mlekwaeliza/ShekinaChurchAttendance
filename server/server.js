@@ -43,14 +43,7 @@ if (trustProxy) {
 
 const isLocalRequest = (req) => {
   const ip = req.ip || req.connection?.remoteAddress || '';
-  const origin = req.get('origin') || '';
-  return (
-    ip === '127.0.0.1' ||
-    ip === '::1' ||
-    ip === '::ffff:127.0.0.1' ||
-    origin.startsWith('http://127.0.0.1:') ||
-    origin.startsWith('http://localhost:')
-  );
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
 };
 
 // Security middleware
@@ -92,14 +85,16 @@ if (!sessionSecret) {
 }
 
 app.use(session({
+  name: 'sc.sid',
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     secure: cookieSecure,
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours idle timeout
   }
 }));
 
@@ -221,13 +216,15 @@ async function initializeAdmin() {
     if (!adminExists) {
       const bcrypt = require('bcryptjs');
       const crypto = require('crypto');
-      const tempPassword = crypto.randomBytes(8).toString('hex');
-      const passwordHash = bcrypt.hashSync(tempPassword, 10);
-      await queries.createUser('admin', passwordHash, 'admin', 'System Administrator');
-      console.log('Default admin user created');
-      console.log('Username: admin');
-      console.log(`Temporary password: ${tempPassword}`);
-      console.log('IMPORTANT: Change this password after first login!');
+      const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
+      if (initialPassword && initialPassword.length >= 12) {
+        const passwordHash = bcrypt.hashSync(initialPassword, 10);
+        await queries.createUser('admin', passwordHash, 'admin', 'System Administrator');
+        console.log('Default admin user created from INITIAL_ADMIN_PASSWORD env var.');
+      } else {
+        console.warn('No admin user exists. Set INITIAL_ADMIN_PASSWORD (>=12 chars) and restart to bootstrap.');
+        console.warn('Admin login will be unavailable until this is configured.');
+      }
     }
   } catch (error) {
     console.error('Failed to create admin user:', error);

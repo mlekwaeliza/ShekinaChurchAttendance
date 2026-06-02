@@ -5,13 +5,23 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
-const { queries, run, get, all, db } = require('../database');
+const { queries, run, get, all, db, transaction } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate } = require('../utils/date');
+const { escapeCsvValue, toCsvRow } = require('../utils/csv');
 const { yearEquals, monthEquals, weekEquals, dateOnly, upsertAttendanceSql } = require('../utils/sqlDialect');
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype !== 'text/csv' && !file.originalname.toLowerCase().endsWith('.csv')) {
+      return cb(new Error('Only CSV files are allowed'));
+    }
+    cb(null, true);
+  }
+});
 
 // Apply authentication and admin role check to all routes
 router.use(isAuthenticated);
@@ -270,13 +280,18 @@ router.put('/home-cells/:id/leaders', async (req, res) => {
       return res.status(404).json({ error: 'Home cell not found' });
     }
 
-    await run('DELETE FROM home_cell_leaders WHERE cell_id = ?', [cellId]);
+    const validLeaderIds = [];
     for (const leaderId of leaderIds) {
       const leader = await get('SELECT id FROM leaders WHERE id = ? AND is_active = 1', [leaderId]);
-      if (leader) {
-        await run('INSERT INTO home_cell_leaders (cell_id, leader_id) VALUES (?, ?)', [cellId, leaderId]);
-      }
+      if (leader) validLeaderIds.push(leaderId);
     }
+
+    await transaction(async (tx) => {
+      await tx.run('DELETE FROM home_cell_leaders WHERE cell_id = ?', [cellId]);
+      for (const leaderId of validLeaderIds) {
+        await tx.run('INSERT INTO home_cell_leaders (cell_id, leader_id) VALUES (?, ?)', [cellId, leaderId]);
+      }
+    });
 
     res.json({ message: 'Home cell leaders updated' });
   } catch (error) {
@@ -704,18 +719,25 @@ router.post('/leaders', async (req, res) => {
     if (!username || !full_name || !section_id) {
       return res.status(400).json({ error: 'Username, full name, and section are required' });
     }
-    // Check if user exists
     const existingUser = await queries.findUserByUsername(username);
     if (existingUser) {
       return res.status(400).json({ error: 'Username already taken' });
     }
-    // Default password for new leaders
+    // Generate a password-set token; the leader sets their own password via emailed link.
     const crypto = require('crypto');
-    const tempPassword = `temp_${crypto.randomBytes(8).toString('hex')}`;
-    const passwordHash = bcrypt.hashSync(tempPassword, 10);
-    const { lastID: userId } = await queries.createUser(username, passwordHash, 'leader', full_name);
+    const setToken = crypto.randomBytes(24).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(); // 72h
+    // Random unusable initial hash so the token is the only way to set the password.
+    const placeholderHash = crypto.createHash('sha256').update(`placeholder:${setToken}`).digest('hex');
+    const { lastID: userId } = await queries.createUser(username, placeholderHash, 'leader', full_name);
     await queries.createLeader(userId, section_id, phone, email, is_head ? 1 : 0);
-    res.json({ message: 'Leader created successfully', userId });
+    await run(
+      'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
+      [tokenHash, expiresAt, userId]
+    );
+    const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
+    res.json({ message: 'Leader created. Share the password-set link with the user.', userId, set_url: setUrl, expires_at: expiresAt });
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
       return res.status(400).json({ error: 'Username already taken' });
@@ -876,12 +898,20 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
           let leaderUser = await queries.findUserByUsername(leaderUsername);
 
           if (!leaderUser) {
-            const tempPassword = `temp_${uuidv4().substring(0, 8)}`;
-            const passwordHash = bcrypt.hashSync(tempPassword, 10);
+            const crypto = require('crypto');
+            const setToken = crypto.randomBytes(24).toString('hex');
+            const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
+            const placeholderHash = crypto.createHash('sha256').update(`placeholder:${setToken}`).digest('hex');
+            const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
             try {
-              await queries.createUser(leaderUsername, passwordHash, 'leader', leaderNameOrId);
+              await queries.createUser(leaderUsername, placeholderHash, 'leader', leaderNameOrId);
               leaderUser = await queries.findUserByUsername(leaderUsername);
-              userPasswords.set(leaderUsername, tempPassword);
+              await run(
+                'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
+                [tokenHash, expiresAt, leaderUser.id]
+              );
+              const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
+              userPasswords.set(leaderUsername, { url: setUrl, expires_at: expiresAt });
               results.leadersCreated++;
             } catch (error) {
               results.errors.push(`Failed to create leader user "${leaderUsername}": ${error.message}`);
@@ -976,7 +1006,7 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
     res.json({
       message: 'CSV uploaded successfully',
       results,
-      tempPasswords: userPasswords.size > 0 ? Array.from(userPasswords.entries()).map(([username, password]) => ({ username, password })) : null
+      leaderInviteLinks: userPasswords.size > 0 ? Array.from(userPasswords.entries()).map(([username, info]) => ({ username, ...info })) : null
     });
   } catch (error) {
     if (fs.existsSync(tempPath)) {
@@ -1111,26 +1141,18 @@ router.get('/export', async (req, res) => {
     // Convert to CSV
     const headers = ['Date', 'Service', 'Section', 'Leader', 'MembershipID', 'MemberName', 'Status'];
     const csvRows = [];
-    csvRows.push(headers.join(','));
+    csvRows.push(headers.map(escapeCsvValue).join(','));
 
     records.forEach(row => {
-      const escapeCsvValue = (val) => {
-        const str = String(val ?? '');
-        if (str.startsWith('=') || str.startsWith('+') || str.startsWith('-') || str.startsWith('@')) {
-          return `"'${str}"`;
-        }
-        return `"${str.replace(/"/g, '""')}"`;
-      };
-      const values = [
-        escapeCsvValue(row.date),
-        escapeCsvValue(row.service_name),
-        escapeCsvValue(row.section_name),
-        escapeCsvValue(row.leader_name),
-        escapeCsvValue(row.membership_id),
-        escapeCsvValue(row.member_name),
-        escapeCsvValue(row.status)
-      ];
-      csvRows.push(values.join(','));
+      csvRows.push(toCsvRow([
+        row.date,
+        row.service_name,
+        row.section_name,
+        row.leader_name,
+        row.membership_id,
+        row.member_name,
+        row.status
+      ]));
     });
 
     res.setHeader('Content-Type', 'text/csv');
@@ -1168,7 +1190,6 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Get leader's user account with username
     const leader = await new Promise((resolve, reject) => {
       db.get(`
         SELECT l.user_id, u.username
@@ -1185,17 +1206,25 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
       return res.status(404).json({ error: 'Leader not found' });
     }
 
-    // Generate temporary password
-    const tempPassword = `temp_${uuidv4().substring(0, 8)}`;
-    const passwordHash = bcrypt.hashSync(tempPassword, 10);
+    // Generate a one-time reset token instead of returning the new password.
+    // The admin shares the link with the user, who sets their own password.
+    const crypto = require('crypto');
+    const resetToken = crypto.randomBytes(24).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
 
-    // Update user password
-    await run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [passwordHash, leader.user_id]);
+    await run(
+      'UPDATE users SET password_reset_token = ?, password_reset_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [tokenHash, expiresAt, leader.user_id]
+    );
+
+    const resetUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/reset-password?token=${resetToken}`;
 
     res.json({
-      message: 'Password reset successful',
-      temp_password: tempPassword,
-      username: leader.username
+      message: 'Password reset link generated. Share it with the user; it expires in 1 hour.',
+      username: leader.username,
+      reset_url: resetUrl,
+      expires_at: expiresAt
     });
   } catch (error) {
     console.error('Reset password error:', error);
@@ -1614,50 +1643,39 @@ router.post('/attendance', async (req, res) => {
       return res.status(400).json({ error: 'Date, leader_id, section_id, and attendance array required' });
     }
 
-    const existingSubmission = await queries.checkSubmissionExists(leader_id, date);
+    const leaderId = Number(leader_id);
+    const sectionId = Number(section_id);
+    if (!Number.isInteger(leaderId) || !Number.isInteger(sectionId)) {
+      return res.status(400).json({ error: 'Invalid leader_id or section_id' });
+    }
+
+    const leader = await get('SELECT id, section_id, is_active FROM leaders WHERE id = ?', [leaderId]);
+    if (!leader || !leader.is_active || Number(leader.section_id) !== sectionId) {
+      return res.status(400).json({ error: 'Leader does not exist, is inactive, or does not belong to the specified section' });
+    }
+
+    for (const record of attendance) {
+      if (!['present', 'absent', 'excused'].includes(record.status)) {
+        return res.status(400).json({ error: `Invalid status for member ${record.member_id}` });
+      }
+    }
+
+    const existingSubmission = await queries.checkSubmissionExists(leaderId, date);
     if (existingSubmission) {
       return res.status(400).json({ error: 'Attendance already submitted for this leader on this date' });
     }
 
-    await new Promise((resolve, reject) => {
-      db.serialize(() => {
-        db.run('BEGIN TRANSACTION', (err) => {
-          if (err) return reject(err);
-
-          try {
-            attendance.forEach(record => {
-              if (!['present', 'absent', 'excused'].includes(record.status)) {
-                throw new Error(`Invalid status for member ${record.member_id}`);
-              }
-              db.run(
-                upsertAttendanceSql({ includeServiceType: true }),
-                [record.member_id, date, record.status, service_id, req.session.userId]
-              );
-            });
-
-            db.run(
-              'INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)',
-              [leader_id, section_id, date, service_id],
-              (err) => {
-                if (err) {
-                  db.run('ROLLBACK');
-                  return reject(err);
-                }
-                db.run('COMMIT', (commitErr) => {
-                  if (commitErr) {
-                    db.run('ROLLBACK');
-                    return reject(commitErr);
-                  }
-                  resolve();
-                });
-              }
-            );
-          } catch (err) {
-            db.run('ROLLBACK');
-            reject(err);
-          }
-        });
-      });
+    await transaction(async (tx) => {
+      for (const record of attendance) {
+        await tx.run(
+          upsertAttendanceSql({ includeServiceType: true }),
+          [record.member_id, date, record.status, service_id, req.session.userId]
+        );
+      }
+      await tx.run(
+        'INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)',
+        [leaderId, sectionId, date, service_id]
+      );
     });
 
     res.json({ message: 'Attendance submitted successfully' });
@@ -2029,25 +2047,25 @@ router.get('/birthdays/export', async (req, res) => {
      res.setHeader('Content-Type', 'text/csv');
      res.setHeader('Content-Disposition', 'attachment; filename=birthdays.csv');
      
-     // Create CSV content
-     const csvRows = [];
-     csvRows.push(['ID', 'Full Name', 'Membership ID', 'Phone', 'Address', 'Date of Birth', 'Age Group', 'Gender', 'Section', 'Leader']);
-     
-     for (const b of birthdays) {
-       const dob = b.date_of_birth ? new Date(b.date_of_birth).toLocaleDateString() : '';
-       csvRows.push([
-         b.id,
-         b.full_name,
-         b.membership_id,
-         b.phone || '',
-         b.address || '',
-         dob,
-         b.age_group || '',
-         b.gender || '',
-         b.section_name,
-         b.leader_name || ''
-       ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(','));
-     }
+      // Create CSV content
+      const csvRows = [];
+      csvRows.push(toCsvRow(['ID', 'Full Name', 'Membership ID', 'Phone', 'Address', 'Date of Birth', 'Age Group', 'Gender', 'Section', 'Leader']));
+
+      for (const b of birthdays) {
+        const dob = b.date_of_birth ? new Date(b.date_of_birth).toLocaleDateString() : '';
+        csvRows.push(toCsvRow([
+          b.id,
+          b.full_name,
+          b.membership_id,
+          b.phone || '',
+          b.address || '',
+          dob,
+          b.age_group || '',
+          b.gender || '',
+          b.section_name,
+          b.leader_name || ''
+        ]));
+      }
      
      res.send(csvRows.join('\n'));
    } catch (error) {
@@ -2071,10 +2089,9 @@ router.get('/members/export', async (req, res) => {
     `);
 
     const headers = ['MembershipID', 'FullName', 'Phone', 'Address', 'Email', 'Gender', 'AgeGroup', 'Section', 'Leader'];
-    const csvRows = [headers.join(',')];
+    const csvRows = [headers.map(escapeCsvValue).join(',')];
     members.forEach(row => {
-      const escape = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
-      csvRows.push([row.membership_id, row.full_name, row.phone, row.address, row.email, row.gender, row.age_group, row.section_name, row.leader_name].map(escape).join(','));
+      csvRows.push(toCsvRow([row.membership_id, row.full_name, row.phone, row.address, row.email, row.gender, row.age_group, row.section_name, row.leader_name]));
     });
 
     res.setHeader('Content-Type', 'text/csv');

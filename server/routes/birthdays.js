@@ -2,6 +2,7 @@ const express = require('express');
 const { queries, all, db } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
 const { addDays, formatLocalDate, getWeekStartDate, parseDateInput, startOfLocalDay } = require('../utils/date');
+const { escapeCsvValue, toCsvRow } = require('../utils/csv');
 
 const router = express.Router();
 
@@ -132,20 +133,12 @@ router.get('/', async (req, res) => {
 
 // GET export
 router.get('/export', async (req, res) => {
-   // Logic for CSV export...
-   // For now, simple implementation
    try {
      const allBirthdays = await queries.getUpcomingBirthdays();
      const headers = ['Name', 'Date of Birth', 'Section', 'Leader', 'Phone'];
-     const csvRows = [headers.join(',')];
+     const csvRows = [headers.map(escapeCsvValue).join(',')];
      allBirthdays.forEach(m => {
-       csvRows.push([
-         `"${m.full_name}"`,
-         m.date_of_birth,
-         `"${m.section_name}"`,
-         `"${m.leader_name}"`,
-         m.phone || ''
-       ].join(','));
+       csvRows.push(toCsvRow([m.full_name, m.date_of_birth, m.section_name, m.leader_name, m.phone || '']));
      });
      res.setHeader('Content-Type', 'text/csv');
      res.setHeader('Content-Disposition', `attachment; filename="birthdays_${formatLocalDate()}.csv"`);

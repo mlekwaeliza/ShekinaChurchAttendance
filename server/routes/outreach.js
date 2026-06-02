@@ -1,5 +1,5 @@
 const express = require('express');
-const { db, queries, run, all, get } = require('../database');
+const { db, queries, run, all, get, transaction } = require('../database');
 const { isAuthenticated } = require('../middleware/auth');
 const { addDays, formatLocalDate, formatMonthDay, getWeekStartString, startOfLocalDay } = require('../utils/date');
 const { monthDay: sqlMonthDay } = require('../utils/sqlDialect');
@@ -181,9 +181,9 @@ router.get('/leaders', async (req, res) => {
 router.post('/log', async (req, res) => {
   try {
     const { userId, leaderId } = req.outreachContext;
-    const { 
-      member_id, contact_method, outcome, service_id, message, 
-      new_prayer_request, follow_up_needed, assigned_to_user_id, due_date, 
+    const {
+      member_id, contact_method, outcome, service_id, message,
+      new_prayer_request, follow_up_needed, assigned_to_user_id, due_date,
       add_to_hall_of_fame, points, new_flags = []
     } = req.body;
 
@@ -194,67 +194,59 @@ router.post('/log', async (req, res) => {
     const weekStart = getWeekStartString();
     const parsedServiceId = service_id && service_id !== 'all' ? service_id : null;
 
-    db.serialize(async () => {
-      db.run('BEGIN TRANSACTION');
+    // Pre-fetch member state outside the transaction (read-only).
+    const member = await get(`SELECT prayer_requests, flags FROM members WHERE id = ?`, [member_id]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
 
-      try {
-        // 1. Insert Outreach Log
-        const logResult = await run(
-          `INSERT INTO outreach_logs (leader_id, member_id, contact_method, outcome, service_id, created_by, message, week_start)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [leaderId || 0, member_id, contact_method, outcome, parsedServiceId, userId, message || null, weekStart]
-        );
-        const logId = logResult.lastID;
+    let prayers = [];
+    let flags = [];
+    try { prayers = member.prayer_requests ? JSON.parse(member.prayer_requests) : []; } catch (e) { prayers = []; }
+    try { flags = member.flags ? JSON.parse(member.flags) : []; } catch (e) { flags = []; }
 
-        // 2. Add to Hall of Fame if requested
-        if (add_to_hall_of_fame && points) {
-          await run(
-            `INSERT INTO hall_of_fame_adjustments (member_id, points, reason, outreach_log_id) VALUES (?, ?, ?, ?)`,
-            [member_id, points, `Outreach: ${contact_method}`, logId]
-          );
-          await run(`UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?`, [points, member_id]);
-        }
-
-        // 3. Queue Pastoral Care Follow-up
-        if (follow_up_needed && due_date && assigned_to_user_id) {
-          await run(
-            `INSERT INTO pastoral_care_queue (member_id, assigned_by, assigned_to, due_date, status, notes) VALUES (?, ?, ?, ?, 'pending', ?)`,
-            [member_id, userId, assigned_to_user_id, due_date, `Follow-up needed after ${contact_method} by user ${userId}`]
-          );
-        }
-
-        // 4. Update Member (Flags, Prayer Requests, Last Contacted)
-        const member = await get(`SELECT prayer_requests, flags FROM members WHERE id = ?`, [member_id]);
-        let prayers = [];
-        let flags = [];
-        try { prayers = member.prayer_requests ? JSON.parse(member.prayer_requests) : []; } catch (e) {}
-        try { flags = member.flags ? JSON.parse(member.flags) : []; } catch (e) {}
-
-        if (new_prayer_request && new_prayer_request.trim() !== '') {
-          prayers.unshift({ request: new_prayer_request, date: new Date().toISOString() });
-        }
-        
-        if (new_flags.length > 0) {
-          new_flags.forEach(f => {
-            if (!f.reason) f.reason = 'Logged via outreach';
-            if (!f.created_at) f.created_at = new Date().toISOString(); 
-            flags.push(f);
-          });
-        }
-
-        await run(
-          `UPDATE members SET last_contacted_at = CURRENT_TIMESTAMP, last_contacted_by = ?, prayer_requests = ?, flags = ? WHERE id = ?`,
-          [userId, JSON.stringify(prayers), JSON.stringify(flags), member_id]
-        );
-
-        db.run('COMMIT');
-        res.json({ message: 'Outreach logged successfully' });
-      } catch (err) {
-        db.run('ROLLBACK');
-        console.error('Log insert transaction error:', err);
-        res.status(500).json({ error: 'Failed to save log' });
+    if (new_prayer_request && new_prayer_request.trim() !== '') {
+      prayers.unshift({ request: new_prayer_request, date: new Date().toISOString() });
+    }
+    if (Array.isArray(new_flags) && new_flags.length > 0) {
+      for (const f of new_flags) {
+        if (!f.reason) f.reason = 'Logged via outreach';
+        if (!f.created_at) f.created_at = new Date().toISOString();
+        flags.push(f);
       }
+    }
+
+    await transaction(async (tx) => {
+      const logResult = await tx.run(
+        `INSERT INTO outreach_logs (leader_id, member_id, contact_method, outcome, service_id, created_by, message, week_start)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [leaderId || 0, member_id, contact_method, outcome, parsedServiceId, userId, message || null, weekStart]
+      );
+      const logId = logResult.lastID;
+
+      if (add_to_hall_of_fame && points) {
+        await tx.run(
+          `INSERT INTO hall_of_fame_adjustments (member_id, points, reason, outreach_log_id) VALUES (?, ?, ?, ?)`,
+          [member_id, points, `Outreach: ${contact_method}`, logId]
+        );
+        await tx.run(
+          `UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?`,
+          [points, member_id]
+        );
+      }
+
+      if (follow_up_needed && due_date && assigned_to_user_id) {
+        await tx.run(
+          `INSERT INTO pastoral_care_queue (member_id, assigned_by, assigned_to, due_date, status, notes) VALUES (?, ?, ?, ?, 'pending', ?)`,
+          [member_id, userId, assigned_to_user_id, due_date, `Follow-up needed after ${contact_method} by user ${userId}`]
+        );
+      }
+
+      await tx.run(
+        `UPDATE members SET last_contacted_at = CURRENT_TIMESTAMP, last_contacted_by = ?, prayer_requests = ?, flags = ? WHERE id = ?`,
+        [userId, JSON.stringify(prayers), JSON.stringify(flags), member_id]
+      );
     });
+
+    res.json({ message: 'Outreach logged successfully' });
   } catch (error) {
     console.error('Log error:', error);
     res.status(500).json({ error: 'Failed to process outreach log' });

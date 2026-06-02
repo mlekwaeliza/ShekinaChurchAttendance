@@ -17,7 +17,6 @@ services:
       - COOKIE_SECURE=${COOKIE_SECURE:-false}
       - TRUST_PROXY=${TRUST_PROXY:-false}
     volumes:
-      - db-data:/app/server
       - uploads:/app/server/uploads
       - backups:/app/server/backups
     healthcheck:
@@ -33,6 +32,5 @@ services:
         max-file: "5"
 
 volumes:
-  db-data:
   uploads:
   backups:

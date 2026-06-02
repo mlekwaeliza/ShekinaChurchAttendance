@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
-const fs = require('fs');
 const { queries, get } = require('../database');
 
 const router = express.Router();
@@ -48,16 +47,10 @@ router.post('/login', async (req, res) => {
     username = username.trim();
     password = password.trim();
 
-    const logEntry = (msg) => {
-      const timestamp = new Date().toISOString();
-      fs.appendFileSync(path.join(__dirname, '../debug.log'), `[${timestamp}] ${msg}\n`);
-    };
-
-    logEntry(`Login attempt - Username: "${username}" (Len: ${username.length}), PassLen: ${password.length}`);
-
     const user = await queries.findUserByUsername(username);
     if (!user) {
-      logEntry(`Login failed: User "${username}" not found in database.`);
+      // Constant-time-ish dummy compare to reduce user enumeration timing.
+      bcrypt.compareSync(password, '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali');
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -73,7 +66,6 @@ router.post('/login', async (req, res) => {
     }
 
     const validPassword = bcrypt.compareSync(password, user.password_hash);
-    logEntry(`Password check for "${username}": ${validPassword ? 'MATCH' : 'FAIL'}`);
     if (!validPassword) {
       const attempts = (user.failed_login_attempts || 0) + 1;
       await queries.incrementFailedLogin(user.id);
@@ -91,19 +83,19 @@ router.post('/login', async (req, res) => {
 
     // Check if 2FA is enabled
     if (user.totp_enabled) {
-      req.session.pending2FAUserId = user.id;
-      req.session.pending2FAUsername = user.username;
-      req.session.twoFactorVerified = false;
-      return res.json({
-        message: '2FA required',
-        requires2FA: true,
-        userId: user.id
+      const finishPending2FA = () => {
+        req.session.pending2FAUserId = user.id;
+        req.session.pending2FAUsername = user.username;
+        req.session.twoFactorVerified = false;
+        res.json({ message: '2FA required', requires2FA: true, userId: user.id });
+      };
+      return req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ error: 'Session error' });
+        finishPending2FA();
       });
     }
 
-    // Store user info in session (exclude password)
-    req.session.userId = user.id;
-    req.session.user = {
+    const sessionUser = {
       id: user.id,
       username: user.username,
       role: user.role,
@@ -111,11 +103,17 @@ router.post('/login', async (req, res) => {
       profile_picture: user.profile_picture,
       is_head: user.is_head
     };
-    req.session.twoFactorVerified = true;
 
-    res.json({
-      message: 'Login successful',
-      user: req.session.user
+    req.session.regenerate((err) => {
+      if (err) return res.status(500).json({ error: 'Session error' });
+      req.session.userId = user.id;
+      req.session.user = sessionUser;
+      req.session.twoFactorVerified = true;
+      req.session.createdAt = Date.now();
+      req.session.save((saveErr) => {
+        if (saveErr) return res.status(500).json({ error: 'Session error' });
+        res.json({ message: 'Login successful', user: sessionUser });
+      });
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -129,7 +127,7 @@ router.post('/logout', (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to logout' });
     }
-    res.clearCookie('connect.sid');
+    res.clearCookie('sc.sid');
     res.json({ message: 'Logged out successfully' });
   });
 });
