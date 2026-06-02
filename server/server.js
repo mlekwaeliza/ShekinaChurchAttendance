@@ -9,7 +9,34 @@ const { auditLog } = require('./middleware/audit');
 const { addDays, formatLocalDate, startOfLocalDay } = require('./utils/date');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const onFinished = require('on-finished');
 require('dotenv').config();
+
+// Optional Sentry init. No-op unless SENTRY_DSN is set.
+if (process.env.SENTRY_DSN) {
+  try {
+    const Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'development',
+      release: process.env.GIT_SHA || undefined,
+      tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.1),
+      // Don't capture PII automatically.
+      sendDefaultPii: false,
+      beforeSend(event) {
+        // Strip Authorization header from breadcrumbs.
+        if (event.request?.headers) {
+          delete event.request.headers.authorization;
+          delete event.request.headers.cookie;
+        }
+        return event;
+      }
+    });
+  } catch (err) {
+    console.warn('Sentry init failed (continuing without):', err.message);
+  }
+}
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads', 'profiles');
@@ -47,9 +74,37 @@ const isLocalRequest = (req) => {
 };
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: isProduction
+    ? {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          fontSrc: ["'self'", 'data:'],
+          connectSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          upgradeInsecureRequests: []
+        }
+      }
+    : false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'same-site' },
+  hsts: isProduction
+    ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+    : false,
+  referrerPolicy: { policy: 'same-origin' }
+}));
 app.use(cors({
-  origin: clientUrl,
+  origin: (origin, callback) => {
+    // Allow same-origin (no Origin header) and configured client origin
+    if (!origin || origin === clientUrl) return callback(null, true);
+    return callback(new Error('CORS: origin not allowed'));
+  },
   credentials: true
 }));
 
@@ -69,6 +124,44 @@ const loginLimiter = rateLimit({
   skip: isLocalRequest
 });
 
+// Per-IP failed-login counter (in-memory). Complements the per-account
+// 5-attempts lockout by protecting against credential-stuffing
+// distributed across many usernames from a single source IP.
+const ipLoginFailures = new Map();
+const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const IP_LOGIN_MAX = 25;
+function getIpLoginState(ip) {
+  const now = Date.now();
+  const state = ipLoginFailures.get(ip);
+  if (!state || now - state.startedAt > IP_LOGIN_WINDOW_MS) {
+    return { count: 0, startedAt: now, lockedUntil: 0 };
+  }
+  return state;
+}
+function recordIpLoginFailure(ip) {
+  const now = Date.now();
+  const state = ipLoginFailures.get(ip);
+  if (!state || now - state.startedAt > IP_LOGIN_WINDOW_MS) {
+    ipLoginFailures.set(ip, { count: 1, startedAt: now, lockedUntil: 0 });
+    return;
+  }
+  state.count += 1;
+  if (state.count >= IP_LOGIN_MAX) {
+    state.lockedUntil = now + IP_LOGIN_WINDOW_MS;
+  }
+}
+function resetIpLoginState(ip) {
+  ipLoginFailures.delete(ip);
+}
+setInterval(() => {
+  const cutoff = Date.now() - IP_LOGIN_WINDOW_MS;
+  for (const [ip, state] of ipLoginFailures.entries()) {
+    if (state.startedAt < cutoff && (!state.lockedUntil || state.lockedUntil < Date.now())) {
+      ipLoginFailures.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000).unref?.();
+
 // Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -84,12 +177,28 @@ if (!sessionSecret) {
   process.exit(1);
 }
 
+function buildSessionStore() {
+  const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
+  if (dbClient === 'postgres') {
+    const PgSession = require('connect-pg-simple')(session);
+    const { pool } = require('./db/postgres');
+    return new PgSession({
+      pool,
+      tableName: 'session',
+      createTableIfMissing: true,
+      pruneSessionInterval: 60 * 15 // seconds
+    });
+  }
+  return undefined; // default MemoryStore (OK for local SQLite dev only)
+}
+
 app.use(session({
   name: 'sc.sid',
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   rolling: true,
+  store: buildSessionStore(),
   cookie: {
     secure: cookieSecure,
     httpOnly: true,
@@ -108,6 +217,29 @@ app.use('/api/', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
+  next();
+});
+
+// Request ID + structured access log
+app.use((req, res, next) => {
+  const id = req.headers['x-request-id'] || crypto.randomUUID();
+  req.id = id;
+  res.setHeader('x-request-id', id);
+  const start = process.hrtime.bigint();
+  onFinished(res, () => {
+    const durMs = Number(process.hrtime.bigint() - start) / 1e6;
+    console.log(JSON.stringify({
+      level: 'info',
+      type: 'http',
+      request_id: id,
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      duration_ms: Math.round(durMs * 100) / 100,
+      ip: req.ip,
+      user_id: req.session?.userId || null
+    }));
+  });
   next();
 });
 
@@ -199,7 +331,37 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
-// 404 catch-all for undefined API routes
+// Prometheus-style metrics endpoint. No external dep; just process metrics
+// + DB connection status. Format: text/plain; version=0.0.4
+app.get('/api/metrics', async (req, res) => {
+  const mem = process.memoryUsage();
+  const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
+  let dbUp = 0;
+  if (dbClient === 'postgres') {
+    try {
+      const { checkConnection } = require('./db/postgres');
+      const r = await checkConnection();
+      dbUp = r.ok ? 1 : 0;
+    } catch (e) { dbUp = 0; }
+  } else {
+    dbUp = 1; // SQLite is process-local; assume up
+  }
+  res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.send([
+    '# HELP process_uptime_seconds Node process uptime in seconds',
+    '# TYPE process_uptime_seconds gauge',
+    `process_uptime_seconds ${process.uptime()}`,
+    '# HELP process_resident_memory_bytes RSS in bytes',
+    '# TYPE process_resident_memory_bytes gauge',
+    `process_resident_memory_bytes ${mem.rss}`,
+    '# HELP process_heap_bytes Heap used in bytes',
+    '# TYPE process_heap_bytes gauge',
+    `process_heap_bytes ${mem.heapUsed}`,
+    '# HELP database_up 1 if database is reachable, else 0',
+    '# TYPE database_up gauge',
+    `database_up{client="${dbClient}"} ${dbUp}`
+  ].join('\n'));
+});
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
@@ -299,6 +461,7 @@ async function generateNotifications() {
 }
 
 // Start server
+let server = null;
 async function startServer() {
   try {
     await new Promise((resolve, reject) => {
@@ -313,7 +476,7 @@ async function startServer() {
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);
     startScheduler();
-    app.listen(PORT, () => {
+    server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
@@ -323,6 +486,47 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+// Graceful shutdown
+let shuttingDown = false;
+function shutdown(signal) {
+  return async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(JSON.stringify({ level: 'info', type: 'shutdown', signal }));
+    const forceExit = setTimeout(() => {
+      console.error('Forced exit after 15s');
+      process.exit(1);
+    }, 15000);
+    forceExit.unref();
+
+    try {
+      if (server) {
+        await new Promise((resolve) => server.close(resolve));
+      }
+      const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
+      if (dbClient === 'postgres') {
+        const { close } = require('./db/postgres');
+        await close();
+      }
+      clearTimeout(forceExit);
+      process.exit(0);
+    } catch (err) {
+      console.error('Shutdown error:', err);
+      process.exit(1);
+    }
+  };
+}
+
+process.on('SIGTERM', shutdown('SIGTERM'));
+process.on('SIGINT', shutdown('SIGINT'));
+process.on('unhandledRejection', (reason) => {
+  console.error(JSON.stringify({ level: 'error', type: 'unhandledRejection', reason: String(reason) }));
+});
+process.on('uncaughtException', (err) => {
+  console.error(JSON.stringify({ level: 'error', type: 'uncaughtException', message: err.message, stack: err.stack }));
+  shutdown('uncaughtException')();
+});
 
 startServer();
 

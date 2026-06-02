@@ -7,6 +7,23 @@ const { upsertAttendanceSql } = require('../utils/sqlDialect');
 const router = express.Router();
 router.use(isAuthenticated);
 
+// Idempotency-Key cache: 5 min TTL, max 1000 entries (FIFO eviction)
+const idemCache = new Map();
+const IDEM_MAX = 1000;
+function idemCacheSet(key, status, body) {
+  if (idemCache.size >= IDEM_MAX) {
+    const firstKey = idemCache.keys().next().value;
+    idemCache.delete(firstKey);
+  }
+  idemCache.set(key, { ts: Date.now(), status, body });
+}
+setInterval(() => {
+  const cutoff = Date.now() - 5 * 60 * 1000;
+  for (const [k, v] of idemCache.entries()) {
+    if (v.ts < cutoff) idemCache.delete(k);
+  }
+}, 60 * 1000).unref?.();
+
 const normalizePersonKey = (name, phone = '') => {
   const normalizedName = String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
   const normalizedPhone = String(phone || '').replace(/\D/g, '');
@@ -458,6 +475,16 @@ router.post('/attendance', async (req, res) => {
       return res.status(400).json({ error: 'Date and attendance array required' });
     }
 
+    // Idempotency-Key: if the client retries with the same key within 5
+    // minutes, return the cached response instead of inserting again.
+    const idemKey = req.get('Idempotency-Key');
+    if (idemKey && /^[A-Za-z0-9_\-]{1,128}$/.test(idemKey)) {
+      const cached = idemCache.get(idemKey);
+      if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
+        return res.status(cached.status).json(cached.body);
+      }
+    }
+
     const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
     if (!leaderRecord) {
       return res.status(404).json({ error: 'Leader record not found' });
@@ -561,11 +588,13 @@ router.post('/attendance', async (req, res) => {
       );
     });
 
-    res.json({
+    const responseBody = {
       message: Number(targetLeader.id) === Number(leaderRecord.id)
         ? 'Attendance submitted successfully'
         : `Attendance submitted on behalf of ${targetLeader.full_name}`
-    });
+    };
+    if (idemKey) idemCacheSet(idemKey, 200, responseBody);
+    res.json(responseBody);
   } catch (error) {
     res.status(error.statusCode || 500).json({ error: 'Failed to submit attendance', details: error.message });
   }

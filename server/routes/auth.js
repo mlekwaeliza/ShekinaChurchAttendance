@@ -7,6 +7,44 @@ const { queries, get } = require('../database');
 
 const router = express.Router();
 
+const ipLoginFailures = new Map();
+const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const IP_LOGIN_MAX = 25;
+function checkIpLoginBlocked(ip) {
+  const now = Date.now();
+  const state = ipLoginFailures.get(ip);
+  if (!state) return false;
+  if (state.lockedUntil && now < state.lockedUntil) return true;
+  if (now - state.startedAt > IP_LOGIN_WINDOW_MS) {
+    ipLoginFailures.delete(ip);
+    return false;
+  }
+  return false;
+}
+function recordIpLoginFailure(ip) {
+  const now = Date.now();
+  const state = ipLoginFailures.get(ip);
+  if (!state || now - state.startedAt > IP_LOGIN_WINDOW_MS) {
+    ipLoginFailures.set(ip, { count: 1, startedAt: now, lockedUntil: 0 });
+    return;
+  }
+  state.count += 1;
+  if (state.count >= IP_LOGIN_MAX) {
+    state.lockedUntil = now + IP_LOGIN_WINDOW_MS;
+  }
+}
+function resetIpLoginState(ip) {
+  ipLoginFailures.delete(ip);
+}
+setInterval(() => {
+  const cutoff = Date.now() - IP_LOGIN_WINDOW_MS;
+  for (const [ip, state] of ipLoginFailures.entries()) {
+    if (state.startedAt < cutoff && (!state.lockedUntil || state.lockedUntil < Date.now())) {
+      ipLoginFailures.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000).unref?.();
+
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 
 const storage = multer.diskStorage({
@@ -44,6 +82,11 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password required' });
     }
 
+    const ip = req.ip || req.connection?.remoteAddress || 'unknown';
+    if (checkIpLoginBlocked(ip)) {
+      return res.status(423).json({ error: 'Too many failed attempts from this network. Try again in 15 minutes.' });
+    }
+
     username = username.trim();
     password = password.trim();
 
@@ -51,6 +94,7 @@ router.post('/login', async (req, res) => {
     if (!user) {
       // Constant-time-ish dummy compare to reduce user enumeration timing.
       bcrypt.compareSync(password, '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali');
+      recordIpLoginFailure(ip);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -69,6 +113,7 @@ router.post('/login', async (req, res) => {
     if (!validPassword) {
       const attempts = (user.failed_login_attempts || 0) + 1;
       await queries.incrementFailedLogin(user.id);
+      recordIpLoginFailure(ip);
 
       if (attempts >= 5) {
         const lockUntil = new Date(Date.now() + 30 * 60 * 1000);
@@ -80,6 +125,7 @@ router.post('/login', async (req, res) => {
     }
 
     await queries.resetFailedLogin(user.id);
+    resetIpLoginState(ip);
 
     // Check if 2FA is enabled
     if (user.totp_enabled) {
@@ -87,6 +133,7 @@ router.post('/login', async (req, res) => {
         req.session.pending2FAUserId = user.id;
         req.session.pending2FAUsername = user.username;
         req.session.twoFactorVerified = false;
+        req.session.totpEnabled = true;
         res.json({ message: '2FA required', requires2FA: true, userId: user.id });
       };
       return req.session.regenerate((err) => {
@@ -109,6 +156,7 @@ router.post('/login', async (req, res) => {
       req.session.userId = user.id;
       req.session.user = sessionUser;
       req.session.twoFactorVerified = true;
+      req.session.totpEnabled = !!user.totp_enabled;
       req.session.createdAt = Date.now();
       req.session.save((saveErr) => {
         if (saveErr) return res.status(500).json({ error: 'Session error' });

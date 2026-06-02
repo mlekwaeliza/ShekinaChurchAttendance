@@ -19,19 +19,21 @@ function requireRole(allowedRoles) {
   };
 }
 
+// Cache the totp_enabled flag in the session after login/2FA to avoid a DB
+// hit on every authenticated request. The flag is set explicitly on:
+//  - successful password login (auth.js /login)
+//  - successful 2FA verification (twofactor.js /verify-login)
+//  - when 2FA is enabled/disabled (twofactor.js /enable, /disable)
+// The session itself is the trust boundary; this is read-only after auth.
 async function isAuthenticated(req, res, next) {
   if (req.session.userId && req.session.user) {
-    try {
-      const twoFactor = await queries.getUser2FA(req.session.userId);
-      if (twoFactor?.totp_enabled && !req.session.twoFactorVerified) {
-        return res.status(401).json({
-          error: 'Two-step verification required',
-          requires2FA: true,
-          userId: req.session.userId,
-        });
-      }
-    } catch (error) {
-      return res.status(500).json({ error: 'Failed to verify authentication state' });
+    // Require 2FA if the session flag says it's enabled but not yet verified.
+    if (req.session.totpEnabled === true && !req.session.twoFactorVerified) {
+      return res.status(401).json({
+        error: 'Two-step verification required',
+        requires2FA: true,
+        userId: req.session.userId,
+      });
     }
 
     return requireRole(['admin', 'leader', 'pastor'])(req, res, next);

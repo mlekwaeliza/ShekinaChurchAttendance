@@ -1,5 +1,8 @@
-/* ===== Google Fonts ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+/* ===== Fonts =====
+ * Inter and Outfit are self-hosted under /fonts/. The CSS variables below
+ * are overridden in /fonts/inter.css and /fonts/outfit.css via @font-face.
+ * No third-party CDN; no font-blocking network round-trip.
+ */
 
 @tailwind base;
 @tailwind components;

@@ -154,6 +154,7 @@ router.post('/verify-login', async (req, res) => {
       req.session.userId = pendingUserId;
       req.session.user = sessionUser;
       req.session.twoFactorVerified = true;
+      req.session.totpEnabled = true;
       req.session.createdAt = Date.now();
       delete req.session.pending2FAUserId;
       delete req.session.pending2FAUsername;
@@ -211,6 +212,7 @@ router.post('/verify', async (req, res) => {
 
     await queries.updateUser2FA(req.session.userId, setupSecret, true, storeBackupCodes(backupCodes));
     delete req.session.pendingTotpSecret;
+    req.session.totpEnabled = true;
 
     res.json({ message: '2FA enabled successfully', backupCodes });
   } catch (error) {
@@ -233,6 +235,7 @@ router.post('/disable', async (req, res) => {
 
     await queries.disableUser2FA(req.session.userId);
     req.session.twoFactorVerified = false;
+    req.session.totpEnabled = false;
 
     res.json({ message: '2FA disabled successfully' });
   } catch (error) {

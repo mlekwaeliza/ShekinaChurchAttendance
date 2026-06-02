@@ -618,6 +618,9 @@ router.put('/members/bulk-update', async (req, res) => {
     if (!Array.isArray(member_ids) || member_ids.length === 0) {
       return res.status(400).json({ error: 'member_ids array required' });
     }
+    if (member_ids.length > 500) {
+      return res.status(400).json({ error: 'Cannot update more than 500 members at once' });
+    }
 
     const sectionId = Number(section_id);
     const leaderId = Number(leader_id);
@@ -626,25 +629,32 @@ router.put('/members/bulk-update', async (req, res) => {
       return res.status(400).json({ error: 'Invalid section, leader, or member selection' });
     }
 
-    const leader = await get('SELECT id, section_id FROM leaders WHERE id = ?', [leaderId]);
+    const leader = await get('SELECT id, section_id, user_id FROM leaders WHERE id = ?', [leaderId]);
     if (!leader || Number(leader.section_id) !== sectionId) {
       return res.status(400).json({ error: 'Leader does not belong to the selected section' });
     }
 
     const placeholders = memberIds.map(() => '?').join(',');
     const params = [sectionId, leaderId, ...memberIds];
+    let updatedCount = 0;
     await new Promise((resolve, reject) => {
-      db.run(`UPDATE members SET section_id = ?, leader_id = ? WHERE id IN (${placeholders})`, params, (err) => {
-        if (err) reject(err); else resolve();
+      db.run(`UPDATE members SET section_id = ?, leader_id = ? WHERE id IN (${placeholders})`, params, function (err) {
+        if (err) reject(err);
+        else { updatedCount = this.changes || 0; resolve(); }
       });
     });
 
     const userId = req.session?.userId;
+    const auditPromises = [];
     for (const memberId of memberIds) {
-      queries.createAuditEntry(userId, 'update', 'member', memberId, null, { section_id: sectionId, leader_id: leaderId }, req.ip, req.headers['user-agent']).catch(() => {});
+      auditPromises.push(
+        queries.createAuditEntry(userId, 'update', 'member', memberId, null, { section_id: sectionId, leader_id: leaderId }, req.ip, req.headers['user-agent'])
+          .catch((e) => console.error('bulk-update audit error:', e.message))
+      );
     }
+    await Promise.allSettled(auditPromises);
 
-    res.json({ message: `${memberIds.length} member(s) updated` });
+    res.json({ message: `${updatedCount} member(s) updated` });
   } catch (error) {
     console.error('Bulk update error:', error);
     res.status(500).json({ error: 'Failed to bulk update members' });

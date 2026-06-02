@@ -2,9 +2,13 @@ services:
   - type: web
     name: church-attendance
     env: docker
-    plan: free
+    plan: starter
+    region: oregon
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
+    autoDeploy: true
+    numInstances: 1
+    preDeployCommand: "node server/scripts/postgres-check.js"
     envVars:
       - key: NODE_ENV
         value: production
@@ -20,7 +24,15 @@ services:
         value: true
       - key: BACKUP_RETENTION_DAYS
         value: 30
+      - key: INITIAL_ADMIN_PASSWORD
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      - key: SENTRY_DSN
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

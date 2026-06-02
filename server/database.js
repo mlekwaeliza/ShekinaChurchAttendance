@@ -847,16 +847,32 @@ const queries = {
         ) = 3
       `, [oldestDate, s.id, dates[0], dates[1], dates[2]]);
 
+      // Pre-load visitor present-counts for ALL members in the absent list
+      // in a single GROUP BY query, to avoid the N+1 inside the loop below.
+      const visitorIds = absentMembers
+        .filter((a) => a.status === 'Visitor')
+        .map((a) => a.id);
+      const visitorPresentCounts = new Map();
+      if (visitorIds.length > 0) {
+        const placeholders = visitorIds.map(() => '?').join(',');
+        const rows = await all(
+          `SELECT member_id, COUNT(*) AS c FROM attendance
+           WHERE service_type_id = ? AND status = 'present' AND member_id IN (${placeholders})
+           GROUP BY member_id`,
+          [s.id, ...visitorIds]
+        );
+        for (const r of rows) visitorPresentCounts.set(Number(r.member_id), Number(r.c));
+      }
+
       for (const a of absentMembers) {
         // Evaluate Opt-Outs
         let optOuts = [];
         try { optOuts = JSON.parse(a.opt_out_services || '[]'); } catch(e){}
         if (optOuts.includes(s.name)) continue;
 
-        // Evaluate Visitors limitation
-        if (a.status === 'Visitor') {
-          const presentCountList = await all(`SELECT COUNT(*) as c FROM attendance WHERE member_id=? AND service_type_id=? AND status='present'`, [a.id, s.id]);
-          if (!presentCountList.length || presentCountList[0].c < 3) continue;
+        // Evaluate Visitors limitation using pre-loaded map (no extra query).
+        if (a.status === 'Visitor' && (visitorPresentCounts.get(Number(a.id)) || 0) < 3) {
+          continue;
         }
 
         // Add or merge into map
@@ -871,7 +887,7 @@ const queries = {
             section_id: a.section_id,
             section_name: a.section_name,
             missed_services: [s.name],
-            missed_dates: dates 
+            missed_dates: dates
           });
         }
       }
