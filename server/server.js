@@ -1,3 +1,8 @@
+// dotenv MUST be loaded before any module that reads process.env at top
+// level (notably ./database which picks the PG vs SQLite driver). All
+// other requires are deferred until after env is populated.
+require('dotenv').config();
+
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
@@ -11,7 +16,6 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const onFinished = require('on-finished');
-require('dotenv').config();
 
 // Optional Sentry init. No-op unless SENTRY_DSN is set.
 if (process.env.SENTRY_DSN) {
@@ -472,6 +476,13 @@ async function startServer() {
     });
     console.log('Database connection established');
     await ensureHomeCellSchema();
+    await initializeAdmin();
+    await generateNotifications();
+    setInterval(generateNotifications, 24 * 60 * 60 * 1000);
+    startScheduler();
+    server = app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
     await initializeAdmin();
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);

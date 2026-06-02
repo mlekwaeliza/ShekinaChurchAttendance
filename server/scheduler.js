@@ -233,10 +233,19 @@ async function cleanupExpiredFlags() {
 }
 
 function startScheduler() {
-  scheduleWeeklyReminders();
-  scheduleBirthdayReminders();
-  scheduleFollowUpReminders();
-  cleanupExpiredFlags();
+  // Run the four bootstrap functions in sequence so the in-memory query
+  // queue in postgresRuntime.js is not flooded by 4 concurrent producers
+  // at startup. Subsequent intervals stay concurrent.
+  (async () => {
+    try {
+      await scheduleWeeklyReminders();
+      await scheduleBirthdayReminders();
+      await scheduleFollowUpReminders();
+      await cleanupExpiredFlags();
+    } catch (error) {
+      console.error('Scheduler bootstrap error:', error);
+    }
+  })();
 
   setInterval(processPendingReminders, 15 * 60 * 1000);
   setInterval(scheduleBirthdayReminders, 24 * 60 * 60 * 1000);

@@ -36,7 +36,6 @@ function enqueue(fn) {
       }
     });
   });
-  // Ensure the chain always resolves so subsequent queries can run even if this one failed
   queryQueue = next.catch(() => {});
   return next;
 }

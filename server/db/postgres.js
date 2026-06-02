@@ -18,12 +18,18 @@ function buildPoolConfig() {
     ...baseConfig,
     max: Number(process.env.PGPOOL_MAX || 10),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
-    connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 5000),
+    connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 15000),
     ssl: sslEnabled ? { rejectUnauthorized: false } : false
   };
 }
 
-const pool = new Pool(buildPoolConfig());
+const poolConfig = buildPoolConfig();
+// Search_path is set per-query via executeWithPath() in postgresRuntime.js
+// because Neon's transaction pooler resets session state between
+// transactions, so onConnect (which runs once per physical connection)
+// is not sufficient.
+
+const pool = new Pool(poolConfig);
 
 pool.on('error', (err) => {
   console.error('Unexpected PostgreSQL pool error:', err);
