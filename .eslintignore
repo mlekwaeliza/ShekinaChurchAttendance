@@ -11,5 +11,6 @@ build/
 .DS_Store
 database.sqlite
 corrupted_git/
+e2e/
 client/src/**/*.test.js
 client/src/**/*.test.jsx

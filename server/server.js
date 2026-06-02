@@ -60,6 +60,8 @@ const twofactorRoutes = require('./routes/twofactor');
 const analyticsRoutes = require('./routes/analytics');
 const birthdayRoutes = require('./routes/birthdays');
 const calendarRoutes = require('./routes/calendar');
+const eventsRoutes = require('./realtime/events');
+const realtimeBus = require('./realtime/bus');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -166,6 +168,12 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000).unref?.();
 
+// Compression (skip /api/metrics and SSE streams which are text/event-stream)
+app.use(require('compression')({
+  threshold: 1024,
+  level: 6
+}));
+
 // Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -258,6 +266,7 @@ app.use('/api/2fa', twofactorRoutes);
 app.use('/api/birthdays', birthdayRoutes);
 app.use('/api/outreach', outreachRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/events', eventsRoutes);
 
 // Static uploads serving
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -306,6 +315,7 @@ app.get('/api/health', async (req, res) => {
           }
         },
         memory,
+        realtime: realtimeBus.stats(),
         node: {
           version: process.version,
           env: process.env.NODE_ENV || 'development'
@@ -485,13 +495,6 @@ async function startServer() {
     });
     console.log('Database connection established');
     await ensureHomeCellSchema();
-    await initializeAdmin();
-    await generateNotifications();
-    setInterval(generateNotifications, 24 * 60 * 60 * 1000);
-    startScheduler();
-    server = app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
     await initializeAdmin();
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);

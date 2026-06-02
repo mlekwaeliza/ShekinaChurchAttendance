@@ -1402,7 +1402,19 @@ const queries = {
   // Notification queries
   createNotification: (userId, type, title, message, entityType = null, entityId = null) =>
     run('INSERT INTO notifications (user_id, type, title, message, entity_type, entity_id) VALUES (?, ?, ?, ?, ?, ?)',
-      [userId, type, title, message, entityType, entityId]),
+      [userId, type, title, message, entityType, entityId])
+      .then((res) => {
+        // Best-effort: push a real-time event to any SSE subscriber for
+        // this user. Failures here must NOT roll back the DB write.
+        try {
+          const realtimeBus = require('./realtime/bus');
+          realtimeBus.publish(userId, 'notification', {
+            id: res.lastID,
+            type, title, message, entityType, entityId
+          });
+        } catch (_) { /* bus not loaded yet (tests) */ }
+        return res;
+      }),
   getUnreadCount: (userId) => get('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND is_read = 0', [userId]),
   getUnreadNotifications: (userId) => all(
     'SELECT * FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY created_at DESC',
