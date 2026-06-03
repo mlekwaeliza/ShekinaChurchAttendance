@@ -1,4 +1,4 @@
-const CACHE_NAME = 'church-attendance-v5';
+const CACHE_NAME = 'church-attendance-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -55,6 +55,23 @@ self.addEventListener('fetch', (event) => {
             return response;
           })
           .catch(() => caches.match('/index.html'))
+      );
+      return;
+    }
+
+    if (url.pathname.startsWith('/assets/')) {
+      event.respondWith(
+        fetch(request, { cache: 'no-store' })
+          .then((response) => {
+            if (response.ok) {
+              const responseClone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(request, responseClone);
+              });
+            }
+            return response;
+          })
+          .catch(() => caches.match(request))
       );
       return;
     }

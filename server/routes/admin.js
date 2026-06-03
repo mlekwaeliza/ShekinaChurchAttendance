@@ -724,6 +724,39 @@ router.delete('/members/:id', async (req, res) => {
   }
 });
 
+// POST bulk soft-delete (selected members) — they will be flagged for permanent deletion after 6 months
+router.post('/members/bulk-soft-delete', async (req, res) => {
+  const { member_ids } = req.body || {};
+  if (!Array.isArray(member_ids) || member_ids.length === 0) {
+    return res.status(400).json({ error: 'member_ids array required' });
+  }
+  const ids = member_ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+  if (ids.length === 0) {
+    return res.status(400).json({ error: 'No valid member ids' });
+  }
+  try {
+    const placeholders = ids.map(() => '?').join(',');
+    const result = await run(
+      `UPDATE members
+       SET is_active = 0,
+           soft_deleted_at = CURRENT_TIMESTAMP,
+           pending_deletion_at = NULL,
+           deletion_confirmed_at = NULL,
+           deletion_confirmed_by = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id IN (${placeholders})
+         AND is_active = 1`,
+      ids
+    );
+    res.json({
+      message: `${result.changes || 0} member(s) deactivated; will be eligible for permanent deletion after 6 months of inactivity`,
+      deactivated: result.changes || 0
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to bulk soft-delete members', details: error.message });
+  }
+});
+
 // GET members pending permanent deletion (is_active=0 AND soft_deleted_at > 6 months ago)
 router.get('/members/pending-deletion', async (req, res) => {
   try {

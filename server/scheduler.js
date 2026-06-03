@@ -1,4 +1,4 @@
-const { queries, all, db } = require('./database');
+const { queries, all, run, db } = require('./database');
 const { addDays, formatMonthDay, getWeekStartString, startOfLocalDay } = require('./utils/date');
 
 function getNextSunday() {

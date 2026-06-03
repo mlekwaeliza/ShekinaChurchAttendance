@@ -505,8 +505,8 @@ async function startServer() {
     busBridge.startBridge().catch((err) => {
       console.warn('Realtime bridge failed to start:', err.message);
     });
-    server = app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    server = app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
+      console.log(`Server running on ${process.env.HOST || '0.0.0.0'}:${PORT}`);
     });
   } catch (error) {
     console.error('FATAL: Failed to connect to database:', error.message);

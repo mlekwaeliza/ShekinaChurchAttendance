@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check } from 'lucide-react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock } from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
+import BulkDeleteModal from './BulkDeleteModal';
+import PendingDeletionModal from './PendingDeletionModal';
 import { adminAPI } from '../../services/api';
 
 const avatarColors = [
@@ -45,11 +47,25 @@ const MemberDirectory = ({
     else setLocalLeaderFilter(val);
   };
   const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [showPendingDeletion, setShowPendingDeletion] = useState(false);
+  const [pendingDeletionCount, setPendingDeletionCount] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [sortField, setSortField] = useState('full_name');
   const [sortDir, setSortDir] = useState('asc');
   const [selectedMembers, setSelectedMembers] = useState(new Set());
   const [expandedRow, setExpandedRow] = useState(null);
+
+  const refreshPendingDeletionCount = useCallback(async () => {
+    try {
+      const res = await adminAPI.getPendingDeletion();
+      setPendingDeletionCount(res.data?.members?.length || 0);
+    } catch {
+      setPendingDeletionCount(0);
+    }
+  }, []);
+
+  useEffect(() => { refreshPendingDeletionCount(); }, [refreshPendingDeletionCount]);
 
   const getInitials = (name) => {
     if (!name) return '?';
@@ -181,11 +197,11 @@ const MemberDirectory = ({
             </p>
           </div>
         </div>
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+        <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={() => adminAPI.exportMembers()}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 sm:w-auto"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <Download className="w-4 h-4" />
             Export
@@ -193,15 +209,38 @@ const MemberDirectory = ({
           <button
             type="button"
             onClick={() => setShowBulkEdit(true)}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 sm:w-auto"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <Check className="w-4 h-4" />
             Bulk Edit
           </button>
           <button
             type="button"
+            onClick={() => setShowBulkDelete(true)}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 hover:shadow dark:border-rose-700/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30"
+            title="Soft-delete selected members (eligible for permanent deletion after 6 months)"
+          >
+            <Trash2 className="w-4 h-4" />
+            Bulk Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowPendingDeletion(true)}
+            className="relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 hover:shadow dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30"
+            title="Review members awaiting permanent deletion"
+          >
+            <Clock className="w-4 h-4" />
+            Pending
+            {pendingDeletionCount > 0 && (
+              <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-600 px-1.5 text-xs font-bold text-white dark:bg-amber-300 dark:text-amber-900">
+                {pendingDeletionCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
             onClick={onAdd}
-            className="group col-span-2 inline-flex h-11 w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-4 pr-5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-500/25 focus:outline-none focus:ring-2 focus:ring-violet-500/30 active:translate-y-0 sm:col-span-1 sm:w-auto"
+            className="group inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-4 pr-5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-500/25 focus:outline-none focus:ring-2 focus:ring-violet-500/30 active:translate-y-0"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/18 ring-1 ring-white/20 transition-colors group-hover:bg-white/24">
               <UserPlus className="w-4 h-4" />
@@ -585,6 +624,31 @@ const MemberDirectory = ({
           onClose={() => setShowBulkEdit(false)}
           onRefresh={() => {
             setSelectedMembers(new Set());
+            onRefresh();
+          }}
+        />
+      )}
+
+      {/* Bulk Soft-Delete Modal */}
+      {showBulkDelete && (
+        <BulkDeleteModal
+          members={allMembers}
+          initialSelectedIds={Array.from(selectedMembers)}
+          onClose={() => setShowBulkDelete(false)}
+          onRefresh={() => {
+            setSelectedMembers(new Set());
+            refreshPendingDeletionCount();
+            onRefresh();
+          }}
+        />
+      )}
+
+      {/* Pending Permanent Deletion Modal */}
+      {showPendingDeletion && (
+        <PendingDeletionModal
+          onClose={() => setShowPendingDeletion(false)}
+          onRefresh={() => {
+            refreshPendingDeletionCount();
             onRefresh();
           }}
         />
