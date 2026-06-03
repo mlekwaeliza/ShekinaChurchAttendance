@@ -232,6 +232,28 @@ async function cleanupExpiredFlags() {
   }
 }
 
+async function flagPendingPermanentDeletions() {
+  try {
+    // Mark members soft-deleted more than 6 months ago as pending permanent
+    // deletion. The admin must explicitly confirm deletion via
+    // POST /api/admin/members/confirm-deletion.
+    const flagged = await run(`
+      UPDATE members
+      SET pending_deletion_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE is_active = 0
+        AND deletion_confirmed_at IS NULL
+        AND soft_deleted_at IS NOT NULL
+        AND pending_deletion_at IS NULL
+        AND soft_deleted_at <= (CURRENT_TIMESTAMP - INTERVAL '6 months')
+    `);
+    if (flagged.changes && flagged.changes > 0) {
+      console.log(`Flagged ${flagged.changes} member(s) as pending permanent deletion`);
+    }
+  } catch (error) {
+    console.error('Flag pending deletions error:', error);
+  }
+}
+
 function startScheduler() {
   // Run the four bootstrap functions in sequence so the in-memory query
   // queue in postgresRuntime.js is not flooded by 4 concurrent producers
@@ -242,6 +264,7 @@ function startScheduler() {
       await scheduleBirthdayReminders();
       await scheduleFollowUpReminders();
       await cleanupExpiredFlags();
+      await flagPendingPermanentDeletions();
     } catch (error) {
       console.error('Scheduler bootstrap error:', error);
     }
@@ -252,8 +275,9 @@ function startScheduler() {
   setInterval(scheduleFollowUpReminders, 6 * 60 * 60 * 1000);
   setInterval(scheduleWeeklyReminders, 7 * 24 * 60 * 60 * 1000);
   setInterval(cleanupExpiredFlags, 24 * 60 * 60 * 1000);
+  setInterval(flagPendingPermanentDeletions, 24 * 60 * 60 * 1000);
 
   console.log('Scheduler started');
 }
 
-module.exports = { startScheduler, processPendingReminders, scheduleWeeklyReminders };
+module.exports = { startScheduler, processPendingReminders, scheduleWeeklyReminders, flagPendingPermanentDeletions };

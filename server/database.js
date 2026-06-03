@@ -73,6 +73,10 @@ db.serialize(() => {
       last_contacted_by INTEGER,
       prayer_requests TEXT DEFAULT '[]',
       is_active INTEGER DEFAULT 1,
+      soft_deleted_at DATETIME,
+      pending_deletion_at DATETIME,
+      deletion_confirmed_at DATETIME,
+      deletion_confirmed_by INTEGER REFERENCES users(id),
       hall_of_fame_points INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -492,6 +496,11 @@ db.serialize(() => {
   db.run(`ALTER TABLE members ADD COLUMN prayer_requests TEXT DEFAULT '[]'`, (err) => { if (err && !err.message.includes('duplicate column')) console.log('Migration:', err.message) });
   db.run(`ALTER TABLE members ADD COLUMN status TEXT DEFAULT 'Active'`, (err) => { if (err && !err.message.includes('duplicate column')) console.log('Migration:', err.message) });
   db.run(`ALTER TABLE members ADD COLUMN flags TEXT DEFAULT '[]'`, (err) => { if (err && !err.message.includes('duplicate column')) console.log('Migration:', err.message) });
+  db.run(`ALTER TABLE members ADD COLUMN soft_deleted_at DATETIME`, (err) => { if (err && !err.message.includes('duplicate column')) console.log('Migration:', err.message) });
+  db.run(`ALTER TABLE members ADD COLUMN pending_deletion_at DATETIME`, (err) => { if (err && !err.message.includes('duplicate column')) console.log('Migration:', err.message) });
+  db.run(`ALTER TABLE members ADD COLUMN deletion_confirmed_at DATETIME`, (err) => { if (err && !err.message.includes('duplicate column')) console.log('Migration:', err.message) });
+  db.run(`ALTER TABLE members ADD COLUMN deletion_confirmed_by INTEGER REFERENCES users(id)`, (err) => { if (err && !err.message.includes('duplicate column')) console.log('Migration:', err.message) });
+  db.run(`CREATE INDEX IF NOT EXISTS idx_members_pending_deletion ON members(soft_deleted_at, pending_deletion_at) WHERE is_active = 0`, (err) => { if (err) console.log('Migration:', err.message) });
 
   db.run(`CREATE TABLE IF NOT EXISTS pastoral_care_queue (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

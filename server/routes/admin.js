@@ -711,13 +711,134 @@ router.put('/members/:id', async (req, res) => {
   }
 });
 
-// DELETE member
+// DELETE member (soft delete) — will be flagged for permanent deletion after 6 months
 router.delete('/members/:id', async (req, res) => {
   try {
-    await run('UPDATE members SET is_active = 0 WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Member deactivated' });
+    await run(
+      "UPDATE members SET is_active = 0, soft_deleted_at = CURRENT_TIMESTAMP, pending_deletion_at = NULL, deletion_confirmed_at = NULL, deletion_confirmed_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [req.params.id]
+    );
+    res.json({ message: 'Member deactivated; will be eligible for permanent deletion after 6 months of inactivity' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete member' });
+  }
+});
+
+// GET members pending permanent deletion (is_active=0 AND soft_deleted_at > 6 months ago)
+router.get('/members/pending-deletion', async (req, res) => {
+  try {
+    const rows = await all(`
+      SELECT m.id, m.membership_id, m.full_name, m.phone, m.email, m.soft_deleted_at,
+             m.pending_deletion_at, m.deletion_confirmed_at, m.deletion_confirmed_by,
+             s.name AS section_name, l.id AS leader_id, u.full_name AS leader_name,
+             (SELECT COUNT(*) FROM attendance WHERE member_id = m.id) AS attendance_count,
+             CAST(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.soft_deleted_at)) / 86400 AS INTEGER) AS days_inactive
+      FROM members m
+      JOIN sections s ON m.section_id = s.id
+      JOIN leaders l ON m.leader_id = l.id
+      LEFT JOIN users u ON l.user_id = u.id
+      WHERE m.is_active = 0
+        AND m.soft_deleted_at IS NOT NULL
+        AND m.deletion_confirmed_at IS NULL
+        AND m.soft_deleted_at <= (CURRENT_TIMESTAMP - INTERVAL '6 months')
+      ORDER BY m.soft_deleted_at ASC
+    `);
+    res.json({ count: rows.length, members: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch pending-deletion members', details: error.message });
+  }
+});
+
+// POST confirm permanent deletion of one or more members (admin confirmation)
+router.post('/members/confirm-deletion', async (req, res) => {
+  const { member_ids, confirm } = req.body || {};
+  if (!confirm) {
+    return res.status(400).json({ error: 'Confirmation required; send { confirm: true, member_ids: [...] }' });
+  }
+  if (!Array.isArray(member_ids) || member_ids.length === 0) {
+    return res.status(400).json({ error: 'member_ids array required' });
+  }
+  const ids = member_ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+  if (ids.length === 0) {
+    return res.status(400).json({ error: 'No valid member ids' });
+  }
+  try {
+    // Verify each member is actually pending deletion
+    const placeholders = ids.map(() => '?').join(',');
+    const pending = await all(
+      `SELECT id, full_name FROM members
+       WHERE id IN (${placeholders})
+         AND is_active = 0
+         AND soft_deleted_at IS NOT NULL
+         AND deletion_confirmed_at IS NULL
+         AND soft_deleted_at <= (CURRENT_TIMESTAMP - INTERVAL '6 months')`,
+      ids
+    );
+    if (pending.length === 0) {
+      return res.status(404).json({ error: 'No members match the pending-deletion criteria' });
+    }
+
+    const auditEntries = [];
+    let deletedCount = 0;
+    await transaction(async (tx) => {
+      for (const m of pending) {
+        // Audit BEFORE deleting
+        auditEntries.push({
+          user_id: req.session.userId,
+          action: 'permanent_delete_member',
+          entity_type: 'member',
+          entity_id: m.id,
+          details: JSON.stringify({ full_name: m.full_name, confirmed_by: req.session.user.username })
+        });
+        await tx.run('DELETE FROM members WHERE id = ?', [m.id]);
+        deletedCount += 1;
+      }
+      for (const a of auditEntries) {
+        await tx.run(
+          'INSERT INTO audit_log (user_id, action, entity_type, entity_id, new_value, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+          [a.user_id, a.action, a.entity_type, a.entity_id, a.details]
+        );
+      }
+    });
+
+    res.json({ message: `Permanently deleted ${deletedCount} member(s)`, deleted: deletedCount });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to confirm deletion', details: error.message });
+  }
+});
+
+// POST restore a soft-deleted member (cancel pending deletion)
+router.post('/members/restore', async (req, res) => {
+  const { member_ids } = req.body || {};
+  if (!Array.isArray(member_ids) || member_ids.length === 0) {
+    return res.status(400).json({ error: 'member_ids array required' });
+  }
+  const ids = member_ids.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+  if (ids.length === 0) {
+    return res.status(400).json({ error: 'No valid member ids' });
+  }
+  try {
+    const placeholders = ids.map(() => '?').join(',');
+    const result = await run(
+      `UPDATE members
+       SET is_active = 1,
+           soft_deleted_at = NULL,
+           pending_deletion_at = NULL,
+           deletion_confirmed_at = NULL,
+           deletion_confirmed_by = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id IN (${placeholders})
+         AND is_active = 0`,
+      ids
+    );
+    // Audit
+    try {
+      const { auditLog } = require('../middleware/audit');
+      await auditLog(req, 'restore_member', 'member', null, JSON.stringify({ member_ids: ids }));
+    } catch (_) { /* noop */ }
+    res.json({ message: `Restored ${result.changes || 0} member(s)`, restored: result.changes || 0 });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to restore members', details: error.message });
   }
 });
 

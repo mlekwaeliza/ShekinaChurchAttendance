@@ -62,6 +62,10 @@ CREATE TABLE IF NOT EXISTS members (
   last_contacted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   prayer_requests TEXT DEFAULT '[]',
   is_active INTEGER DEFAULT 1,
+  soft_deleted_at TIMESTAMPTZ,
+  pending_deletion_at TIMESTAMPTZ,
+  deletion_confirmed_at TIMESTAMPTZ,
+  deletion_confirmed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   hall_of_fame_points INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -380,5 +384,12 @@ DROP TRIGGER IF EXISTS audit_log_no_delete ON audit_log;
 CREATE TRIGGER audit_log_no_delete
 BEFORE DELETE ON audit_log
 FOR EACH ROW EXECUTE FUNCTION audit_log_block_mutation();
+
+-- ─── Migrations: soft-delete & permanent-deletion audit trail ───
+ALTER TABLE members ADD COLUMN IF NOT EXISTS soft_deleted_at TIMESTAMPTZ;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS pending_deletion_at TIMESTAMPTZ;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS deletion_confirmed_at TIMESTAMPTZ;
+ALTER TABLE members ADD COLUMN IF NOT EXISTS deletion_confirmed_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_members_pending_deletion ON members(soft_deleted_at, pending_deletion_at) WHERE is_active = 0;
 
 COMMIT;
