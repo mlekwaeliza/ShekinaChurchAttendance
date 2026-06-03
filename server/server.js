@@ -52,6 +52,7 @@ const { queries, db, all, ensureHomeCellSchema } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const authRoutes = require('./routes/auth');
+const adminAttendanceRoutes = require('./routes/adminAttendance');
 const adminRoutes = require('./routes/admin');
 const leaderRoutes = require('./routes/leader');
 const outreachRoutes = require('./routes/outreach');
@@ -258,6 +259,7 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminAttendanceRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/leader', leaderRoutes);
 app.use('/api/pastor', pastorRoutes);
