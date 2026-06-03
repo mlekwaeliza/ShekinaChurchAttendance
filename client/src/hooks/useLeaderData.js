@@ -127,7 +127,7 @@ const useLeaderData = () => {
       try {
         const optOuts = JSON.parse(member.opt_out_services);
         if (optOuts.includes(service.id)) return false;
-      } catch (e) {}
+      } catch (e) { /* noop */ }
     }
 
     // Gender check

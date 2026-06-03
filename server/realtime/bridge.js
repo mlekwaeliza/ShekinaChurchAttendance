@@ -68,7 +68,7 @@ function handleClientError(err) {
   lastError = err.message;
   started = false;
   // Don't leak the dead client
-  try { listenClient?.removeAllListeners(); } catch (_) {}
+  try { listenClient?.removeAllListeners(); } catch (_) { /* noop */ }
   listenClient = null;
   setTimeout(() => { startBridge().catch(() => {}); }, 5000);
 }

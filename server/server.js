@@ -535,7 +535,7 @@ function shutdown(signal) {
       }
       // Stop the realtime bridge BEFORE closing the pool so the LISTEN
       // client can cleanly end its connection.
-      try { await require('./realtime/bridge').stopBridge(); } catch (_) {}
+      try { await require('./realtime/bridge').stopBridge(); } catch (_) { /* noop */ }
       const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
       if (dbClient === 'postgres') {
         const { close } = require('./db/postgres');

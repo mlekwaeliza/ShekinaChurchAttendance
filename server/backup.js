@@ -97,7 +97,7 @@ function backupPostgres() {
 
 function safeBackupName(input) {
   const safe = path.basename(String(input || ''));
-  if (!safe || safe !== input || !/^[\w.\-]+$/.test(safe)) {
+  if (!safe || safe !== input || !/^[\w.-]+$/.test(safe)) {
     throw new Error('Invalid backup filename');
   }
   if (!/\.(sqlite|sql)$/i.test(safe)) {

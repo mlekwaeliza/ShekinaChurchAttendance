@@ -28,12 +28,13 @@ router.get('/', async (req, res) => {
       const end = new Date(now);
       
       switch (filter) {
-        case 'thisWeek':
+        case 'thisWeek': {
           const day = start.getDay();
           const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Monday
           start.setDate(diff);
           end.setDate(start.getDate() + 6);
           break;
+        }
         case 'next7Days':
           end.setDate(start.getDate() + 7);
           break;

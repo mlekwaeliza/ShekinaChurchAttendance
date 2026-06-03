@@ -479,7 +479,7 @@ router.post('/attendance', async (req, res) => {
     // Idempotency-Key: if the client retries with the same key within 5
     // minutes, return the cached response instead of inserting again.
     const idemKey = req.get('Idempotency-Key');
-    if (idemKey && /^[A-Za-z0-9_\-]{1,128}$/.test(idemKey)) {
+    if (idemKey && /^[A-Za-z0-9_-]{1,128}$/.test(idemKey)) {
       const cached = idemCache.get(idemKey);
       if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
         return res.status(cached.status).json(cached.body);

@@ -1,6 +1,6 @@
 {
   "root": true,
-  "env": { "browser": true, "es2022": true, "node": true },
+  "env": { "browser": true, "es2022": true, "node": true, "jest": true },
   "extends": [
     "eslint:recommended",
     "plugin:react/recommended",
@@ -11,7 +11,9 @@
   "settings": { "react": { "version": "detect" } },
   "rules": {
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
-    "no-console": "off"
+    "no-console": "off",
+    "react/prop-types": "off",
+    "react/no-unescaped-entities": "off"
   },
   "ignorePatterns": ["client/dist", "client/node_modules", "server/node_modules", "**/coverage", "**/.next", "**/build"]
 }

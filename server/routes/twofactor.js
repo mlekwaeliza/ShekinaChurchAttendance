@@ -133,7 +133,7 @@ router.post('/verify-login', async (req, res) => {
           consumedBackupCode = true;
           remainingCodes = codes.filter((code) => !backupCodeMatches(code, normalizedToken));
         }
-      } catch (error) {}
+      } catch (error) { /* noop */ }
     }
 
     if (!consumedBackupCode && !verifyTotp({ secret: user2FA.totp_secret, token: normalizedToken })) {

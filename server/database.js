@@ -760,18 +760,6 @@ const queries = {
     WHERE m.section_id = ? AND m.is_active = 1
     ORDER BY m.full_name
   `, [sectionId]),
-  getDemographicBreakdown: (startDate = formatLocalDate(addDays(new Date(), -90))) => all(`
-    SELECT gender as category, gender as name, COUNT(*) as count, 'gender' as category_type
-    FROM members
-    WHERE is_active = 1
-    GROUP BY gender
-    UNION ALL
-    SELECT age_group as category, age_group as name, COUNT(*) as count, 'age_group' as category_type
-    FROM members
-    WHERE is_active = 1
-    GROUP BY age_group
-  `),
-
   // --- Dashboard Overhaul: Advanced Metrics ---
   getDashboardComparisons: (monthStart = formatLocalDate(addMonths(new Date(), -1))) => all(`
     SELECT 
@@ -871,7 +859,7 @@ const queries = {
       for (const a of absentMembers) {
         // Evaluate Opt-Outs
         let optOuts = [];
-        try { optOuts = JSON.parse(a.opt_out_services || '[]'); } catch(e){}
+        try { optOuts = JSON.parse(a.opt_out_services || '[]'); } catch(e) { /* noop */ }
         if (optOuts.includes(s.name)) continue;
 
         // Evaluate Visitors limitation using pre-loaded map (no extra query).
