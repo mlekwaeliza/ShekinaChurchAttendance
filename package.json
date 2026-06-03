@@ -21,7 +21,7 @@
     "lint:fix": "eslint . --ext .js,.jsx --fix",
     "format": "prettier --write \"**/*.{js,jsx,json,css,md}\" --ignore-path .gitignore",
     "format:check": "prettier --check \"**/*.{js,jsx,json,css,md}\" --ignore-path .gitignore",
-    "prepare": "husky install"
+    "prepare": "node -e \"try { require.resolve('husky'); console.log('husky: running install'); require('child_process').execSync('husky install', { stdio: 'inherit' }); } catch (e) { console.log('husky: skipped (not installed)'); }\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
