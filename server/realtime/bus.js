@@ -1,58 +1,54 @@
 'use strict';
 
-// Lightweight in-process pub/sub used by the SSE endpoint to push
-// real-time events to connected clients (notifications, submission
-// updates, follow-up changes, etc.). Survives only for the lifetime
-// of the Node process — sufficient for a single-instance deployment
-// like Render's `numInstances: 1` setting in render.yaml.
+// In-process pub/sub used by the SSE endpoint to push real-time
+// events to connected clients. In single-instance deployments the
+// in-process bus alone is sufficient. For multi-instance
+// deployments the optional `realtime/bridge.js` (Postgres
+// LISTEN/NOTIFY) fan-outs events across processes — see bus.js's
+// wiring in `realtime/bus.js`.
 //
-// For multi-instance deployments, swap the in-memory `subscribers`
-// Map for a Postgres LISTEN/NOTIFY bridge (see TODOs).
+// Subscriptions are user-keyed. publish() is best-effort: a write
+// failure here is logged but never thrown to the caller.
+
+const bridge = require('./bridge');
 
 const subscribers = new Map(); // userId -> Set<{ res, ping, lastEventId }>
 let nextId = 1;
 
-function publish(userId, eventType, data) {
+function publish(userId, eventType, data, { skipBridge = false } = {}) {
   const subs = subscribers.get(Number(userId));
-  if (!subs || subs.size === 0) return 0;
-  const payload = {
-    id: String(nextId++),
-    type: eventType,
-    data,
-    ts: Date.now()
-  };
-  const serialized = `id: ${payload.id}\nevent: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
-  let delivered = 0;
-  for (const sub of subs) {
-    try {
-      sub.res.write(serialized);
-      sub.lastEventId = payload.id;
-      delivered += 1;
-    } catch (err) {
-      // The connection is dead; clean it up.
-      subs.delete(sub);
-      clearInterval(sub.ping);
+  if (subs && subs.size > 0) {
+    const payload = serialize(eventType, data);
+    let delivered = 0;
+    for (const sub of subs) {
+      try {
+        sub.res.write(payload);
+        sub.lastEventId = payload.id;
+        delivered += 1;
+      } catch (err) {
+        subs.delete(sub);
+        clearInterval(sub.ping);
+      }
     }
+    if (subs.size === 0) subscribers.delete(Number(userId));
+    if (delivered > 0 && !skipBridge) {
+      // Cross-instance fan-out. Don't await — this is best-effort.
+      bridge.notify(Number(userId), eventType, data);
+    }
+    return delivered;
   }
-  if (subs.size === 0) subscribers.delete(Number(userId));
-  return delivered;
+  // No local subscribers — still notify so other instances can deliver.
+  if (!skipBridge) bridge.notify(Number(userId), eventType, data);
+  return 0;
 }
 
-// Broadcast to every connected subscriber (used for system-wide
-// events like backup completion).
-function broadcast(eventType, data) {
-  const payload = {
-    id: String(nextId++),
-    type: eventType,
-    data,
-    ts: Date.now()
-  };
-  const serialized = `id: ${payload.id}\nevent: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
+function broadcast(eventType, data, { skipBridge = false } = {}) {
+  const payload = serialize(eventType, data);
   let delivered = 0;
   for (const [userId, subs] of subscribers) {
     for (const sub of subs) {
       try {
-        sub.res.write(serialized);
+        sub.res.write(payload);
         sub.lastEventId = payload.id;
         delivered += 1;
       } catch (err) {
@@ -62,7 +58,12 @@ function broadcast(eventType, data) {
     }
     if (subs.size === 0) subscribers.delete(userId);
   }
+  if (!skipBridge) bridge.notify(null, eventType, data);
   return delivered;
+}
+
+function serialize(eventType, data) {
+  return `id: ${nextId++}\nevent: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
 function subscribe(userId, res) {
@@ -91,7 +92,15 @@ function subscribe(userId, res) {
 function stats() {
   let connections = 0;
   for (const subs of subscribers.values()) connections += subs.size;
-  return { users: subscribers.size, connections };
+  return { users: subscribers.size, connections, bridge: bridge.status() };
 }
 
-module.exports = { publish, broadcast, subscribe, stats };
+// Wire the bridge's NOTIFY callback to local-only delivery so a
+// publish on instance A reaches instance B's subscribers exactly
+// once (and never loops back to Postgres).
+bridge.setDispatchHandler((target, userId, type, data) => {
+  if (target === 'user') publish(userId, type, data, { skipBridge: true });
+  else if (target === 'broadcast') broadcast(type, data, { skipBridge: true });
+});
+
+module.exports = { publish, broadcast, subscribe, stats, bridge };

@@ -499,6 +499,12 @@ async function startServer() {
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);
     startScheduler();
+    // Start the Postgres LISTEN/NOTIFY bridge for cross-instance SSE
+    // delivery. No-op when DATABASE_URL is unset (e.g. SQLite mode).
+    const busBridge = require('./realtime/bridge');
+    busBridge.startBridge().catch((err) => {
+      console.warn('Realtime bridge failed to start:', err.message);
+    });
     server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
@@ -527,6 +533,9 @@ function shutdown(signal) {
       if (server) {
         await new Promise((resolve) => server.close(resolve));
       }
+      // Stop the realtime bridge BEFORE closing the pool so the LISTEN
+      // client can cleanly end its connection.
+      try { await require('./realtime/bridge').stopBridge(); } catch (_) {}
       const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
       if (dbClient === 'postgres') {
         const { close } = require('./db/postgres');
