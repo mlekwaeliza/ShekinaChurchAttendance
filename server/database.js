@@ -1433,7 +1433,7 @@ const queries = {
     ),
     runs AS (
       SELECT member_id, full_name, membership_id, section_name, date,
-             SUM(CASE WHEN prev_date IS NULL OR (julianday(prev_date) - julianday(date)) > 9 THEN 1 ELSE 0 END)
+              SUM(CASE WHEN prev_date IS NULL OR (CAST(prev_date AS DATE) - CAST(date AS DATE)) > 9 THEN 1 ELSE 0 END)
                OVER (PARTITION BY member_id ORDER BY date DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS run_id
       FROM ordered
     ),

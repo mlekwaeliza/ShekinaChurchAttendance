@@ -1670,10 +1670,25 @@ router.post('/attendance', async (req, res) => {
       }
     }
 
-    const existingSubmission = await queries.checkSubmissionExists(leaderId, date);
+    const existingSubmission = await queries.checkSubmissionExists(leaderId, date, service_id);
     if (existingSubmission) {
       return res.status(400).json({ error: 'Attendance already submitted for this leader on this date' });
     }
+
+    // Validate that all members belong to this leader
+    const leaderMembers = await all('SELECT id FROM members WHERE leader_id = ? AND is_active = 1', [leaderId]);
+    const validMemberIds = new Set(leaderMembers.map((m) => Number(m.id)));
+    for (const record of attendance) {
+      if (!validMemberIds.has(Number(record.member_id))) {
+        return res.status(400).json({ error: `Member ${record.member_id} does not belong to leader ${leaderId}` });
+      }
+    }
+
+    // Get points config for hall_of_fame
+    const serviceTypeRow = await get('SELECT points_config FROM service_types WHERE id = ?', [service_id]);
+    const pointsConfig = serviceTypeRow?.points_config
+      ? (typeof serviceTypeRow.points_config === 'string' ? JSON.parse(serviceTypeRow.points_config) : serviceTypeRow.points_config)
+      : { present: 1, excused: 1 };
 
     await transaction(async (tx) => {
       for (const record of attendance) {
@@ -1681,6 +1696,11 @@ router.post('/attendance', async (req, res) => {
           upsertAttendanceSql({ includeServiceType: true }),
           [record.member_id, date, record.status, service_id, req.session.userId]
         );
+        if (record.status === 'present' && pointsConfig.present > 0) {
+          await tx.run('UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?', [pointsConfig.present, record.member_id]);
+        } else if (record.status === 'excused' && pointsConfig.excused > 0) {
+          await tx.run('UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?', [pointsConfig.excused, record.member_id]);
+        }
       }
       await tx.run(
         'INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)',
