@@ -24,6 +24,6 @@ describe('SQL dialect helper', () => {
 
     expect(sqlDialect.yearEquals('a.date')).toBe("EXTRACT(YEAR FROM a.date::date)::text = ?");
     expect(sqlDialect.monthDay('m.date_of_birth')).toBe("TO_CHAR(m.date_of_birth::date, 'MM-DD')");
-    expect(sqlDialect.upsertAttendanceSql()).toContain('ON CONFLICT (member_id, date)');
+    expect(sqlDialect.upsertAttendanceSql({ includeServiceType: true })).toContain('ON CONFLICT (member_id, date, service_type_id)');
   });
 });

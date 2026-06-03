@@ -91,10 +91,13 @@ db.serialize(() => {
       date DATE NOT NULL,
       status TEXT NOT NULL CHECK(status IN ('present', 'absent', 'excused')),
       submitted_by INTEGER NOT NULL,
+      service_type_id INTEGER NOT NULL DEFAULT 1,
+      service_type TEXT DEFAULT 'main',
       submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
       FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE CASCADE,
-      UNIQUE(member_id, date)
+      FOREIGN KEY (service_type_id) REFERENCES service_types(id) ON DELETE RESTRICT,
+      UNIQUE(member_id, date, service_type_id)
     );
 
     CREATE TABLE IF NOT EXISTS submission_log (
@@ -991,13 +994,13 @@ const queries = {
     JOIN members m ON a.member_id = m.id
     WHERE m.leader_id = ? AND a.date = ?
   `, [leaderId, date]),
-  bulkInsertAttendance: (memberId, date, status, submittedBy) =>
+  bulkInsertAttendance: (memberId, date, status, submittedBy, serviceId = 1) =>
     run(`
-      ${upsertAttendanceSql()}
-    `, [memberId, date, status, submittedBy]),
+      ${upsertAttendanceSql({ includeServiceType: true })}
+    `, [memberId, date, status, serviceId, submittedBy]),
   checkSubmissionExists: (leaderId, date, serviceId) => get('SELECT * FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?', [leaderId, date, serviceId]),
-  logSubmission: (leaderId, sectionId, date) =>
-    run('INSERT INTO submission_log (leader_id, section_id, date) VALUES (?, ?, ?)', [leaderId, sectionId, date]),
+  logSubmission: (leaderId, sectionId, date, serviceId = 1) =>
+    run('INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)', [leaderId, sectionId, date, serviceId]),
   getAttendanceByDateAndSection: (date, sectionId, serviceId = 1) => {
     const isAll = String(serviceId) === 'all';
     const query = `

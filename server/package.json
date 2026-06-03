@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "test": "jest",
     "postgres:migrate": "node scripts/migrate-sqlite-to-postgres.js",
+    "postgres:migrate:attendance-service-unique": "node scripts/migrate-attendance-service-unique.js",
     "postgres:refresh-analytics": "node scripts/postgres-refresh-analytics.js",
     "postgres:check": "node scripts/postgres-check.js",
     "postgres:scan-runtime": "node scripts/postgres-scan-runtime.js"
