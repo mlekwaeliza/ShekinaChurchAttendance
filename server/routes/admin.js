@@ -101,41 +101,6 @@ async function syncChurchMemberHomeCell(memberId, cellId, userId) {
   ]);
 }
 
-// Helper for date calculations
-function getISOWeekRange(weekStr) {
-  const parts = weekStr.split('-W');
-  const year = parseInt(parts[0]);
-  const week = parseInt(parts[1]);
-  
-  // Find the first Thursday of the year
-  const firstThursday = new Date(year, 0, 4);
-  const day = firstThursday.getDay() || 7;
-  firstThursday.setDate(firstThursday.getDate() - day + 4);
-  
-  // Find the start of the requested week
-  const weekStart = new Date(firstThursday);
-  weekStart.setDate(weekStart.getDate() + (week - 1) * 7 - 3);
-  
-  // Format as YYYY-MM-DD
-  const formatDate = formatLocalDate;
-  
-  const start = formatDate(weekStart);
-  const endD = new Date(weekStart);
-  endD.setDate(endD.getDate() + 6);
-  const end = formatDate(endD);
-  
-  return { start, end };
-}
-
-function getISOWeekString(dateValue) {
-  const date = new Date(`${formatLocalDate(new Date(dateValue))}T12:00:00`);
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
-  const week1 = new Date(date.getFullYear(), 0, 4);
-  const week = 1 + Math.round(((date - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
-  return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`;
-}
-
 // --- Announcements ---
 router.get('/announcements', async (req, res) => {
   try {

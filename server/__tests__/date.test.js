@@ -2,6 +2,8 @@ const {
   addDays,
   formatLocalDate,
   formatMonthDay,
+  getISOWeekRange,
+  getISOWeekString,
   getWeekStartString,
   parseDateInput,
   startOfLocalDay
@@ -37,5 +39,16 @@ describe('server date utilities', () => {
 
   test('addDays works consistently with ISO-like date strings', () => {
     expect(formatLocalDate(addDays('2026-04-26', -1))).toBe('2026-04-25');
+  });
+
+  test('getISOWeekRange returns the Monday through Sunday for an ISO week', () => {
+    expect(getISOWeekRange('2026-W22')).toEqual({
+      start: '2026-05-25',
+      end: '2026-05-31'
+    });
+  });
+
+  test('getISOWeekString returns the expected ISO week for a date', () => {
+    expect(getISOWeekString('2026-05-31')).toBe('2026-W22');
   });
 });

@@ -1,7 +1,7 @@
 const express = require('express');
 const { db, queries, run, get, all, transaction } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
-const { addDays, formatLocalDate } = require('../utils/date');
+const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString } = require('../utils/date');
 const { escapeCsvValue, toCsvRow } = require('../utils/csv');
 const { yearEquals, monthEquals, weekEquals, dateOnly, upsertAttendanceSql } = require('../utils/sqlDialect');
 
@@ -9,42 +9,6 @@ const router = express.Router();
 
 router.use(isAuthenticated);
 router.use(requireRole(['admin']));
-
-function getISOWeekRange(weekStr) {
-  const [yearStr, weekPart] = String(weekStr || '').split('-W');
-  const year = Number(yearStr);
-  const week = Number(weekPart);
-
-  if (!Number.isInteger(year) || !Number.isInteger(week)) {
-    throw new Error('Invalid ISO week format');
-  }
-
-  const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
-  const day = simple.getUTCDay();
-  const isoWeekStart = simple;
-  if (day <= 4) {
-    isoWeekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
-  } else {
-    isoWeekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
-  }
-
-  const isoWeekEnd = new Date(isoWeekStart);
-  isoWeekEnd.setUTCDate(isoWeekStart.getUTCDate() + 6);
-
-  return {
-    start: isoWeekStart.toISOString().slice(0, 10),
-    end: isoWeekEnd.toISOString().slice(0, 10)
-  };
-}
-
-function getISOWeekString(dateValue) {
-  const date = new Date(`${formatLocalDate(new Date(dateValue))}T12:00:00`);
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
-  const week1 = new Date(date.getFullYear(), 0, 4);
-  const week = 1 + Math.round(((date - week1) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
-  return `${date.getFullYear()}-W${String(week).padStart(2, '0')}`;
-}
 
 // GET all attendance with filters
 router.get('/attendance', async (req, res) => {
