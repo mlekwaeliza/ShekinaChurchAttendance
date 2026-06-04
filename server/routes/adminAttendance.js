@@ -4,6 +4,11 @@ const { isAuthenticated, requireRole, validateDate } = require('../middleware/au
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString } = require('../utils/date');
 const { escapeCsvValue, toCsvRow } = require('../utils/csv');
 const { yearEquals, monthEquals, weekEquals, dateOnly, upsertAttendanceSql } = require('../utils/sqlDialect');
+const {
+  getAttendanceHistory,
+  getAttendanceTrends,
+  listAttendance
+} = require('../services/adminAttendanceService');
 
 const router = express.Router();
 
@@ -13,55 +18,7 @@ router.use(requireRole(['admin']));
 // GET all attendance with filters
 router.get('/attendance', async (req, res) => {
   try {
-    const { date, section_id, leader_id } = req.query;
-
-    let query = `
-      SELECT a.*, m.full_name as member_name, m.membership_id, s.name as section_name, u.full_name as leader_name
-      FROM attendance a
-      JOIN members m ON a.member_id = m.id
-      JOIN sections s ON m.section_id = s.id
-      JOIN leaders l ON m.leader_id = l.id
-      JOIN users u ON l.user_id = u.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (req.query.filterType && req.query.filterValue) {
-      if (req.query.filterType === 'daily') {
-        query += ` AND ${dateOnly('a.date')} = ?`;
-        params.push(req.query.filterValue);
-      } else if (req.query.filterType === 'yearly') {
-        query += ` AND ${yearEquals('a.date')}`;
-        params.push(req.query.filterValue);
-      } else if (req.query.filterType === 'monthly') {
-        query += ` AND ${monthEquals('a.date')}`;
-        params.push(req.query.filterValue);
-      } else if (req.query.filterType === 'weekly') {
-        const parts = req.query.filterValue.split('-W');
-        query += ` AND ${weekEquals('a.date')}`;
-        params.push(`${parts[0]}-${parts[1].padStart(2, '0')}`);
-      }
-    } else if (date) {
-      query += ' AND a.date = ?';
-      params.push(date);
-    }
-    if (section_id) {
-      query += ' AND m.section_id = ?';
-      params.push(section_id);
-    }
-    if (leader_id) {
-      query += ' AND m.leader_id = ?';
-      params.push(leader_id);
-    }
-
-    query += ' ORDER BY a.date DESC, m.full_name';
-
-    const attendance = await new Promise((resolve, reject) => {
-      db.all(query, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
+    const attendance = await listAttendance(req.query);
     res.json(attendance);
   } catch (error) {
     console.error('Attendance fetch error:', error);
@@ -161,36 +118,7 @@ router.get('/export', async (req, res) => {
 router.get('/history', async (req, res) => {
   try {
     const { service_id = 'all' } = req.query;
-    const history = await new Promise((resolve, reject) => {
-      const serviceCondition = service_id === 'all' ? '' : 'WHERE a.service_type_id = ?';
-      const params = service_id === 'all' ? [] : [service_id];
-      db.all(`
-        SELECT
-          a.date,
-          COALESCE(MAX(sl.created_at), MAX(a.submitted_at)) as submitted_at,
-          u.full_name as leader_name,
-          s.name as section_name,
-          COALESCE(st.name, 'Selected service') as service_name,
-          COUNT(DISTINCT a.id) as records_count
-        FROM attendance a
-        JOIN members m ON a.member_id = m.id
-        JOIN leaders l ON m.leader_id = l.id
-        JOIN users u ON l.user_id = u.id
-        JOIN sections s ON m.section_id = s.id
-        LEFT JOIN service_types st ON a.service_type_id = st.id
-        LEFT JOIN submission_log sl
-          ON sl.leader_id = l.id
-         AND sl.date = a.date
-         AND sl.service_id = a.service_type_id
-        ${serviceCondition}
-        GROUP BY a.date, a.service_type_id, st.name, l.id, u.full_name, s.name
-        ORDER BY a.date DESC, submitted_at DESC
-        LIMIT 200
-      `, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
+    const history = await getAttendanceHistory(service_id);
     res.json(history);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch global history' });
@@ -201,29 +129,7 @@ router.get('/history', async (req, res) => {
 router.get('/attendance-trends', async (req, res) => {
   try {
     const { days = 90 } = req.query;
-    const parsedDays = parseInt(days, 10);
-    const endDate = formatLocalDate();
-    const startDateStr = formatLocalDate(addDays(new Date(), -parsedDays));
-
-    const trends = await new Promise((resolve, reject) => {
-      const query = `
-        SELECT
-          date,
-          SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_count,
-          SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_count,
-          SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused_count,
-          COUNT(*) as total_members
-        FROM attendance
-        WHERE date >= ? AND date <= ?
-        GROUP BY date
-        ORDER BY date ASC
-      `;
-      db.all(query, [startDateStr, endDate], (err, rows) => {
-        if (err) reject(err); else resolve(rows || []);
-      });
-    });
-
-    res.json({ trends, date_range: { start: startDateStr, end: endDate } });
+    res.json(await getAttendanceTrends(days));
   } catch (error) {
     console.error('Global Trends error:', error);
     res.status(500).json({ error: 'Failed to fetch global attendance trends' });
