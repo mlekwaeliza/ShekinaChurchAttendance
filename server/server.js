@@ -53,6 +53,7 @@ const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const authRoutes = require('./routes/auth');
 const adminAttendanceRoutes = require('./routes/adminAttendance');
+const adminHomeCellRoutes = require('./routes/adminHomeCells');
 const adminRoutes = require('./routes/admin');
 const leaderRoutes = require('./routes/leader');
 const outreachRoutes = require('./routes/outreach');
@@ -260,6 +261,7 @@ app.use((req, res, next) => {
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminAttendanceRoutes);
+app.use('/api/admin', adminHomeCellRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/leader', leaderRoutes);
 app.use('/api/pastor', pastorRoutes);
