@@ -717,21 +717,6 @@ async function ensureHomeCellSchema() {
       [`Home Cell ${number}`, number]
     );
   }
-
-  if (usePostgres) {
-    // C3-fix: idempotent column add for already-deployed PG databases.
-    // These columns exist in postgres-schema.sql (CREATE TABLE), but
-    // because the schema file is only read by the one-off migration
-    // script, we re-apply ALTER TABLE on every boot. Safe because of
-    // IF NOT EXISTS.
-    try {
-      await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT');
-      await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ');
-      await run('CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token) WHERE password_reset_token IS NOT NULL');
-    } catch (e) {
-      console.warn('password-reset column ensure failed (non-fatal):', e.message);
-    }
-  }
 }
 
 // Prepared statement wrappers
