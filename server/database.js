@@ -445,6 +445,20 @@ db.serialize(() => {
       console.log('Migration note:', err.message);
     }
   });
+  // C3-fix: password reset columns
+  db.run(`ALTER TABLE users ADD COLUMN password_reset_token TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+  db.run(`ALTER TABLE users ADD COLUMN password_reset_expires DATETIME`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+  db.run(`CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token) WHERE password_reset_token IS NOT NULL`, (err) => {
+    if (err) console.log('Migration note:', err.message);
+  });
 
   // Migration: Create outreach_logs table (updated schema)
   db.run(`CREATE TABLE IF NOT EXISTS outreach_logs (

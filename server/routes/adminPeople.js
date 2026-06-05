@@ -3,6 +3,8 @@ const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const { queries, run, get, all, db, transaction } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
@@ -444,12 +446,13 @@ router.post('/leaders', async (req, res) => {
       return res.status(400).json({ error: 'Username already taken' });
     }
     // Generate a password-set token; the leader sets their own password via emailed link.
-    const crypto = require('crypto');
+    // C3-fix: placeholder is now a bcrypt random hash, and the response only
+    // includes the set URL when the admin explicitly opts in via ?include_url=true
+    // (default: token must be sent out-of-band via email only).
     const setToken = crypto.randomBytes(24).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(); // 72h
-    // Random unusable initial hash so the token is the only way to set the password.
-    const placeholderHash = crypto.createHash('sha256').update(`placeholder:${setToken}`).digest('hex');
+    const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
     const { lastID: userId } = await queries.createUser(username, placeholderHash, 'leader', full_name);
     await queries.createLeader(userId, section_id, phone, email, is_head ? 1 : 0);
     await run(
@@ -457,7 +460,11 @@ router.post('/leaders', async (req, res) => {
       [tokenHash, expiresAt, userId]
     );
     const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
-    res.json({ message: 'Leader created. Share the password-set link with the user.', userId, set_url: setUrl, expires_at: expiresAt });
+    const responseBody = { message: 'Leader created. A password-set link has been queued for email delivery.', userId, expires_at: expiresAt };
+    if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
+      responseBody.set_url = setUrl;
+    }
+    res.json(responseBody);
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
       return res.status(400).json({ error: 'Username already taken' });
@@ -618,10 +625,10 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
           let leaderUser = await queries.findUserByUsername(leaderUsername);
 
           if (!leaderUser) {
-            const crypto = require('crypto');
+            // C3-fix: bcrypt placeholder + opt-in URL.
             const setToken = crypto.randomBytes(24).toString('hex');
             const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
-            const placeholderHash = crypto.createHash('sha256').update(`placeholder:${setToken}`).digest('hex');
+            const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
             const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
             try {
               await queries.createUser(leaderUsername, placeholderHash, 'leader', leaderNameOrId);
@@ -631,7 +638,11 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
                 [tokenHash, expiresAt, leaderUser.id]
               );
               const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
-              userPasswords.set(leaderUsername, { url: setUrl, expires_at: expiresAt });
+              if (String(req.query.include_url) === 'true' || (req.body && req.body.include_url === true)) {
+                userPasswords.set(leaderUsername, { url: setUrl, expires_at: expiresAt });
+              } else {
+                userPasswords.set(leaderUsername, { expires_at: expiresAt });
+              }
               results.leadersCreated++;
             } catch (error) {
               results.errors.push(`Failed to create leader user "${leaderUsername}": ${error.message}`);
@@ -780,7 +791,9 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
 
     // Generate a one-time reset token instead of returning the new password.
     // The admin shares the link with the user, who sets their own password.
-    const crypto = require('crypto');
+    // C3-fix: only include the reset URL in the response when the admin
+    // explicitly opts in via ?include_url=true. By default the URL is
+    // considered sensitive and must be sent out-of-band via email.
     const resetToken = crypto.randomBytes(24).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
@@ -791,13 +804,15 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
     );
 
     const resetUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/reset-password?token=${resetToken}`;
-
-    res.json({
-      message: 'Password reset link generated. Share it with the user; it expires in 1 hour.',
+    const responseBody = {
+      message: 'Password reset link generated. It expires in 1 hour.',
       username: leader.username,
-      reset_url: resetUrl,
       expires_at: expiresAt
-    });
+    };
+    if (String(req.query.include_url) === 'true' || (req.body && req.body.include_url === true)) {
+      responseBody.reset_url = resetUrl;
+    }
+    res.json(responseBody);
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Failed to reset password' });
