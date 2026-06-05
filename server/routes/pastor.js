@@ -1,10 +1,11 @@
 const express = require('express');
 const { queries, all, get, db } = require('../database');
-const { isAuthenticated, validateDate } = require('../middleware/auth');
+const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate, getWeekStartString } = require('../utils/date');
 
 const router = express.Router();
 router.use(isAuthenticated);
+router.use(requireRole(['admin', 'pastor']));
 
 function validateQueryDates(req, res, next) {
   const { start_date, end_date } = req.query;
