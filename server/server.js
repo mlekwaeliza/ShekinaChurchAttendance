@@ -136,6 +136,38 @@ const loginLimiter = rateLimit({
   skip: isLocalRequest
 });
 
+// H3-fix: stricter per-endpoint rate limits.
+const twofaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: 'Too many 2FA attempts, please try again later' },
+  skip: isLocalRequest
+});
+const passwordChangeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  message: { error: 'Too many password change attempts, please try again later' },
+  skip: isLocalRequest
+});
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: 'Too many upload attempts, please try again later' },
+  skip: isLocalRequest
+});
+const bulkOpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many bulk operations, please try again later' },
+  skip: isLocalRequest
+});
+const leaderMgmtLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many leader management requests, please try again later' },
+  skip: isLocalRequest
+});
+
 // Per-IP failed-login counter (in-memory). Complements the per-account
 // 5-attempts lockout by protecting against credential-stuffing
 // distributed across many usernames from a single source IP.
@@ -293,11 +325,24 @@ app.use('/api/admin', adminSystemRoutes);
 app.use('/api/leader', leaderRoutes);
 app.use('/api/pastor', pastorRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/2fa', twofaLimiter);
 app.use('/api/2fa', twofactorRoutes);
 app.use('/api/birthdays', birthdayRoutes);
 app.use('/api/outreach', outreachRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/events', eventsRoutes);
+// H3-fix: per-route limiters mounted as middleware on the specific
+// sensitive paths. These run BEFORE the route handlers because the
+// mount points above happen later. Unused limiters cost nothing.
+app.use('/api/auth/change-password', passwordChangeLimiter);
+app.use('/api/auth/profile-picture', uploadLimiter);
+app.use('/api/admin/members/bulk-soft-delete', bulkOpLimiter);
+app.use('/api/admin/members/confirm-deletion', bulkOpLimiter);
+app.use('/api/admin/members/restore', bulkOpLimiter);
+app.use('/api/admin/members/bulk-update', bulkOpLimiter);
+app.use('/api/admin/leaders', leaderMgmtLimiter);
+app.use('/api/admin/upload-csv', uploadLimiter);
+app.use('/api/2fa/regenerate-backup-codes', bulkOpLimiter);
 
 // Static uploads serving
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
