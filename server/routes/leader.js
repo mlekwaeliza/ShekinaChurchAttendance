@@ -718,10 +718,22 @@ router.put('/follow-ups/:memberId', async (req, res) => {
       return res.status(403).json({ error: 'Access denied: Only head leaders can update follow-ups' });
     }
 
+    // C4-fix: IDOR — verify the target member is in this leader's section.
+    const memberId = parseInt(req.params.memberId, 10);
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      return res.status(400).json({ error: 'Invalid memberId' });
+    }
+    const member = await get('SELECT id, section_id, soft_deleted_at FROM members WHERE id = ?', [memberId]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (member.soft_deleted_at) return res.status(410).json({ error: 'Member has been deleted' });
+    if (Number(member.section_id) !== Number(leaderRecord.section_id)) {
+      return res.status(403).json({ error: 'Member is not in your section' });
+    }
+
     const { contacted, contact_method, notes } = req.body;
     const existing = await new Promise((resolve, reject) => {
       db.get('SELECT id, absence_date FROM absent_followups WHERE member_id = ? AND leader_id = ? ORDER BY absence_date DESC LIMIT 1',
-        [req.params.memberId, leaderRecord.id], (err, row) => {
+        [memberId, leaderRecord.id], (err, row) => {
           if (err) reject(err); else resolve(row);
         });
     });
@@ -729,7 +741,7 @@ router.put('/follow-ups/:memberId', async (req, res) => {
     if (existing) {
       await queries.updateFollowUp(existing.id, contacted ? 1 : 0, contact_method || null, notes || null);
     } else {
-      await queries.createFollowUp(req.params.memberId, leaderRecord.id, formatLocalDate());
+      await queries.createFollowUp(memberId, leaderRecord.id, formatLocalDate());
     }
 
     res.json({ message: 'Follow-up saved' });
