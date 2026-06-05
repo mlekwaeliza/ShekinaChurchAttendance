@@ -40,6 +40,18 @@ api.interceptors.response.use(
       err.response?.data?.message ||
       err.message ||
       'Request failed';
+
+    // Session expired / unauthenticated — kick to login unless we're
+    // already on the login page (avoid loops).
+    if (status === 401 && typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (!path.startsWith('/login')) {
+        // Best-effort: clear the user-visible session and reload to /login.
+        try { window.dispatchEvent(new CustomEvent('app:session-expired', { detail: { message } })); } catch (_) {}
+        try { window.location.assign('/login?expired=1'); } catch (_) {}
+      }
+    }
+
     const e = new Error(`${status ? `[${status}] ` : ''}${message}`);
     e.status = status;
     e.original = err;

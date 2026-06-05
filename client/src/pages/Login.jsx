@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import TwoFactorVerify from '../components/TwoFactorVerify';
 import api from '../services/api';
-import { Church, ArrowRight, Sparkles } from 'lucide-react';
+import { Church, ArrowRight, Sparkles, Clock } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -13,11 +13,27 @@ const Login = () => {
   const [requires2FA, setRequires2FA] = useState(false);
   const [pendingUserId, setPendingUserId] = useState(null);
   const { login, user, setUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const expiredFlag = searchParams.get('expired') === '1';
   const navigate = useNavigate();
 
   if (user && !requires2FA) {
     return <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'leader' ? '/leader' : '/pastor'} />;
   }
+
+  // Auto-clear the ?expired=1 query param after first render so a
+  // refresh of /login doesn't keep showing the banner.
+  useEffect(() => {
+    if (expiredFlag) {
+      const t = setTimeout(() => {
+        const sp = new URLSearchParams(searchParams);
+        sp.delete('expired');
+        setSearchParams(sp, { replace: true });
+      }, 8000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [expiredFlag, searchParams, setSearchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -104,6 +120,13 @@ const Login = () => {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Sign in to your account</p>
           </div>
+
+          {expiredFlag && (
+            <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-xl mb-6 text-sm font-medium flex items-start gap-2">
+              <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>Your session has expired. Please log in again.</span>
+            </div>
+          )}
 
           {error && (
             <div className="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 px-4 py-3 rounded-xl mb-6 text-sm font-medium">

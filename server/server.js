@@ -221,12 +221,31 @@ app.use(session({
     secure: cookieSecure,
     httpOnly: true,
     sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours idle timeout
+    maxAge: 60 * 60 * 1000 // 1 hour idle timeout (rolling)
   }
 }));
 
 // CSRF Protection (for authenticated state-changing requests)
 app.use('/api/', csrfProtect());
+
+// Absolute session ceiling: log out the user if the session has been
+// alive for more than MAX_SESSION_AGE_MS regardless of rolling refresh.
+// Rolling idle timeout (cookie.maxAge) handles inactivity; this handles
+// total session lifetime (e.g. someone who clicks once an hour for 10 hours).
+const MAX_SESSION_AGE_MS = 8 * 60 * 60 * 1000; // 8 hours absolute
+app.use('/api/', (req, res, next) => {
+  if (req.session && req.session.userId && req.session.createdAt) {
+    const age = Date.now() - new Date(req.session.createdAt).getTime();
+    if (age > MAX_SESSION_AGE_MS) {
+      const sid = req.session.id;
+      req.session.destroy(() => {
+        res.status(401).json({ error: 'Session expired (max age reached). Please log in again.' });
+      });
+      return;
+    }
+  }
+  next();
+});
 
 // Audit logging for state-changing requests
 app.use('/api/', auditLog);

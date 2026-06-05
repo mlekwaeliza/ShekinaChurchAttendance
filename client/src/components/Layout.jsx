@@ -50,6 +50,7 @@ const Layout = ({ children, showNav = true }) => {
   const { user, logout, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { isOnline, pendingCount, syncing, syncPending, conflicts } = useOffline();
+  const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
@@ -66,6 +67,53 @@ const Layout = ({ children, showNav = true }) => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // 1-hour client-side idle detector. Server enforces a matching
+  // rolling timeout on the session cookie, but a tab left open without
+  // network activity can sit idle for a long time. Any user input
+  // (mousemove, keydown, click, scroll, touch) resets the timer.
+  const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+  const IDLE_WARNING_MS = 55 * 60 * 1000; // warn 5 min before logout
+  useEffect(() => {
+    if (!user) return undefined;
+    let warnTimer = null;
+    let logoutTimer = null;
+    let warned = false;
+    const reset = () => {
+      warned = false;
+      if (warnTimer) clearTimeout(warnTimer);
+      if (logoutTimer) clearTimeout(logoutTimer);
+      warnTimer = setTimeout(() => {
+        warned = true;
+        try { showToast({ type: 'warning', message: 'You will be logged out in 5 minutes due to inactivity.' }); } catch (_e) { /* ignore */ }
+      }, IDLE_WARNING_MS);
+      logoutTimer = setTimeout(() => {
+        if (warned) {
+          try { showToast({ type: 'info', message: 'Logged out due to inactivity.' }); } catch (_e) { /* ignore */ }
+          logout();
+        }
+      }, IDLE_TIMEOUT_MS);
+    };
+    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, reset));
+      if (warnTimer) clearTimeout(warnTimer);
+      if (logoutTimer) clearTimeout(logoutTimer);
+    };
+  }, [user, logout, showToast]);
+
+  // Server-side session expiry (401) -> show toast + logout.
+  useEffect(() => {
+    const handler = (event) => {
+      const msg = event?.detail?.message || 'Your session has expired. Please log in again.';
+      try { showToast({ type: 'warning', message: msg }); } catch (_e) { /* ignore */ }
+      logout();
+    };
+    window.addEventListener('app:session-expired', handler);
+    return () => window.removeEventListener('app:session-expired', handler);
+  }, [logout, showToast]);
 
   // Close mobile nav on route change
   useEffect(() => {
@@ -504,8 +552,6 @@ export default Layout;
 //  - Invalidates attendance caches for admin/pastor dashboards
 function RealtimeBridge({ user, children }) {
   const queryClient = useQueryClient();
-  const { showToast } = useToast();
-
   useEventStream(user ? '/api/events' : '', {
     notification: (data) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
