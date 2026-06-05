@@ -180,7 +180,7 @@ router.get('/leaders', async (req, res) => {
 // POST /api/outreach/log
 router.post('/log', async (req, res) => {
   try {
-    const { userId, leaderId } = req.outreachContext;
+    const { userId, leaderId, isPastorOrAdmin, sectionId } = req.outreachContext;
     const {
       member_id, contact_method, outcome, service_id, message,
       new_prayer_request, follow_up_needed, assigned_to_user_id, due_date,
@@ -191,23 +191,58 @@ router.post('/log', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // C2-fix: enum-validate contact_method (matches CHECK constraint).
+    const VALID_CONTACT_METHODS = new Set([
+      'Call', 'WhatsApp', 'SMS', 'Visit', 'Prayer', 'Counseling',
+      'Hospital Visit', 'Other', 'sms', 'whatsapp', 'phone', 'email', 'visit', 'other'
+    ]);
+    if (!VALID_CONTACT_METHODS.has(contact_method)) {
+      return res.status(400).json({ error: 'Invalid contact_method' });
+    }
+
+    // C2-fix: restrict mass-assignment fields to pastor/admin only.
+    if ((add_to_hall_of_fame || (Array.isArray(new_flags) && new_flags.length > 0)) && !isPastorOrAdmin) {
+      return res.status(403).json({ error: 'Only pastor or admin may award hall-of-fame points or set member flags' });
+    }
+
+    // C2-fix: clamp points to a sane range to prevent integer overflow / abuse.
+    let clampedPoints = 0;
+    if (add_to_hall_of_fame) {
+      const n = Number(points);
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        return res.status(400).json({ error: 'points must be a number between 0 and 100' });
+      }
+      clampedPoints = n;
+    }
+
     const weekStart = getWeekStartString();
     const parsedServiceId = service_id && service_id !== 'all' ? service_id : null;
 
     // Pre-fetch member state outside the transaction (read-only).
-    const member = await get(`SELECT prayer_requests, flags FROM members WHERE id = ?`, [member_id]);
+    // Also C2-fix: enforce that the member belongs to the caller's section (IDOR).
+    const member = await get(
+      `SELECT prayer_requests, flags, section_id, soft_deleted_at FROM members WHERE id = ?`,
+      [member_id]
+    );
     if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (member.soft_deleted_at) {
+      return res.status(410).json({ error: 'Member has been deleted' });
+    }
+    if (!isPastorOrAdmin && sectionId && member.section_id && Number(member.section_id) !== Number(sectionId)) {
+      return res.status(403).json({ error: 'Member is not in your section' });
+    }
 
     let prayers = [];
     let flags = [];
     try { prayers = member.prayer_requests ? JSON.parse(member.prayer_requests) : []; } catch (e) { prayers = []; }
     try { flags = member.flags ? JSON.parse(member.flags) : []; } catch (e) { flags = []; }
 
-    if (new_prayer_request && new_prayer_request.trim() !== '') {
-      prayers.unshift({ request: new_prayer_request, date: new Date().toISOString() });
+    if (new_prayer_request && typeof new_prayer_request === 'string' && new_prayer_request.trim() !== '') {
+      prayers.unshift({ request: new_prayer_request.slice(0, 1000), date: new Date().toISOString() });
     }
-    if (Array.isArray(new_flags) && new_flags.length > 0) {
+    if (Array.isArray(new_flags) && new_flags.length > 0 && isPastorOrAdmin) {
       for (const f of new_flags) {
+        if (typeof f !== 'object' || !f) continue;
         if (!f.reason) f.reason = 'Logged via outreach';
         if (!f.created_at) f.created_at = new Date().toISOString();
         flags.push(f);
@@ -218,26 +253,29 @@ router.post('/log', async (req, res) => {
       const logResult = await tx.run(
         `INSERT INTO outreach_logs (leader_id, member_id, contact_method, outcome, service_id, created_by, message, week_start)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [leaderId || 0, member_id, contact_method, outcome, parsedServiceId, userId, message || null, weekStart]
+        [leaderId || 0, member_id, contact_method, outcome, parsedServiceId, userId, message ? String(message).slice(0, 2000) : null, weekStart]
       );
       const logId = logResult.lastID;
 
-      if (add_to_hall_of_fame && points) {
+      if (add_to_hall_of_fame && clampedPoints > 0) {
         await tx.run(
           `INSERT INTO hall_of_fame_adjustments (member_id, points, reason, outreach_log_id) VALUES (?, ?, ?, ?)`,
-          [member_id, points, `Outreach: ${contact_method}`, logId]
+          [member_id, clampedPoints, `Outreach: ${contact_method}`, logId]
         );
         await tx.run(
           `UPDATE members SET hall_of_fame_points = hall_of_fame_points + ? WHERE id = ?`,
-          [points, member_id]
+          [clampedPoints, member_id]
         );
       }
 
       if (follow_up_needed && due_date && assigned_to_user_id) {
-        await tx.run(
-          `INSERT INTO pastoral_care_queue (member_id, assigned_by, assigned_to, due_date, status, notes) VALUES (?, ?, ?, ?, 'pending', ?)`,
-          [member_id, userId, assigned_to_user_id, due_date, `Follow-up needed after ${contact_method} by user ${userId}`]
-        );
+        const parsedDue = new Date(due_date);
+        if (!isNaN(parsedDue.getTime())) {
+          await tx.run(
+            `INSERT INTO pastoral_care_queue (member_id, assigned_by, assigned_to, due_date, status, notes) VALUES (?, ?, ?, ?, 'pending', ?)`,
+            [member_id, userId, assigned_to_user_id, parsedDue.toISOString().slice(0, 10), `Follow-up needed after ${contact_method} by user ${userId}`]
+          );
+        }
       }
 
       await tx.run(
