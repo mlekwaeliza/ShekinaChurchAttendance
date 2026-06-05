@@ -11,6 +11,7 @@
     "postgres:migrate:attendance-service-unique": "node scripts/migrate-attendance-service-unique.js",
     "postgres:refresh-analytics": "node scripts/postgres-refresh-analytics.js",
     "postgres:check": "node scripts/postgres-check.js",
+    "postgres:migrate:password-reset": "node scripts/migrate-add-password-reset-columns.js",
     "postgres:scan-runtime": "node scripts/postgres-scan-runtime.js"
   },
   "dependencies": {
