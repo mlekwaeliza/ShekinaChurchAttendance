@@ -471,12 +471,28 @@ router.post('/leaders', async (req, res) => {
     const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
     const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(); // 72h
     const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
-    const { lastID: userId } = await queries.createUser(username, placeholderHash, 'leader', full_name);
-    await queries.createLeader(userId, section_id, phone, email, is_head ? 1 : 0);
-    await run(
-      'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
-      [tokenHash, expiresAt, userId]
-    );
+    // DBA P1-#5: wrap the 3 writes (INSERT users, INSERT leaders, UPDATE
+    // users with reset token) in a single transaction so a failure
+    // between them cannot leave a leader with no reset token. We use
+    // tx.run directly rather than queries.* because the queries
+    // helpers capture the module-level run, not the active
+    // transaction's bound client.
+    const userId = await transaction(async (tx) => {
+      const userResult = await tx.run(
+        'INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)',
+        [username, placeholderHash, 'leader', full_name, null]
+      );
+      const insertedUserId = userResult.lastID;
+      await tx.run(
+        'INSERT INTO leaders (user_id, section_id, phone, email, is_head) VALUES (?, ?, ?, ?, ?)',
+        [insertedUserId, section_id, phone, email, is_head ? 1 : 0]
+      );
+      await tx.run(
+        'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
+        [tokenHash, expiresAt, insertedUserId]
+      );
+      return insertedUserId;
+    });
     const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
     const responseBody = { message: 'Leader created. A password-set link has been queued for email delivery.', userId, expires_at: expiresAt };
     if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
@@ -496,19 +512,26 @@ router.put('/leaders/:id', async (req, res) => {
   try {
     const { full_name, section_id, phone, email, is_head } = req.body;
     const { id } = req.params; // this is the leader id
-    
+
     // First, get the leader to find the user_id
     const db = require('../database').get;
     const leader = await db('SELECT user_id FROM leaders WHERE id = ?', [id]);
     if (!leader) return res.status(404).json({ error: 'Leader not found' });
-    
-    // Update users table
-    if (full_name) {
-      const { run } = require('../database');
-      await run('UPDATE users SET full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [full_name, leader.user_id]);
-    }
-    // Update leaders table
-    await queries.updateLeaderInfo(id, section_id, phone, email, is_head ? 1 : 0);
+
+    // DBA P1-#5: update the users.full_name and leaders row atomically
+    // so a failure cannot leave the two tables out of sync.
+    await transaction(async (tx) => {
+      if (full_name) {
+        await tx.run(
+          'UPDATE users SET full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [full_name, leader.user_id]
+        );
+      }
+      await tx.run(
+        'UPDATE leaders SET section_id = ?, phone = ?, email = ?, is_head = ? WHERE id = ?',
+        [section_id, phone, email, is_head ? 1 : 0, id]
+      );
+    });
     res.json({ message: 'Leader updated successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update leader' });
