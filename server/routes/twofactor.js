@@ -230,7 +230,8 @@ router.post('/disable', async (req, res) => {
     const user = await queries.findUserByUsername(req.session.user.username);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const validPassword = bcrypt.compareSync(password, user.password_hash);
+    // M4-fix: async bcrypt to keep the event loop responsive.
+    const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) return res.status(401).json({ error: 'Invalid password' });
 
     await queries.disableUser2FA(req.session.userId);

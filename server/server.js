@@ -345,11 +345,27 @@ app.use('/api/admin/upload-csv', uploadLimiter);
 app.use('/api/2fa/regenerate-backup-codes', bulkOpLimiter);
 
 // Static uploads serving
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// M7-fix: dotfiles: 'deny' blocks requests for hidden files
+// (.env, .git, .htaccess, etc.) and index: false prevents
+// directory listings. fallthrough: false makes unknown files
+// return 404 instead of falling through to the SPA index.
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  dotfiles: 'deny',
+  index: false,
+  fallthrough: false,
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store');
+    }
+  }
+}));
 
 // Serve production client build
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 app.use(express.static(clientDist, {
+  dotfiles: 'deny',
+  index: false,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('sw.js') || filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -461,6 +477,59 @@ app.get('/api/metrics', async (req, res) => {
     `database_up{client="${dbClient}"} ${dbUp}`
   ].join('\n'));
 });
+// M1+M8-fix: global Express error handler. Strips error.message and
+// `details` from any response that hasn't explicitly opted in via
+// `error.expose = true`. The full error is logged (and Sentry-reported
+// if available) for operator visibility, but clients only see a
+// generic message and an `errorId` (a short hash of the timestamp +
+// path) so the support team can correlate client reports with
+// server logs.
+function globalErrorHandler(err, req, res, next) { // eslint-disable-line no-unused-vars
+  try {
+    const status = Number.isInteger(err?.status) ? err.status
+      : Number.isInteger(err?.statusCode) ? err.statusCode
+      : 500;
+
+    // Allow explicitly-exposed errors (e.g., 4xx with a safe message)
+    // to pass through. The route can set `err.expose = true` and a
+    // safe `err.userMessage` to control the response shape.
+    if (err && err.expose && err.userMessage) {
+      return res.status(status).json({ error: err.userMessage });
+    }
+
+    const errorId = require('crypto')
+      .createHash('sha256')
+      .update(`${Date.now()}:${req.method}:${req.originalUrl}:${Math.random()}`)
+      .digest('hex')
+      .slice(0, 12);
+
+    // Log full detail server-side
+    console.error(`[error ${errorId}] ${req.method} ${req.originalUrl}:`, err);
+
+    // Sentry report if configured (does nothing in dev)
+    try {
+      if (typeof Sentry !== 'undefined' && Sentry && typeof Sentry.captureException === 'function') {
+        Sentry.captureException(err, { tags: { errorId, path: req.originalUrl, method: req.method } });
+      }
+    } catch (_) { /* Sentry is optional */ }
+
+    // Generic client response
+    res.status(status >= 400 && status < 600 ? status : 500).json({
+      error: status >= 500 ? 'Internal server error' : (err.userMessage || 'Request failed'),
+      errorId
+    });
+  } catch (handlerError) {
+    // Last-resort safety net so the process never crashes on a handler bug.
+    console.error('Error handler itself threw:', handlerError);
+    try { res.status(500).end(); } catch (_) { /* connection already closed */ }
+  }
+}
+
+// M1+M8-fix: register the error handler last (after all routes and
+// the 404 catch-all). Any unhandled rejection / thrown error in an
+// async route that wasn't already caught will land here.
+app.use(globalErrorHandler);
+
 app.use('/api/*', (req, res) => {
   res.status(404).json({ error: `Route ${req.originalUrl} not found` });
 });
@@ -479,7 +548,8 @@ async function initializeAdmin() {
       const crypto = require('crypto');
       const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
       if (initialPassword && initialPassword.length >= 12) {
-        const passwordHash = bcrypt.hashSync(initialPassword, 10);
+        // M4-fix: async bcrypt to keep the event loop responsive.
+        const passwordHash = await bcrypt.hash(initialPassword, 10);
         await queries.createUser('admin', passwordHash, 'admin', 'System Administrator');
         console.log('Default admin user created from INITIAL_ADMIN_PASSWORD env var.');
       } else {

@@ -93,7 +93,8 @@ router.post('/login', async (req, res) => {
     const user = await queries.findUserByUsername(username);
     if (!user) {
       // Constant-time-ish dummy compare to reduce user enumeration timing.
-      bcrypt.compareSync(password, '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali');
+      // M4-fix: async to avoid blocking the event loop.
+      await bcrypt.compare(password, '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali');
       recordIpLoginFailure(ip);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -109,7 +110,8 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    const validPassword = bcrypt.compareSync(password, user.password_hash);
+    // M4-fix: async bcrypt to keep the event loop responsive.
+    const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
       const attempts = (user.failed_login_attempts || 0) + 1;
       await queries.incrementFailedLogin(user.id);
@@ -216,8 +218,10 @@ router.post('/change-password', async (req, res) => {
       return res.status(400).json({ error: 'Current password and new password required' });
     }
 
-    if (new_password.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    if (new_password.length < 8) {
+      // M5-fix: enforce min length 8 (was 6) to align with the
+      // 12-char minimum for the bootstrapped admin password.
+      return res.status(400).json({ error: 'New password must be at least 8 characters' });
     }
 
     // Get user from session
@@ -231,15 +235,28 @@ router.post('/change-password', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Verify current password
-    const validPassword = bcrypt.compareSync(current_password, user.password_hash);
+    // M4-fix: async bcrypt to keep the event loop responsive.
+    const validPassword = await bcrypt.compare(current_password, user.password_hash);
     if (!validPassword) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
-    // Hash and save new password
-    const newPasswordHash = bcrypt.hashSync(new_password, 10);
+    // M4-fix: async bcrypt.
+    const newPasswordHash = await bcrypt.hash(new_password, 10);
     await queries.updateUserPassword(newPasswordHash, user.id);
+
+    // M9-fix: regenerate the session on password change to prevent
+    // session-fixation attacks where a hijacked pre-change session
+    // cookie is still considered authenticated.
+    await new Promise((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+    req.session.userId = user.id;
+    req.session.user = { id: user.id, username: user.username, role: user.role, full_name: user.full_name };
+    req.session.createdAt = Date.now();
+    await new Promise((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
