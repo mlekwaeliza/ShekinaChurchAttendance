@@ -200,7 +200,7 @@ router.get('/rewards/top-leaders', async (req, res) => {
   }
 });
 
-const { listBackups, deleteBackup, backupDatabase, restoreDatabase, safeBackupName } = require('../backup');
+const { listBackups, deleteBackup, backupDatabase, restoreDatabase, safeBackupName, getBackupStatus } = require('../backup');
 
 const requireAdmin = requireRole('admin');
 
@@ -210,6 +210,20 @@ router.get('/backups', requireAdmin, async (req, res) => {
     res.json({ backups });
   } catch (error) {
     res.status(500).json({ error: 'Failed to list backups' });
+  }
+});
+
+// GET /api/admin/backups/status
+// Aggregate health summary: backup count, last-backup age, remote-upload
+// configured, and human-readable warnings. Useful for admin dashboards
+// and uptime checks — a single endpoint that says "is my backup story
+// working?" without needing to introspect the filesystem.
+router.get('/backups/status', requireAdmin, async (req, res) => {
+  try {
+    const status = getBackupStatus();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to read backup status' });
   }
 });
 

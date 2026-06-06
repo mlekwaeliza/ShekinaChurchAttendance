@@ -295,6 +295,70 @@ function deleteBackup(filename) {
   console.log(`Deleted backup: ${safeName}`);
 }
 
+// Aggregate status of the local backup directory plus remote-upload
+// configuration. Returns a plain object safe for JSON serialization.
+// The `warning` field is a non-empty human-readable string when the
+// admin should investigate (e.g. no recent backup, remote upload
+// configured but most-recent backup looks old, or the backup dir
+// is missing entirely).
+function getBackupStatus() {
+  const retentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS, 10) || 30;
+  const remoteUrl = process.env.BACKUP_REMOTE_URL || null;
+  const now = Date.now();
+
+  let totalBackups = 0;
+  let totalSizeKb = 0;
+  let lastBackupAt = null;
+
+  if (fs.existsSync(BACKUP_DIR)) {
+    try {
+      const files = fs.readdirSync(BACKUP_DIR)
+        .filter(f => f.endsWith('.sqlite') || f.endsWith('.sql'));
+      totalBackups = files.length;
+      for (const f of files) {
+        try {
+          const stat = fs.statSync(path.join(BACKUP_DIR, f));
+          totalSizeKb += Math.round(stat.size / 1024);
+          if (!lastBackupAt || stat.mtimeMs > new Date(lastBackupAt).getTime()) {
+            lastBackupAt = stat.mtime.toISOString();
+          }
+        } catch (_) { /* skip unreadable file */ }
+      }
+    } catch (_) { /* dir read failed; leave counts at 0 */ }
+  }
+
+  let lastBackupAgeHours = null;
+  if (lastBackupAt) {
+    lastBackupAgeHours = Math.round((now - new Date(lastBackupAt).getTime()) / (60 * 60 * 1000));
+  }
+
+  const warnings = [];
+  if (!fs.existsSync(BACKUP_DIR)) {
+    warnings.push('Backup directory is missing on disk. Run POST /api/admin/backups/create to recreate it.');
+  }
+  if (!lastBackupAt) {
+    warnings.push('No backups have been created yet. The initial backup may have failed — check server logs.');
+  } else if (lastBackupAgeHours > 48) {
+    warnings.push(`Most recent backup is ${lastBackupAgeHours}h old (>48h). Scheduled backups may be failing.`);
+  }
+  if (remoteUrl && lastBackupAgeHours !== null && lastBackupAgeHours > 24) {
+    warnings.push(`BACKUP_REMOTE_URL is configured but the most recent backup is ${lastBackupAgeHours}h old — remote uploads may be failing.`);
+  }
+
+  return {
+    backup_dir: BACKUP_DIR,
+    backup_dir_exists: fs.existsSync(BACKUP_DIR),
+    total_backups: totalBackups,
+    total_size_kb: totalSizeKb,
+    last_backup_at: lastBackupAt,
+    last_backup_age_hours: lastBackupAgeHours,
+    retention_days: retentionDays,
+    remote_upload_configured: Boolean(remoteUrl),
+    remote_upload_host: remoteUrl ? (() => { try { return new URL(remoteUrl).host; } catch (_) { return null; } })() : null,
+    warning: warnings.length > 0 ? warnings.join(' ') : null
+  };
+}
+
 function cleanupOldBackups() {
   const retentionDays = parseInt(process.env.BACKUP_RETENTION_DAYS) || 30;
   const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
@@ -320,4 +384,4 @@ setInterval(() => {
   backupDatabase().catch(err => console.error('Scheduled backup failed:', err.message));
 }, 6 * 60 * 60 * 1000);
 
-module.exports = { backupDatabase, restoreDatabase, listBackups, deleteBackup, safeBackupName, uploadBackupToRemote };
+module.exports = { backupDatabase, restoreDatabase, listBackups, deleteBackup, safeBackupName, uploadBackupToRemote, getBackupStatus };
