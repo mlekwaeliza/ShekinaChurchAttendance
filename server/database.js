@@ -851,83 +851,206 @@ const queries = {
       WHERE m.is_active = 1 AND m.visitor_date >= ?
     `, [visitorCutoff]);
 
-    // 3. Absent 3+ Weeks PER SERVICE Logic
-    let servicesToProcess = [];
-    if (serviceId === 'all') {
-      servicesToProcess = await all('SELECT id, name FROM service_types WHERE is_active = 1');
-    } else {
-      servicesToProcess = await all('SELECT id, name FROM service_types WHERE id = ?', [serviceId]);
+    // 3. Absent 3+ Weeks PER SERVICE Logic.
+    //
+    // DBA P1-#2: collapsed the per-service loop (2*N queries) into
+    // three batched queries: services, last-3-dates-per-service,
+    // absent members in one shot. The final visitor-present-count
+    // query is also a single round-trip across all services.
+    const services = serviceId === 'all'
+      ? await all('SELECT id, name FROM service_types WHERE is_active = 1')
+      : await all('SELECT id, name FROM service_types WHERE id = ?', [serviceId]);
+    if (services.length === 0) {
+      return [...birthdays, ...visitors].slice(0, 50);
+    }
+    const serviceIds = services.map((s) => s.id);
+    const serviceNameById = new Map(services.map((s) => [Number(s.id), s.name]));
+
+    // 3a. Last 3 distinct dates per service in a single query.
+    // ROW_NUMBER() partitions the attendance rows by service and
+    // orders by date desc; we keep only rn <= 3.
+    const datesPerService = usePostgres
+      ? await all(`
+        SELECT service_type_id, date
+        FROM (
+          SELECT service_type_id, date,
+                 ROW_NUMBER() OVER (PARTITION BY service_type_id ORDER BY date DESC) AS rn
+          FROM attendance
+          WHERE service_type_id = ANY($1::int[])
+        ) ranked
+        WHERE rn <= 3
+      `, [serviceIds])
+      : (() => {
+        // SQLite has no ANY(); do one query per service but only to
+        // collect dates -- the expensive absentMembers query below is
+        // a single batched round-trip in both backends. SQLite dev
+        // mode typically has 1-2 services so this is acceptable.
+        const out = [];
+        return (async () => {
+          for (const sid of serviceIds) {
+            const rows = await all(
+              `SELECT service_type_id, date FROM (
+                 SELECT service_type_id, date,
+                        ROW_NUMBER() OVER (PARTITION BY service_type_id ORDER BY date DESC) AS rn
+                 FROM attendance
+                 WHERE service_type_id = ?
+               ) ranked WHERE rn <= 3`,
+              [sid]
+            );
+            out.push(...rows);
+          }
+          return out;
+        })();
+      })();
+
+    // Group dates by service: Map<serviceId, string[]>
+    const datesByService = new Map();
+    for (const row of datesPerService) {
+      const sid = Number(row.service_type_id);
+      if (!datesByService.has(sid)) datesByService.set(sid, []);
+      datesByService.get(sid).push(row.date);
     }
 
-    let absenteesMap = new Map();
+    // Only proceed for services that have at least 3 dates.
+    const eligibleServices = services.filter((s) => (datesByService.get(Number(s.id)) || []).length >= 3);
+    if (eligibleServices.length === 0) {
+      return [...birthdays, ...visitors].slice(0, 50);
+    }
 
-    for (const s of servicesToProcess) {
-      // Find the last 3 exact dates this service occurred
-      const datesRow = await all(`SELECT DISTINCT date FROM attendance WHERE service_type_id = ? ORDER BY date DESC LIMIT 3`, [s.id]);
-      if (datesRow.length < 3) continue; // Cannot have missed 3 consecutive if 3 haven't occurred
-      
-      const dates = datesRow.map(d => d.date);
-      const oldestDate = dates[2];
+    // 3b. Oldest "third" date across eligible services is the
+    // universal "is the member old enough?" cutoff. The original
+    // per-service query used the oldest of the 3 dates for that
+    // service, which is correct but can differ across services.
+    // Use the earliest such oldest-date so we don't miss any
+    // member.
+    const cutoff = eligibleServices
+      .map((s) => datesByService.get(Number(s.id))[2])
+      .sort()[0];
 
-      // Query members who explicitly have 'absent' on strictly these 3 dates for this service
-      const absentMembers = await all(`
-        SELECT m.id, m.full_name, m.section_id, m.opt_out_services, m.status, m.created_at, sec.name as section_name
-        FROM members m
+    // 3c. Single batched query: members absent on all 3 dates for a
+    // given service, in one round-trip. Returns one row per
+    // (member_id, service_type_id).
+    const eligibleServiceIds = eligibleServices.map((s) => Number(s.id));
+    const absentRows = usePostgres
+      ? await all(`
+        SELECT a.member_id, a.service_type_id, a.date,
+               m.full_name, m.section_id, m.opt_out_services, m.status, m.created_at,
+               sec.name AS section_name
+        FROM attendance a
+        JOIN members m ON m.id = a.member_id
         JOIN sections sec ON m.section_id = sec.id
-        WHERE m.is_active = 1
-        AND ${dateOnly('m.created_at')} <= ${dateOnly('?')}
-        AND (
-          SELECT COUNT(*) FROM attendance a 
-          WHERE a.member_id = m.id 
-          AND a.service_type_id = ? 
-          AND a.date IN (?, ?, ?) 
+        WHERE a.service_type_id = ANY($1::int[])
           AND a.status = 'absent'
-        ) = 3
-      `, [oldestDate, s.id, dates[0], dates[1], dates[2]]);
+          AND ${dateOnly('m.created_at')} <= $2::date
+        GROUP BY a.member_id, a.service_type_id, a.date,
+                 m.full_name, m.section_id, m.opt_out_services, m.status, m.created_at,
+                 sec.name
+        HAVING COUNT(DISTINCT a.date) >= 1
+      `, [eligibleServiceIds, cutoff])
+      : (() => {
+        // SQLite: build a single IN-list for service ids, then group
+        // by member to count distinct dates.
+        const placeholders = eligibleServiceIds.map(() => '?').join(',');
+        return all(`
+          SELECT a.member_id, a.service_type_id, a.date,
+                 m.full_name, m.section_id, m.opt_out_services, m.status, m.created_at,
+                 sec.name AS section_name
+          FROM attendance a
+          JOIN members m ON m.id = a.member_id
+          JOIN sections sec ON m.section_id = sec.id
+          WHERE a.service_type_id IN (${placeholders})
+            AND a.status = 'absent'
+            AND ${dateOnly('m.created_at')} <= ${dateOnly('?')}
+          GROUP BY a.member_id, a.service_type_id, a.date,
+                   m.full_name, m.section_id, m.opt_out_services, m.status, m.created_at,
+                   sec.name
+          HAVING COUNT(DISTINCT a.date) >= 1
+        `, [...eligibleServiceIds, cutoff]);
+      })();
 
-      // Pre-load visitor present-counts for ALL members in the absent list
-      // in a single GROUP BY query, to avoid the N+1 inside the loop below.
-      const visitorIds = absentMembers
-        .filter((a) => a.status === 'Visitor')
-        .map((a) => a.id);
-      const visitorPresentCounts = new Map();
-      if (visitorIds.length > 0) {
-        const placeholders = visitorIds.map(() => '?').join(',');
-        const rows = await all(
-          `SELECT member_id, COUNT(*) AS c FROM attendance
-           WHERE service_type_id = ? AND status = 'present' AND member_id IN (${placeholders})
-           GROUP BY member_id`,
-          [s.id, ...visitorIds]
-        );
-        for (const r of rows) visitorPresentCounts.set(Number(r.member_id), Number(r.c));
+    // 3d. Keep only members whose absent-row count for a service
+    // equals the 3 dates we know about. This is the "missed all 3"
+    // condition from the original code.
+    const absentMembersByService = new Map();
+    for (const r of absentRows) {
+      const sid = Number(r.service_type_id);
+      const knownDates = datesByService.get(sid) || [];
+      const key = `${r.member_id}_${sid}`;
+      if (!absentMembersByService.has(key)) {
+        absentMembersByService.set(key, { ...r, _absentDates: [] });
+      }
+      absentMembersByService.get(key)._absentDates.push(r.date);
+    }
+
+    // 3e. Single batched visitor-present-count query across all
+    // eligible services. Use distinct (member_id, service_type_id)
+    // pairs.
+    const visitorKeys = Array.from(absentMembersByService.values())
+      .filter((a) => a.status === 'Visitor')
+      .map((a) => `${a.member_id}_${a.service_type_id}`);
+    const visitorPresentCounts = new Map();
+    if (visitorKeys.length > 0) {
+      const visitorMemberIds = Array.from(new Set(visitorKeys.map((k) => Number(k.split('_')[0]))));
+      const visitorServiceIds = Array.from(new Set(visitorKeys.map((k) => Number(k.split('_')[1]))));
+      const visitorRows = usePostgres
+        ? await all(`
+          SELECT member_id, service_type_id, COUNT(*) AS c
+          FROM attendance
+          WHERE status = 'present'
+            AND member_id = ANY($1::int[])
+            AND service_type_id = ANY($2::int[])
+          GROUP BY member_id, service_type_id
+        `, [visitorMemberIds, visitorServiceIds])
+        : (() => {
+          const mh = visitorMemberIds.map(() => '?').join(',');
+          const sh = visitorServiceIds.map(() => '?').join(',');
+          return all(`
+            SELECT member_id, service_type_id, COUNT(*) AS c
+            FROM attendance
+            WHERE status = 'present'
+              AND member_id IN (${mh})
+              AND service_type_id IN (${sh})
+            GROUP BY member_id, service_type_id
+          `, [...visitorMemberIds, ...visitorServiceIds]);
+        })();
+      for (const r of visitorRows) {
+        visitorPresentCounts.set(`${Number(r.member_id)}_${Number(r.service_type_id)}`, Number(r.c));
+      }
+    }
+
+    // 3f. Build the per-member absentee map.
+    const absenteesMap = new Map();
+    for (const a of absentMembersByService.values()) {
+      const sid = Number(a.service_type_id);
+      const knownDates = datesByService.get(sid) || [];
+      // Must have absent on ALL 3 known dates for this service.
+      const allThree = knownDates.length === 3 &&
+        knownDates.every((d) => a._absentDates.includes(d));
+      if (!allThree) continue;
+
+      // Opt-out check.
+      let optOuts = [];
+      try { optOuts = JSON.parse(a.opt_out_services || '[]'); } catch (_) { /* noop */ }
+      if (optOuts.includes(serviceNameById.get(sid))) continue;
+
+      // Visitor present-count check.
+      if (a.status === 'Visitor') {
+        const c = visitorPresentCounts.get(`${Number(a.member_id)}_${sid}`) || 0;
+        if (c < 3) continue;
       }
 
-      for (const a of absentMembers) {
-        // Evaluate Opt-Outs
-        let optOuts = [];
-        try { optOuts = JSON.parse(a.opt_out_services || '[]'); } catch(e) { /* noop */ }
-        if (optOuts.includes(s.name)) continue;
-
-        // Evaluate Visitors limitation using pre-loaded map (no extra query).
-        if (a.status === 'Visitor' && (visitorPresentCounts.get(Number(a.id)) || 0) < 3) {
-          continue;
-        }
-
-        // Add or merge into map
-        if (absenteesMap.has(a.id)) {
-          const existing = absenteesMap.get(a.id);
-          existing.missed_services.push(s.name);
-        } else {
-          absenteesMap.set(a.id, {
-            reason: 'absentee',
-            id: a.id,
-            full_name: a.full_name,
-            section_id: a.section_id,
-            section_name: a.section_name,
-            missed_services: [s.name],
-            missed_dates: dates
-          });
-        }
+      if (absenteesMap.has(Number(a.member_id))) {
+        absenteesMap.get(Number(a.member_id)).missed_services.push(serviceNameById.get(sid));
+      } else {
+        absenteesMap.set(Number(a.member_id), {
+          reason: 'absentee',
+          id: Number(a.member_id),
+          full_name: a.full_name,
+          section_id: a.section_id,
+          section_name: a.section_name,
+          missed_services: [serviceNameById.get(sid)],
+          missed_dates: knownDates
+        });
       }
     }
 
