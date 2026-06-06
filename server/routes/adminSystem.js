@@ -222,6 +222,13 @@ router.post('/backups/create', requireAdmin, async (req, res) => {
 
 router.post('/backups/restore', requireAdmin, async (req, res) => {
   try {
+    // H2-fix: require typed confirmation for destructive restore.
+    if (String(req.body?.confirm || '').toUpperCase() !== 'RESTORE') {
+      return res.status(400).json({
+        error: 'Confirmation required',
+        details: 'Send { "filename": "...", "confirm": "RESTORE" } in the request body to restore a backup. This will overwrite the live database.'
+      });
+    }
     const { filename } = req.body;
     if (!filename) {
       return res.status(400).json({ error: 'Backup filename is required' });
@@ -235,6 +242,13 @@ router.post('/backups/restore', requireAdmin, async (req, res) => {
 
 router.delete('/backups/:filename', requireAdmin, async (req, res) => {
   try {
+    // H2-fix: require typed confirmation for destructive backup delete.
+    if (String(req.body?.confirm || '').toUpperCase() !== 'DELETE') {
+      return res.status(400).json({
+        error: 'Confirmation required',
+        details: 'Send { "confirm": "DELETE" } in the request body to permanently remove a backup file.'
+      });
+    }
     deleteBackup(req.params.filename);
     res.json({ message: 'Backup deleted successfully' });
   } catch (error) {

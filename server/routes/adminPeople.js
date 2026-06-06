@@ -134,6 +134,14 @@ router.put('/sections/:id', async (req, res) => {
 // DELETE section
 router.delete('/sections/:id', async (req, res) => {
   try {
+    // H2-fix: require typed confirmation for cascading destructive delete.
+    // Deleting a section cascades to leaders, members, attendance, follow-ups.
+    if (String(req.body?.confirm || '').toUpperCase() !== 'DELETE') {
+      return res.status(400).json({
+        error: 'Confirmation required',
+        details: 'Send { "confirm": "DELETE" } in the request body to delete a section. This action cascades to all leaders, members, attendance, and follow-ups.'
+      });
+    }
     await queries.deleteSection(req.params.id);
     res.json({ message: 'Section deleted' });
   } catch (error) {
@@ -272,6 +280,15 @@ router.put('/members/:id', async (req, res) => {
 // DELETE member (soft delete) — will be flagged for permanent deletion after 6 months
 router.delete('/members/:id', async (req, res) => {
   try {
+    // H2-fix: defense-in-depth — require typed confirmation even for soft
+    // delete. The member is recoverable via the restore endpoint, but a
+    // typo or stuck UI button should not silently deactivate a member.
+    if (String(req.body?.confirm || '').toUpperCase() !== 'SOFT-DELETE') {
+      return res.status(400).json({
+        error: 'Confirmation required',
+        details: 'Send { "confirm": "SOFT-DELETE" } in the request body to soft-delete a member. This sets is_active=0 and is recoverable via the restore endpoint.'
+      });
+    }
     await run(
       "UPDATE members SET is_active = 0, soft_deleted_at = CURRENT_TIMESTAMP, pending_deletion_at = NULL, deletion_confirmed_at = NULL, deletion_confirmed_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
       [req.params.id]
@@ -500,11 +517,19 @@ router.put('/leaders/:id', async (req, res) => {
 // DELETE leader
 router.delete('/leaders/:id', async (req, res) => {
   try {
+    // H2-fix: require typed confirmation for cascading destructive delete.
+    // Deleting a leader cascades to their members, attendance, and follow-ups.
+    if (String(req.body?.confirm || '').toUpperCase() !== 'DELETE') {
+      return res.status(400).json({
+        error: 'Confirmation required',
+        details: 'Send { "confirm": "DELETE" } in the request body to delete a leader. This action cascades to their members, attendance records, and follow-ups.'
+      });
+    }
     const { id } = req.params;
     const db = require('../database').get;
     const leader = await db('SELECT user_id FROM leaders WHERE id = ?', [id]);
     if (!leader) return res.status(404).json({ error: 'Leader not found' });
-    
+
     // Deleting the user will securely cascade delete the leader and members
     await queries.deleteUserAndCascade(leader.user_id);
     res.json({ message: 'Leader deleted successfully along with associated records' });
