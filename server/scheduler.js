@@ -1,5 +1,6 @@
 const { queries, all, run, db } = require('./database');
 const { addDays, formatMonthDay, getWeekStartString, startOfLocalDay } = require('./utils/date');
+const { monthsAgo } = require('./utils/sqlDialect');
 
 function getNextSunday() {
   const d = new Date();
@@ -244,7 +245,7 @@ async function flagPendingPermanentDeletions() {
         AND deletion_confirmed_at IS NULL
         AND soft_deleted_at IS NOT NULL
         AND pending_deletion_at IS NULL
-        AND soft_deleted_at <= (CURRENT_TIMESTAMP - INTERVAL '6 months')
+        AND soft_deleted_at <= ${monthsAgo(6)}
     `);
     if (flagged.changes && flagged.changes > 0) {
       console.log(`Flagged ${flagged.changes} member(s) as pending permanent deletion`);

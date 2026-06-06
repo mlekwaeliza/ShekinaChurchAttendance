@@ -10,6 +10,7 @@ const { queries, run, get, all, db, transaction } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
 const { formatLocalDate } = require('../utils/date');
 const { escapeCsvValue, toCsvRow } = require('../utils/csv');
+const { monthsAgo } = require('../utils/sqlDialect');
 
 const router = express.Router();
 const upload = multer({
@@ -348,7 +349,7 @@ router.get('/members/pending-deletion', async (req, res) => {
       WHERE m.is_active = 0
         AND m.soft_deleted_at IS NOT NULL
         AND m.deletion_confirmed_at IS NULL
-        AND m.soft_deleted_at <= (CURRENT_TIMESTAMP - INTERVAL '6 months')
+        AND m.soft_deleted_at <= ${monthsAgo(6)}
       ORDER BY m.soft_deleted_at ASC
     `);
     res.json({ count: rows.length, members: rows });
@@ -379,7 +380,7 @@ router.post('/members/confirm-deletion', async (req, res) => {
          AND is_active = 0
          AND soft_deleted_at IS NOT NULL
          AND deletion_confirmed_at IS NULL
-         AND soft_deleted_at <= (CURRENT_TIMESTAMP - INTERVAL '6 months')`,
+         AND soft_deleted_at <= ${monthsAgo(6)}`,
       ids
     );
     if (pending.length === 0) {

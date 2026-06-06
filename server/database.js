@@ -8,6 +8,9 @@ const {
   dateOnly,
   pendingNowExpression,
   nowMinusHours,
+  monthsAgo,
+  likeEscapePattern,
+  likeClause,
   upsertAttendanceSql
 } = require('./utils/sqlDialect');
 
@@ -1526,13 +1529,8 @@ const queries = {
       // H8-fix: escape % and _ so a user can't transform an exact
       // substring match into a wildcard scan that returns every row
       // (mass-disclosure) or skip rows (audit-log tampering indicator).
-      const ESCAPE_CHAR = '\\';
-      const escaped = String(filters.search)
-        .replace(/\\/g, '\\\\')
-        .replace(/%/g, ESCAPE_CHAR + '%')
-        .replace(/_/g, ESCAPE_CHAR + '_');
-      const pattern = `%${escaped}%`;
-      sql += ` AND (al.old_value LIKE ? ESCAPE '\\' OR al.new_value LIKE ? ESCAPE '\\')`;
+      const pattern = `%${likeEscapePattern(filters.search)}%`;
+      sql += ` AND (al.old_value ${likeClause()} OR al.new_value ${likeClause()})`;
       params.push(pattern, pattern);
     }
     sql += ` ORDER BY al.created_at DESC LIMIT ? OFFSET ?`;

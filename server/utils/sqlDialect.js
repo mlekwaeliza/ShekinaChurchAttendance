@@ -52,6 +52,37 @@ function nowMinusHours(hoursParam = '?') {
     : `DATETIME('now', '+' || ${hoursParam} || ' hours')`;
 }
 
+// monthsAgo(months) -> dialect-correct expression for "now minus N months".
+// Use as: WHERE soft_deleted_at <= ${monthsAgo(6)}
+// On Postgres: CURRENT_TIMESTAMP - $1::int * INTERVAL '1 month'
+// On SQLite:   DATETIME('now', '-' || $1 || ' months')
+function monthsAgo(monthsParam = '?') {
+  return isPostgres()
+    ? `CURRENT_TIMESTAMP - (${monthsParam}::int * INTERVAL '1 month')`
+    : `DATETIME('now', '-' || ${monthsParam} || ' months')`;
+}
+
+// Escape % and _ for use inside a LIKE pattern, returning a parameterised
+// pattern fragment. The escape character is appended in a way that both
+// PG (LIKE '...' ESCAPE '\\') and SQLite (LIKE '...' ESCAPE '\') accept.
+//
+// Usage:  const pattern = `%${likeEscapePattern(userInput)}%`
+//         db.run("... LIKE ? ESCAPE '\\\\'", [pattern])
+function likeEscapePattern(value) {
+  const ESCAPE = '\\';
+  return String(value)
+    .replace(/\\/g, ESCAPE + ESCAPE)
+    .replace(/%/g, ESCAPE + '%')
+    .replace(/_/g, ESCAPE + '_');
+}
+
+// likeClause() -> the LIKE pattern fragment "LIKE ? ESCAPE '\\'".
+// Use as: `${column} ${likeClause()}` in dynamic SQL, with the bound
+// param being `%${likeEscapePattern(value)}%`.
+function likeClause() {
+  return `LIKE ? ESCAPE '\\'`;
+}
+
 function upsertAttendanceSql({ includeServiceType = false } = {}) {
   if (isPostgres()) {
     return includeServiceType
@@ -88,5 +119,8 @@ module.exports = {
   dateOnly,
   pendingNowExpression,
   nowMinusHours,
+  monthsAgo,
+  likeEscapePattern,
+  likeClause,
   upsertAttendanceSql
 };
