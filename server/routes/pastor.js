@@ -7,6 +7,42 @@ const router = express.Router();
 router.use(isAuthenticated);
 router.use(requireRole(['admin', 'pastor']));
 
+// H5-fix: redact PII in pastor-facing list responses. Pastors get the
+// full name and membership_id (for tracking), but phone and DOB are
+// masked to last-4 and month/day respectively. The full values are
+// only available through /api/admin/people/members/:id or
+// /api/leader/members/:id where the caller is the assigned leader.
+function maskMemberPII(rows) {
+  if (!Array.isArray(rows)) return rows;
+  return rows.map((r) => {
+    if (!r || typeof r !== 'object') return r;
+    const out = { ...r };
+    if ('phone' in out) {
+      const digits = String(out.phone || '').replace(/\D/g, '');
+      out.phone_masked = digits.length >= 4 ? `***-***-${digits.slice(-4)}` : null;
+      delete out.phone;
+    }
+    if ('date_of_birth' in out && out.date_of_birth) {
+      const dob = String(out.date_of_birth);
+      // Keep month-day only; drop year.
+      const m = dob.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      out.birthday = m ? `${m[2]}-${m[3]}` : null;
+      delete out.date_of_birth;
+    }
+    if ('address' in out) {
+      out.address_masked = out.address ? `${String(out.address).slice(0, 2)}***` : null;
+      delete out.address;
+    }
+    if ('email' in out) {
+      const e = String(out.email || '');
+      const at = e.indexOf('@');
+      out.email_masked = at > 1 ? `${e[0]}***${e.slice(at)}` : null;
+      delete out.email;
+    }
+    return out;
+  });
+}
+
 function validateQueryDates(req, res, next) {
   const { start_date, end_date } = req.query;
   const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -126,7 +162,7 @@ router.get('/leaders/metrics', async (req, res) => {
 router.get('/members/at-risk', async (req, res) => {
   try {
     const atRisk = await queries.getAtRiskMembers();
-    res.json(atRisk);
+    res.json(maskMemberPII(atRisk));
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch at-risk members' });
   }
@@ -262,7 +298,7 @@ router.get('/weekly-summary', async (req, res) => {
 router.get('/alerts/follow-up-needed', async (req, res) => {
   try {
     const members = await queries.getMembersNeedingFollowUp();
-    res.json(members);
+    res.json(maskMemberPII(members));
   } catch (error) {
     console.error('Follow-up alerts error:', error);
     res.status(500).json({ error: 'Failed to fetch follow-up alerts' });
@@ -273,7 +309,7 @@ router.get('/alerts/follow-up-needed', async (req, res) => {
 router.get('/alerts/birthdays', async (req, res) => {
   try {
     const birthdays = await queries.getTodayBirthdays();
-    res.json(birthdays);
+    res.json(maskMemberPII(birthdays));
   } catch (error) {
     console.error('Birthday alerts error:', error);
     res.status(500).json({ error: 'Failed to fetch birthday alerts' });
