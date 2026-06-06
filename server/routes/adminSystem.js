@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { queries, db } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
 const { yearEquals, weekEquals } = require('../utils/sqlDialect');
@@ -198,7 +200,7 @@ router.get('/rewards/top-leaders', async (req, res) => {
   }
 });
 
-const { listBackups, deleteBackup, backupDatabase, restoreDatabase } = require('../backup');
+const { listBackups, deleteBackup, backupDatabase, restoreDatabase, safeBackupName } = require('../backup');
 
 const requireAdmin = requireRole('admin');
 
@@ -217,6 +219,35 @@ router.post('/backups/create', requireAdmin, async (req, res) => {
     res.json({ message: 'Backup created successfully', backup: backupPath });
   } catch (error) {
     res.status(500).json({ error: 'Failed to create backup' });
+  }
+});
+
+// GET /api/admin/backups/download/:filename
+// Stream the backup file directly to the admin as a binary download.
+// This is the primary "get my data out" mechanism on Render, where the
+// local disk is ephemeral. The admin saves the response to their
+// machine. Combined with Neon's 7-day PITR (Neon free tier) and an
+// optional BACKUP_REMOTE_URL configured for S3-compatible storage,
+// this gives a full defense-in-depth backup story.
+router.get('/backups/download/:filename', requireAdmin, async (req, res) => {
+  try {
+    let safeName;
+    try {
+      safeName = safeBackupName(req.params.filename);
+    } catch (err) {
+      return res.status(400).json({ error: 'Invalid backup filename' });
+    }
+    const filePath = path.join(__dirname, '..', 'backups', safeName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Backup file not found' });
+    }
+    const stat = fs.statSync(filePath);
+    res.setHeader('Content-Type', 'application/sql');
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    fs.createReadStream(filePath).pipe(res);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to download backup' });
   }
 });
 

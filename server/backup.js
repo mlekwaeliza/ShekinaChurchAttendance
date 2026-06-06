@@ -1,5 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
+const http = require('http');
+const { URL } = require('url');
 const { execFile } = require('child_process');
 const { db } = require('./database');
 
@@ -78,10 +81,11 @@ function backupPostgres() {
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupPath = path.join(BACKUP_DIR, `backup-${timestamp}.sql`);
+    const fileName = `backup-${timestamp}.sql`;
+    const backupPath = path.join(BACKUP_DIR, fileName);
     const pgDump = findPgDump();
 
-    execFile(pgDump, [cleanUrl, '--file', backupPath, '--format', 'plain'], (error, stdout, stderr) => {
+    execFile(pgDump, [cleanUrl, '--file', backupPath, '--format', 'plain'], async (error, stdout, stderr) => {
       if (error) {
         console.error('PostgreSQL backup failed:', stderr || error.message);
         reject(error);
@@ -90,8 +94,113 @@ function backupPostgres() {
 
       console.log(`PostgreSQL database backed up to: ${backupPath}`);
       cleanupOldBackups();
+
+      // DBA P0-1: also push a copy off-host when BACKUP_REMOTE_URL is
+      // configured. The local copy on Render's ephemeral disk is not
+      // durable, so we treat it as a short-lived staging area and
+      // stream the same file to a remote object store as soon as the
+      // dump completes. Supports S3-compatible PUT (Backblaze B2,
+      // Cloudflare R2, etc.) and any HTTP endpoint that accepts the
+      // configured method (default PUT) with the configured headers
+      // (e.g. Authorization: Bearer ...).
+      const remoteUrl = process.env.BACKUP_REMOTE_URL;
+      if (remoteUrl) {
+        try {
+          await uploadBackupToRemote(backupPath, fileName);
+        } catch (uploadErr) {
+          // Don't fail the backup; local copy exists and the operator
+          // can replay later. We log loudly so it's visible in
+          // Sentry/log streams.
+          console.error('Remote backup upload failed:', uploadErr.message);
+        }
+      }
+
       resolve(backupPath);
     });
+  });
+}
+
+// uploadBackupToRemote(localPath, fileName) -> streams a backup file
+// to the URL configured in BACKUP_REMOTE_URL. The method, headers,
+// and request body shape are derived from environment variables so we
+// can support S3-style "PUT body=file" with custom auth headers, plus
+// plain "POST multipart" endpoints in the future.
+//
+// Environment variables consumed:
+//   BACKUP_REMOTE_URL       - https://... endpoint (required)
+//   BACKUP_REMOTE_METHOD    - HTTP method, default "PUT"
+//   BACKUP_REMOTE_HEADERS   - JSON object of extra headers
+//                             (e.g. {"Authorization":"Bearer ..."})
+//   BACKUP_REMOTE_PATH_TPL  - optional, e.g. "/{filename}"; appended
+//                             to BACKUP_REMOTE_URL. Default empty.
+//
+// Any failure (network, non-2xx, file missing) rejects with a
+// descriptive Error so the caller can log and continue.
+function uploadBackupToRemote(localPath, fileName) {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(localPath)) {
+      return reject(new Error(`Local backup missing: ${localPath}`));
+    }
+    const baseUrl = process.env.BACKUP_REMOTE_URL;
+    if (!baseUrl) {
+      return reject(new Error('BACKUP_REMOTE_URL not set'));
+    }
+    const method = (process.env.BACKUP_REMOTE_METHOD || 'PUT').toUpperCase();
+    let parsed;
+    try {
+      parsed = new URL(baseUrl);
+    } catch (err) {
+      return reject(new Error(`Invalid BACKUP_REMOTE_URL: ${baseUrl}`));
+    }
+    const pathTpl = process.env.BACKUP_REMOTE_PATH_TPL || '';
+    if (pathTpl) {
+      parsed.pathname = (parsed.pathname || '/').replace(/\/?$/, '/') + pathTpl.replace(/^\//, '').replace(/\{filename\}/g, encodeURIComponent(fileName));
+    }
+
+    let extraHeaders = {};
+    if (process.env.BACKUP_REMOTE_HEADERS) {
+      try {
+        extraHeaders = JSON.parse(process.env.BACKUP_REMOTE_HEADERS);
+        if (typeof extraHeaders !== 'object' || Array.isArray(extraHeaders)) {
+          throw new Error('not an object');
+        }
+      } catch (err) {
+        return reject(new Error(`Invalid BACKUP_REMOTE_HEADERS (must be JSON object): ${err.message}`));
+      }
+    }
+
+    const isHttps = parsed.protocol === 'https:';
+    const lib = isHttps ? https : http;
+    const fileSize = fs.statSync(localPath).size;
+
+    const req = lib.request({
+      method,
+      hostname: parsed.hostname,
+      port: parsed.port || (isHttps ? 443 : 80),
+      path: parsed.pathname + (parsed.search || ''),
+      headers: {
+        'Content-Type': 'application/sql',
+        'Content-Length': fileSize,
+        ...extraHeaders
+      }
+    }, (res) => {
+      const status = res.statusCode || 0;
+      if (status >= 200 && status < 300) {
+        res.resume();
+        console.log(`Remote backup upload OK (${status}): ${parsed.pathname} (${fileSize} bytes)`);
+        resolve({ status, bytes: fileSize });
+      } else {
+        let body = '';
+        res.on('data', (c) => { body += c; });
+        res.on('end', () => {
+          reject(new Error(`Remote upload HTTP ${status}: ${body.slice(0, 200)}`));
+        });
+      }
+    });
+    req.on('error', (err) => reject(err));
+    fs.createReadStream(localPath).on('error', (err) => {
+      req.destroy(err);
+    }).pipe(req);
   });
 }
 
@@ -211,4 +320,4 @@ setInterval(() => {
   backupDatabase().catch(err => console.error('Scheduled backup failed:', err.message));
 }, 6 * 60 * 60 * 1000);
 
-module.exports = { backupDatabase, restoreDatabase, listBackups, deleteBackup };
+module.exports = { backupDatabase, restoreDatabase, listBackups, deleteBackup, safeBackupName, uploadBackupToRemote };
