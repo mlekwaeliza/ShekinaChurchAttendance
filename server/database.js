@@ -1510,6 +1510,11 @@ const queries = {
 
   // Audit log queries
   getAuditLog: (filters = {}) => {
+    // L12-fix (no-op confirmation): ORDER BY is hardcoded; the only
+    // user-controlled interpolation is `filters.search` (handled in
+    // the body below with LIKE escape) and bind parameters. Do not
+    // accept a `sort` or `order_by` parameter from callers — keep
+    // ORDER BY in this allowlist.
     let sql = `SELECT al.*, u.username, u.full_name FROM audit_log al LEFT JOIN users u ON al.user_id = u.id WHERE 1=1`;
     const params = [];
     if (filters.entityType) { sql += ` AND al.entity_type = ?`; params.push(filters.entityType); }

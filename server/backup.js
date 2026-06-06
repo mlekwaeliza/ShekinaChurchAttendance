@@ -96,12 +96,29 @@ function backupPostgres() {
 }
 
 function safeBackupName(input) {
-  const safe = path.basename(String(input || ''));
-  if (!safe || safe !== input || !/^[\w.-]+$/.test(safe)) {
+  const str = String(input || '');
+  if (!str) throw new Error('Invalid backup filename');
+  // L6-fix: reject obvious traversal patterns BEFORE basename().
+  // path.basename() on Windows collapses both forward and backslashes
+  // in some Node versions, so we belt-and-suspenders the check.
+  if (str.includes('..') || /[/\\]/.test(str) || str.startsWith('.') || str.includes('\0')) {
+    throw new Error('Invalid backup filename');
+  }
+  const safe = path.basename(str);
+  if (!safe || safe !== str || !/^[\w.-]+$/.test(safe)) {
     throw new Error('Invalid backup filename');
   }
   if (!/\.(sqlite|sql)$/i.test(safe)) {
     throw new Error('Invalid backup file extension');
+  }
+  // L6-fix: confirm the resolved absolute path stays inside the backup
+  // directory. This catches any future regex bypass via symlinks or
+  // platform-specific path quirks.
+  const backupsDir = path.resolve(__dirname, 'backups');
+  const resolved = path.resolve(backupsDir, safe);
+  if (resolved !== path.join(backupsDir, safe) ||
+      !resolved.startsWith(backupsDir + path.sep)) {
+    throw new Error('Invalid backup path');
   }
   return safe;
 }

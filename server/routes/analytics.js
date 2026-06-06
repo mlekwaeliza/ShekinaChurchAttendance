@@ -1,6 +1,6 @@
 const express = require('express');
 const { queries } = require('../database');
-const { isAuthenticated, requireRole } = require('../middleware/auth');
+const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
 const { addDays, formatLocalDate, parseDateInput } = require('../utils/date');
 
 const router = express.Router();
@@ -79,7 +79,7 @@ router.get('/streaks', async (req, res) => {
 
 // GET /analytics/leader-trends?start_date=...&end_date=...
 // Returns per-leader attendance rate with trend indicators
-router.get('/leader-trends', async (req, res) => {
+router.get('/leader-trends', validateDateRange('start_date', 'end_date'), async (req, res) => {
   try {
     const startDate = req.query.start_date || formatLocalDate(addDays(new Date(), -90));
     const endDate = req.query.end_date || formatLocalDate();

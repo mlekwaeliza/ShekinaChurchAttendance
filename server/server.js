@@ -96,7 +96,12 @@ app.use(helmet({
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
+          // L1-fix: drop 'unsafe-inline' for styles. The compiled bundle
+          // uses external CSS, React's JSX style={{}} props set styles
+          // via element.style (CSP-safe), and index.html has no inline
+          // style attributes. If a third-party widget ever needs inline
+          // <style>, use a nonce (per-request) or a hash of the literal.
+          styleSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
           fontSrc: ["'self'", 'data:'],
           connectSrc: ["'self'"],
@@ -155,8 +160,29 @@ app.use(cors({
   credentials: true
 }));
 
+// L8-fix: helper to construct rate limiters with a bounded IP tracker.
+// express-rate-limit's default MemoryStore grows unbounded if an
+// attacker rotates source IPs (each unique IP creates a new bucket).
+// We pass a default `max` to bound the bucket count per limiter, and
+// use the safe `ipKeyGenerator` helper for IPv6-aware keying.
+const { ipKeyGenerator } = require('express-rate-limit');
+const RL_MAX_KEYS = 10_000; // 10k unique IPs per limiter is plenty
+const rateLimitDefaults = {
+  standardHeaders: 'draft-7',
+  legacyHeaders: false
+};
+
+function buildLimiter(opts) {
+  return rateLimit({
+    ...rateLimitDefaults,
+    keyGenerator: ipKeyGenerator,
+    max: RL_MAX_KEYS,
+    ...opts
+  });
+}
+
 // Rate limiting - general
-const limiter = rateLimit({
+const limiter = buildLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 1000, // allow normal dashboard navigation while login remains strictly limited
   skip: isLocalRequest
@@ -164,7 +190,7 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Stricter rate limiting for login
-const loginLimiter = rateLimit({
+const loginLimiter = buildLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // limit each IP to 10 login attempts per window
   message: { error: 'Too many login attempts, please try again later' },
@@ -172,31 +198,31 @@ const loginLimiter = rateLimit({
 });
 
 // H3-fix: stricter per-endpoint rate limits.
-const twofaLimiter = rateLimit({
+const twofaLimiter = buildLimiter({
   windowMs: 15 * 60 * 1000,
   max: 30,
   message: { error: 'Too many 2FA attempts, please try again later' },
   skip: isLocalRequest
 });
-const passwordChangeLimiter = rateLimit({
+const passwordChangeLimiter = buildLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   message: { error: 'Too many password change attempts, please try again later' },
   skip: isLocalRequest
 });
-const uploadLimiter = rateLimit({
+const uploadLimiter = buildLimiter({
   windowMs: 15 * 60 * 1000,
   max: 30,
   message: { error: 'Too many upload attempts, please try again later' },
   skip: isLocalRequest
 });
-const bulkOpLimiter = rateLimit({
+const bulkOpLimiter = buildLimiter({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: { error: 'Too many bulk operations, please try again later' },
   skip: isLocalRequest
 });
-const leaderMgmtLimiter = rateLimit({
+const leaderMgmtLimiter = buildLimiter({
   windowMs: 60 * 60 * 1000,
   max: 20,
   message: { error: 'Too many leader management requests, please try again later' },
@@ -247,6 +273,11 @@ app.use(require('compression')({
   level: 6
 }));
 
+// I2/I4-fix: request-id for log correlation and response header.
+// Mounted first so the id is available to all subsequent middleware
+// (including the global error handler and the audit logger).
+app.use(require('./middleware/requestId').requestId());
+
 // Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -259,6 +290,25 @@ const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
   console.error('ERROR: SESSION_SECRET environment variable is not set.');
   console.error('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+// L5-fix: enforce minimum entropy on the session secret. Anything
+// shorter than 32 bytes (~256 bits) or matching a common default
+// is rejected in production. In development a 16-byte minimum is
+// allowed with a warning so local SQLite iteration isn't blocked.
+const SECRET_MIN = isProduction ? 32 : 16;
+if (sessionSecret.length < SECRET_MIN) {
+  console.error(`ERROR: SESSION_SECRET must be at least ${SECRET_MIN} chars (got ${sessionSecret.length}).`);
+  console.error('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+const WEAK_SECRETS = new Set([
+  'changeme', 'change-me', 'secret', 'password', 'dev', 'development',
+  'shekina-dev', 'shekina-church-attendance', 'localhost', 'test',
+  'keyboard-cat', '12345678', 'admin', 'admin-secret'
+]);
+if (WEAK_SECRETS.has(sessionSecret.toLowerCase())) {
+  console.error('ERROR: SESSION_SECRET is set to a known weak value. Refusing to start.');
   process.exit(1);
 }
 
@@ -569,13 +619,15 @@ function globalErrorHandler(err, req, res, next) { // eslint-disable-line no-unu
       .digest('hex')
       .slice(0, 12);
 
-    // Log full detail server-side
-    console.error(`[error ${errorId}] ${req.method} ${req.originalUrl}:`, err);
+    // Log full detail server-side (request-id prefix makes the line
+    // easy to find when a user pastes their errorId in a bug report).
+    const requestId = req.id || res.locals.requestId || '-';
+    console.error(`[req ${requestId} err ${errorId}] ${req.method} ${req.originalUrl}:`, err);
 
     // Sentry report if configured (does nothing in dev)
     try {
       if (typeof Sentry !== 'undefined' && Sentry && typeof Sentry.captureException === 'function') {
-        Sentry.captureException(err, { tags: { errorId, path: req.originalUrl, method: req.method } });
+        Sentry.captureException(err, { tags: { errorId, requestId, path: req.originalUrl, method: req.method } });
       }
     } catch (_) { /* Sentry is optional */ }
 

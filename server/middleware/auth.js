@@ -57,4 +57,33 @@ function validateDate(paramName = 'date') {
   };
 }
 
-module.exports = { requireRole, isAuthenticated, rolePermissions, validateDate };
+// L11-fix: validate a [start, end] date range in req.query. Rejects
+// swapped ranges (start > end) and anything outside YYYY-MM-DD.
+function validateDateRange(startParam = 'start_date', endParam = 'end_date') {
+  const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  return (req, res, next) => {
+    const start = req.query[startParam];
+    const end = req.query[endParam];
+    if (start && !isoDateRegex.test(start)) {
+      return res.status(400).json({ error: `Invalid ${startParam} (use YYYY-MM-DD)` });
+    }
+    if (end && !isoDateRegex.test(end)) {
+      return res.status(400).json({ error: `Invalid ${endParam} (use YYYY-MM-DD)` });
+    }
+    if (start && end && start > end) {
+      return res.status(400).json({ error: `${startParam} must be on or before ${endParam}` });
+    }
+    // Optional range cap to prevent extremely large window queries.
+    if (start && end) {
+      const startMs = new Date(start + 'T00:00:00').getTime();
+      const endMs = new Date(end + 'T00:00:00').getTime();
+      const days = Math.round((endMs - startMs) / (24 * 60 * 60 * 1000));
+      if (days > 365 * 5) {
+        return res.status(400).json({ error: 'Date range cannot exceed 5 years' });
+      }
+    }
+    next();
+  };
+}
+
+module.exports = { requireRole, isAuthenticated, rolePermissions, validateDate, validateDateRange };

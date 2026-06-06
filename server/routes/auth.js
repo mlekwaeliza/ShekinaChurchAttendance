@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const { recordSecurityEvent } = require('../utils/securityAudit');
 const { queries, get } = require('../database');
 
 const router = express.Router();
@@ -96,6 +97,9 @@ router.post('/login', async (req, res) => {
       // M4-fix: async to avoid blocking the event loop.
       await bcrypt.compare(password, '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali');
       recordIpLoginFailure(ip);
+      // I5-fix: audit unknown-username attempts (with the attempted
+      // username in details — operator-grade, not user-facing).
+      recordSecurityEvent('login_failure', null, { username, reason: 'unknown_user' }, req);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -104,6 +108,7 @@ router.post('/login', async (req, res) => {
       const lockExpiry = new Date(user.locked_until);
       if (new Date() < lockExpiry) {
         const minutesLeft = Math.ceil((lockExpiry - new Date()) / 60000);
+        recordSecurityEvent('login_blocked', user.id, { reason: 'account_locked', minutesLeft }, req);
         return res.status(423).json({ error: `Account locked. Try again in ${minutesLeft} minutes.` });
       } else {
         await queries.resetFailedLogin(user.id);
@@ -120,9 +125,11 @@ router.post('/login', async (req, res) => {
       if (attempts >= 5) {
         const lockUntil = new Date(Date.now() + 30 * 60 * 1000);
         await queries.lockUser(user.id, lockUntil.toISOString());
+        recordSecurityEvent('account_locked', user.id, { attempts, lockUntil: lockUntil.toISOString() }, req);
         return res.status(423).json({ error: 'Account locked due to too many failed attempts. Try again in 30 minutes.' });
       }
 
+      recordSecurityEvent('login_failure', user.id, { username, attempts, reason: 'bad_password' }, req);
       return res.status(401).json({ error: `Invalid credentials. ${5 - attempts} attempts remaining.` });
     }
 
@@ -136,6 +143,7 @@ router.post('/login', async (req, res) => {
         req.session.pending2FAUsername = user.username;
         req.session.twoFactorVerified = false;
         req.session.totpEnabled = true;
+        recordSecurityEvent('login_success_partial', user.id, { reason: '2fa_required' }, req);
         res.json({ message: '2FA required', requires2FA: true, userId: user.id });
       };
       return req.session.regenerate((err) => {
@@ -162,6 +170,7 @@ router.post('/login', async (req, res) => {
       req.session.createdAt = Date.now();
       req.session.save((saveErr) => {
         if (saveErr) return res.status(500).json({ error: 'Session error' });
+        recordSecurityEvent('login_success', user.id, { role: user.role }, req);
         res.json({ message: 'Login successful', user: sessionUser });
       });
     });
@@ -173,10 +182,12 @@ router.post('/login', async (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
+  const userId = req.session?.userId || null;
   req.session.destroy((err) => {
     if (err) {
       return res.status(500).json({ error: 'Failed to logout' });
     }
+    recordSecurityEvent('logout', userId, null, req);
     res.clearCookie('sc.sid');
     res.json({ message: 'Logged out successfully' });
   });
@@ -258,6 +269,7 @@ router.post('/change-password', async (req, res) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
     });
 
+    recordSecurityEvent('password_changed', user.id, null, req);
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
     console.error('Change password error:', error);

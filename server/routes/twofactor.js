@@ -3,6 +3,7 @@ const qrcode = require('qrcode');
 const crypto = require('crypto');
 const { queries, get } = require('../database');
 const { isAuthenticated } = require('../middleware/auth');
+const { recordSecurityEvent } = require('../utils/securityAudit');
 
 const router = express.Router();
 
@@ -137,6 +138,7 @@ router.post('/verify-login', async (req, res) => {
     }
 
     if (!consumedBackupCode && !verifyTotp({ secret: user2FA.totp_secret, token: normalizedToken })) {
+      recordSecurityEvent('2fa_login_failure', pendingUserId, null, req);
       return res.status(400).json({ error: 'Invalid token' });
     }
 
@@ -160,6 +162,7 @@ router.post('/verify-login', async (req, res) => {
       delete req.session.pending2FAUsername;
       req.session.save((saveErr) => {
         if (saveErr) return res.status(500).json({ error: 'Session error' });
+        recordSecurityEvent('2fa_login_success', pendingUserId, { usedBackupCode: consumedBackupCode }, req);
         res.json({ message: 'Login successful', user: sessionUser });
       });
     });
@@ -214,6 +217,7 @@ router.post('/verify', async (req, res) => {
     delete req.session.pendingTotpSecret;
     req.session.totpEnabled = true;
 
+    recordSecurityEvent('2fa_enabled', req.session.userId, null, req);
     res.json({ message: '2FA enabled successfully', backupCodes });
   } catch (error) {
     console.error('2FA verify error:', error);
@@ -238,6 +242,7 @@ router.post('/disable', async (req, res) => {
     req.session.twoFactorVerified = false;
     req.session.totpEnabled = false;
 
+    recordSecurityEvent('2fa_disabled', req.session.userId, null, req);
     res.json({ message: '2FA disabled successfully' });
   } catch (error) {
     console.error('2FA disable error:', error);

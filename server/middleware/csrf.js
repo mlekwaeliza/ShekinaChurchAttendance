@@ -26,6 +26,13 @@ function csrfProtect(options = {}) {
   const {
     cookieName = 'csrfToken',
     headerName = 'X-CSRF-Token',
+    // L7-fix: GET/HEAD/OPTIONS are HTTP "safe methods" and cannot
+    // modify server state per RFC 7231. CSRF is only relevant for
+    // state-changing methods (POST/PUT/PATCH/DELETE), so excluding
+    // safe methods is the standard double-submit pattern. If a
+    // developer ever mounts a state-changing handler on a GET route,
+    // that is a separate application bug — the ESLint rule below
+    // catches the common case at code-review time.
     ignoredMethods = ['GET', 'HEAD', 'OPTIONS'],
     sameOriginPaths = ['/api/auth/login', '/api/2fa/verify-login']
   } = options;
