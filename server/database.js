@@ -1245,6 +1245,7 @@ const queries = {
     WHERE sl.date BETWEEN ? AND ?
     GROUP BY l.id, s.name, u.full_name
     ORDER BY avg_rate DESC
+    LIMIT 500
   `, [startDate, endDate]),
   getUpcomingBirthdays: (days = 30, referenceMonthDay = formatMonthDay()) => {
     const monthDay = typeof days === 'string' ? days : referenceMonthDay;
