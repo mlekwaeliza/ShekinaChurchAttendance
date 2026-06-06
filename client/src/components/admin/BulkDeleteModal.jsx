@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Users, AlertTriangle, Trash2 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh }) => {
   const [selectedIds, setSelectedIds] = useState([]);
@@ -9,6 +10,8 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [confirmText, setConfirmText] = useState('');
+  const dialogRef = useRef(null);
+  useModalA11y(dialogRef, true, onClose);
 
   useEffect(() => {
     setSelectedIds(initialSelectedIds);
@@ -51,14 +54,14 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-5" onClick={onClose}>
-      <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="bulk-delete-title" tabIndex={-1} className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
               <Trash2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Bulk Soft-Delete Members</h3>
+              <h3 id="bulk-delete-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">Bulk Soft-Delete Members</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">Members will be hidden immediately. They become eligible for permanent deletion after 6 months.</p>
             </div>
           </div>

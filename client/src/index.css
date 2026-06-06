@@ -415,3 +415,26 @@
   content: '';
   @apply absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75;
 }
+
+/* Respect the user's OS-level "reduce motion" preference. Disables
+   all decorative animation (background orbs, modals, toasts, dots)
+   while keeping the static layout intact. Transitions are kept
+   short (50ms) to preserve hover/focus feedback. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 50ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-blob,
+  .animate-ping,
+  .animate-pulse,
+  .animate-fade-in,
+  .animate-fade-in-down,
+  .animate-scale-in {
+    animation: none !important;
+  }
+}

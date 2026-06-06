@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Users, Check } from 'lucide-react';
 import { adminAPI } from '../../services/api';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 const BulkEditModal = ({ members, sections, leaders, initialSelectedIds = [], onClose, onRefresh }) => {
   const [selectedIds, setSelectedIds] = useState([]);
@@ -10,6 +11,8 @@ const BulkEditModal = ({ members, sections, leaders, initialSelectedIds = [], on
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const dialogRef = useRef(null);
+  useModalA11y(dialogRef, true, onClose);
 
   useEffect(() => {
     setSelectedIds(initialSelectedIds);
@@ -50,11 +53,11 @@ const BulkEditModal = ({ members, sections, leaders, initialSelectedIds = [], on
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-5" onClick={onClose}>
-      <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="bulk-edit-title" tabIndex={-1} className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Bulk Edit Members</h3>
+              <h3 id="bulk-edit-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">Bulk Edit Members</h3>
           </div>
           <button onClick={onClose} className="btn-ghost p-2"><X className="w-5 h-5" /></button>
         </div>

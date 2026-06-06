@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, AlertTriangle, RotateCcw, Trash2, Clock } from 'lucide-react';
 import { adminAPI } from '../../services/api';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 const PendingDeletionModal = ({ onClose, onRefresh }) => {
   const [members, setMembers] = useState([]);
@@ -11,6 +12,8 @@ const PendingDeletionModal = ({ onClose, onRefresh }) => {
   const [confirmText, setConfirmText] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const dialogRef = useRef(null);
+  useModalA11y(dialogRef, true, onClose);
 
   const load = async () => {
     setLoading(true);
@@ -67,14 +70,14 @@ const PendingDeletionModal = ({ onClose, onRefresh }) => {
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-5" onClick={onClose}>
-      <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="pending-deletion-title" tabIndex={-1} className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-700">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Pending Permanent Deletion</h3>
+              <h3 id="pending-deletion-title" className="text-lg font-bold text-slate-900 dark:text-slate-100">Pending Permanent Deletion</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Members soft-deleted more than 6 months ago. Review and confirm permanent deletion, or restore them.
               </p>
