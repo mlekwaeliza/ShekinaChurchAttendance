@@ -3,6 +3,10 @@
 // other requires are deferred until after env is populated.
 require('dotenv').config();
 
+// L3-fix: install the PII redaction logger as early as possible so
+// that even the modules required below benefit from redacted stdout.
+require('./utils/piiLogger').install();
+
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
@@ -111,6 +115,37 @@ app.use(helmet({
     : false,
   referrerPolicy: { policy: 'same-origin' }
 }));
+
+// L15-fix: explicit security headers. Helmet covers most of these in
+// recent versions, but pinning them here makes the policy version-
+// independent and easy to audit. Permissions-Policy disables browser
+// features this app does not need (camera/mic/geo/payment/usb/etc.).
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('X-XSS-Protection', '0'); // modern browsers honor CSP; legacy XSS filter is worse than nothing
+  res.setHeader('Permissions-Policy', [
+    'accelerometer=()',
+    'camera=()',
+    'geolocation=()',
+    'gyroscope=()',
+    'magnetometer=()',
+    'microphone=()',
+    'payment=()',
+    'usb=()',
+    'interest-cohort=()', // disable FLoC/Topics
+    'browsing-topics=()'
+  ].join(', '));
+  // Cross-Origin policies for the /api endpoints
+  if (req.path.startsWith('/api/')) {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  }
+  next();
+});
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow same-origin (no Origin header) and configured client origin
@@ -227,19 +262,41 @@ if (!sessionSecret) {
   process.exit(1);
 }
 
+// L14-fix: track the session store at module scope so the graceful
+// shutdown handler can release its resources (close PG client, clear
+// in-memory sweep interval).
+let activeSessionStore = null;
+
 function buildSessionStore() {
   const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
   if (dbClient === 'postgres') {
     const PgSession = require('connect-pg-simple')(session);
     const { pool } = require('./db/postgres');
-    return new PgSession({
+    const store = new PgSession({
       pool,
       tableName: 'session',
       createTableIfMissing: true,
-      pruneSessionInterval: 60 * 15 // seconds
+      pruneSessionInterval: 60 * 15 // seconds (L14-fix: explicit prune)
     });
+    activeSessionStore = store;
+    return store;
   }
-  return undefined; // default MemoryStore (OK for local SQLite dev only)
+  // L14-fix: for SQLite/dev mode, wrap the default MemoryStore with a
+  // periodic TTL sweep so expired sessions don't accumulate. The default
+  // MemoryStore never expires entries, which is a memory leak.
+  const memStore = new session.MemoryStore();
+  const sweep = setInterval(() => {
+    const now = Date.now();
+    for (const [sid, entry] of memStore.entries()) {
+      if (entry?.cookie?.expires && new Date(entry.cookie.expires).getTime() < now) {
+        memStore.destroy(sid, () => {});
+      }
+    }
+  }, 15 * 60 * 1000);
+  sweep.unref?.();
+  memStore._shekinaSweep = sweep;
+  activeSessionStore = memStore;
+  return memStore;
 }
 
 app.use(session({
@@ -378,23 +435,31 @@ app.use(express.static(clientDist, {
 }));
 
 // Health check
+// L9-fix: /api/health returns minimal info by default (status, timestamp,
+// uptime, db client, db status). Detailed info (latency, pool, memory,
+// realtime stats, node version) is only returned when:
+//   - The caller includes ?detail=full in the query
+//   - AND the caller is authenticated as admin
+// Unauthenticated callers (Render health check, k8s probes, uptime
+// monitors) only see { status, timestamp, db: { status } }.
 app.get('/api/health', async (req, res) => {
   const uptime = process.uptime();
   const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
-  const memory = {
-    rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,
-    heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
-  };
+  const detail = req.query.detail === 'full'
+    && req.session?.user?.role === 'admin';
 
   if (dbClient === 'postgres') {
     try {
       const { checkConnection, pool } = require('./db/postgres');
       const check = await checkConnection();
-      return res.json({
+      const response = {
         status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
-        database: {
+        database: { status: 'connected' }
+      };
+      if (detail) {
+        response.database = {
           client: 'postgres',
           status: 'connected',
           latency_ms: check.latency_ms,
@@ -405,44 +470,45 @@ app.get('/api/health', async (req, res) => {
             idle: pool.idleCount,
             waiting: pool.waitingCount
           }
-        },
-        memory,
-        realtime: realtimeBus.stats(),
-        node: {
+        };
+        response.memory = {
+          rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,
+          heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
+        };
+        response.realtime = realtimeBus.stats();
+        response.node = {
           version: process.version,
           env: process.env.NODE_ENV || 'development'
-        }
-      });
+        };
+      }
+      return res.json(response);
     } catch (err) {
       return res.json({
         status: 'degraded',
         timestamp: new Date().toISOString(),
-        uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
-        database: {
-          client: 'postgres',
-          status: 'error',
-          error: err.message
-        },
-        memory
+        database: { status: 'error' }
       });
     }
   }
 
+  // SQLite mode
   const dbPath = require('path').join(__dirname, 'database.sqlite');
-  const dbSize = require('fs').existsSync(dbPath) ? Math.round(require('fs').statSync(dbPath).size / 1024) : 0;
-
   db.get('SELECT 1', (err) => {
-    res.json({
+    const response = {
       status: err ? 'degraded' : 'ok',
       timestamp: new Date().toISOString(),
       uptime: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
-      database: {
-        client: 'sqlite',
-        size_kb: dbSize,
-        status: err ? 'error' : 'connected'
-      },
-      memory
-    });
+      database: { status: err ? 'error' : 'connected' }
+    };
+    if (detail) {
+      const dbSize = require('fs').existsSync(dbPath) ? Math.round(require('fs').statSync(dbPath).size / 1024) : 0;
+      response.database = { client: 'sqlite', size_kb: dbSize, status: err ? 'error' : 'connected' };
+      response.memory = {
+        rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,
+        heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
+      };
+    }
+    res.json(response);
   });
 });
 
@@ -682,6 +748,15 @@ function shutdown(signal) {
       // Stop the realtime bridge BEFORE closing the pool so the LISTEN
       // client can cleanly end its connection.
       try { await require('./realtime/bridge').stopBridge(); } catch (_) { /* noop */ }
+      // L14-fix: clear the in-memory store sweep interval so the
+      // process can exit cleanly during local SQLite dev.
+      if (activeSessionStore && activeSessionStore._shekinaSweep) {
+        clearInterval(activeSessionStore._shekinaSweep);
+      }
+      // L14-fix: close the PG session store cleanly.
+      if (activeSessionStore && typeof activeSessionStore.close === 'function') {
+        await new Promise((resolve) => activeSessionStore.close(resolve));
+      }
       const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
       if (dbClient === 'postgres') {
         const { close } = require('./db/postgres');
