@@ -36,7 +36,7 @@ async function startBridge() {
   try {
     listenClient = new Client({
       connectionString: url,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: process.env.PG_REJECT_UNAUTHORIZED === 'false' ? false : true }
     });
     listenClient.on('error', handleClientError);
     listenClient.on('end', handleClientEnd);

@@ -1,9 +1,21 @@
 const { Pool } = require('pg');
 
 const isTruthy = (value) => ['1', 'true', 'yes', 'require'].includes(String(value || '').toLowerCase());
+const isFalsy = (value) => ['0', 'false', 'no', 'off'].includes(String(value || '').toLowerCase());
 
 function buildPoolConfig() {
   const sslEnabled = isTruthy(process.env.PGSSL || process.env.POSTGRES_SSL);
+  // M2: PG cert verification defaults to ON for production safety.
+  // Override with PG_REJECT_UNAUTHORIZED=false ONLY for self-signed
+  // dev databases or networks where the CA bundle is not trusted.
+  // NOTE: When the connection string sets `sslmode=require` (as our
+  // Neon URL does) the npm `pg` library falls back to libpq semantics
+  // and may bypass rejectUnauthorized entirely. For full cert
+  // verification, use `sslmode=verify-full` in DATABASE_URL.
+  const rejectUnauthorized = process.env.PG_REJECT_UNAUTHORIZED === undefined
+    ? true
+    : !isFalsy(process.env.PG_REJECT_UNAUTHORIZED);
+
   const baseConfig = process.env.DATABASE_URL
     ? { connectionString: process.env.DATABASE_URL }
     : {
@@ -19,7 +31,7 @@ function buildPoolConfig() {
     max: Number(process.env.PGPOOL_MAX || 10),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
     connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 15000),
-    ssl: sslEnabled ? { rejectUnauthorized: false } : false
+    ssl: sslEnabled ? { rejectUnauthorized } : false
   };
 }
 
@@ -34,6 +46,15 @@ const pool = new Pool(poolConfig);
 pool.on('error', (err) => {
   console.error('Unexpected PostgreSQL pool error:', err);
 });
+
+// M2: Startup warning if cert verification is disabled.
+if (poolConfig.ssl && poolConfig.ssl.rejectUnauthorized === false) {
+  console.warn(
+    '[security] PG SSL cert verification is DISABLED. ' +
+    'Set PG_REJECT_UNAUTHORIZED=true (and use sslmode=verify-full ' +
+    'in DATABASE_URL) to enable MITM protection.'
+  );
+}
 
 async function query(text, params = []) {
   return pool.query(text, params);
