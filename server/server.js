@@ -46,6 +46,22 @@ if (process.env.SENTRY_DSN) {
   }
 }
 
+// Extract the Sentry host (if any) so the CSP can allow browser-side
+// events to reach the Sentry ingest endpoint. The DSN format is
+// https://<public_key>@o<org>.ingest.sentry.io/<project_id> for SaaS
+// or https://<key>@<self-hosted-host>/<id> for self-hosted.
+// Parsed defensively: an unparseable DSN just means no host is added.
+function parseSentryHost(dsn) {
+  if (!dsn) return null;
+  try {
+    const u = new URL(dsn);
+    return u.host || null;
+  } catch (_) {
+    return null;
+  }
+}
+const sentryHost = parseSentryHost(process.env.SENTRY_DSN);
+
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads', 'profiles');
 if (!fs.existsSync(uploadsDir)) {
@@ -104,7 +120,12 @@ app.use(helmet({
           styleSrc: ["'self'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
           fontSrc: ["'self'", 'data:'],
-          connectSrc: ["'self'"],
+          // When Sentry is enabled, add the Sentry ingest host so the
+          // browser can post events. Without this, Sentry would silently
+          // fail because connect-src: 'self' would block all cross-origin
+          // XHR/fetch. Both server-side init (in this file) and the
+          // client SDK can use the same SENTRY_DSN.
+          connectSrc: sentryHost ? ["'self'", `https://${sentryHost}`] : ["'self'"],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
           baseUri: ["'self'"],
