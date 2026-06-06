@@ -32,9 +32,21 @@ db.serialize(() => {
       password_hash TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin', 'leader', 'pastor')),
       full_name TEXT NOT NULL,
+      profile_picture TEXT,
+      totp_secret TEXT,
+      totp_enabled INTEGER DEFAULT 0,
+      backup_codes TEXT,
+      -- C3-fix: password reset columns
+      password_reset_token TEXT,
+      password_reset_expires DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    -- C3 / I5: partial index on password_reset_token to keep the
+    -- token lookup hot even with millions of users where the
+    -- column is NULL for the vast majority.
+    CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token) WHERE password_reset_token IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS sections (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -250,6 +262,52 @@ db.serialize(() => {
     CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action);
     CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at);
+
+    -- DBA P1-#3: previously only created via callback after the
+    -- ensureHomeCellSchema block. Moving to the main db.exec
+    -- block so a fresh DB has these tables and indexes on first
+    -- boot, before any queries run against them. (The legacy
+    -- migration callbacks below still run for back-compat with
+    -- older SQLite databases that pre-date these tables.)
+    CREATE TABLE IF NOT EXISTS outreach_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      leader_id INTEGER NOT NULL,
+      member_id INTEGER NOT NULL,
+      contact_method TEXT NOT NULL CHECK(contact_method IN ('Call', 'WhatsApp', 'SMS', 'Visit', 'Prayer', 'Counseling', 'Hospital Visit', 'Other', 'sms', 'whatsapp', 'phone', 'email', 'visit', 'other')),
+      outcome TEXT,
+      service_id INTEGER,
+      created_by INTEGER,
+      message TEXT,
+      week_start DATE NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (leader_id) REFERENCES leaders(id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
+      FOREIGN KEY (service_id) REFERENCES service_types(id) ON DELETE SET NULL,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_outreach_leader ON outreach_logs(leader_id);
+    CREATE INDEX IF NOT EXISTS idx_outreach_member ON outreach_logs(member_id);
+    CREATE INDEX IF NOT EXISTS idx_outreach_week ON outreach_logs(week_start);
+    CREATE INDEX IF NOT EXISTS idx_outreach_leader_week ON outreach_logs(leader_id, week_start);
+
+    CREATE TABLE IF NOT EXISTS scheduled_reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL CHECK(type IN ('submission_reminder', 'follow_up_reminder', 'birthday_greeting', 'weekly_summary')),
+      entity_type TEXT,
+      entity_id INTEGER,
+      scheduled_for DATETIME NOT NULL,
+      sent BOOLEAN DEFAULT 0,
+      sent_at DATETIME,
+      payload TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_reminders_scheduled ON scheduled_reminders(scheduled_for, sent);
+    CREATE INDEX IF NOT EXISTS idx_reminders_type ON scheduled_reminders(type);
+
+    -- Partial index for the soft-delete pending-deletion sweep that
+    -- runs every 24h. Kept narrow (only inactive members) so the
+    -- index stays small and the scheduler's WHERE clause is index-only.
+    CREATE INDEX IF NOT EXISTS idx_members_pending_deletion ON members(soft_deleted_at, pending_deletion_at) WHERE is_active = 0;
 
     CREATE TABLE IF NOT EXISTS service_instances (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
