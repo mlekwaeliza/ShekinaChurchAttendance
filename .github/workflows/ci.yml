@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend:
-    name: Backend lint & schema check
+    name: Backend lint, test & schema check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +21,11 @@ jobs:
         run: npm ci
       - name: Lint
         run: npm run lint
+      - name: Run jest tests
+        working-directory: server
+        env:
+          SESSION_SECRET: 'ci-only-not-secret'
+        run: npm test
       - name: Schema check (offline)
         working-directory: server
         env:
