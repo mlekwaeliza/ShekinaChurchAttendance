@@ -552,6 +552,7 @@ export default Layout;
 //  - Invalidates attendance caches for admin/pastor dashboards
 function RealtimeBridge({ user, children }) {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   useEventStream(user ? '/api/events' : '', {
     notification: (data) => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
