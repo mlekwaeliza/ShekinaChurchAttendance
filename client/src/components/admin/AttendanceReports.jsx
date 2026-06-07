@@ -113,99 +113,32 @@ const AttendanceReports = ({
   const generatePdfReport = async () => {
     if (!overviewData) return;
 
-    const [{ default: jsPDF }, autoTableModule] = await Promise.all([
-      import('jspdf'),
-      import('jspdf-autotable')
-    ]);
-    const autoTable = autoTableModule.default;
-    const generatedAt = new Date();
-    const stats = overviewData.stats || {};
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 40;
+    // Build the leader rows here on the main thread (we already have
+    // the formatted `formatSectionLabel` available) and hand the
+    // worker a fully-prepared payload. The worker does the heavy
+    // jspdf work off the main thread.
+    const leaderRows = leaders.map((leader) => ({
+      leader_name: leader.leader_name || 'Unassigned',
+      section_name: formatSectionLabel(leader.section_name),
+      submissions_count: leader.submissions_count ?? 0,
+      stats: leader.stats || {},
+    }));
 
-    doc.setFillColor(30, 41, 59);
-    doc.rect(0, 0, pageWidth, 96, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.setFont(undefined, 'bold');
-    doc.text('Church Attendance Report', margin, 42);
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Generated ${generatedAt.toLocaleString()}`, margin, 62);
-    doc.text(`${serviceLabel} | ${periodLabel}`, margin, 78);
-
-    doc.setTextColor(15, 23, 42);
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('Summary', margin, 126);
-
-    autoTable(doc, {
-      startY: 142,
-      margin: { left: margin, right: margin },
-      theme: 'grid',
-      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
-      styles: { fontSize: 10, cellPadding: 8 },
-      head: [['Metric', 'Value']],
-      body: [
-        ['Service', serviceLabel],
-        ['Period', periodLabel],
-        ['Submitted leaders', stats.total_submitted_leaders ?? 0],
-        ['Present', stats.present ?? 0],
-        ['Absent', stats.absent ?? 0],
-        ['Excused', stats.excused ?? 0],
-        ['Total records', (stats.present ?? 0) + (stats.absent ?? 0) + (stats.excused ?? 0)],
-      ],
-    });
-
-    const leaderRows = leaders.map((leader) => {
-      const present = leader.stats?.present ?? 0;
-      const absent = leader.stats?.absent ?? 0;
-      const excused = leader.stats?.excused ?? 0;
-      return [
-        leader.leader_name || 'Unassigned',
-        formatSectionLabel(leader.section_name),
-        leader.submissions_count ?? 0,
-        present,
-        absent,
-        excused,
-        present + absent + excused,
-      ];
-    });
-
-    const tableY = (doc.lastAutoTable?.finalY || 260) + 28;
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text('Leader Breakdown', margin, tableY);
-
-    autoTable(doc, {
-      startY: tableY + 16,
-      margin: { left: margin, right: margin },
-      theme: 'striped',
-      headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
-      styles: { fontSize: 8.5, cellPadding: 6 },
-      columnStyles: {
-        0: { cellWidth: 130 },
-        1: { cellWidth: 110 },
-        2: { halign: 'right' },
-        3: { halign: 'right' },
-        4: { halign: 'right' },
-        5: { halign: 'right' },
-        6: { halign: 'right' },
-      },
-      head: [['Leader', 'Section', 'Logs', 'Present', 'Absent', 'Excused', 'Total']],
-      body: leaderRows.length > 0 ? leaderRows : [['No leader rows found', '', '', '', '', '', '']],
-      didDrawPage: () => {
-        const pageNumber = doc.internal.getNumberOfPages();
-        doc.setFontSize(8);
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Page ${pageNumber}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 22, { align: 'right' });
-      },
-    });
-
-    const safePeriod = String(filterValue).replace(/[^a-z0-9-]/gi, '_');
-    const safeService = String(serviceLabel).replace(/[^a-z0-9-]/gi, '_').toLowerCase();
-    doc.save(`attendance-report-${safeService}-${safePeriod}.pdf`);
+    const { generateReportPdf } = await import('../../utils/pdfWorker');
+    try {
+      await generateReportPdf({
+        report: 'attendance',
+        overviewData,
+        leaders: leaderRows,
+        serviceLabel,
+        periodLabel,
+        filterValue,
+      });
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      // Surface the failure to the admin so they can retry.
+      alert('Failed to generate PDF: ' + (err.message || err));
+    }
   };
 
   return (

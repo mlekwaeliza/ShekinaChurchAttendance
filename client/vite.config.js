@@ -20,6 +20,13 @@ export default defineConfig({
       }
     }
   },
+  // FFA P2: Web Worker for report-pdf generation. ESM format is
+  // required for the worker to use import statements (jspdf +
+  // jspdf-autotable are ESM). The default 'iife' format doesn't
+  // support code splitting which the worker needs.
+  worker: {
+    format: 'es'
+  },
   server: {
     port: 5173,
     host: '0.0.0.0',

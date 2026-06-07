@@ -229,153 +229,24 @@ const PastorDashboard = () => {
     setReportLoading(true);
 
     try {
-      const [{ default: jsPDF }, autoTableModule] = await Promise.all([
-        import('jspdf'),
-        import('jspdf-autotable')
-      ]);
-      const autoTable = autoTableModule.default;
-      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 42;
-      const contentWidth = pageWidth - margin * 2;
-      const generatedOn = formatDisplayDate(formatLocalDate());
-
-      let cursorY = 56;
-
-      const ensureSpace = (heightNeeded = 80) => {
-        if (cursorY + heightNeeded <= pageHeight - 42) {
-          return;
-        }
-        doc.addPage();
-        cursorY = 56;
-      };
-
-      const addHeading = (label) => {
-        ensureSpace(48);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.setTextColor(15, 23, 42);
-        doc.text(label, margin, cursorY);
-        cursorY += 14;
-      };
-
-      const addParagraph = (text) => {
-        ensureSpace(40);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.setTextColor(71, 85, 105);
-        const lines = doc.splitTextToSize(text, contentWidth);
-        doc.text(lines, margin, cursorY);
-        cursorY += lines.length * 13 + 8;
-      };
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.setTextColor(15, 23, 42);
-      doc.text(form.title, margin, cursorY);
-
-      cursorY += 20;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Window: ${reportSummary.windowLabel}`, margin, cursorY);
-      cursorY += 14;
-      doc.text(`Generated: ${generatedOn}`, margin, cursorY);
-      cursorY += 14;
-
-      if (form.preparedBy.trim()) {
-        doc.text(`Prepared by: ${form.preparedBy.trim()}`, margin, cursorY);
-        cursorY += 14;
-      }
-
-      cursorY += 10;
-
-      autoTable(doc, {
-        startY: cursorY,
-        theme: 'grid',
-        head: [['Metric', 'Value']],
-        body: [
-          ['Latest attendance day', summaryMetrics.latestDateLabel],
-          ['Average attendance', `${summaryMetrics.averageAttendance}%`],
-          ['Submission rate', `${summaryMetrics.submissionRate}% (${summaryMetrics.leadersSubmitted}/${summaryMetrics.totalLeaders})`],
-          ['Tracked sections', String(summaryMetrics.trackedSections)],
-          ['Members needing attention', String(prioritizedMembers.length)],
-          ['Trend delta', `${reportSummary.trendDelta > 0 ? '+' : ''}${reportSummary.trendDelta}%`],
-        ],
-        margin: { left: margin, right: margin },
-        styles: { fontSize: 10, cellPadding: 8, textColor: [30, 41, 59] },
-        headStyles: { fillColor: [37, 99, 235] },
+      const { generateReportPdf } = await import('../utils/pdfWorker');
+      await generateReportPdf({
+        report: 'pastor',
+        form,
+        reportSummary,
+        summaryMetrics,
+        sectionBreakdown,
+        prioritizedMembers,
+        generatedOn: formatDisplayDate(formatLocalDate()),
+        formatDisplayDate,
+        formatLocalDate,
+        sanitizeFilename,
+        numberOrZero,
       });
-
-      cursorY = doc.lastAutoTable.finalY + 26;
-
-      if (form.includeActionItems) {
-        addHeading('Priority Actions');
-        reportSummary.actionItems.forEach((item) => {
-          addParagraph(`- ${item}`);
-        });
-      }
-
-      if (form.includeSectionBreakdown && sectionBreakdown.length > 0) {
-        addHeading('Section Breakdown');
-        autoTable(doc, {
-          startY: cursorY,
-          theme: 'striped',
-          head: [['Section', 'Attendance Rate', 'Present', 'Total']],
-          body: sectionBreakdown.map((section) => [
-            section.section_name,
-            `${numberOrZero(section.attendance_rate)}%`,
-            String(numberOrZero(section.present)),
-            String(numberOrZero(section.total)),
-          ]),
-          margin: { left: margin, right: margin },
-          styles: { fontSize: 10, cellPadding: 7 },
-          headStyles: { fillColor: [79, 70, 229] },
-        });
-        cursorY = doc.lastAutoTable.finalY + 26;
-      }
-
-      if (form.includeLeaderPerformance && reportSummary.topLeaders.length > 0) {
-        addHeading('Leader Performance');
-        autoTable(doc, {
-          startY: cursorY,
-          theme: 'striped',
-          head: [['Leader', 'Section', 'Attendance Rate', 'Reporting Days', 'Records']],
-          body: reportSummary.topLeaders.map((leader) => [
-            leader.leader_name,
-            leader.section_name,
-            `${numberOrZero(leader.attendance_rate)}%`,
-            String(numberOrZero(leader.reporting_days)),
-            String(numberOrZero(leader.total_records)),
-          ]),
-          margin: { left: margin, right: margin },
-          styles: { fontSize: 9, cellPadding: 7 },
-          headStyles: { fillColor: [13, 148, 136] },
-        });
-        cursorY = doc.lastAutoTable.finalY + 26;
-      }
-
-      if (form.includeAtRiskMembers && reportSummary.atRiskMembers.length > 0) {
-        addHeading('Members Requiring Follow-Up');
-        autoTable(doc, {
-          startY: cursorY,
-          theme: 'striped',
-          head: [['Member', 'Section', 'Leader', 'Absences']],
-          body: reportSummary.atRiskMembers.map((member) => [
-            member.full_name,
-            member.section_name,
-            member.leader_name,
-            String(numberOrZero(member.absence_count)),
-          ]),
-          margin: { left: margin, right: margin },
-          styles: { fontSize: 9, cellPadding: 7 },
-          headStyles: { fillColor: [225, 29, 72] },
-        });
-      }
-
-      doc.save(`${sanitizeFilename(form.title)}-${formatLocalDate()}.pdf`);
       setIsReportModalOpen(false);
+    } catch (err) {
+      console.error('Pastor report PDF generation failed:', err);
+      alert('Failed to generate PDF: ' + (err.message || err));
     } finally {
       setReportLoading(false);
     }
