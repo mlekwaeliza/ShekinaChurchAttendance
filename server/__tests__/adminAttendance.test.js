@@ -52,7 +52,8 @@ function loadAndStart(mocks) {
     getAttendanceHistory: jest.fn().mockResolvedValue([]),
     getAttendanceTrends: jest.fn().mockResolvedValue({ trends: [] }),
     listAttendance: jest.fn().mockResolvedValue([]),
-    searchAttendanceForCorrection: jest.fn().mockResolvedValue({ rows: [], total: 0, page: 1, pageSize: 50 }),
+    searchAttendanceForCorrection: mocks.searchAttendanceForCorrection
+      || jest.fn().mockResolvedValue({ rows: [], total: 0, page: 1, pageSize: 50 }),
   }));
   const router = require('../routes/adminAttendance');
   const app = express();
@@ -205,6 +206,75 @@ describe('PUT /api/admin/attendance/:id (attendance correction)', () => {
     try {
       const res = await request(port, 'PUT', '/api/admin/attendance/1', { status: 'present' });
       expect(res.status).toBe(403);
+    } finally { server.close(); }
+  });
+});
+
+describe('GET /api/admin/attendance/search (admin search)', () => {
+  // Regression test: the service must import BOTH `all` and `get` from
+  // ../database. A previous version only imported `all`, so the count
+  // query threw a ReferenceError and every request returned 500.
+  test('returns the service payload as JSON', async () => {
+    const fakeRows = [
+      { id: 1, date: '2026-06-07', status: 'present', member_name: 'Alice' },
+      { id: 2, date: '2026-06-06', status: 'absent', member_name: 'Bob' },
+    ];
+    const searchAttendanceForCorrection = jest.fn().mockResolvedValue({
+      rows: fakeRows, total: 2, page: 1, pageSize: 10,
+    });
+    const { server, port } = await loadAndStart({
+      session: { userId: 1, role: 'admin' },
+      searchAttendanceForCorrection,
+    });
+    try {
+      const res = await request(port, 'GET', '/api/admin/attendance/search?page=1&page_size=10');
+      expect(res.status).toBe(200);
+      expect(res.body.rows).toEqual(fakeRows);
+      expect(res.body.total).toBe(2);
+      expect(res.body.page).toBe(1);
+      expect(res.body.pageSize).toBe(10);
+    } finally { server.close(); }
+  });
+
+  test('forwards start_date, end_date, status, and pagination to the service', async () => {
+    const searchAttendanceForCorrection = jest.fn().mockResolvedValue({
+      rows: [], total: 0, page: 1, pageSize: 10,
+    });
+    const { server, port } = await loadAndStart({
+      session: { userId: 1, role: 'admin' },
+      searchAttendanceForCorrection,
+    });
+    try {
+      const res = await request(
+        port, 'GET',
+        '/api/admin/attendance/search?start_date=2026-01-01&end_date=2026-06-07&status=present&page=1&page_size=10'
+      );
+      expect(res.status).toBe(200);
+      const callArgs = searchAttendanceForCorrection.mock.calls[0][0];
+      expect(callArgs.start_date).toBe('2026-01-01');
+      expect(callArgs.end_date).toBe('2026-06-07');
+      expect(callArgs.status).toBe('present');
+      expect(callArgs.page).toBe(1);
+      expect(callArgs.pageSize).toBe(10);
+    } finally { server.close(); }
+  });
+
+  test('rejects unauthenticated', async () => {
+    const { server, port } = await loadAndStart({ session: null });
+    try {
+      const res = await request(port, 'GET', '/api/admin/attendance/search');
+      expect(res.status).toBe(401);
+    } finally { server.close(); }
+  });
+
+  test('returns 500 when the service throws', async () => {
+    const { server, port } = await loadAndStart({
+      session: { userId: 1, role: 'admin' },
+      searchAttendanceForCorrection: jest.fn().mockRejectedValue(new Error('db down')),
+    });
+    try {
+      const res = await request(port, 'GET', '/api/admin/attendance/search');
+      expect(res.status).toBe(500);
     } finally { server.close(); }
   });
 });

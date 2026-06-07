@@ -1,4 +1,4 @@
-const { all } = require('../database');
+const { all, get } = require('../database');
 const { addDays, formatLocalDate } = require('../utils/date');
 const { yearEquals, monthEquals, weekEquals, dateOnly } = require('../utils/sqlDialect');
 

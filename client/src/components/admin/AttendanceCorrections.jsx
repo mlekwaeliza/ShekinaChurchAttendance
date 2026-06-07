@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { adminAPI } from '../../services/api';
+import { formatLocalDate, addDays } from '../../utils/date';
 import {
   Edit3,
   Search,
@@ -306,6 +307,70 @@ const AttendanceCorrections = ({ showMessage }) => {
     setTimeout(() => load(1), 0);
   };
 
+  // Date-range presets: clicking a chip sets start_date + end_date and
+  // refreshes the table immediately. "Clear dates" only clears the date
+  // pair (keeping the search text and status). Today's date is computed
+  // in local time so it matches the day the admin sees in the picker.
+  const buildRange = (kind) => {
+    const today = new Date();
+    const todayStr = formatLocalDate(today);
+    if (kind === 'today') return { start_date: todayStr, end_date: todayStr };
+    if (kind === 'yesterday') {
+      const y = addDays(today, -1);
+      const yStr = formatLocalDate(y);
+      return { start_date: yStr, end_date: yStr };
+    }
+    if (kind === 'last7') {
+      return { start_date: formatLocalDate(addDays(today, -6)), end_date: todayStr };
+    }
+    if (kind === 'last30') {
+      return { start_date: formatLocalDate(addDays(today, -29)), end_date: todayStr };
+    }
+    if (kind === 'thisMonth') {
+      const first = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { start_date: formatLocalDate(first), end_date: todayStr };
+    }
+    if (kind === 'lastMonth') {
+      const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const last = new Date(today.getFullYear(), today.getMonth(), 0);
+      return { start_date: formatLocalDate(first), end_date: formatLocalDate(last) };
+    }
+    return null;
+  };
+
+  const handleDatePreset = (kind) => {
+    const range = buildRange(kind);
+    if (!range) return;
+    setFilters((prev) => ({ ...prev, ...range }));
+    setPage(1);
+    // Defer to next tick so the state update flushes before we re-query.
+    setTimeout(() => load(1), 0);
+  };
+
+  const handleClearDates = () => {
+    setFilters((prev) => ({ ...prev, start_date: '', end_date: '' }));
+    setPage(1);
+    setTimeout(() => load(1), 0);
+  };
+
+  const hasDateFilter = Boolean(filters.start_date || filters.end_date);
+  const activePreset = (() => {
+    if (!hasDateFilter) return null;
+    const todayStr = formatLocalDate(new Date());
+    if (filters.start_date === todayStr && filters.end_date === todayStr) return 'today';
+    const yest = formatLocalDate(addDays(new Date(), -1));
+    if (filters.start_date === yest && filters.end_date === yest) return 'yesterday';
+    if (filters.start_date === formatLocalDate(addDays(new Date(), -6)) && filters.end_date === todayStr) return 'last7';
+    if (filters.start_date === formatLocalDate(addDays(new Date(), -29)) && filters.end_date === todayStr) return 'last30';
+    const t = new Date();
+    const monthFirst = formatLocalDate(new Date(t.getFullYear(), t.getMonth(), 1));
+    if (filters.start_date === monthFirst && filters.end_date === todayStr) return 'thisMonth';
+    const prevFirst = formatLocalDate(new Date(t.getFullYear(), t.getMonth() - 1, 1));
+    const prevLast = formatLocalDate(new Date(t.getFullYear(), t.getMonth(), 0));
+    if (filters.start_date === prevFirst && filters.end_date === prevLast) return 'lastMonth';
+    return 'custom';
+  })();
+
   const columns = useMemo(() => [
     {
       accessor: 'date',
@@ -415,6 +480,75 @@ const AttendanceCorrections = ({ showMessage }) => {
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+          <div className="min-w-[140px] flex-1">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">From</label>
+            <input
+              type="date"
+              value={filters.start_date}
+              max={filters.end_date || undefined}
+              onChange={(e) => handleFilterChange('start_date', e.target.value)}
+              onBlur={handleApplyFilters}
+              className="input h-9 w-full"
+            />
+          </div>
+          <div className="min-w-[140px] flex-1">
+            <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">To</label>
+            <input
+              type="date"
+              value={filters.end_date}
+              min={filters.start_date || undefined}
+              onChange={(e) => handleFilterChange('end_date', e.target.value)}
+              onBlur={handleApplyFilters}
+              className="input h-9 w-full"
+            />
+          </div>
+          {hasDateFilter && (
+            <button
+              type="button"
+              onClick={handleClearDates}
+              className="inline-flex h-9 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              title="Clear date range"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear dates
+            </button>
+          )}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Quick range</span>
+          {[
+            { id: 'today', label: 'Today' },
+            { id: 'yesterday', label: 'Yesterday' },
+            { id: 'last7', label: 'Last 7 days' },
+            { id: 'last30', label: 'Last 30 days' },
+            { id: 'thisMonth', label: 'This month' },
+            { id: 'lastMonth', label: 'Last month' },
+          ].map((p) => {
+            const isActive = activePreset === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handleDatePreset(p.id)}
+                className={`inline-flex h-7 items-center rounded-full border px-3 text-xs font-semibold transition-colors ${
+                  isActive
+                    ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/30 dark:hover:text-blue-200'
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+          {activePreset === 'custom' && (
+            <span className="ml-1 inline-flex h-7 items-center rounded-full bg-amber-50 px-3 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+              Custom range
+            </span>
+          )}
         </div>
 
         {showFilters && (
