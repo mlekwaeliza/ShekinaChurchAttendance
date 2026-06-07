@@ -135,26 +135,30 @@ const LeaderDirectory = ({
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-            <UserCog className="w-5 h-5 text-white" />
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-700 via-slate-800 to-zinc-900 p-6 text-white shadow-xl shadow-slate-500/20">
+        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
+        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+              <UserCog className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Leaders</h2>
+              <p className="text-sm text-white/80">
+                {leadersLoading ? 'Loading leaders...' : `${totalLeaders} leaders · ${totalSections} sections`}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Leaders</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {leadersLoading ? 'Loading leaders...' : `${totalLeaders} leaders · ${totalSections} sections`}
-            </p>
-          </div>
+          <button
+            onClick={onAdd}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold text-white shadow-sm backdrop-blur-sm transition-all hover:bg-white/25"
+          >
+            <Plus className="h-4 w-4" />
+            Add Leader
+          </button>
         </div>
-        <button
-          onClick={onAdd}
-          className="btn-primary h-10 px-4 rounded-xl flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Leader
-        </button>
       </div>
 
       {/* Search */}

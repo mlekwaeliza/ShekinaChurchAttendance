@@ -55,22 +55,24 @@ const SectionManagement = ({
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-              <Layers className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Sections</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 p-6 text-white shadow-xl shadow-purple-500/20">
+        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+            <Layers className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Sections</h2>
+            <p className="text-sm text-white/80">
               {loading ? 'Loading sections...' : `${sections.length} sections · ${leaders.length} leaders`}
             </p>
-            </div>
           </div>
         </div>
-        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+      </div>
+
+      <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           <div className="relative w-full sm:w-56">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -92,7 +94,6 @@ const SectionManagement = ({
             <span className="whitespace-nowrap tracking-tight">New Section</span>
           </button>
         </div>
-      </div>
 
       {/* Section Cards */}
       {loading ? (

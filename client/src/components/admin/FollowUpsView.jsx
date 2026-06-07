@@ -81,14 +81,16 @@ const FollowUpsView = ({ dashboardMetrics, leaders = [], showMessage }) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500 text-white shadow-lg shadow-amber-500/20">
-            <ClipboardCheck className="h-5 w-5" />
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-500 via-cyan-500 to-sky-500 p-6 text-white shadow-xl shadow-cyan-500/20">
+        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+            <ClipboardCheck className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Follow-ups</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Turn attendance concerns and visitor moments into owned next steps.</p>
+            <h2 className="text-xl font-bold">Follow-ups</h2>
+            <p className="text-sm text-white/80">Turn attendance concerns and visitor moments into owned next steps.</p>
           </div>
         </div>
       </div>
