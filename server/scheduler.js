@@ -81,57 +81,73 @@ async function processPendingReminders() {
     for (const reminder of reminders) {
       const payload = reminder.payload ? JSON.parse(reminder.payload) : null;
 
-      if (reminder.type === 'submission_reminder' && payload) {
-        const userId = payload.leader_id ? await getLeaderUserId(payload.leader_id) : null;
-        if (userId) {
-          await queries.createNotification(
-            userId,
-            'system',
-            'Reminder: Submit Attendance',
-            `Don't forget to submit attendance for ${payload.section_name || 'your section'} tomorrow!`,
-            'leader',
-            payload.leader_id
-          );
-        } else {
-          console.warn(`Could not find User ID for Leader ID ${payload.leader_id}. Skipping notification.`);
+      try {
+        if (reminder.type === 'submission_reminder' && payload) {
+          const userId = payload.leader_id ? await getLeaderUserId(payload.leader_id) : null;
+          if (userId) {
+            await queries.createNotification(
+              userId,
+              'system',
+              'Reminder: Submit Attendance',
+              `Don't forget to submit attendance for ${payload.section_name || 'your section'} tomorrow!`,
+              'leader',
+              payload.leader_id
+            );
+          } else {
+            console.warn(`Could not find User ID for Leader ID ${payload.leader_id}. Skipping notification.`);
+          }
         }
-      }
 
-      if (reminder.type === 'weekly_summary') {
-        const weekStart = getWeekStartString();
-        const summary = await queries.getWeeklySummary(weekStart);
-        const leadersNotSubmitted = summary.filter(l => l.submitted === 0);
+        if (reminder.type === 'weekly_summary') {
+          if (!reminder.entity_id) {
+            console.warn(`Weekly summary reminder ${reminder.id} has no entity_id (target user). Skipping.`);
+          } else {
+            const weekStart = getWeekStartString();
+            const summary = await queries.getWeeklySummary(weekStart);
+            const leadersNotSubmitted = summary.filter(l => l.submitted === 0);
 
-        await queries.createNotification(
-          reminder.entity_id,
-          'system',
-          'Weekly Summary',
-          `This week: ${summary.filter(l => l.submitted > 0).length}/${summary.length} leaders submitted. ${leadersNotSubmitted.length} leader(s) still pending: ${leadersNotSubmitted.map(l => l.leader_name).join(', ') || 'none'}`,
-          'system',
-          null
-        );
-      }
+            await queries.createNotification(
+              reminder.entity_id,
+              'system',
+              'Weekly Summary',
+              `This week: ${summary.filter(l => l.submitted > 0).length}/${summary.length} leaders submitted. ${leadersNotSubmitted.length} leader(s) still pending: ${leadersNotSubmitted.map(l => l.leader_name).join(', ') || 'none'}`,
+              'system',
+              null
+            );
+          }
+        }
 
-      if (reminder.type === 'birthday_greeting' && payload) {
-        await queries.createNotification(
-          payload.leader_user_id,
-          'system',
-          'Birthday Today!',
-          `${payload.member_name} from ${payload.section_name} has a birthday today! Consider sending a greeting.`,
-          'member',
-          payload.member_id
-        );
-      }
+        if (reminder.type === 'birthday_greeting' && payload) {
+          if (!payload.leader_user_id) {
+            console.warn(`Birthday reminder ${reminder.id} for member ${payload.member_id} (${payload.member_name || 'unnamed'}) has no leader_user_id. Skipping notification.`);
+          } else {
+            await queries.createNotification(
+              payload.leader_user_id,
+              'system',
+              'Birthday Today!',
+              `${payload.member_name} from ${payload.section_name} has a birthday today! Consider sending a greeting.`,
+              'member',
+              payload.member_id
+            );
+          }
+        }
 
-      if (reminder.type === 'follow_up_reminder' && payload) {
-        await queries.createNotification(
-          payload.leader_user_id,
-          'system',
-          'Follow-Up Needed',
-          `${payload.member_name} has been absent and needs follow-up.`,
-          'member',
-          payload.member_id
-        );
+        if (reminder.type === 'follow_up_reminder' && payload) {
+          if (!payload.leader_user_id) {
+            console.warn(`Follow-up reminder ${reminder.id} for member ${payload.member_id} (${payload.member_name || 'unnamed'}) has no leader_user_id. Skipping notification.`);
+          } else {
+            await queries.createNotification(
+              payload.leader_user_id,
+              'system',
+              'Follow-Up Needed',
+              `${payload.member_name} has been absent and needs follow-up.`,
+              'member',
+              payload.member_id
+            );
+          }
+        }
+      } catch (reminderError) {
+        console.error(`Failed to process reminder ${reminder.id} (type=${reminder.type}):`, reminderError.message);
       }
 
       await queries.markReminderSent(reminder.id);
@@ -157,6 +173,9 @@ async function scheduleBirthdayReminders() {
     const tomorrowStart = addDays(todayStart, 1);
 
     for (const bday of birthdays) {
+      if (!bday.leader_user_id) {
+        continue;
+      }
       const existing = await all(
         "SELECT id FROM scheduled_reminders WHERE type = 'birthday_greeting' AND entity_id = ? AND scheduled_for >= ? AND scheduled_for < ?",
         [bday.id, todayStart.toISOString(), tomorrowStart.toISOString()]
@@ -187,6 +206,9 @@ async function scheduleFollowUpReminders() {
     const members = await queries.getMembersNeedingFollowUp();
 
     for (const member of members) {
+      if (!member.leader_user_id) {
+        continue;
+      }
       const existing = await all(
         "SELECT id FROM scheduled_reminders WHERE type = 'follow_up_reminder' AND entity_id = ? AND sent = 0",
         [member.id]
