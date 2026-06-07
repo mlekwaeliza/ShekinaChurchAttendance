@@ -83,6 +83,14 @@ function likeClause() {
   return `LIKE ? ESCAPE '\\'`;
 }
 
+// likeClauseCaseInsensitive() -> "ILIKE ? ESCAPE '\\'" on PostgreSQL,
+// "LIKE ? ESCAPE '\\'" on SQLite (SQLite LIKE is ASCII-case-insensitive
+// by default).  Drop-in replacement for likeClause when the search
+// should be case-insensitive on both databases.
+function likeClauseCaseInsensitive() {
+  return isPostgres() ? `ILIKE ? ESCAPE '\\'` : `LIKE ? ESCAPE '\\'`;
+}
+
 function upsertAttendanceSql({ includeServiceType = false } = {}) {
   if (isPostgres()) {
     return includeServiceType
@@ -122,5 +130,6 @@ module.exports = {
   monthsAgo,
   likeEscapePattern,
   likeClause,
+  likeClauseCaseInsensitive,
   upsertAttendanceSql
 };

@@ -1,6 +1,6 @@
 const { all, get } = require('../database');
 const { addDays, formatLocalDate } = require('../utils/date');
-const { yearEquals, monthEquals, weekEquals, dateOnly } = require('../utils/sqlDialect');
+const { yearEquals, monthEquals, weekEquals, dateOnly, likeClauseCaseInsensitive } = require('../utils/sqlDialect');
 
 async function listAttendance(filters = {}) {
   const { date, section_id, leader_id, filterType, filterValue } = filters;
@@ -69,7 +69,8 @@ async function searchAttendanceForCorrection(filters = {}) {
   if (q) {
     const trimmed = String(q).trim();
     if (trimmed) {
-      conditions.push('(m.full_name LIKE ? OR m.membership_id LIKE ?)');
+      const likeOp = likeClauseCaseInsensitive();
+      conditions.push(`(m.full_name ${likeOp} OR m.membership_id ${likeOp})`);
       const like = `%${trimmed}%`;
       params.push(like, like);
     }

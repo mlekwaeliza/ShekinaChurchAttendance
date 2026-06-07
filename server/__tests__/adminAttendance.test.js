@@ -47,6 +47,7 @@ function loadAndStart(mocks) {
     weekEquals: () => '1=1',
     dateOnly: (col) => col,
     upsertAttendanceSql: () => 'INSERT OR REPLACE INTO attendance ...',
+    likeClauseCaseInsensitive: () => `LIKE ? ESCAPE '\\'`,
   }));
   jest.doMock(path.resolve(__dirname, '../services/adminAttendanceService'), () => ({
     getAttendanceHistory: jest.fn().mockResolvedValue([]),

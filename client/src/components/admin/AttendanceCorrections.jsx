@@ -459,7 +459,7 @@ const AttendanceCorrections = ({ showMessage }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               value={filters.q}
-              onChange={(e) => { handleFilterChange('q', e.target.value); debouncedLoad(); }}
+              onChange={(e) => { handleFilterChange('q', e.target.value.toUpperCase()); debouncedLoad(); }}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
               placeholder="Search member name or membership ID..."
               className="input h-10 w-full pl-10 pr-10"
