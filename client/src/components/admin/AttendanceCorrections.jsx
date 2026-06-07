@@ -13,8 +13,6 @@ import {
   XCircle,
   HelpCircle,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import Badge from '../ui/Badge';
 import { useModalA11y } from '../../hooks/useModalA11y';
@@ -255,8 +253,6 @@ const AttendanceCorrections = ({ showMessage }) => {
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(25);
   const [editing, setEditing] = useState(null);
   const [filters, setFilters] = useState({
     q: '',
@@ -266,12 +262,12 @@ const AttendanceCorrections = ({ showMessage }) => {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  const load = async (targetPage = page, activeFilters = filters) => {
+  const load = async (activeFilters = filters) => {
     setLoading(true);
     try {
       const params = {
-        page: targetPage,
-        page_size: pageSize,
+        page: 1,
+        page_size: 1000,
         ...(activeFilters.q ? { q: activeFilters.q } : {}),
         ...(activeFilters.start_date ? { start_date: activeFilters.start_date } : {}),
         ...(activeFilters.end_date ? { end_date: activeFilters.end_date } : {}),
@@ -288,59 +284,36 @@ const AttendanceCorrections = ({ showMessage }) => {
     }
   };
 
-  useEffect(() => { load(1); /* eslint-disable-next-line */ }, []);
-
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Debounced auto-search: re-query 300ms after the user stops typing or
-  // changing a date. The previous version only ran on Enter / onBlur,
-  // which broke the "search-as-you-type" expectation and never fired for
-  // the date picker at all (clicking the calendar icon blurs the input
-  // for a frame, but some browsers dismiss the picker without firing
-  // blur). The Apply button still works as an explicit refresh.
-  //
-  // Stale-closure fix: setFilters is async, so if the user types 'a' then
-  // 'n' inside the 300ms window, the setTimeout fires with the closure
-  // from BEFORE the re-render — which still has filters.q = ''. The
-  // request goes out unfiltered, the user sees the full unfiltered page,
-  // and concludes the search "only filters the current page". We read the
-  // current filters/page from refs inside the callback so the latest
-  // values are always used.
+  // Read current filters from a ref inside the setTimeout so the debounce
+  // never sends stale filter values (the old closure bug).
   const filtersRef = useRef(filters);
-  const pageRef = useRef(page);
   filtersRef.current = filters;
-  pageRef.current = page;
   const debounceRef = useRef(null);
-  const debouncedApply = (resetPage = true) => {
+  const debouncedLoad = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const target = resetPage ? 1 : pageRef.current;
-      if (resetPage) setPage(1);
-      load(target, filtersRef.current);
-    }, 300);
+    debounceRef.current = setTimeout(() => load(filtersRef.current), 300);
   };
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+  // Also expose load so button handlers can call it without a stale closure.
+  const loadRef = useRef(load);
+  loadRef.current = load;
 
-  const handleApplyFilters = () => {
-    setPage(1);
-    load(1);
-  };
+  const handleApplyFilters = () => load(filters);
 
   const handleClearFilters = () => {
     const empty = { q: '', start_date: '', end_date: '', status: '' };
     setFilters(empty);
-    setPage(1);
-    load(1, empty);
+    filtersRef.current = empty;
+    load(empty);
   };
 
-  // Date-range presets: clicking a chip sets start_date + end_date and
-  // refreshes the table immediately. "Clear dates" only clears the date
-  // pair (keeping the search text and status). Today's date is computed
-  // in local time so it matches the day the admin sees in the picker.
+  // Date-range presets
   const buildRange = (kind) => {
     const today = new Date();
     const todayStr = formatLocalDate(today);
@@ -371,21 +344,17 @@ const AttendanceCorrections = ({ showMessage }) => {
   const handleDatePreset = (kind) => {
     const range = buildRange(kind);
     if (!range) return;
-    // Apply via the ref so the request carries the new range even if
-    // the debounce / setTimeout fires before the next render.
     const next = { ...filtersRef.current, ...range };
     setFilters(next);
     filtersRef.current = next;
-    setPage(1);
-    load(1, next);
+    load(next);
   };
 
   const handleClearDates = () => {
     const next = { ...filtersRef.current, start_date: '', end_date: '' };
     setFilters(next);
     filtersRef.current = next;
-    setPage(1);
-    load(1, next);
+    load(next);
   };
 
   const hasDateFilter = Boolean(filters.start_date || filters.end_date);
@@ -490,7 +459,7 @@ const AttendanceCorrections = ({ showMessage }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               value={filters.q}
-              onChange={(e) => { handleFilterChange('q', e.target.value); debouncedApply(true); }}
+              onChange={(e) => { handleFilterChange('q', e.target.value); debouncedLoad(); }}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
               placeholder="Search member name or membership ID..."
               className="input h-10 w-full pl-10 pr-10"
@@ -502,8 +471,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                   const next = { ...filtersRef.current, q: '' };
                   setFilters(next);
                   filtersRef.current = next;
-                  setPage(1);
-                  load(1, next);
+                  load(next);
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                 title="Clear search"
@@ -530,7 +498,7 @@ const AttendanceCorrections = ({ showMessage }) => {
             </button>
             <button
               type="button"
-              onClick={() => load(page)}
+              onClick={() => load(filters)}
               className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               aria-label="Refresh"
               title="Refresh"
@@ -547,7 +515,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               type="date"
               value={filters.start_date}
               max={filters.end_date || undefined}
-              onChange={(e) => { handleFilterChange('start_date', e.target.value); debouncedApply(true); }}
+              onChange={(e) => { handleFilterChange('start_date', e.target.value); debouncedLoad(); }}
               className="input h-9 w-full cursor-pointer"
               onClick={(e) => e.currentTarget.showPicker?.()}
             />
@@ -558,7 +526,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               type="date"
               value={filters.end_date}
               min={filters.start_date || undefined}
-              onChange={(e) => { handleFilterChange('end_date', e.target.value); debouncedApply(true); }}
+              onChange={(e) => { handleFilterChange('end_date', e.target.value); debouncedLoad(); }}
               className="input h-9 w-full cursor-pointer"
               onClick={(e) => e.currentTarget.showPicker?.()}
             />
@@ -654,7 +622,7 @@ const AttendanceCorrections = ({ showMessage }) => {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {loading
               ? 'Loading…'
-              : `${total} record${total === 1 ? '' : 's'} found${(filters.q || hasDateFilter || filters.status) ? ' (filtered across all pages)' : ''}`}
+              : `${total} record${total === 1 ? '' : 's'} found${(filters.q || hasDateFilter || filters.status) ? ' (filtered)' : ''}`}
           </p>
           {(filters.q || hasDateFilter || filters.status) && (
             <button
@@ -668,7 +636,7 @@ const AttendanceCorrections = ({ showMessage }) => {
             </button>
           )}
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto max-h-[460px] overflow-y-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
             <thead className="bg-slate-50 dark:bg-slate-900/40">
               <tr>
@@ -689,7 +657,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                     <p className="text-sm font-semibold">No attendance records found</p>
                     <p className="text-xs">
                       {(filters.q || hasDateFilter || filters.status)
-                        ? 'No records match the current filters across all pages.'
+                        ? 'No records match the current filters.'
                         : 'Try adjusting your filters or date range.'}
                     </p>
                     {(filters.q || hasDateFilter || filters.status) && (
@@ -716,29 +684,6 @@ const AttendanceCorrections = ({ showMessage }) => {
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 dark:border-slate-700">
-            <p className="text-xs text-slate-500">Page {page} of {totalPages}</p>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => { const p = Math.max(1, page - 1); setPage(p); load(p); }}
-                disabled={page <= 1}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => { const p = Math.min(totalPages, page + 1); setPage(p); load(p); }}
-                disabled={page >= totalPages}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {editing && (
