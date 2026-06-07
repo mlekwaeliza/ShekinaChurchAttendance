@@ -690,7 +690,7 @@ const AttendanceCorrections = ({ showMessage }) => {
         <EditAttendanceModal
           record={editing}
           onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); load(page); }}
+          onSaved={() => { setEditing(null); load(filters); }}
           showMessage={showMessage}
         />
       )}
