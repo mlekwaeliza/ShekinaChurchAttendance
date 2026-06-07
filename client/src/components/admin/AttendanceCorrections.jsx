@@ -266,16 +266,16 @@ const AttendanceCorrections = ({ showMessage }) => {
   });
   const [showFilters, setShowFilters] = useState(false);
 
-  const load = async (targetPage = page) => {
+  const load = async (targetPage = page, activeFilters = filters) => {
     setLoading(true);
     try {
       const params = {
         page: targetPage,
         page_size: pageSize,
-        ...(filters.q ? { q: filters.q } : {}),
-        ...(filters.start_date ? { start_date: filters.start_date } : {}),
-        ...(filters.end_date ? { end_date: filters.end_date } : {}),
-        ...(filters.status ? { status: filters.status } : {}),
+        ...(activeFilters.q ? { q: activeFilters.q } : {}),
+        ...(activeFilters.start_date ? { start_date: activeFilters.start_date } : {}),
+        ...(activeFilters.end_date ? { end_date: activeFilters.end_date } : {}),
+        ...(activeFilters.status ? { status: activeFilters.status } : {}),
       };
       const res = await adminAPI.searchAttendance(params);
       setRecords(res.data.rows || []);
@@ -302,12 +302,25 @@ const AttendanceCorrections = ({ showMessage }) => {
   // the date picker at all (clicking the calendar icon blurs the input
   // for a frame, but some browsers dismiss the picker without firing
   // blur). The Apply button still works as an explicit refresh.
+  //
+  // Stale-closure fix: setFilters is async, so if the user types 'a' then
+  // 'n' inside the 300ms window, the setTimeout fires with the closure
+  // from BEFORE the re-render — which still has filters.q = ''. The
+  // request goes out unfiltered, the user sees the full unfiltered page,
+  // and concludes the search "only filters the current page". We read the
+  // current filters/page from refs inside the callback so the latest
+  // values are always used.
+  const filtersRef = useRef(filters);
+  const pageRef = useRef(page);
+  filtersRef.current = filters;
+  pageRef.current = page;
   const debounceRef = useRef(null);
   const debouncedApply = (resetPage = true) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      const target = resetPage ? 1 : pageRef.current;
       if (resetPage) setPage(1);
-      load(resetPage ? 1 : page);
+      load(target, filtersRef.current);
     }, 300);
   };
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
@@ -318,9 +331,10 @@ const AttendanceCorrections = ({ showMessage }) => {
   };
 
   const handleClearFilters = () => {
-    setFilters({ q: '', start_date: '', end_date: '', status: '' });
+    const empty = { q: '', start_date: '', end_date: '', status: '' };
+    setFilters(empty);
     setPage(1);
-    setTimeout(() => load(1), 0);
+    load(1, empty);
   };
 
   // Date-range presets: clicking a chip sets start_date + end_date and
@@ -357,16 +371,21 @@ const AttendanceCorrections = ({ showMessage }) => {
   const handleDatePreset = (kind) => {
     const range = buildRange(kind);
     if (!range) return;
-    setFilters((prev) => ({ ...prev, ...range }));
+    // Apply via the ref so the request carries the new range even if
+    // the debounce / setTimeout fires before the next render.
+    const next = { ...filtersRef.current, ...range };
+    setFilters(next);
+    filtersRef.current = next;
     setPage(1);
-    // Defer to next tick so the state update flushes before we re-query.
-    setTimeout(() => load(1), 0);
+    load(1, next);
   };
 
   const handleClearDates = () => {
-    setFilters((prev) => ({ ...prev, start_date: '', end_date: '' }));
+    const next = { ...filtersRef.current, start_date: '', end_date: '' };
+    setFilters(next);
+    filtersRef.current = next;
     setPage(1);
-    setTimeout(() => load(1), 0);
+    load(1, next);
   };
 
   const hasDateFilter = Boolean(filters.start_date || filters.end_date);
@@ -474,10 +493,33 @@ const AttendanceCorrections = ({ showMessage }) => {
               onChange={(e) => { handleFilterChange('q', e.target.value); debouncedApply(true); }}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
               placeholder="Search member name or membership ID..."
-              className="input h-10 w-full pl-10"
+              className="input h-10 w-full pl-10 pr-10"
             />
+            {filters.q && (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = { ...filtersRef.current, q: '' };
+                  setFilters(next);
+                  filtersRef.current = next;
+                  setPage(1);
+                  load(1, next);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {loading && (
+              <span className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-blue-50 px-3 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                Searching…
+              </span>
+            )}
             <button
               type="button"
               onClick={() => setShowFilters((s) => !s)}
@@ -610,8 +652,21 @@ const AttendanceCorrections = ({ showMessage }) => {
       <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {loading ? 'Loading...' : `${total} record${total === 1 ? '' : 's'} found`}
+            {loading
+              ? 'Loading…'
+              : `${total} record${total === 1 ? '' : 's'} found${(filters.q || hasDateFilter || filters.status) ? ' (filtered across all pages)' : ''}`}
           </p>
+          {(filters.q || hasDateFilter || filters.status) && (
+            <button
+              type="button"
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+              title="Clear all filters"
+            >
+              <X className="h-3 w-3" />
+              Reset all filters
+            </button>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
@@ -632,7 +687,21 @@ const AttendanceCorrections = ({ showMessage }) => {
                   <div className="flex flex-col items-center gap-2 text-slate-400">
                     <Users className="h-8 w-8" />
                     <p className="text-sm font-semibold">No attendance records found</p>
-                    <p className="text-xs">Try adjusting your filters or date range.</p>
+                    <p className="text-xs">
+                      {(filters.q || hasDateFilter || filters.status)
+                        ? 'No records match the current filters across all pages.'
+                        : 'Try adjusting your filters or date range.'}
+                    </p>
+                    {(filters.q || hasDateFilter || filters.status) && (
+                      <button
+                        type="button"
+                        onClick={handleClearFilters}
+                        className="mt-2 inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Reset all filters
+                      </button>
+                    )}
                   </div>
                 </td></tr>
               ) : (
