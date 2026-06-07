@@ -14,19 +14,28 @@ const HallOfFamePreview = ({ topMembers = [], onViewAll }) => {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 shadow-sm p-6 relative overflow-hidden h-full flex flex-col">
       <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full -translate-y-16 translate-x-16" />
-      
-      <div className="flex items-center justify-between mb-6 relative z-10">
-        <h3 className="text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-violet-500" />
-          Hall of Fame 2026
-        </h3>
-        <button
-          onClick={onViewAll}
-          className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 text-slate-400 hover:text-violet-500 transition-colors"
-          title="Points earned from attendance, service, giving. Winners announced Dec 31."
-        >
-          <ArrowUpRight className="w-4 h-4" />
-        </button>
+
+      <div className="relative -mx-6 -mt-6 mb-5 overflow-hidden bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-400 px-5 py-3.5 text-white shadow-lg shadow-amber-500/20">
+        <div className="absolute top-0 right-0 h-20 w-20 rounded-full bg-white/10 -translate-y-10 translate-x-10" />
+        <div className="absolute bottom-0 left-1/3 h-14 w-14 rounded-full bg-white/10 translate-y-7" />
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
+              <Trophy className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold leading-tight">Hall of Fame 2026</h3>
+              <p className="text-[10px] uppercase tracking-wider text-white/80">Season standings</p>
+            </div>
+          </div>
+          <button
+            onClick={onViewAll}
+            className="rounded-lg bg-white/20 p-1.5 text-white backdrop-blur-sm transition-colors hover:bg-white/30"
+            title="Points earned from attendance, service, giving. Winners announced Dec 31."
+          >
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4 relative z-10 flex-1 flex flex-col justify-center">
