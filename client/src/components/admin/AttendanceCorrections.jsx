@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { adminAPI } from '../../services/api';
 import { formatLocalDate, addDays } from '../../utils/date';
 import {
@@ -296,6 +296,22 @@ const AttendanceCorrections = ({ showMessage }) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  // Debounced auto-search: re-query 300ms after the user stops typing or
+  // changing a date. The previous version only ran on Enter / onBlur,
+  // which broke the "search-as-you-type" expectation and never fired for
+  // the date picker at all (clicking the calendar icon blurs the input
+  // for a frame, but some browsers dismiss the picker without firing
+  // blur). The Apply button still works as an explicit refresh.
+  const debounceRef = useRef(null);
+  const debouncedApply = (resetPage = true) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (resetPage) setPage(1);
+      load(resetPage ? 1 : page);
+    }, 300);
+  };
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
   const handleApplyFilters = () => {
     setPage(1);
     load(1);
@@ -455,7 +471,7 @@ const AttendanceCorrections = ({ showMessage }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               value={filters.q}
-              onChange={(e) => handleFilterChange('q', e.target.value)}
+              onChange={(e) => { handleFilterChange('q', e.target.value); debouncedApply(true); }}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
               placeholder="Search member name or membership ID..."
               className="input h-10 w-full pl-10"
@@ -489,9 +505,9 @@ const AttendanceCorrections = ({ showMessage }) => {
               type="date"
               value={filters.start_date}
               max={filters.end_date || undefined}
-              onChange={(e) => handleFilterChange('start_date', e.target.value)}
-              onBlur={handleApplyFilters}
-              className="input h-9 w-full"
+              onChange={(e) => { handleFilterChange('start_date', e.target.value); debouncedApply(true); }}
+              className="input h-9 w-full cursor-pointer"
+              onClick={(e) => e.currentTarget.showPicker?.()}
             />
           </div>
           <div className="min-w-[140px] flex-1">
@@ -500,11 +516,20 @@ const AttendanceCorrections = ({ showMessage }) => {
               type="date"
               value={filters.end_date}
               min={filters.start_date || undefined}
-              onChange={(e) => handleFilterChange('end_date', e.target.value)}
-              onBlur={handleApplyFilters}
-              className="input h-9 w-full"
+              onChange={(e) => { handleFilterChange('end_date', e.target.value); debouncedApply(true); }}
+              className="input h-9 w-full cursor-pointer"
+              onClick={(e) => e.currentTarget.showPicker?.()}
             />
           </div>
+          <button
+            type="button"
+            onClick={handleApplyFilters}
+            className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white shadow-sm hover:bg-primary-700"
+            title="Apply filters"
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Apply
+          </button>
           {hasDateFilter && (
             <button
               type="button"
