@@ -7,13 +7,17 @@ const { yearEquals, monthEquals, weekEquals, dateOnly, upsertAttendanceSql } = r
 const {
   getAttendanceHistory,
   getAttendanceTrends,
-  listAttendance
+  listAttendance,
+  searchAttendanceForCorrection
 } = require('../services/adminAttendanceService');
 
 const router = express.Router();
 
 router.use(isAuthenticated);
 router.use(requireRole(['admin']));
+
+const VALID_STATUSES = new Set(['present', 'absent', 'excused']);
+const REASON_MAX_LENGTH = 500;
 
 // GET all attendance with filters
 router.get('/attendance', async (req, res) => {
@@ -26,19 +30,106 @@ router.get('/attendance', async (req, res) => {
   }
 });
 
-// PUT update attendance (admin override)
+// GET attendance records for the admin corrections table.
+// Supports: q (member name / membership id), start_date, end_date,
+// section_id, leader_id, service_id, status, page, page_size.
+router.get('/attendance/search', async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const pageSize = Math.min(200, Math.max(1, parseInt(req.query.page_size, 10) || 50));
+    const result = await searchAttendanceForCorrection({
+      q: req.query.q,
+      start_date: req.query.start_date,
+      end_date: req.query.end_date,
+      section_id: req.query.section_id,
+      leader_id: req.query.leader_id,
+      service_id: req.query.service_id,
+      status: req.query.status,
+      page,
+      pageSize,
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Attendance search error:', error);
+    res.status(500).json({ error: 'Failed to search attendance' });
+  }
+});
+
+// GET audit history for a single attendance record (most recent first).
+router.get('/attendance/:id/audit', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid attendance id' });
+    }
+    const history = await all(
+      `SELECT al.id, al.action, al.old_value, al.new_value, al.ip_address, al.user_agent, al.created_at,
+              u.id AS editor_id, u.username AS editor_username, u.full_name AS editor_name
+       FROM audit_log al
+       LEFT JOIN users u ON al.user_id = u.id
+       WHERE al.entity_type = 'attendance' AND al.entity_id = ?
+       ORDER BY al.created_at DESC
+       LIMIT 50`,
+      [id]
+    );
+    res.json(history);
+  } catch (error) {
+    console.error('Attendance audit fetch error:', error);
+    res.status(500).json({ error: 'Failed to fetch attendance audit history' });
+  }
+});
+
+// PUT update attendance (admin override). Captures old/new values in the
+// audit_log so every correction is traceable back to the admin who made
+// it. Optional `reason` is stored in the audit_log new_value payload.
 router.put('/attendance/:id', async (req, res) => {
   try {
-    const { status } = req.body;
-    const { id } = req.params;
-
-    if (!['present', 'absent', 'excused'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid attendance id' });
     }
 
-    await run('UPDATE attendance SET status = ?, submitted_at = CURRENT_TIMESTAMP WHERE id = ?', [status, id]);
-    res.json({ message: 'Attendance updated' });
+    const { status, reason } = req.body || {};
+    if (!VALID_STATUSES.has(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be present, absent, or excused.' });
+    }
+    const trimmedReason = typeof reason === 'string' ? reason.trim().slice(0, REASON_MAX_LENGTH) : '';
+
+    const existing = await get('SELECT id, member_id, date, status, service_type_id FROM attendance WHERE id = ?', [id]);
+    if (!existing) {
+      return res.status(404).json({ error: 'Attendance record not found' });
+    }
+
+    if (existing.status === status && !trimmedReason) {
+      return res.status(400).json({ error: 'Status is already set to that value. No changes to save.' });
+    }
+
+    await run(
+      'UPDATE attendance SET status = ?, submitted_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [status, id]
+    );
+
+    const ipAddress = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || null;
+    const userAgent = req.headers['user-agent'] || null;
+    const oldValue = { status: existing.status };
+    const newValue = { status, reason: trimmedReason || null };
+
+    queries.createAuditEntry(
+      req.session.userId,
+      'update',
+      'attendance',
+      id,
+      oldValue,
+      newValue,
+      ipAddress,
+      userAgent
+    ).catch((err) => {
+      console.error('Attendance correction audit log write failed:', err.message);
+    });
+
+    res.json({ message: 'Attendance updated', id, status, reason: trimmedReason || null });
   } catch (error) {
+    console.error('Attendance update error:', error);
     res.status(500).json({ error: 'Failed to update attendance' });
   }
 });

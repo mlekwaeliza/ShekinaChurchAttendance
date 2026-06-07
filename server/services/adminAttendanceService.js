@@ -50,6 +50,81 @@ async function listAttendance(filters = {}) {
   return all(query, params);
 }
 
+async function searchAttendanceForCorrection(filters = {}) {
+  const {
+    q,
+    start_date,
+    end_date,
+    section_id,
+    leader_id,
+    service_id,
+    status,
+    page = 1,
+    pageSize = 50,
+  } = filters;
+
+  const conditions = ['1=1'];
+  const params = [];
+
+  if (q) {
+    const trimmed = String(q).trim();
+    if (trimmed) {
+      conditions.push('(m.full_name LIKE ? OR m.membership_id LIKE ?)');
+      const like = `%${trimmed}%`;
+      params.push(like, like);
+    }
+  }
+  if (start_date) {
+    conditions.push('a.date >= ?');
+    params.push(start_date);
+  }
+  if (end_date) {
+    conditions.push('a.date <= ?');
+    params.push(end_date);
+  }
+  if (section_id) {
+    conditions.push('m.section_id = ?');
+    params.push(Number(section_id));
+  }
+  if (leader_id) {
+    conditions.push('m.leader_id = ?');
+    params.push(Number(leader_id));
+  }
+  if (service_id && service_id !== 'all') {
+    conditions.push('a.service_type_id = ?');
+    params.push(Number(service_id));
+  }
+  if (status && ['present', 'absent', 'excused'].includes(status)) {
+    conditions.push('a.status = ?');
+    params.push(status);
+  }
+
+  const whereClause = conditions.join(' AND ');
+  const offset = (page - 1) * pageSize;
+
+  const rows = await all(
+    `SELECT a.id, a.date, a.status, a.service_type_id, a.submitted_at, a.member_id,
+            m.full_name AS member_name, m.membership_id, m.section_id,
+            s.name AS section_name, l.id AS leader_id,
+            u.full_name AS leader_name, st.name AS service_name,
+            sub_u.id AS submitted_by_id, sub_u.full_name AS submitted_by_name
+       FROM attendance a
+       JOIN members m ON a.member_id = m.id
+       JOIN sections s ON m.section_id = s.id
+       JOIN leaders l ON m.leader_id = l.id
+       JOIN users u ON l.user_id = u.id
+       LEFT JOIN service_types st ON a.service_type_id = st.id
+       LEFT JOIN users sub_u ON a.submitted_by = sub_u.id
+      WHERE ${whereClause}
+      ORDER BY a.date DESC, a.submitted_at DESC
+      LIMIT ? OFFSET ?`,
+    [...params, pageSize, offset]
+  );
+
+  const countRow = await get(`SELECT COUNT(*) AS total FROM attendance a JOIN members m ON a.member_id = m.id WHERE ${whereClause}`, params);
+  return { rows, total: countRow?.total || 0, page, pageSize };
+}
+
 function getAttendanceHistory(serviceId = 'all') {
   const serviceCondition = serviceId === 'all' ? '' : 'WHERE a.service_type_id = ?';
   const params = serviceId === 'all' ? [] : [serviceId];
@@ -102,5 +177,6 @@ async function getAttendanceTrends(days = 90) {
 module.exports = {
   getAttendanceHistory,
   getAttendanceTrends,
-  listAttendance
+  listAttendance,
+  searchAttendanceForCorrection
 };

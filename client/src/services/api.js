@@ -96,7 +96,9 @@ export const adminAPI = {
   deleteMember: (id) => api.delete(`/admin/members/${id}`),
   getAttendance: (filters = {}) => api.get('/admin/attendance', { params: filters }),
   getAttendanceTrends: (days = 90) => api.get('/admin/attendance-trends', { params: { days } }),
-  updateAttendance: (id, status) => api.put(`/admin/attendance/${id}`, { status }),
+  updateAttendance: (id, status, reason) => api.put(`/admin/attendance/${id}`, { status, reason }),
+  searchAttendance: (filters = {}) => api.get('/admin/attendance/search', { params: filters }),
+  getAttendanceAudit: (id) => api.get(`/admin/attendance/${id}/audit`),
   exportAttendance: (filters = {}) => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {

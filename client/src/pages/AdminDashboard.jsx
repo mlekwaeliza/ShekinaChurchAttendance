@@ -24,6 +24,7 @@ import ServiceAssignmentsModal from '../components/admin/ServiceAssignmentsModal
 import AnnouncementCenter from '../components/admin/AnnouncementCenter';
 import FollowUpsView from '../components/admin/FollowUpsView';
 import VisitorIntake from '../components/admin/VisitorIntake';
+import AttendanceCorrections from '../components/admin/AttendanceCorrections';
 import ChurchCalendar from '../components/ChurchCalendar';
 import HomeCellsView from '../components/admin/HomeCellsView';
 
@@ -276,6 +277,9 @@ const AdminDashboard = () => {
 
       case 'audit':
         return <AuditLog />;
+
+      case 'attendance-corrections':
+        return <AttendanceCorrections showMessage={data.showMessage} />;
 
       case 'birthdays':
         return <BirthdayModule />;
