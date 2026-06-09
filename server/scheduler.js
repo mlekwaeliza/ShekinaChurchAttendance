@@ -29,13 +29,17 @@ async function scheduleWeeklyReminders() {
     const saturdayTime = getSaturdayEvening();
     const weekStart = getWeekStartString();
 
-    for (const leader of leaders) {
-      const existing = await all(
-        "SELECT id FROM scheduled_reminders WHERE type = 'submission_reminder' AND entity_id = ? AND scheduled_for >= ?",
-        [leader.id, weekStart]
+    if (leaders.length > 0) {
+      const placeholders = leaders.map(() => '?').join(',');
+      const leaderIds = leaders.map(l => l.id);
+      const existingRows = await all(
+        `SELECT entity_id FROM scheduled_reminders WHERE type = 'submission_reminder' AND scheduled_for >= ? AND entity_id IN (${placeholders})`,
+        [weekStart, ...leaderIds]
       );
+      const existingSet = new Set(existingRows.map(r => Number(r.entity_id)));
 
-      if (existing.length === 0) {
+      for (const leader of leaders) {
+        if (existingSet.has(leader.id)) continue;
         await queries.createScheduledReminder(
           'submission_reminder',
           'leader',
@@ -47,13 +51,17 @@ async function scheduleWeeklyReminders() {
     }
 
     const admins = await all("SELECT id FROM users WHERE role = 'admin'");
-    for (const admin of admins) {
-      const existing = await all(
-        "SELECT id FROM scheduled_reminders WHERE type = 'weekly_summary' AND entity_id = ? AND scheduled_for >= ?",
-        [admin.id, weekStart]
+    if (admins.length > 0) {
+      const placeholders = admins.map(() => '?').join(',');
+      const adminIds = admins.map(a => a.id);
+      const existingAdminRows = await all(
+        `SELECT entity_id FROM scheduled_reminders WHERE type = 'weekly_summary' AND scheduled_for >= ? AND entity_id IN (${placeholders})`,
+        [weekStart, ...adminIds]
       );
+      const existingAdminSet = new Set(existingAdminRows.map(r => Number(r.entity_id)));
 
-      if (existing.length === 0) {
+      for (const admin of admins) {
+        if (existingAdminSet.has(admin.id)) continue;
         const mondayMorning = new Date();
         mondayMorning.setDate(mondayMorning.getDate() + ((1 - mondayMorning.getDay() + 7) % 7 || 7));
         mondayMorning.setHours(9, 0, 0, 0);
@@ -172,16 +180,17 @@ async function scheduleBirthdayReminders() {
     const todayStart = startOfLocalDay(new Date());
     const tomorrowStart = addDays(todayStart, 1);
 
-    for (const bday of birthdays) {
-      if (!bday.leader_user_id) {
-        continue;
-      }
-      const existing = await all(
-        "SELECT id FROM scheduled_reminders WHERE type = 'birthday_greeting' AND entity_id = ? AND scheduled_for >= ? AND scheduled_for < ?",
-        [bday.id, todayStart.toISOString(), tomorrowStart.toISOString()]
+    if (birthdays.length > 0) {
+      const placeholders = birthdays.map(() => '?').join(',');
+      const bdayIds = birthdays.map(b => b.id);
+      const existingBdayRows = await all(
+        `SELECT entity_id FROM scheduled_reminders WHERE type = 'birthday_greeting' AND scheduled_for >= ? AND scheduled_for < ? AND entity_id IN (${placeholders})`,
+        [todayStart.toISOString(), tomorrowStart.toISOString(), ...bdayIds]
       );
+      const existingBdaySet = new Set(existingBdayRows.map(r => Number(r.entity_id)));
 
-      if (existing.length === 0) {
+      for (const bday of birthdays) {
+        if (!bday.leader_user_id || existingBdaySet.has(bday.id)) continue;
         await queries.createScheduledReminder(
           'birthday_greeting',
           'member',
@@ -205,16 +214,17 @@ async function scheduleFollowUpReminders() {
   try {
     const members = await queries.getMembersNeedingFollowUp();
 
-    for (const member of members) {
-      if (!member.leader_user_id) {
-        continue;
-      }
-      const existing = await all(
-        "SELECT id FROM scheduled_reminders WHERE type = 'follow_up_reminder' AND entity_id = ? AND sent = 0",
-        [member.id]
+    if (members.length > 0) {
+      const placeholders = members.map(() => '?').join(',');
+      const memberIds = members.map(m => m.id);
+      const existingFollowRows = await all(
+        `SELECT entity_id FROM scheduled_reminders WHERE type = 'follow_up_reminder' AND sent = 0 AND entity_id IN (${placeholders})`,
+        memberIds
       );
+      const existingFollowSet = new Set(existingFollowRows.map(r => Number(r.entity_id)));
 
-      if (existing.length === 0) {
+      for (const member of members) {
+        if (!member.leader_user_id || existingFollowSet.has(member.id)) continue;
         await queries.createScheduledReminder(
           'follow_up_reminder',
           'member',

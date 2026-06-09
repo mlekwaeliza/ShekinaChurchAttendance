@@ -10,8 +10,6 @@ export default defineConfig({
           if (!id.includes('node_modules')) return undefined;
           if (id.includes('jspdf-autotable')) return 'report-autotable';
           if (id.includes('jspdf')) return 'report-pdf';
-          if (id.includes('html2canvas')) return 'report-canvas';
-          if (id.includes('dompurify')) return 'report-sanitize';
           if (id.includes('recharts')) return 'charts';
           if (id.includes('react') || id.includes('react-router-dom')) return 'react-vendor';
           if (id.includes('lucide-react')) return 'icons';

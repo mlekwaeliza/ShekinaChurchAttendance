@@ -45,7 +45,7 @@ async function listAttendance(filters = {}) {
     params.push(leader_id);
   }
 
-  query += ' ORDER BY a.date DESC, m.full_name';
+  query += ' ORDER BY a.date DESC, m.full_name LIMIT 200';
 
   return all(query, params);
 }

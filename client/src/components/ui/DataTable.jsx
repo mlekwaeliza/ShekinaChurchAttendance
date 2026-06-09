@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
-const DataTable = ({
+const DataTable = React.memo(({
   columns,
   data,
   searchable = true,
@@ -142,6 +142,7 @@ const DataTable = ({
       </div>
     </div>
   );
-};
+});
 
 export default DataTable;
+DataTable.displayName = 'DataTable';

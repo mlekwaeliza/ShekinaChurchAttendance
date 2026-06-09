@@ -794,6 +794,17 @@ async function ensureHomeCellSchema() {
     } catch (e) {
       console.warn('password-reset column ensure failed (non-fatal):', e.message);
     }
+
+    // Additional indexes
+    try {
+      await run('CREATE INDEX IF NOT EXISTS idx_attendance_service_type_id ON attendance(service_type_id)');
+      await run('CREATE INDEX IF NOT EXISTS idx_leaders_user_id ON leaders(user_id)');
+      await run('CREATE INDEX IF NOT EXISTS idx_members_created_at ON members(created_at)');
+      await run('CREATE INDEX IF NOT EXISTS idx_submission_log_leader_id ON submission_log(leader_id)');
+      await run('CREATE INDEX IF NOT EXISTS idx_attendance_date_service ON attendance(date, service_type_id)');
+    } catch (e) {
+      console.warn('Additional index creation failed (non-fatal):', e.message);
+    }
   }
 }
 
@@ -1178,7 +1189,7 @@ const queries = {
     LEFT JOIN home_cell_members hcm ON hcm.church_member_id = m.id AND hcm.is_active = 1
     LEFT JOIN home_cells hc ON hc.id = hcm.cell_id
     WHERE m.is_active = 1
-    ORDER BY s.name, m.full_name
+    ORDER BY s.name, m.full_name LIMIT 1000
   `),
   createMember: (membershipId, fullName, sectionId, leaderId, phone, email, gender, ageGroup, dob = null, showAge = 0, hideBday = 0, optOuts = '[]', address = null) =>
     run(`
@@ -1639,7 +1650,7 @@ const queries = {
     'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?',
     [userId, limit]),
   getAllNotifications: (userId) => all(
-    'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC',
+    'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 500',
     [userId]),
   markNotificationRead: (notificationId, userId) =>
     run('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?', [notificationId, userId]),
@@ -1966,9 +1977,9 @@ const queries = {
        params.push(filters.month.padStart(2, '0'));
      }
 
-     query += ` ORDER BY ${sqlMonthDay('m.date_of_birth')}`;
+      query += ` ORDER BY ${sqlMonthDay('m.date_of_birth')} LIMIT 500`;
 
-     return all(query, params);
+      return all(query, params);
    },
 
   // Scheduled reminder queries
@@ -1976,12 +1987,12 @@ const queries = {
     run('INSERT INTO scheduled_reminders (type, entity_type, entity_id, scheduled_for, payload) VALUES (?, ?, ?, ?, ?)',
       [type, entityType, entityId, scheduledFor, payload ? JSON.stringify(payload) : null]),
   getPendingReminders: () => all(
-    `SELECT * FROM scheduled_reminders WHERE sent = 0 AND scheduled_for <= ${pendingNowExpression()} ORDER BY scheduled_for ASC`,
+    `SELECT * FROM scheduled_reminders WHERE sent = 0 AND scheduled_for <= ${pendingNowExpression()} ORDER BY scheduled_for ASC LIMIT 500`,
     []),
   markReminderSent: (reminderId) =>
     run("UPDATE scheduled_reminders SET sent = 1, sent_at = CURRENT_TIMESTAMP WHERE id = ?", [reminderId]),
   getUpcomingReminders: (type, hours = 24) => all(
-    `SELECT * FROM scheduled_reminders WHERE type = ? AND sent = 0 AND scheduled_for <= ${nowMinusHours(hours)} ORDER BY scheduled_for ASC`,
+    `SELECT * FROM scheduled_reminders WHERE type = ? AND sent = 0 AND scheduled_for <= ${nowMinusHours(hours)} ORDER BY scheduled_for ASC LIMIT 500`,
     [type]),
 };
 
