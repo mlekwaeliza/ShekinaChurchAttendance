@@ -23,7 +23,15 @@ export default defineConfig({
   // jspdf-autotable are ESM). The default 'iife' format doesn't
   // support code splitting which the worker needs.
   worker: {
-    format: 'es'
+    format: 'es',
+    rollupOptions: {
+      external: ['html2canvas'],
+      output: {
+        globals: {
+          html2canvas: 'html2canvas'
+        }
+      }
+    }
   },
   server: {
     port: 5173,

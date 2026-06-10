@@ -254,9 +254,29 @@ function restoreDatabase(backupFile) {
     }
 
     try {
-      fs.copyFileSync(backupPath, dbPath);
-      console.log(`Database restored from: ${backupPath}`);
-      resolve(dbPath);
+      // Close the database connection to avoid corruption when overwriting
+      // the SQLite file (WAL mode + active connections = data loss)
+      if (db && typeof db.close === 'function') {
+        db.close((closeErr) => {
+          if (closeErr) {
+            console.error('Error closing database before restore:', closeErr.message);
+          }
+          try {
+            fs.copyFileSync(backupPath, dbPath);
+            console.log(`Database restored from: ${backupPath}`);
+            // Note: database connection is now closed; app restart recommended
+            resolve(dbPath);
+          } catch (error) {
+            console.error('Restore failed:', error.message);
+            reject(error);
+          }
+        });
+      } else {
+        // Fallback if db not available
+        fs.copyFileSync(backupPath, dbPath);
+        console.log(`Database restored from: ${backupPath}`);
+        resolve(dbPath);
+      }
     } catch (error) {
       console.error('Restore failed:', error.message);
       reject(error);

@@ -6,7 +6,7 @@ services:
     region: oregon
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeploy: false
     numInstances: 1
     preDeployCommand: "node server/scripts/postgres-check.js"
     envVars:

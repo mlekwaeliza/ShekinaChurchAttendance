@@ -950,26 +950,19 @@ const queries = {
         WHERE rn <= 3
       `, [serviceIds])
       : (() => {
-        // SQLite has no ANY(); do one query per service but only to
-        // collect dates -- the expensive absentMembers query below is
-        // a single batched round-trip in both backends. SQLite dev
-        // mode typically has 1-2 services so this is acceptable.
-        const out = [];
-        return (async () => {
-          for (const sid of serviceIds) {
-            const rows = await all(
-              `SELECT service_type_id, date FROM (
-                 SELECT service_type_id, date,
-                        ROW_NUMBER() OVER (PARTITION BY service_type_id ORDER BY date DESC) AS rn
-                 FROM attendance
-                 WHERE service_type_id = ?
-               ) ranked WHERE rn <= 3`,
-              [sid]
-            );
-            out.push(...rows);
-          }
-          return out;
-        })();
+        // SQLite: single batched query with IN clause + ROW_NUMBER()
+        // (supported since SQLite 3.25). Filter to 3 dates per service in JS.
+        const placeholders = serviceIds.map(() => '?').join(',');
+        return all(`
+          SELECT service_type_id, date
+          FROM (
+            SELECT service_type_id, date,
+                   ROW_NUMBER() OVER (PARTITION BY service_type_id ORDER BY date DESC) AS rn
+            FROM attendance
+            WHERE service_type_id IN (${placeholders})
+          ) ranked
+          WHERE rn <= 3
+        `, serviceIds);
       })();
 
     // Group dates by service: Map<serviceId, string[]>

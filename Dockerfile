@@ -16,8 +16,8 @@ FROM node:20.18.1-alpine AS production
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling + wget for HEALTHCHECK
-RUN apk add --no-cache dumb-init wget
+# Install dumb-init for proper signal handling + wget for HEALTHCHECK + postgresql-client for pg_dump/psql
+RUN apk add --no-cache dumb-init wget postgresql-client
 
 # Copy server dependencies
 COPY package*.json ./

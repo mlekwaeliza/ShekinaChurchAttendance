@@ -218,7 +218,7 @@ router.get('/export', async (req, res) => {
       params.push(section_id);
     }
 
-    query += ' ORDER BY a.date DESC, s.name, m.full_name';
+    query += ' ORDER BY a.date DESC, s.name, m.full_name LIMIT 10000';
 
     const records = await new Promise((resolve, reject) => {
       db.all(query, params, (err, rows) => {

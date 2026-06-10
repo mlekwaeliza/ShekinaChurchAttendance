@@ -621,7 +621,9 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
       console.log('Sample Row 0:', rows[0]);
     }
 
-    for (const row of rows) {
+    // Wrap all row processing in a single transaction for atomicity
+    await transaction(async (tx) => {
+      for (const row of rows) {
       try {
         const fullName = getValue(row, ['fullname', 'full_name', 'name']);
         const membershipId = getValue(row, ['membershipid', 'membership_id', 'id']);
@@ -779,6 +781,7 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
         results.errors.push(`Unexpected error: ${error.message}`);
       }
     }
+  });
 
     // Cleanup temp file
     fs.unlinkSync(tempPath);
@@ -954,6 +957,7 @@ router.get('/members/export', async (req, res) => {
       JOIN users u ON l.user_id = u.id
       WHERE m.is_active = 1
       ORDER BY s.name, m.full_name
+      LIMIT 10000
     `);
 
     const headers = ['MembershipID', 'FullName', 'Phone', 'Address', 'Email', 'Gender', 'AgeGroup', 'Section', 'Leader'];
