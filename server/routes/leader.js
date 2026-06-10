@@ -42,17 +42,7 @@ async function getTargetLeaderRecord(currentLeader, targetLeaderId) {
     throw error;
   }
 
-  const target = await new Promise((resolve, reject) => {
-    db.get(`
-      SELECT l.*, s.name as section_name, u.username, u.full_name
-      FROM leaders l
-      JOIN sections s ON l.section_id = s.id
-      JOIN users u ON l.user_id = u.id
-      WHERE l.id = ?
-    `, [targetLeaderId], (err, row) => {
-      if (err) reject(err); else resolve(row);
-    });
-  });
+  const target = await queries.getLeaderById(targetLeaderId);
 
   if (!target || Number(target.section_id) !== Number(currentLeader.section_id)) {
     const error = new Error('Selected leader does not belong to your section');

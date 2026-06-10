@@ -4,38 +4,23 @@ const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 const { recordSecurityEvent } = require('../utils/securityAudit');
-const { queries, get } = require('../database');
+const { queries } = require('../database');
 
 const router = express.Router();
 
-const ipLoginFailures = new Map();
 const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const IP_LOGIN_MAX = 25;
-function checkIpLoginBlocked(ip) {
-  const now = Date.now();
-  const state = ipLoginFailures.get(ip);
+async function checkIpLoginBlocked(ip) {
+  const state = await queries.getIpLoginState(ip);
   if (!state) return false;
-  if (state.lockedUntil && now < state.lockedUntil) return true;
-  if (now - state.startedAt > IP_LOGIN_WINDOW_MS) {
-    ipLoginFailures.delete(ip);
-    return false;
-  }
+  if (state.lockedUntil && Date.now() < new Date(state.lockedUntil).getTime()) return true;
   return false;
 }
-function recordIpLoginFailure(ip) {
-  const now = Date.now();
-  const state = ipLoginFailures.get(ip);
-  if (!state || now - state.startedAt > IP_LOGIN_WINDOW_MS) {
-    ipLoginFailures.set(ip, { count: 1, startedAt: now, lockedUntil: 0 });
-    return;
-  }
-  state.count += 1;
-  if (state.count >= IP_LOGIN_MAX) {
-    state.lockedUntil = now + IP_LOGIN_WINDOW_MS;
-  }
+async function recordIpLoginFailure(ip) {
+  await queries.recordIpLoginFailure(ip);
 }
-function resetIpLoginState(ip) {
-  ipLoginFailures.delete(ip);
+async function resetIpLoginState(ip) {
+  await queries.resetIpLoginState(ip);
 }
 setInterval(() => {
   const cutoff = Date.now() - IP_LOGIN_WINDOW_MS;
@@ -84,7 +69,7 @@ router.post('/login', async (req, res) => {
     }
 
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
-    if (checkIpLoginBlocked(ip)) {
+    if (await checkIpLoginBlocked(ip)) {
       return res.status(423).json({ error: 'Too many failed attempts from this network. Try again in 15 minutes.' });
     }
 
@@ -96,7 +81,7 @@ router.post('/login', async (req, res) => {
       // Constant-time-ish dummy compare to reduce user enumeration timing.
       // M4-fix: async to avoid blocking the event loop.
       await bcrypt.compare(password, '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali');
-      recordIpLoginFailure(ip);
+      await recordIpLoginFailure(ip);
       // I5-fix: audit unknown-username attempts (with the attempted
       // username in details — operator-grade, not user-facing).
       recordSecurityEvent('login_failure', null, { username, reason: 'unknown_user' }, req);
@@ -120,21 +105,25 @@ router.post('/login', async (req, res) => {
     if (!validPassword) {
       const attempts = (user.failed_login_attempts || 0) + 1;
       await queries.incrementFailedLogin(user.id);
-      recordIpLoginFailure(ip);
+      await recordIpLoginFailure(ip);
 
-      if (attempts >= 5) {
-        const lockUntil = new Date(Date.now() + 30 * 60 * 1000);
+      if (attempts >= 10) {
+        const lockoutCount = (user.lockout_count || 0) + 1;
+        // Exponential backoff: 30min, 1hr, 2hr, 4hr, 8hr (max)
+        const lockoutMinutes = [30, 60, 120, 240, 480];
+        const minutes = lockoutMinutes[Math.min(lockoutCount - 1, lockoutMinutes.length - 1)];
+        const lockUntil = new Date(Date.now() + minutes * 60 * 1000);
         await queries.lockUser(user.id, lockUntil.toISOString());
-        recordSecurityEvent('account_locked', user.id, { attempts, lockUntil: lockUntil.toISOString() }, req);
-        return res.status(423).json({ error: 'Account locked due to too many failed attempts. Try again in 30 minutes.' });
+        recordSecurityEvent('account_locked', user.id, { attempts, lockoutCount, lockUntil: lockUntil.toISOString() }, req);
+        return res.status(423).json({ error: `Account locked due to too many failed attempts. Try again in ${minutes} minutes.` });
       }
 
       recordSecurityEvent('login_failure', user.id, { username, attempts, reason: 'bad_password' }, req);
-      return res.status(401).json({ error: `Invalid credentials. ${5 - attempts} attempts remaining.` });
+      return res.status(401).json({ error: `Invalid credentials. ${10 - attempts} attempts remaining.` });
     }
 
     await queries.resetFailedLogin(user.id);
-    resetIpLoginState(ip);
+    await resetIpLoginState(ip);
 
     // Check if 2FA is enabled
     if (user.totp_enabled) {

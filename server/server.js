@@ -250,42 +250,25 @@ const leaderMgmtLimiter = buildLimiter({
   skip: isLocalRequest
 });
 
-// Per-IP failed-login counter (in-memory). Complements the per-account
+// Per-IP failed-login counter (database-backed). Complements the per-account
 // 5-attempts lockout by protecting against credential-stuffing
 // distributed across many usernames from a single source IP.
-const ipLoginFailures = new Map();
 const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const IP_LOGIN_MAX = 25;
-function getIpLoginState(ip) {
-  const now = Date.now();
-  const state = ipLoginFailures.get(ip);
-  if (!state || now - state.startedAt > IP_LOGIN_WINDOW_MS) {
-    return { count: 0, startedAt: now, lockedUntil: 0 };
-  }
-  return state;
+async function getIpLoginState(ip) {
+  const state = await queries.getIpLoginState(ip);
+  if (!state) return { count: 0, lockedUntil: null };
+  return { count: state.count, lockedUntil: state.locked_until ? new Date(state.locked_until).getTime() : null };
 }
-function recordIpLoginFailure(ip) {
-  const now = Date.now();
-  const state = ipLoginFailures.get(ip);
-  if (!state || now - state.startedAt > IP_LOGIN_WINDOW_MS) {
-    ipLoginFailures.set(ip, { count: 1, startedAt: now, lockedUntil: 0 });
-    return;
-  }
-  state.count += 1;
-  if (state.count >= IP_LOGIN_MAX) {
-    state.lockedUntil = now + IP_LOGIN_WINDOW_MS;
-  }
+async function recordIpLoginFailure(ip) {
+  await queries.recordIpLoginFailure(ip);
 }
-function resetIpLoginState(ip) {
-  ipLoginFailures.delete(ip);
+async function resetIpLoginState(ip) {
+  await queries.resetIpLoginState(ip);
 }
+// Cleanup old IP login failures periodically
 setInterval(() => {
-  const cutoff = Date.now() - IP_LOGIN_WINDOW_MS;
-  for (const [ip, state] of ipLoginFailures.entries()) {
-    if (state.startedAt < cutoff && (!state.lockedUntil || state.lockedUntil < Date.now())) {
-      ipLoginFailures.delete(ip);
-    }
-  }
+  queries.cleanupIpLoginFailures().catch(err => console.error('Cleanup IP login failures error:', err.message));
 }, 5 * 60 * 1000).unref?.();
 
 // Compression (skip /api/metrics and SSE streams which are text/event-stream)
@@ -483,6 +466,10 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   fallthrough: false,
   maxAge: '1d',
   setHeaders: (res, filePath) => {
+    // Security headers for uploads
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'self'");
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-store');
     }

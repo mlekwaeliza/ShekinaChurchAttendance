@@ -39,6 +39,9 @@ db.serialize(() => {
       -- C3-fix: password reset columns
       password_reset_token TEXT,
       password_reset_expires DATETIME,
+      password_reset_used INTEGER DEFAULT 0,
+      -- P1-fix: brute-force lockout tracking with exponential backoff
+      lockout_count INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -186,6 +189,14 @@ db.serialize(() => {
       FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS ip_login_failures (
+      ip TEXT PRIMARY KEY,
+      count INTEGER NOT NULL DEFAULT 0,
+      started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      locked_until DATETIME
+    );
+    CREATE INDEX IF NOT EXISTS idx_ip_login_failures_locked ON ip_login_failures(locked_until) WHERE locked_until IS NOT NULL;
+
     CREATE TABLE IF NOT EXISTS church_calendar_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -216,6 +227,11 @@ db.serialize(() => {
     CREATE INDEX IF NOT EXISTS idx_followup_tasks_status ON admin_followup_tasks(status, created_at);
     CREATE INDEX IF NOT EXISTS idx_visitor_intake_status ON visitor_intake(status, created_at);
     CREATE INDEX IF NOT EXISTS idx_church_calendar_date ON church_calendar_events(event_date);
+
+    -- Missing indexes (P1 from audit)
+    CREATE INDEX IF NOT EXISTS idx_members_dob ON members(date_of_birth) WHERE is_active = 1;
+    CREATE INDEX IF NOT EXISTS idx_attendance_service_date ON attendance(service_type_id, date);
+    CREATE INDEX IF NOT EXISTS idx_leaders_user_id ON leaders(user_id);
 
     CREATE TABLE IF NOT EXISTS absent_followups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -790,6 +806,8 @@ async function ensureHomeCellSchema() {
     try {
       await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT');
       await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ');
+      await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_used INTEGER DEFAULT 0');
+      await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS lockout_count INTEGER DEFAULT 0');
       await run('CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token) WHERE password_reset_token IS NOT NULL');
     } catch (e) {
       console.warn('password-reset column ensure failed (non-fatal):', e.message);
@@ -818,9 +836,33 @@ const queries = {
     WHERE u.username = ?
   `, [username]),
   incrementFailedLogin: (userId) => run('UPDATE users SET failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1 WHERE id = ?', [userId]),
-  resetFailedLogin: (userId) => run('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?', [userId]),
-  lockUser: (userId, until) => run('UPDATE users SET locked_until = ? WHERE id = ?', [until, userId]),
-  isUserLocked: (userId) => get('SELECT locked_until FROM users WHERE id = ?', [userId]),
+  resetFailedLogin: (userId) => run('UPDATE users SET failed_login_attempts = 0, locked_until = NULL, lockout_count = 0 WHERE id = ?', [userId]),
+  lockUser: (userId, until) => run('UPDATE users SET locked_until = ?, lockout_count = lockout_count + 1 WHERE id = ?', [until, userId]),
+  isUserLocked: (userId) => get('SELECT locked_until, lockout_count FROM users WHERE id = ?', [userId]),
+  // IP login failure tracking (persisted across restarts)
+  getIpLoginState: (ip) => get('SELECT * FROM ip_login_failures WHERE ip = ?', [ip]),
+  recordIpLoginFailure: (ip) => run(`
+    INSERT INTO ip_login_failures (ip, count, started_at, locked_until)
+    VALUES (?, 1, datetime('now'), NULL)
+    ON CONFLICT(ip) DO UPDATE SET
+      count = count + 1,
+      locked_until = CASE WHEN count + 1 >= 25 THEN datetime('now', '+15 minutes') ELSE locked_until END
+  `, [ip]),
+  resetIpLoginState: (ip) => run('DELETE FROM ip_login_failures WHERE ip = ?', [ip]),
+  cleanupIpLoginFailures: () => run(`
+    DELETE FROM ip_login_failures
+    WHERE (started_at < datetime('now', '-15 minutes') AND (locked_until IS NULL OR locked_until < datetime('now')))
+  `),
+  // Password reset token queries (single-use enforcement)
+  validatePasswordResetToken: (tokenHash) => get(`
+    SELECT id, password_reset_expires, password_reset_used
+    FROM users
+    WHERE password_reset_token = ? AND password_reset_used = 0
+  `, [tokenHash]),
+  invalidatePasswordResetToken: (userId) => run(`
+    UPDATE users SET password_reset_used = 1, password_reset_token = NULL, password_reset_expires = NULL
+    WHERE id = ?
+  `, [userId]),
   createUser: (username, password_hash, role, full_name, profile_picture = null) =>
     run('INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)', [username, password_hash, role, full_name, profile_picture]),
   updateUserPassword: (password_hash, userId) =>
@@ -846,6 +888,13 @@ const queries = {
     JOIN users u ON l.user_id = u.id
     WHERE l.user_id = ?
   `, [userId]),
+  getLeaderById: (leaderId) => get(`
+    SELECT l.*, s.name as section_name, u.username, u.full_name
+    FROM leaders l
+    JOIN sections s ON l.section_id = s.id
+    JOIN users u ON l.user_id = u.id
+    WHERE l.id = ?
+  `, [leaderId]),
   getLeadersBySection: (sectionId) => all(`
     SELECT l.id, u.username, u.full_name, l.phone, l.email, l.is_head
     FROM leaders l
@@ -1784,10 +1833,14 @@ const queries = {
   getLeaderOutreachMembersNotContacted: (leaderId, weekStart) => all(`
     SELECT m.id, m.full_name, m.membership_id, m.phone
     FROM members m
+    LEFT JOIN outreach_logs ol
+      ON ol.member_id = m.id
+     AND ol.leader_id = ?
+     AND ol.week_start = ?
     WHERE m.leader_id = ? AND m.is_active = 1
-    AND m.id NOT IN (SELECT member_id FROM outreach_logs WHERE leader_id = ? AND week_start = ?)
+    AND ol.id IS NULL
     ORDER BY m.full_name
-  `, [leaderId, leaderId, weekStart]),
+  `, [leaderId, weekStart, leaderId]),
 
   // Engagement score queries (leader-level)
   getLeaderEngagementScores: (startDate, endDate) => {

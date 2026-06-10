@@ -91,17 +91,28 @@ router.get('/members', async (req, res) => {
     const contactCutoff = startOfLocalDay(addDays(new Date(), -7)).toISOString();
     const upcomingBirthdayMonthDays = Array.from({ length: 8 }, (_, index) => formatMonthDay(addDays(new Date(), index)));
     
+    // Pre-aggregate latest outreach per member to avoid 3 correlated subqueries per row
+    const latestOutreachSql = `
+      SELECT ol.member_id, ol.created_at, ol.contact_method, u2.full_name as contact_by
+      FROM outreach_logs ol
+      LEFT JOIN users u2 ON ol.created_by = u2.id
+      WHERE ol.created_at = (
+        SELECT MAX(created_at) FROM outreach_logs WHERE member_id = ol.member_id
+      )
+    `;
+    
     let baseQuery = `
       SELECT m.*, 
              s.name as section_name, 
              u.full_name as leader_name,
-             (SELECT created_at FROM outreach_logs WHERE member_id = m.id ORDER BY created_at DESC LIMIT 1) as latest_contact_date,
-             (SELECT contact_method FROM outreach_logs WHERE member_id = m.id ORDER BY created_at DESC LIMIT 1) as latest_contact_method,
-             (SELECT u2.full_name FROM outreach_logs ol JOIN users u2 ON ol.created_by = u2.id WHERE ol.member_id = m.id ORDER BY ol.created_at DESC LIMIT 1) as latest_contact_by
+             lo.created_at as latest_contact_date,
+             lo.contact_method as latest_contact_method,
+             lo.contact_by as latest_contact_by
       FROM members m
       LEFT JOIN sections s ON m.section_id = s.id
       LEFT JOIN leaders l ON m.leader_id = l.id
       LEFT JOIN users u ON l.user_id = u.id
+      LEFT JOIN (${latestOutreachSql}) lo ON lo.member_id = m.id
       WHERE m.is_active = 1
     `;
     let params = [];
