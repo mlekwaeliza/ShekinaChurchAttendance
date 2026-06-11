@@ -59,6 +59,10 @@ const MemberDirectory = ({
   const [allTitles, setAllTitles] = useState([]);
   const [titleAssignMember, setTitleAssignMember] = useState(null);
   const [assignSaving, setAssignSaving] = useState(false);
+  const [titleForm, setTitleForm] = useState({ title_id: '', appointment_date: '', notes: '' });
+  const [editingTitleAssignment, setEditingTitleAssignment] = useState(null);
+  const [viewHistoryFor, setViewHistoryFor] = useState(null);
+  const [titleHistory, setTitleHistory] = useState([]);
 
   const fetchMemberTitles = useCallback(async (memberId) => {
     try {
@@ -76,6 +80,15 @@ const MemberDirectory = ({
 
   useEffect(() => { fetchAllTitles(); }, [fetchAllTitles]);
 
+  useEffect(() => {
+    if (!viewHistoryFor) { setTitleHistory([]); return; }
+    let cancelled = false;
+    adminAPI.getMemberTitleHistory(viewHistoryFor.memberId, viewHistoryFor.titleId)
+      .then((res) => { if (!cancelled) setTitleHistory(res.data || []); })
+      .catch(() => { if (!cancelled) setTitleHistory([]); });
+    return () => { cancelled = true; };
+  }, [viewHistoryFor]);
+
   const handleExpandRow = (memberId) => {
     const next = expandedRow === memberId ? null : memberId;
     setExpandedRow(next);
@@ -84,13 +97,31 @@ const MemberDirectory = ({
     }
   };
 
-  const handleAssignTitle = async (memberId, titleId) => {
+  const handleAssignTitle = async (memberId) => {
+    if (!titleForm.title_id) return;
     setAssignSaving(true);
     try {
-      await adminAPI.assignMemberTitle(memberId, titleId);
+      await adminAPI.assignMemberTitle(memberId, titleForm.title_id, {
+        appointment_date: titleForm.appointment_date || null,
+        notes: titleForm.notes || null,
+      });
+      setTitleForm({ title_id: '', appointment_date: '', notes: '' });
       await fetchMemberTitles(memberId);
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to assign title');
+    } finally {
+      setAssignSaving(false);
+    }
+  };
+
+  const handleUpdateTitleAssignment = async (memberId, titleId) => {
+    setAssignSaving(true);
+    try {
+      await adminAPI.updateMemberTitle(memberId, titleId, editingTitleAssignment);
+      setEditingTitleAssignment(null);
+      await fetchMemberTitles(memberId);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to update assignment');
     } finally {
       setAssignSaving(false);
     }
@@ -642,11 +673,25 @@ const MemberDirectory = ({
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titles</p>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   {(memberTitles[member.id] || []).map((t) => (
-                                    <Badge key={t.id} variant="info" className="text-[11px] px-2 py-0.5">
+                                    <Badge key={t.id} variant={t.status === 'active' ? 'info' : 'neutral'} className="text-[11px] px-2 py-0.5">
                                       {t.name}
                                       <button
-                                        onClick={() => handleRemoveTitle(member.id, t.id)}
+                                        onClick={() => setEditingTitleAssignment({ memberId: member.id, titleId: t.id, status: t.status, notes: t.notes || '' })}
                                         className="ml-1 hover:text-white/80"
+                                        title="Edit assignment"
+                                      >
+                                        <Pencil className="w-2.5 h-2.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => setViewHistoryFor({ memberId: member.id, titleId: t.id, titleName: t.name })}
+                                        className="ml-0.5 hover:text-white/80"
+                                        title="View history"
+                                      >
+                                        <Clock className="w-2.5 h-2.5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleRemoveTitle(member.id, t.id)}
+                                        className="ml-0.5 hover:text-white/80"
                                         title="Remove title"
                                       >
                                         <XIcon className="w-2.5 h-2.5" />
@@ -729,10 +774,10 @@ const MemberDirectory = ({
         />
       )}
 
-      {/* Title Assignment Modal */}
+      {/* Title Assignment Modal (form) */}
       {titleAssignMember && (
         <div className="modal-overlay" onClick={() => setTitleAssignMember(null)}>
-          <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-slate-900">Assign Title</h3>
@@ -740,35 +785,134 @@ const MemberDirectory = ({
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="space-y-1 max-h-64 overflow-y-auto">
-                {allTitles.filter((t) => t.is_active).map((title) => {
-                  const hasTitle = (memberTitles[titleAssignMember] || []).some((mt) => mt.id === title.id);
-                  return (
-                    <button
-                      key={title.id}
-                      disabled={hasTitle || assignSaving}
-                      onClick={() => handleAssignTitle(titleAssignMember, title.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${
-                        hasTitle
-                          ? 'bg-emerald-50 text-emerald-700 cursor-default'
-                          : 'hover:bg-slate-50 text-slate-700'
-                      }`}
-                    >
-                      <Award className={`w-4 h-4 ${hasTitle ? 'text-emerald-500' : 'text-slate-400'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{title.name}</p>
-                        {title.description && (
-                          <p className="text-xs text-slate-400 truncate">{title.description}</p>
-                        )}
-                      </div>
-                      {hasTitle && <Check className="w-4 h-4 text-emerald-500 shrink-0" />}
-                    </button>
-                  );
-                })}
-                {allTitles.filter((t) => t.is_active).length === 0 && (
-                  <p className="text-sm text-slate-400 text-center py-4">No active titles available</p>
-                )}
+              <div className="space-y-3">
+                <div>
+                  <label className="input-label">Title *</label>
+                  <select
+                    className="input-field"
+                    value={titleForm.title_id}
+                    onChange={(e) => setTitleForm({ ...titleForm, title_id: e.target.value })}
+                  >
+                    <option value="">Select a title...</option>
+                    {allTitles.filter((t) => t.is_active).map((title) => {
+                      const hasTitle = (memberTitles[titleAssignMember] || []).some((mt) => mt.id === title.id);
+                      return (
+                        <option key={title.id} value={title.id} disabled={hasTitle}>
+                          {title.name}{hasTitle ? ' (already assigned)' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div>
+                  <label className="input-label">Appointment Date</label>
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={titleForm.appointment_date}
+                    onChange={(e) => setTitleForm({ ...titleForm, appointment_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="input-label">Notes</label>
+                  <textarea
+                    className="input-field"
+                    rows={3}
+                    value={titleForm.notes}
+                    onChange={(e) => setTitleForm({ ...titleForm, notes: e.target.value })}
+                    placeholder="Reason for assignment,任期, etc."
+                  />
+                </div>
               </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => { setTitleAssignMember(null); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }} className="btn-secondary flex-1">Cancel</button>
+                <button onClick={() => handleAssignTitle(titleAssignMember)} disabled={!titleForm.title_id || assignSaving} className="btn-primary flex-1">
+                  {assignSaving ? 'Assigning...' : 'Assign'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Title Assignment Modal */}
+      {editingTitleAssignment && (
+        <div className="modal-overlay" onClick={() => setEditingTitleAssignment(null)}>
+          <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-900">Edit Assignment</h3>
+                <button onClick={() => setEditingTitleAssignment(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="input-label">Status</label>
+                  <select
+                    className="input-field"
+                    value={editingTitleAssignment.status}
+                    onChange={(e) => setEditingTitleAssignment({ ...editingTitleAssignment, status: e.target.value })}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="input-label">Notes</label>
+                  <textarea
+                    className="input-field"
+                    rows={3}
+                    value={editingTitleAssignment.notes}
+                    onChange={(e) => setEditingTitleAssignment({ ...editingTitleAssignment, notes: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setEditingTitleAssignment(null)} className="btn-secondary flex-1">Cancel</button>
+                <button onClick={() => handleUpdateTitleAssignment(editingTitleAssignment.memberId, editingTitleAssignment.titleId)} disabled={assignSaving} className="btn-primary flex-1">
+                  {assignSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Title History Modal */}
+      {viewHistoryFor && (
+        <div className="modal-overlay" onClick={() => { setViewHistoryFor(null); }}>
+          <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-900">History: {viewHistoryFor.titleName}</h3>
+                <button onClick={() => setViewHistoryFor(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {titleHistory.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-4">Loading...</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {titleHistory.map((h) => (
+                    <div key={h.id} className="p-3 rounded-xl bg-slate-50 text-sm">
+                      <div className="flex items-center justify-between mb-1">
+                        <Badge variant={h.action === 'assigned' ? 'success' : h.action === 'removed' ? 'danger' : h.action === 'status_changed' ? 'warning' : 'neutral'} className="text-[10px] px-1.5 py-0.5 uppercase">
+                          {h.action.replace('_', ' ')}
+                        </Badge>
+                        <span className="text-[10px] text-slate-400">{new Date(h.created_at).toLocaleString()}</span>
+                      </div>
+                      {h.old_status && h.new_status && (
+                        <p className="text-xs text-slate-600">Status: {h.old_status} → {h.new_status}</p>
+                      )}
+                      {h.notes && <p className="text-xs text-slate-500 mt-0.5">{h.notes}</p>}
+                      {h.changed_by_name && (
+                        <p className="text-[10px] text-slate-400 mt-0.5">by {h.changed_by_name}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

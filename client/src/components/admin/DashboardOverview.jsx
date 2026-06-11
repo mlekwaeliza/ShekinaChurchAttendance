@@ -18,6 +18,7 @@ import {
 import QuickActionsBar from './QuickActionsBar';
 import NeedsAttentionWidget from './NeedsAttentionWidget';
 import HallOfFamePreview from './HallOfFamePreview';
+import LeadershipWidget from './LeadershipWidget';
 import StatCard from '../ui/StatCard';
 import { formatLocalDate } from '../../utils/date';
 
@@ -269,6 +270,8 @@ const DashboardOverview = ({
       />
 
       {todaysAttendanceSection}
+
+      <LeadershipWidget onNavigate={() => navigate('/admin/leadership')} />
 
       <NeedsAttentionWidget
         birthdays={needsAttention?.birthdays || []}

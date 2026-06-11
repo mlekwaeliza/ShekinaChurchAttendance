@@ -162,14 +162,18 @@ export const adminAPI = {
   updateHomeCellLeaders: (cellId, leaderIds) => api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
   createHomeCellMember: (data) => api.post('/admin/home-cell-members', data),
   deleteHomeCellMember: (id) => api.delete(`/admin/home-cell-members/${id}`),
-  // Congregation titles
+  // Leadership roles & assignments
   getTitles: () => api.get('/admin/titles'),
   createTitle: (data) => api.post('/admin/titles', data),
   updateTitle: (id, data) => api.put(`/admin/titles/${id}`, data),
   deleteTitle: (id) => api.delete(`/admin/titles/${id}`),
   getMemberTitles: (memberId) => api.get(`/admin/members/${memberId}/titles`),
-  assignMemberTitle: (memberId, titleId) => api.post(`/admin/members/${memberId}/titles`, { title_id: titleId }),
+  assignMemberTitle: (memberId, titleId, data = {}) => api.post(`/admin/members/${memberId}/titles`, { title_id: titleId, ...data }),
+  updateMemberTitle: (memberId, titleId, data) => api.put(`/admin/members/${memberId}/titles/${titleId}`, data),
   removeMemberTitle: (memberId, titleId) => api.delete(`/admin/members/${memberId}/titles/${titleId}`),
+  getMemberTitleHistory: (memberId, titleId) => api.get(`/admin/members/${memberId}/titles/${titleId}/history`),
+  getLeadershipDirectory: (params = {}) => api.get('/admin/leadership-directory', { params }),
+  getLeadershipStats: () => api.get('/admin/leadership-stats'),
 };
 
 // Shared church calendar API
@@ -211,10 +215,11 @@ export const leaderAPI = {
   getFollowUps: () => api.get('/leader/follow-ups'),
   updateFollowUp: (memberId, data) => api.put(`/leader/follow-ups/${memberId}`, data),
   getAssignments: () => api.get('/leader/assignments'),
-  // Congregation titles
+  // Leadership roles & assignments
   getTitles: () => api.get('/leader/titles'),
   getMemberTitles: (memberId) => api.get(`/leader/members/${memberId}/titles`),
-  assignMemberTitle: (memberId, titleId) => api.post(`/leader/members/${memberId}/titles`, { title_id: titleId }),
+  assignMemberTitle: (memberId, titleId, data = {}) => api.post(`/leader/members/${memberId}/titles`, { title_id: titleId, ...data }),
+  updateMemberTitle: (memberId, titleId, data) => api.put(`/leader/members/${memberId}/titles/${titleId}`, data),
   removeMemberTitle: (memberId, titleId) => api.delete(`/leader/members/${memberId}/titles/${titleId}`),
 };
 

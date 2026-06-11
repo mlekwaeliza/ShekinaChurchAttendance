@@ -975,7 +975,7 @@ router.get('/members/export', async (req, res) => {
   }
 });
 
-// --- Congregation Title CRUD ---
+// --- Leadership Roles & Assignments ---
 // GET all congregation titles
 router.get('/titles', async (req, res) => {
   try {
@@ -1025,6 +1025,7 @@ router.put('/titles/:id', async (req, res) => {
 router.delete('/titles/:id', async (req, res) => {
   try {
     await queries.deleteTitle(req.params.id);
+    await queries.addMemberTitleHistory(null, req.params.id, 'title_deleted', req.session.userId, null, null, null, null, 'Title definition deleted');
     res.json({ message: 'Title deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete title' });
@@ -1041,27 +1042,90 @@ router.get('/members/:id/titles', async (req, res) => {
   }
 });
 
-// POST assign title to member
+// POST assign title to member (with appointment_date, notes)
 router.post('/members/:id/titles', async (req, res) => {
   try {
-    const { title_id } = req.body;
+    const { title_id, appointment_date, notes } = req.body;
     if (!title_id) {
       return res.status(400).json({ error: 'title_id is required' });
     }
-    await queries.assignMemberTitle(req.params.id, title_id, req.session.userId);
+    await queries.assignMemberTitle(req.params.id, title_id, req.session.userId, appointment_date || null, notes || null);
+    await queries.addMemberTitleHistory(req.params.id, title_id, 'assigned', req.session.userId, null, 'active', null, notes || null, notes || null);
     res.json({ message: 'Title assigned' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to assign title' });
   }
 });
 
-// DELETE remove title from member
+// PUT update member title status/notes
+router.put('/members/:id/titles/:titleId', async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+    const { id, titleId } = req.params;
+
+    const current = await get('SELECT status, notes FROM member_titles WHERE member_id = ? AND title_id = ?', [id, titleId]);
+    if (!current) return res.status(404).json({ error: 'Assignment not found' });
+
+    await queries.updateMemberTitle(id, titleId, status || current.status, notes !== undefined ? notes : current.notes);
+
+    if (status && status !== current.status) {
+      await queries.addMemberTitleHistory(id, titleId, 'status_changed', req.session.userId, current.status, status, current.notes, notes, `Status changed from ${current.status} to ${status}`);
+    }
+    if (notes !== undefined && notes !== current.notes && (!status || status === current.status)) {
+      await queries.addMemberTitleHistory(id, titleId, 'notes_updated', req.session.userId, current.status, current.status, current.notes, notes, 'Notes updated');
+    }
+
+    res.json({ message: 'Assignment updated' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update assignment' });
+  }
+});
+
+// DELETE remove title from member (with audit trail)
 router.delete('/members/:id/titles/:titleId', async (req, res) => {
   try {
-    await queries.removeMemberTitle(req.params.id, req.params.titleId);
+    const { id, titleId } = req.params;
+    const current = await get('SELECT status, notes FROM member_titles WHERE member_id = ? AND title_id = ?', [id, titleId]);
+    if (current) {
+      await queries.addMemberTitleHistory(id, titleId, 'removed', req.session.userId, current.status, null, current.notes, null, 'Title removed');
+    }
+    await queries.removeMemberTitle(id, titleId);
     res.json({ message: 'Title removed' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to remove title' });
+  }
+});
+
+// GET member title history (audit trail)
+router.get('/members/:id/titles/:titleId/history', async (req, res) => {
+  try {
+    const history = await queries.getMemberTitleHistory(req.params.id, req.params.titleId);
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch history' });
+  }
+});
+
+// Leadership Directory
+router.get('/leadership-directory', async (req, res) => {
+  try {
+    const { title_id, status, search } = req.query;
+    const directory = await queries.getLeadershipDirectory(title_id || null, status || null, search || null);
+    const titles = await queries.getAllTitles();
+    res.json({ directory, titles });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch leadership directory' });
+  }
+});
+
+// Leadership Statistics
+router.get('/leadership-stats', async (req, res) => {
+  try {
+    const stats = await queries.getLeadershipStats();
+    const totalLeaders = stats.reduce((sum, s) => sum + s.active_count, 0);
+    res.json({ stats, totalLeaders });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch leadership stats' });
   }
 });
 

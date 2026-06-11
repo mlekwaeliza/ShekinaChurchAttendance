@@ -28,6 +28,7 @@ import AttendanceCorrections from '../components/admin/AttendanceCorrections';
 import ChurchCalendar from '../components/ChurchCalendar';
 import HomeCellsView from '../components/admin/HomeCellsView';
 import TitleManager from '../components/admin/TitleManager';
+import LeadershipDirectory from '../components/admin/LeadershipDirectory';
 
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
 
@@ -211,6 +212,9 @@ const AdminDashboard = () => {
 
       case 'titles':
         return <TitleManager showMessage={data.showMessage} />;
+
+      case 'leadership':
+        return <LeadershipDirectory />;
 
       case 'reports':
         return (

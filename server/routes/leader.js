@@ -860,7 +860,7 @@ router.get('/trends', async (req, res) => {
   }
 });
 
-// --- Congregation Titles ---
+// --- Leadership Roles & Assignments ---
 // GET active congregation titles (for assignment UI)
 router.get('/titles', async (req, res) => {
   try {
@@ -890,7 +890,7 @@ router.get('/members/:id/titles', async (req, res) => {
   }
 });
 
-// POST assign title to member (must be in leader's section)
+// POST assign title to member (with appointment_date, notes)
 router.post('/members/:id/titles', async (req, res) => {
   try {
     const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
@@ -902,18 +902,52 @@ router.post('/members/:id/titles', async (req, res) => {
       return res.status(403).json({ error: 'Member is not in your section' });
     }
 
-    const { title_id } = req.body;
+    const { title_id, appointment_date, notes } = req.body;
     if (!title_id) {
       return res.status(400).json({ error: 'title_id is required' });
     }
-    await queries.assignMemberTitle(req.params.id, title_id, req.session.userId);
+    await queries.assignMemberTitle(req.params.id, title_id, req.session.userId, appointment_date || null, notes || null);
+    await queries.addMemberTitleHistory(req.params.id, title_id, 'assigned', req.session.userId, null, 'active', null, notes || null, notes || null);
     res.json({ message: 'Title assigned' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to assign title' });
   }
 });
 
-// DELETE remove title from member
+// PUT update member title status/notes
+router.put('/members/:id/titles/:titleId', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const member = await get('SELECT id, section_id FROM members WHERE id = ?', [req.params.id]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (Number(member.section_id) !== Number(leaderRecord.section_id)) {
+      return res.status(403).json({ error: 'Member is not in your section' });
+    }
+
+    const { status, notes } = req.body;
+    const { id, titleId } = req.params;
+
+    const current = await get('SELECT status, notes FROM member_titles WHERE member_id = ? AND title_id = ?', [id, titleId]);
+    if (!current) return res.status(404).json({ error: 'Assignment not found' });
+
+    await queries.updateMemberTitle(id, titleId, status || current.status, notes !== undefined ? notes : current.notes);
+
+    if (status && status !== current.status) {
+      await queries.addMemberTitleHistory(id, titleId, 'status_changed', req.session.userId, current.status, status, current.notes, notes, `Status changed from ${current.status} to ${status}`);
+    }
+    if (notes !== undefined && notes !== current.notes && (!status || status === current.status)) {
+      await queries.addMemberTitleHistory(id, titleId, 'notes_updated', req.session.userId, current.status, current.status, current.notes, notes, 'Notes updated');
+    }
+
+    res.json({ message: 'Assignment updated' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update assignment' });
+  }
+});
+
+// DELETE remove title from member (with audit trail)
 router.delete('/members/:id/titles/:titleId', async (req, res) => {
   try {
     const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
@@ -925,7 +959,12 @@ router.delete('/members/:id/titles/:titleId', async (req, res) => {
       return res.status(403).json({ error: 'Member is not in your section' });
     }
 
-    await queries.removeMemberTitle(req.params.id, req.params.titleId);
+    const { id, titleId } = req.params;
+    const current = await get('SELECT status, notes FROM member_titles WHERE member_id = ? AND title_id = ?', [id, titleId]);
+    if (current) {
+      await queries.addMemberTitleHistory(id, titleId, 'removed', req.session.userId, current.status, null, current.notes, null, 'Title removed');
+    }
+    await queries.removeMemberTitle(id, titleId);
     res.json({ message: 'Title removed' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to remove title' });

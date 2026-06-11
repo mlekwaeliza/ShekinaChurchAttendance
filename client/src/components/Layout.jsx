@@ -193,6 +193,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/leaders', label: 'Leaders', icon: UserCog },
         { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
         { path: '/admin/titles', label: 'Titles', icon: Award },
+        { path: '/admin/leadership', label: 'Leadership', icon: Users },
       ]},
       { section: 'INSIGHTS', items: [
         { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
