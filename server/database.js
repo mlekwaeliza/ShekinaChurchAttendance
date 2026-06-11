@@ -736,6 +736,20 @@ async function ensureHomeCellSchema() {
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    await run(`
+      CREATE TABLE IF NOT EXISTS ip_login_failures (
+        ip TEXT PRIMARY KEY,
+        count INTEGER NOT NULL DEFAULT 0,
+        started_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        locked_until TIMESTAMPTZ
+      )
+    `);
+    await run(`
+      CREATE INDEX IF NOT EXISTS idx_ip_login_failures_locked
+      ON ip_login_failures(locked_until)
+      WHERE locked_until IS NOT NULL
+    `);
   } else {
     await run(`
       CREATE TABLE IF NOT EXISTS home_cells (
@@ -841,7 +855,13 @@ const queries = {
   isUserLocked: (userId) => get('SELECT locked_until, lockout_count FROM users WHERE id = ?', [userId]),
   // IP login failure tracking (persisted across restarts)
   getIpLoginState: (ip) => get('SELECT * FROM ip_login_failures WHERE ip = ?', [ip]),
-  recordIpLoginFailure: (ip) => run(`
+  recordIpLoginFailure: (ip) => run(usePostgres ? `
+    INSERT INTO ip_login_failures (ip, count, started_at, locked_until)
+    VALUES ($1, 1, NOW(), NULL)
+    ON CONFLICT(ip) DO UPDATE SET
+      count = ip_login_failures.count + 1,
+      locked_until = CASE WHEN ip_login_failures.count + 1 >= 25 THEN NOW() + INTERVAL '15 minutes' ELSE ip_login_failures.locked_until END
+  ` : `
     INSERT INTO ip_login_failures (ip, count, started_at, locked_until)
     VALUES (?, 1, datetime('now'), NULL)
     ON CONFLICT(ip) DO UPDATE SET
@@ -849,7 +869,10 @@ const queries = {
       locked_until = CASE WHEN count + 1 >= 25 THEN datetime('now', '+15 minutes') ELSE locked_until END
   `, [ip]),
   resetIpLoginState: (ip) => run('DELETE FROM ip_login_failures WHERE ip = ?', [ip]),
-  cleanupIpLoginFailures: () => run(`
+  cleanupIpLoginFailures: () => run(usePostgres ? `
+    DELETE FROM ip_login_failures
+    WHERE (started_at < NOW() - INTERVAL '15 minutes' AND (locked_until IS NULL OR locked_until < NOW()))
+  ` : `
     DELETE FROM ip_login_failures
     WHERE (started_at < datetime('now', '-15 minutes') AND (locked_until IS NULL OR locked_until < datetime('now')))
   `),

@@ -22,15 +22,6 @@ async function recordIpLoginFailure(ip) {
 async function resetIpLoginState(ip) {
   await queries.resetIpLoginState(ip);
 }
-setInterval(() => {
-  const cutoff = Date.now() - IP_LOGIN_WINDOW_MS;
-  for (const [ip, state] of ipLoginFailures.entries()) {
-    if (state.startedAt < cutoff && (!state.lockedUntil || state.lockedUntil < Date.now())) {
-      ipLoginFailures.delete(ip);
-    }
-  }
-}, 5 * 60 * 1000).unref?.();
-
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 
 const storage = multer.diskStorage({
