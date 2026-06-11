@@ -975,4 +975,94 @@ router.get('/members/export', async (req, res) => {
   }
 });
 
+// --- Congregation Title CRUD ---
+// GET all congregation titles
+router.get('/titles', async (req, res) => {
+  try {
+    const titles = await queries.getAllTitles();
+    res.json(titles);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch titles' });
+  }
+});
+
+// POST create congregation title
+router.post('/titles', async (req, res) => {
+  try {
+    const { name, description, sort_order } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Title name is required' });
+    }
+    await queries.createTitle(name.trim(), description || null, sort_order || 0);
+    res.json({ message: 'Title created' });
+  } catch (error) {
+    if (error.message.includes('UNIQUE')) {
+      return res.status(400).json({ error: 'A title with this name already exists' });
+    }
+    res.status(500).json({ error: 'Failed to create title' });
+  }
+});
+
+// PUT update congregation title
+router.put('/titles/:id', async (req, res) => {
+  try {
+    const { name, description, is_active, sort_order } = req.body;
+    const { id } = req.params;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'Title name is required' });
+    }
+    await queries.updateTitle(id, name.trim(), description || null, is_active !== undefined ? (is_active ? 1 : 0) : 1, sort_order || 0);
+    res.json({ message: 'Title updated' });
+  } catch (error) {
+    if (error.message.includes('UNIQUE')) {
+      return res.status(400).json({ error: 'A title with this name already exists' });
+    }
+    res.status(500).json({ error: 'Failed to update title' });
+  }
+});
+
+// DELETE congregation title
+router.delete('/titles/:id', async (req, res) => {
+  try {
+    await queries.deleteTitle(req.params.id);
+    res.json({ message: 'Title deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete title' });
+  }
+});
+
+// GET member titles
+router.get('/members/:id/titles', async (req, res) => {
+  try {
+    const titles = await queries.getMemberTitles(req.params.id);
+    res.json(titles);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch member titles' });
+  }
+});
+
+// POST assign title to member
+router.post('/members/:id/titles', async (req, res) => {
+  try {
+    const { title_id } = req.body;
+    if (!title_id) {
+      return res.status(400).json({ error: 'title_id is required' });
+    }
+    await queries.assignMemberTitle(req.params.id, title_id, req.session.userId);
+    res.json({ message: 'Title assigned' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to assign title' });
+  }
+});
+
+// DELETE remove title from member
+router.delete('/members/:id/titles/:titleId', async (req, res) => {
+  try {
+    await queries.removeMemberTitle(req.params.id, req.params.titleId);
+    res.json({ message: 'Title removed' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove title' });
+  }
+});
+
 module.exports = router;

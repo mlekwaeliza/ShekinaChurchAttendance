@@ -162,6 +162,14 @@ export const adminAPI = {
   updateHomeCellLeaders: (cellId, leaderIds) => api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
   createHomeCellMember: (data) => api.post('/admin/home-cell-members', data),
   deleteHomeCellMember: (id) => api.delete(`/admin/home-cell-members/${id}`),
+  // Congregation titles
+  getTitles: () => api.get('/admin/titles'),
+  createTitle: (data) => api.post('/admin/titles', data),
+  updateTitle: (id, data) => api.put(`/admin/titles/${id}`, data),
+  deleteTitle: (id) => api.delete(`/admin/titles/${id}`),
+  getMemberTitles: (memberId) => api.get(`/admin/members/${memberId}/titles`),
+  assignMemberTitle: (memberId, titleId) => api.post(`/admin/members/${memberId}/titles`, { title_id: titleId }),
+  removeMemberTitle: (memberId, titleId) => api.delete(`/admin/members/${memberId}/titles/${titleId}`),
 };
 
 // Shared church calendar API
@@ -202,7 +210,12 @@ export const leaderAPI = {
   getConsecutiveAbsences: () => api.get('/leader/consecutive-absences'),
   getFollowUps: () => api.get('/leader/follow-ups'),
   updateFollowUp: (memberId, data) => api.put(`/leader/follow-ups/${memberId}`, data),
-  getAssignments: () => api.get('/leader/assignments')
+  getAssignments: () => api.get('/leader/assignments'),
+  // Congregation titles
+  getTitles: () => api.get('/leader/titles'),
+  getMemberTitles: (memberId) => api.get(`/leader/members/${memberId}/titles`),
+  assignMemberTitle: (memberId, titleId) => api.post(`/leader/members/${memberId}/titles`, { title_id: titleId }),
+  removeMemberTitle: (memberId, titleId) => api.delete(`/leader/members/${memberId}/titles/${titleId}`),
 };
 
 // Pastor API

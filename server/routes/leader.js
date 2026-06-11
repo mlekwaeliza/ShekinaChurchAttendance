@@ -860,4 +860,76 @@ router.get('/trends', async (req, res) => {
   }
 });
 
+// --- Congregation Titles ---
+// GET active congregation titles (for assignment UI)
+router.get('/titles', async (req, res) => {
+  try {
+    const titles = await queries.getActiveTitles();
+    res.json(titles);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch titles' });
+  }
+});
+
+// GET member titles
+router.get('/members/:id/titles', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const member = await get('SELECT id, section_id, leader_id FROM members WHERE id = ?', [req.params.id]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (Number(member.section_id) !== Number(leaderRecord.section_id)) {
+      return res.status(403).json({ error: 'Member is not in your section' });
+    }
+
+    const titles = await queries.getMemberTitles(req.params.id);
+    res.json(titles);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch member titles' });
+  }
+});
+
+// POST assign title to member (must be in leader's section)
+router.post('/members/:id/titles', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const member = await get('SELECT id, section_id FROM members WHERE id = ?', [req.params.id]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (Number(member.section_id) !== Number(leaderRecord.section_id)) {
+      return res.status(403).json({ error: 'Member is not in your section' });
+    }
+
+    const { title_id } = req.body;
+    if (!title_id) {
+      return res.status(400).json({ error: 'title_id is required' });
+    }
+    await queries.assignMemberTitle(req.params.id, title_id, req.session.userId);
+    res.json({ message: 'Title assigned' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to assign title' });
+  }
+});
+
+// DELETE remove title from member
+router.delete('/members/:id/titles/:titleId', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const member = await get('SELECT id, section_id FROM members WHERE id = ?', [req.params.id]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (Number(member.section_id) !== Number(leaderRecord.section_id)) {
+      return res.status(403).json({ error: 'Member is not in your section' });
+    }
+
+    await queries.removeMemberTitle(req.params.id, req.params.titleId);
+    res.json({ message: 'Title removed' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove title' });
+  }
+});
+
 module.exports = router;
