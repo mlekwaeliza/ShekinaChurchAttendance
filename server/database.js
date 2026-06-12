@@ -863,9 +863,6 @@ async function ensureHomeCellSchema() {
       CREATE INDEX IF NOT EXISTS idx_member_titles_title ON member_titles(title_id)
     `);
     await run(`
-      CREATE INDEX IF NOT EXISTS idx_member_titles_status ON member_titles(status)
-    `);
-    await run(`
       CREATE INDEX IF NOT EXISTS idx_mt_history_member ON member_title_history(member_id, title_id)
     `);
     await run(`
@@ -954,6 +951,12 @@ async function ensureHomeCellSchema() {
       await run('ALTER TABLE member_titles ADD COLUMN IF NOT EXISTS notes TEXT');
     } catch (e) {
       console.warn('member_titles column migration failed (non-fatal):', e.message);
+    }
+
+    try {
+      await run('CREATE INDEX IF NOT EXISTS idx_member_titles_status ON member_titles(status)');
+    } catch (e) {
+      console.warn('member_titles status index creation failed (non-fatal):', e.message);
     }
 
     // Additional indexes
