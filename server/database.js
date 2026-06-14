@@ -2241,7 +2241,8 @@ const queries = {
   `, [memberId, titleId]),
 
   // Leadership directory
-  getLeadershipDirectory: (titleId = null, status = null, search = null) => {
+  getLeadershipDirectory: (filters = {}) => {
+    const { titleId = null, status = null, search = null, sectionId = null, appointmentFrom = null, appointmentTo = null, limit = 500, offset = 0 } = filters;
     const conditions = ['m.is_active = 1', 'mt.id IS NOT NULL'];
     const params = [];
     if (titleId) {
@@ -2257,6 +2258,18 @@ const queries = {
       const like = `%${search}%`;
       params.push(like, like);
     }
+    if (sectionId) {
+      conditions.push('m.section_id = ?');
+      params.push(sectionId);
+    }
+    if (appointmentFrom) {
+      conditions.push('mt.appointment_date >= ?');
+      params.push(appointmentFrom);
+    }
+    if (appointmentTo) {
+      conditions.push('mt.appointment_date <= ?');
+      params.push(appointmentTo);
+    }
     return all(`
       SELECT DISTINCT m.id, m.full_name, m.membership_id, m.phone, m.email,
              s.name as section_name, ct.name as title_name, ct.id as title_id,
@@ -2269,7 +2282,45 @@ const queries = {
       LEFT JOIN users u2 ON mt.assigned_by = u2.id
       WHERE ${conditions.join(' AND ')}
       ORDER BY m.full_name, ct.sort_order ASC
-      LIMIT 500
+      LIMIT ? OFFSET ?
+    `, [...params, limit, offset]);
+  },
+  getLeadershipDirectoryCount: (filters = {}) => {
+    const { titleId = null, status = null, search = null, sectionId = null, appointmentFrom = null, appointmentTo = null } = filters;
+    const conditions = ['m.is_active = 1', 'mt.id IS NOT NULL'];
+    const params = [];
+    if (titleId) {
+      conditions.push('mt.title_id = ?');
+      params.push(titleId);
+    }
+    if (status) {
+      conditions.push('mt.status = ?');
+      params.push(status);
+    }
+    if (search) {
+      conditions.push('(m.full_name ILIKE ? OR ct.name ILIKE ?)');
+      const like = `%${search}%`;
+      params.push(like, like);
+    }
+    if (sectionId) {
+      conditions.push('m.section_id = ?');
+      params.push(sectionId);
+    }
+    if (appointmentFrom) {
+      conditions.push('mt.appointment_date >= ?');
+      params.push(appointmentFrom);
+    }
+    if (appointmentTo) {
+      conditions.push('mt.appointment_date <= ?');
+      params.push(appointmentTo);
+    }
+    return all(`
+      SELECT COUNT(DISTINCT m.id) as total
+      FROM member_titles mt
+      JOIN members m ON mt.member_id = m.id
+      JOIN congregation_titles ct ON mt.title_id = ct.id
+      LEFT JOIN sections s ON m.section_id = s.id
+      WHERE ${conditions.join(' AND ')}
     `, params);
   },
   getLeadershipStats: () => all(`

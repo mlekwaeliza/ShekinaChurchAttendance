@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useToast } from '../../context/ToastContext';
 import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock, Award, Plus, X as XIcon } from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
@@ -59,10 +60,12 @@ const MemberDirectory = ({
   const [allTitles, setAllTitles] = useState([]);
   const [titleAssignMember, setTitleAssignMember] = useState(null);
   const [assignSaving, setAssignSaving] = useState(false);
+  const { showToast } = useToast();
   const [titleForm, setTitleForm] = useState({ title_id: '', appointment_date: '', notes: '' });
   const [editingTitleAssignment, setEditingTitleAssignment] = useState(null);
   const [viewHistoryFor, setViewHistoryFor] = useState(null);
   const [titleHistory, setTitleHistory] = useState([]);
+  const [removingTitle, setRemovingTitle] = useState(null); // { memberId, titleId, titleName }
 
   const fetchMemberTitles = useCallback(async (memberId) => {
     try {
@@ -98,17 +101,22 @@ const MemberDirectory = ({
   };
 
   const handleAssignTitle = async (memberId) => {
-    if (!titleForm.title_id) return;
+    if (!titleForm.title_id) {
+      showToast({ type: 'error', title: 'Validation Error', message: 'Please select a title' });
+      return;
+    }
     setAssignSaving(true);
     try {
       await adminAPI.assignMemberTitle(memberId, titleForm.title_id, {
         appointment_date: titleForm.appointment_date || null,
         notes: titleForm.notes || null,
       });
+      showToast({ type: 'success', title: 'Title Assigned', message: 'Title has been assigned successfully' });
       setTitleForm({ title_id: '', appointment_date: '', notes: '' });
+      setTitleAssignMember(null);
       await fetchMemberTitles(memberId);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to assign title');
+      showToast({ type: 'error', title: 'Assignment Failed', message: err.response?.data?.error || 'Failed to assign title' });
     } finally {
       setAssignSaving(false);
     }
@@ -118,21 +126,29 @@ const MemberDirectory = ({
     setAssignSaving(true);
     try {
       await adminAPI.updateMemberTitle(memberId, titleId, editingTitleAssignment);
+      showToast({ type: 'success', title: 'Assignment Updated', message: 'Title assignment has been updated' });
       setEditingTitleAssignment(null);
       await fetchMemberTitles(memberId);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update assignment');
+      showToast({ type: 'error', title: 'Update Failed', message: err.response?.data?.error || 'Failed to update assignment' });
     } finally {
       setAssignSaving(false);
     }
   };
 
-  const handleRemoveTitle = async (memberId, titleId) => {
+  const handleRemoveTitle = (memberId, titleId, titleName) => {
+    setRemovingTitle({ memberId, titleId, titleName });
+  };
+
+  const confirmRemoveTitle = async () => {
+    if (!removingTitle) return;
     try {
-      await adminAPI.removeMemberTitle(memberId, titleId);
-      await fetchMemberTitles(memberId);
+      await adminAPI.removeMemberTitle(removingTitle.memberId, removingTitle.titleId);
+      showToast({ type: 'success', title: 'Title Removed', message: `${removingTitle.titleName} has been removed` });
+      await fetchMemberTitles(removingTitle.memberId);
+      setRemovingTitle(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to remove title');
+      showToast({ type: 'error', title: 'Removal Failed', message: err.response?.data?.error || 'Failed to remove title' });
     }
   };
 
@@ -690,7 +706,7 @@ const MemberDirectory = ({
                                         <Clock className="w-2.5 h-2.5" />
                                       </button>
                                       <button
-                                        onClick={() => handleRemoveTitle(member.id, t.id)}
+                                        onClick={() => handleRemoveTitle(member.id, t.id, t.name)}
                                         className="ml-0.5 hover:text-white/80"
                                         title="Remove title"
                                       >
@@ -913,6 +929,30 @@ const MemberDirectory = ({
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Title Confirmation Modal */}
+      {removingTitle && (
+        <div className="modal-overlay" onClick={() => setRemovingTitle(null)}>
+          <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-900">Remove Title</h3>
+                <button onClick={() => setRemovingTitle(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-slate-600 mb-6">
+                Are you sure you want to remove <strong className="text-slate-900">{removingTitle.titleName}</strong> from this member?
+                This action will be recorded in the title history.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setRemovingTitle(null)} className="btn-secondary flex-1">Cancel</button>
+                <button onClick={confirmRemoveTitle} className="btn-danger flex-1">Remove</button>
+              </div>
             </div>
           </div>
         </div>

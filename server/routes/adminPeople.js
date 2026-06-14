@@ -1109,10 +1109,33 @@ router.get('/members/:id/titles/:titleId/history', async (req, res) => {
 // Leadership Directory
 router.get('/leadership-directory', async (req, res) => {
   try {
-    const { title_id, status, search } = req.query;
-    const directory = await queries.getLeadershipDirectory(title_id || null, status || null, search || null);
+    const { title_id, status, search, section_id, appointment_from, appointment_to, page = 1, limit = 50 } = req.query;
+    const p = parseInt(page);
+    const lim = parseInt(limit);
+    const offset = (p - 1) * lim;
+    const directory = await queries.getLeadershipDirectory({
+      titleId: title_id || null,
+      status: status || null,
+      search: search || null,
+      sectionId: section_id || null,
+      appointmentFrom: appointment_from || null,
+      appointmentTo: appointment_to || null,
+      limit: lim,
+      offset,
+    });
     const titles = await queries.getAllTitles();
-    res.json({ directory, titles });
+    const sections = await queries.getSections();
+    // Get total count for pagination
+    const countRes = await queries.getLeadershipDirectoryCount({
+      titleId: title_id || null,
+      status: status || null,
+      search: search || null,
+      sectionId: section_id || null,
+      appointmentFrom: appointment_from || null,
+      appointmentTo: appointment_to || null,
+    });
+    const total = countRes[0]?.total || 0;
+    res.json({ directory, titles, sections, total });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch leadership directory' });
   }

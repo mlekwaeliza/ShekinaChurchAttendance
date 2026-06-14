@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Award, Users, UserCheck, UserX } from 'lucide-react';
+import { Award, Users, UserCheck, UserX, Filter, ChevronRight } from 'lucide-react';
 import { adminAPI } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
 import StatCard from '../ui/StatCard';
 
 const LeadershipWidget = ({ onNavigate }) => {
   const [stats, setStats] = useState({ stats: [], totalLeaders: 0 });
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -21,6 +23,16 @@ const LeadershipWidget = ({ onNavigate }) => {
   const active = stats.stats.reduce((s, t) => s + t.active_count, 0);
   const inactive = stats.stats.reduce((s, t) => s + t.inactive_count, 0);
 
+  const handleNavigate = (filter = {}) => {
+    if (onNavigate) {
+      onNavigate(filter);
+    } else {
+      const params = new URLSearchParams();
+      Object.entries(filter).forEach(([k, v]) => params.set(k, v));
+      navigate(`/admin/leadership?${params.toString()}`);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -29,21 +41,21 @@ const LeadershipWidget = ({ onNavigate }) => {
           label="Total Leadership Roles"
           value={stats.totalLeaders}
           color="primary"
-          onClick={onNavigate}
+          onClick={() => handleNavigate()}
         />
         <StatCard
           icon={UserCheck}
           label="Active"
           value={active}
           color="success"
-          onClick={onNavigate}
+          onClick={() => handleNavigate({ status: 'active' })}
         />
         <StatCard
           icon={UserX}
           label="Inactive"
           value={inactive}
           color="warning"
-          onClick={onNavigate}
+          onClick={() => handleNavigate({ status: 'inactive' })}
         />
       </div>
       {stats.stats.length > 0 && (
@@ -54,8 +66,15 @@ const LeadershipWidget = ({ onNavigate }) => {
           </h4>
           <div className="space-y-2">
             {stats.stats.map((s) => (
-              <div key={s.id} className="flex items-center justify-between text-sm">
-                <span className="text-slate-700 font-medium">{s.name}</span>
+              <button
+                key={s.id}
+                onClick={() => handleNavigate({ title_id: s.id })}
+                className="w-full flex items-center justify-between text-sm p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
+                <span className="text-slate-700 dark:text-slate-200 font-medium flex items-center gap-2">
+                  {s.name}
+                  <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-400">{s.description || ''}</span>
                   <span className="inline-flex items-center gap-1.5">
@@ -69,7 +88,7 @@ const LeadershipWidget = ({ onNavigate }) => {
                     </span>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
