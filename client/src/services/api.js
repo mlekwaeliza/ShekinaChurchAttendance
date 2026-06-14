@@ -174,6 +174,17 @@ export const adminAPI = {
   getMemberTitleHistory: (memberId, titleId) => api.get(`/admin/members/${memberId}/titles/${titleId}/history`),
   getLeadershipDirectory: (params = {}) => api.get('/admin/leadership-directory', { params }),
   getLeadershipStats: () => api.get('/admin/leadership-stats'),
+  // Departments
+  getDepartments: () => api.get('/admin/departments'),
+  getDepartment: (id) => api.get(`/admin/departments/${id}`),
+  createDepartment: (data) => api.post('/admin/departments', data),
+  updateDepartment: (id, data) => api.put(`/admin/departments/${id}`, data),
+  deleteDepartment: (id) => api.delete(`/admin/departments/${id}`),
+  getDepartmentMembers: (id) => api.get(`/admin/departments/${id}/members`),
+  addDepartmentMember: (id, member_id) => api.post(`/admin/departments/${id}/members`, { member_id }),
+  removeDepartmentMember: (id, memberId) => api.delete(`/admin/departments/${id}/members/${memberId}`),
+  getDepartmentHistory: (id) => api.get(`/admin/departments/${id}/history`),
+  getMemberDepartments: (memberId) => api.get(`/admin/members/${memberId}/departments`),
 };
 
 // Shared church calendar API

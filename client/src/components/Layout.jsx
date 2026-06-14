@@ -46,6 +46,7 @@ import {
   RefreshCw,
   Edit3,
   Award,
+  Building2,
 } from 'lucide-react';
 
 const Layout = ({ children, showNav = true }) => {
@@ -194,6 +195,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
         { path: '/admin/titles', label: 'Titles', icon: Award },
         { path: '/admin/leadership', label: 'Leadership', icon: Users },
+        { path: '/admin/departments', label: 'Departments', icon: Building2 },
       ]},
       { section: 'INSIGHTS', items: [
         { path: '/admin/calendar', label: 'Calendar', icon: Calendar },

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Award, Search, Users, Filter, X, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Award, Search, Users, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
@@ -68,26 +68,21 @@ const LeadershipDirectory = () => {
     loadDirectory();
   };
 
-  const handleExport = () => {
-    if (data.directory.length === 0) return;
-    const headers = ['Name', 'S/N', 'Section', 'Title', 'Status', 'Appointed', 'Phone', 'Email', 'Assigned By'];
-    const rows = data.directory.map((d) => [
-      d.full_name,
-      d.membership_id,
-      d.section_name || '—',
-      d.title_name,
-      d.title_status || 'active',
-      d.appointment_date ? new Date(d.appointment_date).toLocaleDateString() : '—',
-      d.phone || '—',
-      d.email || '—',
-      d.assigned_by_name || '—',
-    ]);
-    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `leadership-directory-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+  const STATUS_VARIANTS = {
+    active: 'success',
+    on_leave: 'warning',
+    emeritus: 'info',
+    probationary: 'warning',
+    retired: 'neutral',
+    inactive: 'neutral',
+  };
+  const STATUS_LABELS = {
+    active: 'Active',
+    on_leave: 'On Leave',
+    emeritus: 'Emeritus',
+    probationary: 'Probationary',
+    retired: 'Retired',
+    inactive: 'Inactive',
   };
 
   const columns = [
@@ -105,8 +100,8 @@ const LeadershipDirectory = () => {
       header: 'Status',
       sortable: true,
       render: (row) => (
-        <Badge variant={row.title_status === 'active' ? 'success' : 'neutral'} className="text-[11px] px-2 py-0.5">
-          {row.title_status === 'active' ? 'Active' : 'Inactive'}
+        <Badge variant={STATUS_VARIANTS[row.title_status] || 'neutral'} className="text-[11px] px-2 py-0.5">
+          {STATUS_LABELS[row.title_status] || row.title_status || 'Active'}
         </Badge>
       ),
     },
@@ -152,10 +147,14 @@ const LeadershipDirectory = () => {
                 ))}
               </select>
             </div>
-            <div className="w-40">
+            <div className="w-44">
               <select className="input-field" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="">All Status</option>
+                <option value="">All Statuses</option>
                 <option value="active">Active</option>
+                <option value="on_leave">On Leave</option>
+                <option value="emeritus">Emeritus</option>
+                <option value="probationary">Probationary</option>
+                <option value="retired">Retired</option>
                 <option value="inactive">Inactive</option>
               </select>
             </div>
@@ -188,9 +187,6 @@ const LeadershipDirectory = () => {
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => { setTitleFilter(''); setStatusFilter(''); setSectionFilter(''); setAppointmentFrom(''); setAppointmentTo(''); setSearch(''); setPage(1); }} className="btn-ghost text-sm flex items-center gap-1">
                 <X className="w-3 h-3" /> Clear
-              </button>
-              <button type="button" onClick={handleExport} className="btn-secondary flex items-center gap-2">
-                <Download className="w-4 h-4" /> Export
               </button>
             </div>
           </div>

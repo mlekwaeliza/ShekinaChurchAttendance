@@ -976,45 +976,45 @@ router.get('/members/export', async (req, res) => {
 });
 
 // --- Leadership Roles & Assignments ---
-// GET all congregation titles
+// GET all congregation titles (with category and hierarchy data)
 router.get('/titles', async (req, res) => {
   try {
-    const titles = await queries.getAllTitles();
+    const titles = await queries.getAllTitlesWithCategory();
     res.json(titles);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch titles' });
   }
 });
 
-// POST create congregation title
+// POST create congregation title (category-aware)
 router.post('/titles', async (req, res) => {
   try {
-    const { name, description, sort_order } = req.body;
+    const { name, description, category, sort_order, reports_to_title_id, is_active } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Title name is required' });
     }
-    await queries.createTitle(name.trim(), description || null, sort_order || 0);
+    await queries.createTitleFull(name.trim(), description || null, category || 'General', sort_order || 0, reports_to_title_id || null, is_active !== undefined ? is_active : true);
     res.json({ message: 'Title created' });
   } catch (error) {
-    if (error.message.includes('UNIQUE')) {
+    if (error.message && error.message.includes('UNIQUE')) {
       return res.status(400).json({ error: 'A title with this name already exists' });
     }
     res.status(500).json({ error: 'Failed to create title' });
   }
 });
 
-// PUT update congregation title
+// PUT update congregation title (category-aware)
 router.put('/titles/:id', async (req, res) => {
   try {
-    const { name, description, is_active, sort_order } = req.body;
+    const { name, description, category, is_active, sort_order, reports_to_title_id } = req.body;
     const { id } = req.params;
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Title name is required' });
     }
-    await queries.updateTitle(id, name.trim(), description || null, is_active !== undefined ? (is_active ? 1 : 0) : 1, sort_order || 0);
+    await queries.updateTitleFull(id, name.trim(), description || null, category || 'General', sort_order || 0, reports_to_title_id || null, is_active !== undefined ? (is_active ? 1 : 0) : 1);
     res.json({ message: 'Title updated' });
   } catch (error) {
-    if (error.message.includes('UNIQUE')) {
+    if (error.message && error.message.includes('UNIQUE')) {
       return res.status(400).json({ error: 'A title with this name already exists' });
     }
     res.status(500).json({ error: 'Failed to update title' });
@@ -1149,6 +1149,133 @@ router.get('/leadership-stats', async (req, res) => {
     res.json({ stats, totalLeaders });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch leadership stats' });
+  }
+});
+
+// --- Member Departments ---
+router.get('/members/:id/departments', async (req, res) => {
+  try {
+    const departments = await queries.getMemberDepartments(req.params.id);
+    res.json(departments);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch member departments' });
+  }
+});
+
+// --- Departments CRUD ---
+
+// GET all departments
+router.get('/departments', async (req, res) => {
+  try {
+    const departments = await queries.getAllDepartments();
+    const titles = await queries.getAllTitlesWithCategory ? await queries.getAllTitlesWithCategory() : await queries.getAllTitles();
+    res.json({ departments, titles });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch departments' });
+  }
+});
+
+// GET single department
+router.get('/departments/:id', async (req, res) => {
+  try {
+    const dept = await queries.getDepartmentById(req.params.id);
+    if (!dept) return res.status(404).json({ error: 'Department not found' });
+    res.json(dept);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch department' });
+  }
+});
+
+// POST create department
+router.post('/departments', async (req, res) => {
+  try {
+    const { name, description, reports_to_title_id, leader_id, assistant_leader_id, secretary_id, is_active } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Department name is required' });
+    await queries.createDepartment(name.trim(), description || null, reports_to_title_id || null, leader_id || null, assistant_leader_id || null, secretary_id || null);
+    const created = await get('SELECT id FROM departments WHERE name = ?', [name.trim()]);
+    res.json({ message: 'Department created', id: created?.id });
+  } catch (error) {
+    if (error.message && error.message.includes('UNIQUE')) return res.status(400).json({ error: 'A department with this name already exists' });
+    res.status(500).json({ error: 'Failed to create department' });
+  }
+});
+
+// PUT update department
+router.put('/departments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, reports_to_title_id, leader_id, assistant_leader_id, secretary_id, is_active } = req.body;
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Department name is required' });
+    const existing = await queries.getDepartmentById(id);
+    if (!existing) return res.status(404).json({ error: 'Department not found' });
+    await queries.updateDepartment(id, name.trim(), description || null, reports_to_title_id || null, leader_id || null, assistant_leader_id || null, secretary_id || null, is_active !== undefined ? (is_active ? 1 : 0) : 1);
+
+    // Track leadership changes in history
+    const changes = [];
+    if (String(existing.leader_id) !== String(leader_id || '')) changes.push({ role: 'leader', old_member_id: existing.leader_id, new_member_id: leader_id || null });
+    if (String(existing.assistant_leader_id) !== String(assistant_leader_id || '')) changes.push({ role: 'assistant_leader', old_member_id: existing.assistant_leader_id, new_member_id: assistant_leader_id || null });
+    if (String(existing.secretary_id) !== String(secretary_id || '')) changes.push({ role: 'secretary', old_member_id: existing.secretary_id, new_member_id: secretary_id || null });
+    for (const ch of changes) {
+      await run('INSERT INTO department_leadership_history (department_id, role, old_member_id, new_member_id, changed_by) VALUES (?, ?, ?, ?, ?)',
+        [id, ch.role, ch.old_member_id || null, ch.new_member_id || null, req.session?.userId || null]);
+    }
+
+    res.json({ message: 'Department updated' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update department' });
+  }
+});
+
+// DELETE department
+router.delete('/departments/:id', async (req, res) => {
+  try {
+    await queries.deleteDepartment(req.params.id);
+    res.json({ message: 'Department deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete department' });
+  }
+});
+
+// GET department members
+router.get('/departments/:id/members', async (req, res) => {
+  try {
+    const members = await queries.getDepartmentMembers(req.params.id);
+    res.json(members);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch department members' });
+  }
+});
+
+// POST add member to department
+router.post('/departments/:id/members', async (req, res) => {
+  try {
+    const { member_id } = req.body;
+    if (!member_id) return res.status(400).json({ error: 'member_id is required' });
+    await queries.addDepartmentMember(req.params.id, member_id);
+    res.json({ message: 'Member added to department' });
+  } catch (error) {
+    if (error.message && error.message.includes('UNIQUE')) return res.status(400).json({ error: 'Member already in this department' });
+    res.status(500).json({ error: 'Failed to add member to department' });
+  }
+});
+
+// DELETE member from department
+router.delete('/departments/:id/members/:memberId', async (req, res) => {
+  try {
+    await queries.removeDepartmentMember(req.params.id, req.params.memberId);
+    res.json({ message: 'Member removed from department' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to remove member from department' });
+  }
+});
+
+// GET department leadership history
+router.get('/departments/:id/history', async (req, res) => {
+  try {
+    const history = await queries.getDepartmentHistory(req.params.id);
+    res.json(history);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch department history' });
   }
 });
 
