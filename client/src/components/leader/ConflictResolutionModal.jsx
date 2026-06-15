@@ -23,7 +23,7 @@ const ConflictResolutionModal = ({ conflicts, onResolve, onClose }) => {
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="btn-ghost p-2">
+          <button onClick={onClose} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -54,17 +54,18 @@ const ConflictResolutionModal = ({ conflicts, onResolve, onClose }) => {
               <div className="flex gap-2">
                 <button
                   onClick={() => onResolve(conflict.id, 'discard')}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
-                    bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-slate-700 dark:text-slate-200
-                    hover:bg-slate-50 dark:hover:bg-slate-500 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold
+                    bg-white dark:bg-slate-600 border-2 border-slate-200 dark:border-slate-500 text-slate-700 dark:text-slate-200
+                    hover:bg-slate-50 dark:hover:bg-slate-500 active:scale-[0.98] transition-all"
                 >
                   <Trash2 className="w-4 h-4 text-rose-500" />
                   Discard
                 </button>
                 <button
                   onClick={() => onResolve(conflict.id, 'overwrite')}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
-                    bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold
+                    bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-glow-sm
+                    hover:from-primary-500 hover:to-primary-400 active:scale-[0.98] transition-all"
                 >
                   <Upload className="w-4 h-4" />
                   Overwrite Server

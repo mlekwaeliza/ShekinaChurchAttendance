@@ -794,58 +794,58 @@ const MemberDirectory = ({
       {titleAssignMember && (
         <div className="modal-overlay" onClick={() => setTitleAssignMember(null)}>
           <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900">Assign Title</h3>
-                <button onClick={() => setTitleAssignMember(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
-                  <X className="w-5 h-5" />
-                </button>
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Assign Title</h3>
+              <button onClick={() => setTitleAssignMember(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Title *</label>
+                <select
+                  className="select h-10"
+                  value={titleForm.title_id}
+                  onChange={(e) => setTitleForm({ ...titleForm, title_id: e.target.value })}
+                >
+                  <option value="">Select a title...</option>
+                  {allTitles.filter((t) => t.is_active).map((title) => {
+                    const hasTitle = (memberTitles[titleAssignMember] || []).some((mt) => mt.id === title.id);
+                    return (
+                      <option key={title.id} value={title.id} disabled={hasTitle}>
+                        {title.name}{hasTitle ? ' (already assigned)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="input-label">Title *</label>
-                  <select
-                    className="input-field"
-                    value={titleForm.title_id}
-                    onChange={(e) => setTitleForm({ ...titleForm, title_id: e.target.value })}
-                  >
-                    <option value="">Select a title...</option>
-                    {allTitles.filter((t) => t.is_active).map((title) => {
-                      const hasTitle = (memberTitles[titleAssignMember] || []).some((mt) => mt.id === title.id);
-                      return (
-                        <option key={title.id} value={title.id} disabled={hasTitle}>
-                          {title.name}{hasTitle ? ' (already assigned)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-                <div>
-                  <label className="input-label">Appointment Date</label>
-                  <input
-                    type="date"
-                    className="input-field"
-                    value={titleForm.appointment_date}
-                    onChange={(e) => setTitleForm({ ...titleForm, appointment_date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="input-label">Notes</label>
-                  <textarea
-                    className="input-field"
-                    rows={3}
-                    value={titleForm.notes}
-                    onChange={(e) => setTitleForm({ ...titleForm, notes: e.target.value })}
-                    placeholder="Reason for assignment,任期, etc."
-                  />
-                </div>
+              <div>
+                <label className="input-label">Appointment Date</label>
+                <input
+                  type="date"
+                  className="input h-10"
+                  value={titleForm.appointment_date}
+                  onChange={(e) => setTitleForm({ ...titleForm, appointment_date: e.target.value })}
+                />
               </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => { setTitleAssignMember(null); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }} className="btn-secondary flex-1">Cancel</button>
-                <button onClick={() => handleAssignTitle(titleAssignMember)} disabled={!titleForm.title_id || assignSaving} className="btn-primary flex-1">
-                  {assignSaving ? 'Assigning...' : 'Assign'}
-                </button>
+              <div>
+                <label className="input-label">Notes</label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={titleForm.notes}
+                  onChange={(e) => setTitleForm({ ...titleForm, notes: e.target.value })}
+                  placeholder="Reason for assignment, term, etc."
+                />
               </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex gap-3">
+              <button onClick={() => { setTitleAssignMember(null); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }} className="btn-secondary flex-1">Cancel</button>
+              <button onClick={() => handleAssignTitle(titleAssignMember)} disabled={!titleForm.title_id || assignSaving} className="btn-primary flex-1">
+                {assignSaving ? (
+                  <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Assigning...</span>
+                ) : 'Assign'}
+              </button>
             </div>
           </div>
         </div>
@@ -855,41 +855,41 @@ const MemberDirectory = ({
       {editingTitleAssignment && (
         <div className="modal-overlay" onClick={() => setEditingTitleAssignment(null)}>
           <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900">Edit Assignment</h3>
-                <button onClick={() => setEditingTitleAssignment(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
-                  <X className="w-5 h-5" />
-                </button>
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit Assignment</h3>
+              <button onClick={() => setEditingTitleAssignment(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="input-label">Status</label>
+                <select
+                  className="select h-10"
+                  value={editingTitleAssignment.status}
+                  onChange={(e) => setEditingTitleAssignment({ ...editingTitleAssignment, status: e.target.value })}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="input-label">Status</label>
-                  <select
-                    className="input-field"
-                    value={editingTitleAssignment.status}
-                    onChange={(e) => setEditingTitleAssignment({ ...editingTitleAssignment, status: e.target.value })}
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="input-label">Notes</label>
-                  <textarea
-                    className="input-field"
-                    rows={3}
-                    value={editingTitleAssignment.notes}
-                    onChange={(e) => setEditingTitleAssignment({ ...editingTitleAssignment, notes: e.target.value })}
-                  />
-                </div>
+              <div>
+                <label className="input-label">Notes</label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={editingTitleAssignment.notes}
+                  onChange={(e) => setEditingTitleAssignment({ ...editingTitleAssignment, notes: e.target.value })}
+                />
               </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setEditingTitleAssignment(null)} className="btn-secondary flex-1">Cancel</button>
-                <button onClick={() => handleUpdateTitleAssignment(editingTitleAssignment.memberId, editingTitleAssignment.titleId)} disabled={assignSaving} className="btn-primary flex-1">
-                  {assignSaving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex gap-3">
+              <button onClick={() => setEditingTitleAssignment(null)} className="btn-secondary flex-1">Cancel</button>
+              <button onClick={() => handleUpdateTitleAssignment(editingTitleAssignment.memberId, editingTitleAssignment.titleId)} disabled={assignSaving} className="btn-primary flex-1">
+                {assignSaving ? (
+                  <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving...</span>
+                ) : 'Save'}
+              </button>
             </div>
           </div>
         </div>
@@ -899,34 +899,49 @@ const MemberDirectory = ({
       {viewHistoryFor && (
         <div className="modal-overlay" onClick={() => { setViewHistoryFor(null); }}>
           <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <span className="text-slate-400 font-normal">History:</span> {viewHistoryFor.titleName}
+              </h3>
+              <button onClick={() => setViewHistoryFor(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900">History: {viewHistoryFor.titleName}</h3>
-                <button onClick={() => setViewHistoryFor(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
               {titleHistory.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-4">Loading...</p>
+                <div className="flex items-center justify-center py-8 text-slate-400">
+                  <span className="w-5 h-5 border-2 border-slate-300 border-t-primary-500 rounded-full animate-spin mr-3" />
+                  Loading history...
+                </div>
               ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {titleHistory.map((h) => (
-                    <div key={h.id} className="p-3 rounded-xl bg-slate-50 text-sm">
-                      <div className="flex items-center justify-between mb-1">
-                        <Badge variant={h.action === 'assigned' ? 'success' : h.action === 'removed' ? 'danger' : h.action === 'status_changed' ? 'warning' : 'neutral'} className="text-[10px] px-1.5 py-0.5 uppercase">
-                          {h.action.replace('_', ' ')}
-                        </Badge>
-                        <span className="text-[10px] text-slate-400">{new Date(h.created_at).toLocaleString()}</span>
+                <div className="space-y-3 max-h-[50vh] overflow-y-auto scrollbar-thin">
+                  {titleHistory.map((h) => {
+                    const variantMap = { assigned: 'success', removed: 'danger', status_changed: 'warning', notes_updated: 'info' };
+                    return (
+                      <div key={h.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant={variantMap[h.action] || 'neutral'} className="text-[10px] px-2 py-0.5 uppercase tracking-wider">
+                            {h.action.replace('_', ' ')}
+                          </Badge>
+                          <span className="text-[10px] text-slate-400 font-medium">{new Date(h.created_at).toLocaleString()}</span>
+                        </div>
+                        {h.old_status && h.new_status && (
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                            Status: <span className={h.old_status === 'active' ? 'text-emerald-600' : 'text-slate-500'}>{h.old_status}</span>
+                            {' → '}
+                            <span className={h.new_status === 'active' ? 'text-emerald-600 font-semibold' : 'text-slate-500'}>{h.new_status}</span>
+                          </p>
+                        )}
+                        {h.notes && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 italic">{h.notes}</p>}
+                        {h.changed_by_name && (
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                            by {h.changed_by_name}
+                          </p>
+                        )}
                       </div>
-                      {h.old_status && h.new_status && (
-                        <p className="text-xs text-slate-600">Status: {h.old_status} → {h.new_status}</p>
-                      )}
-                      {h.notes && <p className="text-xs text-slate-500 mt-0.5">{h.notes}</p>}
-                      {h.changed_by_name && (
-                        <p className="text-[10px] text-slate-400 mt-0.5">by {h.changed_by_name}</p>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -938,21 +953,26 @@ const MemberDirectory = ({
       {removingTitle && (
         <div className="modal-overlay" onClick={() => setRemovingTitle(null)}>
           <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Remove Title</h3>
+              <button onClick={() => setRemovingTitle(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-900">Remove Title</h3>
-                <button onClick={() => setRemovingTitle(null)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
-                  <X className="w-5 h-5" />
-                </button>
+              <div className="flex items-center gap-4 mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/60 dark:border-amber-700/30">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-800/30 flex items-center justify-center shrink-0">
+                  <X className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+                  Are you sure you want to remove <strong>{removingTitle.titleName}</strong> from this member?
+                  This action will be recorded in the title history.
+                </p>
               </div>
-              <p className="text-slate-600 mb-6">
-                Are you sure you want to remove <strong className="text-slate-900">{removingTitle.titleName}</strong> from this member?
-                This action will be recorded in the title history.
-              </p>
-              <div className="flex gap-3">
-                <button onClick={() => setRemovingTitle(null)} className="btn-secondary flex-1">Cancel</button>
-                <button onClick={confirmRemoveTitle} className="btn-danger flex-1">Remove</button>
-              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex gap-3">
+              <button onClick={() => setRemovingTitle(null)} className="btn-secondary flex-1">Cancel</button>
+              <button onClick={confirmRemoveTitle} className="btn-danger flex-1">Remove</button>
             </div>
           </div>
         </div>

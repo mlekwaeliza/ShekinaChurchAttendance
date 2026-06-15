@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy } from 'lucide-react';
+import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI } from '../../services/api';
@@ -413,6 +413,15 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
       {show2FAModal && (
         <div className="modal-overlay" onClick={() => setShow2FAModal(false)}>
           <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Two-Factor Authentication</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Scan the QR code with your authenticator app</p>
+              </div>
+              <button onClick={() => setShow2FAModal(false)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             <div className="modal-body">
               <TwoFactorSetup
                 onEnabled={handle2FAEnabled}
@@ -428,9 +437,14 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
         <div className="modal-overlay" onClick={() => { setShowDisable2FA(false); setDisablePassword(''); }}>
           <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Disable 2FA</h3>
-              <button onClick={() => { setShowDisable2FA(false); setDisablePassword(''); }} className="btn-ghost p-2">
-                &times;
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
+                  <Shield className="w-4.5 h-4.5 text-rose-500" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Disable 2FA</h3>
+              </div>
+              <button onClick={() => { setShowDisable2FA(false); setDisablePassword(''); }} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90" aria-label="Close">
+                <X className="w-5 h-5" />
               </button>
             </div>
             <div className="modal-body space-y-4">
@@ -441,7 +455,7 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
                 type="password"
                 value={disablePassword}
                 onChange={(e) => setDisablePassword(e.target.value)}
-                className="input"
+                className="input h-10"
                 placeholder="Enter your password"
                 autoFocus
               />
@@ -458,7 +472,9 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
                 disabled={disabling2FA || !disablePassword}
                 className="btn-danger"
               >
-                {disabling2FA ? 'Disabling...' : 'Disable 2FA'}
+                {disabling2FA ? (
+                  <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Disabling...</span>
+                ) : 'Disable 2FA'}
               </button>
             </div>
           </div>
