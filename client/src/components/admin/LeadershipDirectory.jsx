@@ -111,6 +111,7 @@ const LeadershipDirectory = () => {
   // Assign leader modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignSearch, setAssignSearch] = useState('');
+  const [assignDirty, setAssignDirty] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [selectedTitleId, setSelectedTitleId] = useState('');
@@ -119,6 +120,7 @@ const LeadershipDirectory = () => {
   const [assignSaving, setAssignSaving] = useState(false);
   const [allMembers, setAllMembers] = useState([]);
   const assignRef = useRef(null);
+  const assignSelectedMember = useMemo(() => allMembers.find((m) => m.id === selectedMemberId), [allMembers, selectedMemberId]);
 
   // Load all members for the assign modal
   useEffect(() => {
@@ -129,14 +131,14 @@ const LeadershipDirectory = () => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (assignRef.current && !assignRef.current.contains(e.target)) setShowMemberDropdown(false);
+      if (assignRef.current && !assignRef.current.contains(e.target)) { setShowMemberDropdown(false); if (assignDirty && !selectedMemberId) { setAssignSearch(''); setAssignDirty(false); } }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [assignDirty, selectedMemberId]);
 
   const assignMemberList = useMemo(() => {
-    if (!assignSearch.trim()) return [];
+    if (!assignSearch.trim()) return allMembers.slice(0, 20);
     const term = assignSearch.toLowerCase();
     return allMembers.filter((m) => (m.full_name || '').toLowerCase().includes(term)).slice(0, 20);
   }, [assignSearch, allMembers]);
@@ -156,6 +158,7 @@ const LeadershipDirectory = () => {
       });
       setShowAssignModal(false);
       setAssignSearch('');
+      setAssignDirty(false);
       setSelectedMemberId(null);
       setSelectedTitleId('');
       setAppointmentDate('');
@@ -401,10 +404,11 @@ const LeadershipDirectory = () => {
               <input
                 required
                 type="text"
-                value={assignSearch}
-                onChange={(e) => { setAssignSearch(e.target.value); setShowMemberDropdown(true); setSelectedMemberId(null); }}
+                value={assignDirty ? assignSearch : (assignSelectedMember ? assignSelectedMember.full_name : assignSearch)}
+                onChange={(e) => { setAssignSearch(e.target.value); setShowMemberDropdown(true); setAssignDirty(true); if (selectedMemberId) setSelectedMemberId(null); }}
                 onFocus={() => setShowMemberDropdown(true)}
-                placeholder="Type member name..."
+                onBlur={() => { if (assignDirty && !selectedMemberId) { setTimeout(() => { setAssignSearch(''); setAssignDirty(false); }, 200); } }}
+                placeholder="Search member name..."
                 className="input w-full"
               />
               {showMemberDropdown && assignMemberList.length > 0 && (
@@ -415,10 +419,15 @@ const LeadershipDirectory = () => {
                       type="button"
                       onClick={() => {
                         setSelectedMemberId(m.id);
-                        setAssignSearch(m.full_name + (m.section_name ? ` (${m.section_name})` : ''));
+                        setAssignSearch('');
+                        setAssignDirty(false);
                         setShowMemberDropdown(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-2.5"
+                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
+                        m.id === selectedMemberId
+                          ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                      }`}
                     >
                       <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px] shrink-0">
                         {(m.full_name || '').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -428,6 +437,9 @@ const LeadershipDirectory = () => {
                     </button>
                   ))}
                 </div>
+              )}
+              {assignDirty && !selectedMemberId && !showMemberDropdown && (
+                <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
               )}
             </div>
             <div>

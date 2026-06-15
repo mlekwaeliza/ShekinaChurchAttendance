@@ -101,6 +101,10 @@ const MemberDirectory = ({
   };
 
   const handleAssignTitle = async (memberId) => {
+    if (!memberId) {
+      showToast({ type: 'error', title: 'Validation Error', message: 'Please select a member' });
+      return;
+    }
     if (!titleForm.title_id) {
       showToast({ type: 'error', title: 'Validation Error', message: 'Please select a title' });
       return;
@@ -1005,31 +1009,36 @@ const MemberDirectory = ({
 const MemberSearchSelect = ({ members, selectedId, onChange }) => {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const ref = useRef(null);
 
   const selected = useMemo(() => members.find((m) => m.id === selectedId), [members, selectedId]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return [];
+    if (!search.trim()) return members.slice(0, 20);
     const t = search.toLowerCase();
     return members.filter((m) => (m.full_name || '').toLowerCase().includes(t)).slice(0, 20);
   }, [search, members]);
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); if (dirty && !selectedId) setSearch(''); } };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [dirty, selectedId]);
+
+  // When selected member changes from outside, clear search
+  useEffect(() => { if (selectedId && !dirty) setSearch(''); }, [selectedId]);
 
   return (
     <div className="relative" ref={ref}>
       <label className="input-label">Member</label>
       <input
         type="text"
-        value={search || (selected ? selected.full_name : '')}
-        onChange={(e) => { setSearch(e.target.value); setOpen(true); if (e.target.value !== search) onChange(null); }}
-        onFocus={() => { if (search || !selected) setOpen(true); }}
-        placeholder="Type member name to search..."
+        value={dirty ? search : (selected ? selected.full_name : search)}
+        onChange={(e) => { setSearch(e.target.value); setOpen(true); setDirty(true); if (selectedId) onChange(null); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => { if (dirty && !selectedId) { setTimeout(() => { setSearch(''); setDirty(false); }, 200); } }}
+        placeholder="Search member name..."
         className="input w-full"
       />
       {open && filtered.length > 0 && (
@@ -1038,7 +1047,7 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
             <button
               key={m.id}
               type="button"
-              onClick={() => { onChange(m.id); setSearch(''); setOpen(false); }}
+              onClick={() => { onChange(m.id); setSearch(''); setDirty(false); setOpen(false); }}
               className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
                 m.id === selectedId
                   ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
@@ -1053,6 +1062,9 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
             </button>
           ))}
         </div>
+      )}
+      {dirty && !selectedId && !open && (
+        <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
       )}
     </div>
   );

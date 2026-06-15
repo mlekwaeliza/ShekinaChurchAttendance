@@ -54,11 +54,13 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
   // Member additions
   const [memberSearch, setMemberSearch] = useState('');
+  const [memberDirty, setMemberDirty] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [selectedMemberToAdd, setSelectedMemberToAdd] = useState('');
   const [addingMember, setAddingMember] = useState(false);
 
   const memberSearchRef = useRef(null);
+  const selectedAddMember = useMemo(() => sortedMembers.find((m) => m.id === parseInt(selectedMemberToAdd)), [sortedMembers, selectedMemberToAdd]);
 
   // filteredMembers moved below sortedMembers to avoid TDZ
 
@@ -66,11 +68,12 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
     const handleClickOutside = (e) => {
       if (memberSearchRef.current && !memberSearchRef.current.contains(e.target)) {
         setShowMemberDropdown(false);
+        if (memberDirty && !selectedMemberToAdd) { setMemberSearch(''); setMemberDirty(false); }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [memberDirty, selectedMemberToAdd]);
 
   const loadData = async () => {
     setLoading(true);
@@ -117,12 +120,12 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
   // Filtered members for search autocomplete
   const filteredMembers = useMemo(() => {
-    if (!memberSearch.trim()) return [];
-    const term = memberSearch.toLowerCase();
     const addedIds = new Set(deptMembers.map(m => m.member_id));
+    if (!memberSearch.trim()) return sortedMembers.filter((m) => !addedIds.has(m.id)).slice(0, 20);
+    const term = memberSearch.toLowerCase();
     return sortedMembers.filter(
       m => !addedIds.has(m.id) && (m.full_name || '').toLowerCase().includes(term)
-    );
+    ).slice(0, 20);
   }, [memberSearch, sortedMembers, deptMembers]);
 
   // Filtered departments list
@@ -982,35 +985,44 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                     <input
                       required
                       type="text"
-                      value={memberSearch}
-                      onChange={(e) => { setMemberSearch(e.target.value); setShowMemberDropdown(true); setSelectedMemberToAdd(''); }}
+                      value={memberDirty ? memberSearch : (selectedAddMember ? selectedAddMember.full_name : memberSearch)}
+                      onChange={(e) => { setMemberSearch(e.target.value); setShowMemberDropdown(true); setMemberDirty(true); if (selectedMemberToAdd) setSelectedMemberToAdd(''); }}
                       onFocus={() => setShowMemberDropdown(true)}
-                      placeholder="Type member name to search..."
+                      onBlur={() => { if (memberDirty && !selectedMemberToAdd) { setTimeout(() => { setMemberSearch(''); setMemberDirty(false); }, 200); } }}
+                      placeholder="Search member name..."
                       className="input rounded-xl w-full"
                     />
                     {showMemberDropdown && filteredMembers.length > 0 && (
-                      <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto">
+                      <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
                         {filteredMembers.map(m => (
                           <button
                             key={m.id}
                             type="button"
                             onClick={() => {
                               setSelectedMemberToAdd(String(m.id));
-                              setMemberSearch(m.full_name + (m.section_name ? ` (${m.section_name})` : ''));
+                              setMemberSearch('');
+                              setMemberDirty(false);
                               setShowMemberDropdown(false);
                             }}
-                            className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+                            className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
+                              m.id === parseInt(selectedMemberToAdd)
+                                ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300'
+                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                            }`}
                           >
                             <span className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-[10px] shrink-0">
                               {(m.full_name || '').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                             </span>
-                            <span className="truncate">{m.full_name}</span>
+                            <span className="truncate font-medium">{m.full_name}</span>
                             {m.section_name && (
                               <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-auto shrink-0">{m.section_name}</span>
                             )}
                           </button>
                         ))}
                       </div>
+                    )}
+                    {memberDirty && !selectedMemberToAdd && !showMemberDropdown && (
+                      <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
                     )}
                   </div>
                   <button
