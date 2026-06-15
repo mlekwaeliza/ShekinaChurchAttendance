@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Building2, Plus, Pencil, Trash2, Users, UserCog, Search, ChevronRight, 
   ArrowRight, ShieldCheck, Clock, Check, X, Info, GitBranch, Shield, 
@@ -53,8 +53,31 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
   const [detailTab, setDetailTab] = useState('overview'); // 'overview' | 'members' | 'history'
 
   // Member additions
+  const [memberSearch, setMemberSearch] = useState('');
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [selectedMemberToAdd, setSelectedMemberToAdd] = useState('');
   const [addingMember, setAddingMember] = useState(false);
+
+  const memberSearchRef = useRef(null);
+
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return [];
+    const term = memberSearch.toLowerCase();
+    const addedIds = new Set(deptMembers.map(m => m.member_id));
+    return sortedMembers.filter(
+      m => !addedIds.has(m.id) && (m.full_name || '').toLowerCase().includes(term)
+    );
+  }, [memberSearch, sortedMembers, deptMembers]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (memberSearchRef.current && !memberSearchRef.current.contains(e.target)) {
+        setShowMemberDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -840,6 +863,9 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
           setDetailDept(null);
           setDeptMembers([]);
           setDeptHistory([]);
+          setMemberSearch('');
+          setSelectedMemberToAdd('');
+          setShowMemberDropdown(false);
         }}
         title={detailDept ? detailDept.name : 'Loading...'}
         subtitle={detailDept && (detailDept.reports_to_title_name ? `Reports to: ${detailDept.reports_to_title_name}` : 'Independent ministry team')}
@@ -948,19 +974,41 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
               <div className="space-y-6">
                 {/* Add Member Form */}
                 <form onSubmit={handleAddMemberSubmit} className="flex flex-col sm:flex-row items-end gap-3 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <div className="flex-1 w-full">
+                  <div className="flex-1 w-full relative" ref={memberSearchRef}>
                     <label className="input-label">Add Member to Department</label>
-                    <select
+                    <input
                       required
-                      value={selectedMemberToAdd}
-                      onChange={(e) => setSelectedMemberToAdd(e.target.value)}
-                      className="input rounded-xl appearance-none w-full"
-                    >
-                      <option value="">-- Choose Member to Add --</option>
-                      {sortedMembers.map(m => (
-                        <option key={m.id} value={m.id}>{m.full_name} ({m.section_name || 'No Section'})</option>
-                      ))}
-                    </select>
+                      type="text"
+                      value={memberSearch}
+                      onChange={(e) => { setMemberSearch(e.target.value); setShowMemberDropdown(true); setSelectedMemberToAdd(''); }}
+                      onFocus={() => setShowMemberDropdown(true)}
+                      placeholder="Type member name to search..."
+                      className="input rounded-xl w-full"
+                    />
+                    {showMemberDropdown && filteredMembers.length > 0 && (
+                      <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto">
+                        {filteredMembers.map(m => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedMemberToAdd(String(m.id));
+                              setMemberSearch(m.full_name + (m.section_name ? ` (${m.section_name})` : ''));
+                              setShowMemberDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+                          >
+                            <span className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                              {(m.full_name || '').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </span>
+                            <span className="truncate">{m.full_name}</span>
+                            {m.section_name && (
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-auto shrink-0">{m.section_name}</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <button
                     type="submit"
