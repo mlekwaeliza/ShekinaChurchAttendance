@@ -1124,7 +1124,7 @@ router.get('/leadership-directory', async (req, res) => {
       offset,
     });
     const titles = await queries.getAllTitles();
-    const sections = await queries.getSections();
+    const sections = await queries.getAllSections();
     // Get total count for pagination
     const countRes = await queries.getLeadershipDirectoryCount({
       titleId: title_id || null,

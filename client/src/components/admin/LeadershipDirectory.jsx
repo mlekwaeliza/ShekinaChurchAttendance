@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Award, Search, Users, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Award, Search, Users, X, ChevronLeft, ChevronRight, Download, Plus } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
+import Modal from '../ui/Modal';
 
 const LeadershipDirectory = () => {
   const [data, setData] = useState({ directory: [], titles: [], sections: [] });
@@ -105,6 +106,62 @@ const LeadershipDirectory = () => {
     probationary: 'Probationary',
     retired: 'Retired',
     inactive: 'Inactive',
+  };
+
+  // Assign leader modal state
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignSearch, setAssignSearch] = useState('');
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
+  const [selectedTitleId, setSelectedTitleId] = useState('');
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [assignNotes, setAssignNotes] = useState('');
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [allMembers, setAllMembers] = useState([]);
+  const assignRef = useRef(null);
+
+  // Load all members for the assign modal
+  useEffect(() => {
+    if (showAssignModal && allMembers.length === 0) {
+      adminAPI.getMembers({ limit: 5000 }).then((res) => setAllMembers(res.data?.members || [])).catch(() => {});
+    }
+  }, [showAssignModal]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (assignRef.current && !assignRef.current.contains(e.target)) setShowMemberDropdown(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const assignMemberList = useMemo(() => {
+    if (!assignSearch.trim()) return [];
+    const term = assignSearch.toLowerCase();
+    return allMembers.filter((m) => (m.full_name || '').toLowerCase().includes(term)).slice(0, 20);
+  }, [assignSearch, allMembers]);
+
+  const handleAssignLeader = async (e) => {
+    e.preventDefault();
+    if (!selectedMemberId || !selectedTitleId) return;
+    setAssignSaving(true);
+    try {
+      await adminAPI.assignMemberTitle(selectedMemberId, parseInt(selectedTitleId), {
+        appointment_date: appointmentDate || null,
+        notes: assignNotes || null,
+      });
+      setShowAssignModal(false);
+      setAssignSearch('');
+      setSelectedMemberId(null);
+      setSelectedTitleId('');
+      setAppointmentDate('');
+      setAssignNotes('');
+      loadDirectory();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to assign title');
+    } finally {
+      setAssignSaving(false);
+    }
   };
 
   const columns = [
@@ -213,6 +270,9 @@ const LeadershipDirectory = () => {
         </form>
         <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-white/5">
           <span className="text-xs text-slate-400">{data.directory.length} result{data.directory.length !== 1 ? 's' : ''}</span>
+          <button onClick={() => setShowAssignModal(true)} className="btn-sm btn-primary ml-auto">
+            <Plus className="w-3.5 h-3.5" /> Assign Leader
+          </button>
           {data.directory.length > 0 && (
             <button onClick={handleExport} className="btn-sm btn-secondary">
               <Download className="w-3.5 h-3.5" /> Export CSV
@@ -271,6 +331,71 @@ const LeadershipDirectory = () => {
           </button>
         </div>
       )}
+
+      {/* Assign Leader Modal */}
+      <Modal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} title="Assign Leadership Title" subtitle="Search and select a member to assign a leadership role">
+        <form onSubmit={handleAssignLeader} className="space-y-4">
+          <div className="relative" ref={assignRef}>
+            <label className="input-label">Member</label>
+            <input
+              required
+              type="text"
+              value={assignSearch}
+              onChange={(e) => { setAssignSearch(e.target.value); setShowMemberDropdown(true); setSelectedMemberId(null); }}
+              onFocus={() => setShowMemberDropdown(true)}
+              placeholder="Type member name..."
+              className="input w-full"
+            />
+            {showMemberDropdown && assignMemberList.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto">
+                {assignMemberList.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMemberId(m.id);
+                      setAssignSearch(m.full_name + (m.section_name ? ` (${m.section_name})` : ''));
+                      setShowMemberDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors flex items-center gap-2"
+                  >
+                    <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                      {(m.full_name || '').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </span>
+                    <span className="truncate">{m.full_name}</span>
+                    {m.section_name && <span className="text-[10px] text-slate-400 ml-auto shrink-0">{m.section_name}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="input-label">Title</label>
+            <select required className="select h-10 w-full" value={selectedTitleId} onChange={(e) => setSelectedTitleId(e.target.value)}>
+              <option value="">Select a title...</option>
+              {data.titles.filter((t) => t.is_active).map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="input-label">Appointment Date</label>
+            <input type="date" className="input h-10 w-full" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="input-label">Notes</label>
+            <textarea className="input w-full" rows={3} value={assignNotes} onChange={(e) => setAssignNotes(e.target.value)} placeholder="Reason,任期, etc." />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setShowAssignModal(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={!selectedMemberId || !selectedTitleId || assignSaving} className="btn-primary flex-1">
+              {assignSaving ? (
+                <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Assigning...</span>
+              ) : 'Assign'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
