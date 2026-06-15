@@ -1175,12 +1175,14 @@ router.get('/departments', async (req, res) => {
   }
 });
 
-// GET single department
+// GET single department with members and history
 router.get('/departments/:id', async (req, res) => {
   try {
     const dept = await queries.getDepartmentById(req.params.id);
     if (!dept) return res.status(404).json({ error: 'Department not found' });
-    res.json(dept);
+    const members = await queries.getDepartmentMembers(req.params.id);
+    const history = await queries.getDepartmentHistory(req.params.id);
+    res.json({ department: dept, members, history });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch department' });
   }
