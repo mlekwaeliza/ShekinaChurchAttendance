@@ -2762,8 +2762,8 @@ const queries = {
 
   // Department members
   getDepartmentMembers: (departmentId) => all(`
-    SELECT dm.id, dm.joined_at, m.id as member_id, m.full_name, m.membership_id, m.phone, m.email,
-           s.name as section_name
+    SELECT dm.id, dm.joined_at, m.id as member_id, m.full_name as member_name, m.membership_id, m.phone, m.email,
+           s.name as member_section
     FROM department_members dm
     JOIN members m ON dm.member_id = m.id
     LEFT JOIN sections s ON m.section_id = s.id
@@ -2782,7 +2782,10 @@ const queries = {
     run('INSERT INTO department_history (department_id, member_id, role, action, notes, changed_by) VALUES (?, ?, ?, ?, ?, ?)',
       [departmentId, memberId || null, role, action, notes || null, changedBy || null]),
   getDepartmentHistory: (departmentId) => all(`
-    SELECT dh.*, m.full_name as member_name, u.full_name as changed_by_name
+    SELECT dh.*, m.full_name as member_name, u.full_name as changed_by_name,
+           CASE WHEN dh.role IS NOT NULL THEN 'department_' || dh.role ELSE 'department_member' END as entity_type,
+           CASE WHEN dh.notes IS NOT NULL AND dh.notes != '' THEN (COALESCE(m.full_name, 'Unknown') || ' — ' || dh.notes) ELSE COALESCE(m.full_name, 'Unknown') END as details,
+           u.full_name as operator_name
     FROM department_history dh
     LEFT JOIN members m ON dh.member_id = m.id
     LEFT JOIN users u ON dh.changed_by = u.id
