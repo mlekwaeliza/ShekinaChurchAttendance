@@ -2590,7 +2590,7 @@ const queries = {
     ORDER BY ct.sort_order ASC, ct.name ASC
   `, [memberId]),
   assignMemberTitle: (memberId, titleId, assignedBy, appointmentDate = null, notes = null) =>
-    run('INSERT OR IGNORE INTO member_titles (member_id, title_id, assigned_by, appointment_date, notes) VALUES (?, ?, ?, ?, ?)', [memberId, titleId, assignedBy, appointmentDate, notes]),
+    run('INSERT INTO member_titles (member_id, title_id, assigned_by, appointment_date, notes) VALUES (?, ?, ?, ?, ?) ON CONFLICT(member_id, title_id) DO NOTHING', [memberId, titleId, assignedBy, appointmentDate, notes]),
   updateMemberTitle: (memberId, titleId, status, notes) =>
     run('UPDATE member_titles SET status = ?, notes = ? WHERE member_id = ? AND title_id = ?', [status, notes, memberId, titleId]),
   removeMemberTitle: (memberId, titleId) =>
@@ -2771,7 +2771,7 @@ const queries = {
     ORDER BY m.full_name ASC
   `, [departmentId]),
   addDepartmentMember: (departmentId, memberId) =>
-    run('INSERT OR IGNORE INTO department_members (department_id, member_id) VALUES (?, ?)', [departmentId, memberId]),
+    run('INSERT INTO department_members (department_id, member_id) VALUES (?, ?) ON CONFLICT(department_id, member_id) DO NOTHING', [departmentId, memberId]),
   removeDepartmentMember: (departmentId, memberId) =>
     run('DELETE FROM department_members WHERE department_id = ? AND member_id = ?', [departmentId, memberId]),
   removeDepartmentMemberById: (id) =>
