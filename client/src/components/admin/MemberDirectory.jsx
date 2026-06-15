@@ -628,15 +628,22 @@ const MemberDirectory = ({
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-0.5">
                             <button
+                              onClick={() => { setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
+                              className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
+                              title="Assign Title"
+                            >
+                              <Award className="w-3.5 h-3.5" />
+                            </button>
+                            <button
                               onClick={() => onEdit(member)}
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors active:scale-90"
                               title="Edit"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => onDelete(member)}
-                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors"
+                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors active:scale-90"
                               title="Delete"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -685,41 +692,49 @@ const MemberDirectory = ({
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Age Group</p>
                                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.age_group || '—'}</p>
                               </div>
-                              <div className="col-span-full space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titles</p>
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  {(memberTitles[member.id] || []).map((t) => (
-                                    <Badge key={t.id} variant={t.status === 'active' ? 'info' : 'neutral'} className="text-[11px] px-2 py-0.5">
-                                      {t.name}
-                                      <button
-                                        onClick={() => setEditingTitleAssignment({ memberId: member.id, titleId: t.id, status: t.status, notes: t.notes || '' })}
-                                        className="ml-1 hover:text-white/80"
-                                        title="Edit assignment"
-                                      >
-                                        <Pencil className="w-2.5 h-2.5" />
-                                      </button>
-                                      <button
-                                        onClick={() => setViewHistoryFor({ memberId: member.id, titleId: t.id, titleName: t.name })}
-                                        className="ml-0.5 hover:text-white/80"
-                                        title="View history"
-                                      >
-                                        <Clock className="w-2.5 h-2.5" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleRemoveTitle(member.id, t.id, t.name)}
-                                        className="ml-0.5 hover:text-white/80"
-                                        title="Remove title"
-                                      >
-                                        <XIcon className="w-2.5 h-2.5" />
-                                      </button>
-                                    </Badge>
-                                  ))}
+                              <div className="col-span-full">
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titles</p>
                                   <button
-                                    onClick={() => setTitleAssignMember(member.id)}
-                                    className="inline-flex items-center gap-0.5 text-[11px] text-primary-600 hover:text-primary-700 font-medium px-1.5 py-0.5 rounded hover:bg-primary-50 transition-colors"
+                                    onClick={() => { setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
+                                    className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all active:scale-95"
                                   >
-                                    <Plus className="w-3 h-3" /> Add
+                                    <Plus className="w-3 h-3" /> Add Title
                                   </button>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5 min-h-[28px]">
+                                  {(memberTitles[member.id] || []).length > 0 ? (
+                                    (memberTitles[member.id] || []).map((t) => (
+                                      <Badge key={t.id} variant={t.status === 'active' ? 'info' : 'neutral'} className="text-[11px] px-2 py-0.5 group/badge">
+                                        <span className={t.status === 'active' ? '' : 'line-through opacity-60'}>{t.name}</span>
+                                        <div className="inline-flex items-center ml-1.5 opacity-0 group-hover/badge:opacity-100 transition-opacity">
+                                          <button
+                                            onClick={() => setEditingTitleAssignment({ memberId: member.id, titleId: t.id, status: t.status, notes: t.notes || '' })}
+                                            className="hover:text-white/80 p-0.5"
+                                            title="Edit assignment"
+                                          >
+                                            <Pencil className="w-2.5 h-2.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => setViewHistoryFor({ memberId: member.id, titleId: t.id, titleName: t.name })}
+                                            className="hover:text-white/80 p-0.5"
+                                            title="View history"
+                                          >
+                                            <Clock className="w-2.5 h-2.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => handleRemoveTitle(member.id, t.id, t.name)}
+                                            className="hover:text-white/80 p-0.5"
+                                            title="Remove title"
+                                          >
+                                            <XIcon className="w-2.5 h-2.5" />
+                                          </button>
+                                        </div>
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">No titles assigned</span>
+                                  )}
                                 </div>
                               </div>
                               <div className="col-span-full space-y-1">
