@@ -60,14 +60,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
   const memberSearchRef = useRef(null);
 
-  const filteredMembers = useMemo(() => {
-    if (!memberSearch.trim()) return [];
-    const term = memberSearch.toLowerCase();
-    const addedIds = new Set(deptMembers.map(m => m.member_id));
-    return sortedMembers.filter(
-      m => !addedIds.has(m.id) && (m.full_name || '').toLowerCase().includes(term)
-    );
-  }, [memberSearch, sortedMembers, deptMembers]);
+  // filteredMembers moved below sortedMembers to avoid TDZ
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -121,6 +114,16 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
   const sortedMembers = useMemo(() => {
     return [...allMembers].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
   }, [allMembers]);
+
+  // Filtered members for search autocomplete
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return [];
+    const term = memberSearch.toLowerCase();
+    const addedIds = new Set(deptMembers.map(m => m.member_id));
+    return sortedMembers.filter(
+      m => !addedIds.has(m.id) && (m.full_name || '').toLowerCase().includes(term)
+    );
+  }, [memberSearch, sortedMembers, deptMembers]);
 
   // Filtered departments list
   const filteredDepartments = useMemo(() => {
