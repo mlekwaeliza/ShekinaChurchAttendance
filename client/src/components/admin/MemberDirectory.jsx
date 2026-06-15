@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '../../context/ToastContext';
 import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock, Award, Plus, X as XIcon } from 'lucide-react';
 import Badge from '../ui/Badge';
@@ -816,6 +816,11 @@ const MemberDirectory = ({
               </button>
             </div>
             <div className="p-6 space-y-4">
+              <MemberSearchSelect
+                members={allMembers}
+                selectedId={titleAssignMember}
+                onChange={(id) => setTitleAssignMember(id)}
+              />
               <div>
                 <label className="input-label">Title *</label>
                 <select
@@ -990,6 +995,63 @@ const MemberDirectory = ({
               <button onClick={confirmRemoveTitle} className="btn-danger flex-1">Remove</button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Member search + select component for the assign title modal
+const MemberSearchSelect = ({ members, selectedId, onChange }) => {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const selected = useMemo(() => members.find((m) => m.id === selectedId), [members, selectedId]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return [];
+    const t = search.toLowerCase();
+    return members.filter((m) => (m.full_name || '').toLowerCase().includes(t)).slice(0, 20);
+  }, [search, members]);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <label className="input-label">Member</label>
+      <input
+        type="text"
+        value={search || (selected ? selected.full_name : '')}
+        onChange={(e) => { setSearch(e.target.value); setOpen(true); if (e.target.value !== search) onChange(null); }}
+        onFocus={() => { if (search || !selected) setOpen(true); }}
+        placeholder="Type member name to search..."
+        className="input w-full"
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
+          {filtered.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => { onChange(m.id); setSearch(''); setOpen(false); }}
+              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
+                m.id === selectedId
+                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+              }`}
+            >
+              <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                {(m.full_name || '').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+              </span>
+              <span className="truncate font-medium">{m.full_name}</span>
+              {m.section_name && <span className="text-[10px] text-slate-400 ml-auto shrink-0">{m.section_name}</span>}
+            </button>
+          ))}
         </div>
       )}
     </div>
