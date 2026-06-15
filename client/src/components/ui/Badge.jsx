@@ -8,18 +8,19 @@ const variants = {
   neutral: 'badge-neutral',
 };
 
-const Badge = ({ children, variant = 'neutral', dot = false, className = '' }) => {
+const dotColors = {
+  success: 'bg-emerald-500',
+  warning: 'bg-amber-500',
+  danger: 'bg-rose-500',
+  info: 'bg-primary-500',
+  neutral: 'bg-slate-400',
+};
+
+const Badge = ({ children, variant = 'neutral', dot = false, icon: Icon, className = '' }) => {
   return (
     <span className={`${variants[variant] || variants.neutral} ${className}`}>
-      {dot && (
-        <span className={`w-1.5 h-1.5 rounded-full ${
-          variant === 'success' ? 'bg-emerald-500' :
-          variant === 'warning' ? 'bg-amber-500' :
-          variant === 'danger' ? 'bg-rose-500' :
-          variant === 'info' ? 'bg-primary-500' :
-          'bg-slate-400'
-        }`} />
-      )}
+      {Icon && <Icon className="w-3 h-3" />}
+      {dot && <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant] || dotColors.neutral}`} />}
       {children}
     </span>
   );

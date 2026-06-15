@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Award, Search, Users, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Award, Search, Users, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
@@ -68,6 +68,28 @@ const LeadershipDirectory = () => {
     loadDirectory();
   };
 
+  const handleExport = () => {
+    if (data.directory.length === 0) return;
+    const headers = ['Name', 'S/N', 'Section', 'Title', 'Status', 'Appointed', 'Phone', 'Email', 'Assigned By'];
+    const rows = data.directory.map((d) => [
+      d.full_name,
+      d.membership_id,
+      d.section_name || '—',
+      d.title_name,
+      d.title_status || 'active',
+      d.appointment_date ? new Date(d.appointment_date).toLocaleDateString() : '—',
+      d.phone || '—',
+      d.email || '—',
+      d.assigned_by_name || '—',
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `leadership-directory-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
   const STATUS_VARIANTS = {
     active: 'success',
     on_leave: 'warning',
@@ -114,8 +136,10 @@ const LeadershipDirectory = () => {
   return (
     <div>
       <div className="gradient-banner mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 blur-3xl -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-1/4 w-48 h-48 rounded-full bg-white/5 blur-3xl translate-y-24" />
+        <div className="relative z-10 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20">
             <Award className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -126,29 +150,29 @@ const LeadershipDirectory = () => {
       </div>
 
       {/* Filters Toolbar */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-4 shadow-sm">
-        <form onSubmit={handleSearch} className="space-y-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="relative flex-1 min-w-[200px]">
+      <div className="glass-toolbar mb-6">
+        <form onSubmit={handleSearch}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                className="input-field pl-9"
+                className="input pl-9 h-10"
                 placeholder="Search by name or title..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="w-48">
-              <select className="input-field" value={titleFilter} onChange={(e) => setTitleFilter(e.target.value)}>
+            <div>
+              <select className="select h-10" value={titleFilter} onChange={(e) => setTitleFilter(e.target.value)}>
                 <option value="">All Titles</option>
                 {data.titles.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
             </div>
-            <div className="w-44">
-              <select className="input-field" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <div>
+              <select className="select h-10" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="on_leave">On Leave</option>
@@ -158,39 +182,43 @@ const LeadershipDirectory = () => {
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-            <div className="w-48">
-              <select className="input-field" value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
+            <div>
+              <select className="select h-10" value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
                 <option value="">All Sections</option>
                 {data.sections?.map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>
-            <div className="w-40">
+            <div>
               <input
                 type="date"
-                className="input-field"
-                placeholder="Appointed From"
+                className="input h-10"
                 value={appointmentFrom}
                 onChange={(e) => setAppointmentFrom(e.target.value)}
               />
             </div>
-            <div className="w-40">
+            <div className="flex items-center gap-2">
               <input
                 type="date"
-                className="input-field"
-                placeholder="Appointed To"
+                className="input h-10 flex-1"
                 value={appointmentTo}
                 onChange={(e) => setAppointmentTo(e.target.value)}
               />
-            </div>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => { setTitleFilter(''); setStatusFilter(''); setSectionFilter(''); setAppointmentFrom(''); setAppointmentTo(''); setSearch(''); setPage(1); }} className="btn-ghost text-sm flex items-center gap-1">
-                <X className="w-3 h-3" /> Clear
+              <button type="button" onClick={() => { setTitleFilter(''); setStatusFilter(''); setSectionFilter(''); setAppointmentFrom(''); setAppointmentTo(''); setSearch(''); setPage(1); }} className="btn-icon btn-secondary" title="Clear filters">
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
         </form>
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-white/5">
+          <span className="text-xs text-slate-400">{data.directory.length} result{data.directory.length !== 1 ? 's' : ''}</span>
+          {data.directory.length > 0 && (
+            <button onClick={handleExport} className="btn-sm btn-secondary">
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </button>
+          )}
+        </div>
       </div>
 
       <DataTable
@@ -204,22 +232,39 @@ const LeadershipDirectory = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
+        <div className="flex items-center justify-center gap-3 mt-6">
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="btn-secondary p-2 rounded-lg disabled:opacity-50"
+            className="btn-secondary px-3 py-2 rounded-xl disabled:opacity-40"
             aria-label="Previous page"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="px-3 text-sm font-medium text-slate-700 dark:text-slate-300">
-            Page {page} of {totalPages}
-          </span>
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+              const p = start + i;
+              if (p > totalPages) return null;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${
+                    p === page
+                      ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
-            className="btn-secondary p-2 rounded-lg disabled:opacity-50"
+            className="btn-secondary px-3 py-2 rounded-xl disabled:opacity-40"
             aria-label="Next page"
           >
             <ChevronRight className="w-4 h-4" />

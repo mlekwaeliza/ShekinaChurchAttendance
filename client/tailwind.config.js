@@ -57,12 +57,14 @@ module.exports = {
       },
       boxShadow: {
         'card': '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
-        'card-hover': '0 4px 12px rgba(0,0,0,0.08)',
-        'elevated': '0 8px 24px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
+        'card-hover': '0 8px 25px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04)',
+        'elevated': '0 12px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)',
         'sidebar': '4px 0 24px rgba(0,0,0,0.12)',
-        'modal': '0 20px 60px rgba(0,0,0,0.15)',
+        'modal': '0 25px 80px rgba(0,0,0,0.2), 0 8px 32px rgba(0,0,0,0.08)',
         'input-focus': '0 0 0 3px rgba(79, 70, 229, 0.15)',
         'button-primary': '0 1px 2px rgba(0,0,0,0.05), 0 0 0 1px rgba(79, 70, 229, 0.4)',
+        'soft': '0 2px 15px rgba(0,0,0,0.04)',
+        'glow': '0 0 20px rgba(99, 102, 241, 0.15)',
       },
       keyframes: {
         'fade-in': {

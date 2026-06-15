@@ -104,43 +104,44 @@ const DashboardOverview = ({
   };
 
   const todaysAttendanceSection = (
-    <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 p-8 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
-        <div>
-          <h3 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            {attendanceTitle}
-            <Sparkles className="w-5 h-5 text-amber-500" />
-          </h3>
-          <div className="mt-1 flex items-center gap-3">
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Showing: <span className="text-primary-600 dark:text-primary-400">{showingLabel}</span>
-            </p>
-            {selectedServiceId !== 'all' && (
-              <button
-                onClick={() => onAssignDutyRoster(formatLocalDate())}
-                className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-orange-600 transition-colors hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/40"
-              >
-                <ShieldAlert className="w-3 h-3" />
-                Duty Roster
-              </button>
+    <div className="card overflow-hidden">
+      <div className="px-8 py-6 border-b border-slate-100 dark:border-white/5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              {attendanceTitle}
+            </h3>
+            <div className="mt-2 flex items-center gap-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Showing: <span className="text-primary-600 dark:text-primary-400">{showingLabel}</span>
+              </p>
+              {selectedServiceId !== 'all' && (
+                <button
+                  onClick={() => onAssignDutyRoster(formatLocalDate())}
+                  className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-600 transition-colors hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/40"
+                >
+                  <ShieldAlert className="w-3 h-3" />
+                  Duty Roster
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400">
+                4-Week Trend
+              </span>
+              {renderSparkline()}
+            </div>
+            {totalToday > 0 && (
+              <div className="rounded-2xl border border-primary-100 bg-primary-50 px-4 py-2 dark:border-primary-800/30 dark:bg-primary-900/20">
+                <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                  {attendanceRate}% Rate
+                </span>
+              </div>
             )}
           </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-end">
-            <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400">
-              4-Week Trend
-            </span>
-            {renderSparkline()}
-          </div>
-          {totalToday > 0 && (
-            <div className="rounded-2xl border border-primary-100 bg-primary-50 px-4 py-2 dark:border-primary-800/30 dark:bg-primary-900/20">
-              <span className="text-sm font-black text-primary-600 dark:text-primary-400">
-                {attendanceRate}% Rate
-              </span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -153,8 +154,8 @@ const DashboardOverview = ({
         const lastSession = dashboardMetrics?.lastSession;
 
         return (
-          <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/30 py-12 dark:border-slate-700/50 dark:bg-slate-900/10">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-100 dark:bg-primary-900/30">
+          <div className="flex flex-col items-center justify-center py-16 px-8">
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/20 shadow-lg shadow-primary-500/10">
               <Zap className="h-8 w-8 text-primary-600 dark:text-primary-400" />
             </div>
 
@@ -163,12 +164,12 @@ const DashboardOverview = ({
                 <p className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
                   No attendance records yet
                 </p>
-                <p className="mb-6 max-w-xs text-center text-sm text-slate-500 dark:text-slate-400">
+                <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                   Consistency is key. Start documenting today's {serviceLabel} to track progress.
                 </p>
                 <button
                   onClick={() => navigate('/admin/reports')}
-                  className="rounded-2xl bg-primary-600 px-8 py-3 font-black text-white shadow-xl shadow-primary-500/20 transition-all hover:bg-primary-700 active:scale-95"
+                  className="btn-primary btn-lg"
                 >
                   Start Check-in
                 </button>
@@ -178,7 +179,7 @@ const DashboardOverview = ({
                 <p className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
                   No {currentService?.name || 'service'} scheduled today
                 </p>
-                <p className="mb-2 max-w-xs text-center text-sm text-slate-500 dark:text-slate-400">
+                <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                   {currentService?.name || 'This service'} runs on{' '}
                   <span className="font-bold text-primary-600 dark:text-primary-400">
                     {currentService?.default_day || 'N/A'}
@@ -188,7 +189,7 @@ const DashboardOverview = ({
                 {lastSession && (
                   <button
                     onClick={() => navigate('/admin/reports')}
-                    className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 transition-all hover:border-primary-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                    className="btn-secondary btn-lg"
                   >
                     <Calendar className="w-4 h-4" />
                     View last session - {lastSession.date}
@@ -199,32 +200,47 @@ const DashboardOverview = ({
           </div>
         );
       })() : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-          <div className="rounded-2xl border border-emerald-100/50 bg-emerald-50/50 p-6 dark:border-emerald-800/30 dark:bg-emerald-900/10">
-            <div className="mb-2 flex items-center gap-3 text-emerald-600">
-              <CheckCircle2 className="w-5 h-5" />
-              <span className="text-xs font-black uppercase tracking-widest">Present</span>
+        <div className="px-8 py-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50 to-emerald-50/50 p-6 dark:border-emerald-800/30 dark:from-emerald-900/20 dark:to-emerald-900/10">
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-emerald-500/5 blur-2xl -translate-y-8 translate-x-8" />
+            <div className="relative">
+              <div className="mb-3 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Present</span>
+              </div>
+              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{todayStats.present}</p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">Active attendance today</p>
             </div>
-            <p className="text-4xl font-black text-slate-900 dark:text-white">{todayStats.present}</p>
-            <p className="mt-2 text-[10px] font-bold text-slate-500">Vs 38 last Thursday</p>
           </div>
 
-          <div className="rounded-2xl border border-rose-100/50 bg-rose-50/50 p-6 dark:border-rose-800/30 dark:bg-rose-900/10">
-            <div className="mb-2 flex items-center gap-3 text-rose-600">
-              <XCircle className="w-5 h-5" />
-              <span className="text-xs font-black uppercase tracking-widest">Absent</span>
+          <div className="relative overflow-hidden rounded-2xl border border-rose-100/60 bg-gradient-to-br from-rose-50 to-rose-50/50 p-6 dark:border-rose-800/30 dark:from-rose-900/20 dark:to-rose-900/10">
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-rose-500/5 blur-2xl -translate-y-8 translate-x-8" />
+            <div className="relative">
+              <div className="mb-3 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center">
+                  <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400">Absent</span>
+              </div>
+              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{todayStats.absent}</p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">Requires follow-up</p>
             </div>
-            <p className="text-4xl font-black text-slate-900 dark:text-white">{todayStats.absent}</p>
-            <p className="mt-2 text-[10px] font-bold text-slate-500">Requires follow-up</p>
           </div>
 
-          <div className="rounded-2xl border border-amber-100/50 bg-amber-50/50 p-6 dark:border-amber-800/30 dark:bg-amber-900/10">
-            <div className="mb-2 flex items-center gap-3 text-amber-600">
-              <Clock3 className="w-5 h-5" />
-              <span className="text-xs font-black uppercase tracking-widest">Excused</span>
+          <div className="relative overflow-hidden rounded-2xl border border-amber-100/60 bg-gradient-to-br from-amber-50 to-amber-50/50 p-6 dark:border-amber-800/30 dark:from-amber-900/20 dark:to-amber-900/10">
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-amber-500/5 blur-2xl -translate-y-8 translate-x-8" />
+            <div className="relative">
+              <div className="mb-3 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                  <Clock3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">Excused</span>
+              </div>
+              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{todayStats.excused}</p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">Planned absence</p>
             </div>
-            <p className="text-4xl font-black text-slate-900 dark:text-white">{todayStats.excused}</p>
-            <p className="mt-2 text-[10px] font-bold text-slate-500">Planned absence</p>
           </div>
         </div>
       )}
@@ -241,17 +257,24 @@ const DashboardOverview = ({
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 text-white shadow-2xl shadow-indigo-500/20">
-        <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-white/10 blur-3xl -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 h-60 w-60 rounded-full bg-pink-400/10 blur-3xl translate-y-24" />
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 md:p-10 text-white shadow-2xl shadow-indigo-500/25">
+        <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-white/10 blur-3xl -translate-y-40 translate-x-40" />
+        <div className="absolute bottom-0 left-1/4 h-72 w-72 rounded-full bg-pink-400/15 blur-3xl translate-y-32" />
+        <div className="absolute top-1/2 left-1/3 h-48 w-48 rounded-full bg-indigo-300/10 blur-3xl" />
 
         <div className="relative z-10">
-          <h2 className="text-4xl font-black tracking-tight">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-8 w-8 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-amber-300" />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-widest text-white/60">Dashboard</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl font-black tracking-tight">
             Welcome, <span className="text-amber-200">{welcomeName}</span>
           </h2>
-          <p className="mt-2 max-w-lg text-lg font-medium text-white/80">
+          <p className="mt-3 max-w-lg text-base md:text-lg font-medium text-white/75 leading-relaxed">
             Here's what's happening with your church{' '}
-            <span className="font-black text-white underline decoration-pink-400 underline-offset-4">
+            <span className="font-black text-white underline decoration-pink-400 underline-offset-4 decoration-2">
               today
             </span>
             .
@@ -282,7 +305,7 @@ const DashboardOverview = ({
         onAddVisitorToFollowUp={() => navigate('/admin/follow-ups')}
       />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
         <StatCard
           label="Total Members"
           value={totalMembers}
@@ -296,8 +319,6 @@ const DashboardOverview = ({
           value={sections.length}
           icon={Layers}
           variant="info"
-          trend={0}
-          trendLabel="No change"
           onClick={() => navigate('/admin/sections')}
         />
         <StatCard
@@ -305,41 +326,39 @@ const DashboardOverview = ({
           value={leaders.length}
           icon={UserCog}
           variant="success"
-          trend={0}
-          trendLabel="No change"
           onClick={() => navigate('/admin/leaders')}
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <div className="rounded-3xl border border-slate-200/60 bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <div className="mb-8 flex items-center justify-between">
-            <h3 className="flex items-center gap-3 text-xl font-black text-slate-900 dark:text-slate-100">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg shadow-rose-500/20">
-                <Cake className="w-5 h-5 text-white" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="card overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+            <h3 className="flex items-center gap-3 text-lg font-bold text-slate-900 dark:text-slate-100">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg shadow-rose-500/20">
+                <Cake className="w-4.5 h-4.5 text-white" />
               </div>
               Next 7 Days
             </h3>
             <button
               onClick={() => navigate('/admin/birthdays')}
-              className="text-sm font-black text-primary-600 hover:underline dark:text-primary-400"
+              className="btn-sm btn-ghost text-primary-600 dark:text-primary-400"
             >
               View all
             </button>
           </div>
 
-          <div className="space-y-6">
+          <div className="p-5 space-y-3">
             {allMembers
               .filter((member) => member.date_of_birth && !member.hide_from_birthday_list)
               .slice(0, 5)
               .map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between rounded-[1.25rem] border border-slate-100 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/30"
+                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-slate-700/50 dark:bg-slate-800/50"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                      <span className="text-sm font-black text-slate-900 dark:text-white">
+                  <div className="flex items-center gap-3.5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-700">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">
                         {new Date(member.date_of_birth).toLocaleDateString('en-US', {
                           day: 'numeric',
                           month: 'short',
@@ -347,39 +366,37 @@ const DashboardOverview = ({
                       </span>
                     </div>
                     <div>
-                      <p className="text-base font-bold text-slate-900 dark:text-slate-100">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {member.full_name}
                       </p>
-                      <p className="text-xs font-bold uppercase tracking-tighter text-slate-400">
+                      <p className="text-xs font-medium text-slate-400">
                         {member.section_name}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button className="rounded-xl border border-slate-100 bg-white p-2.5 text-slate-400 transition-all hover:text-primary-600 dark:border-slate-600 dark:bg-slate-700">
-                      <MessageSquare className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <button className="btn-icon btn-ghost p-2 rounded-lg text-slate-400 hover:text-primary-600">
+                    <MessageSquare className="w-4 h-4" />
+                  </button>
                 </div>
               ))}
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200/60 bg-white p-8 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-          <div className="mb-8 flex items-center justify-between">
-            <h3 className="text-xl font-black text-slate-900 dark:text-slate-100">
+        <div className="card overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
               Sections Overview
             </h3>
             <button
               onClick={() => navigate('/admin/sections')}
-              className="text-sm font-black text-primary-600 hover:underline dark:text-primary-400"
+              className="btn-sm btn-ghost text-primary-600 dark:text-primary-400"
             >
               Full management
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="p-5 space-y-4">
             {sections.slice(0, 4).map((section) => {
               const sectionMembers = allMembers.filter((member) => member.section_name === section.name);
               const sectionLeaders = leaders.filter((leader) => leader.section_name === section.name);
@@ -388,37 +405,30 @@ const DashboardOverview = ({
                 : 0;
 
               return (
-                <div
-                  key={section.id}
-                  className="rounded-2xl border border-slate-100 bg-slate-50 p-5 dark:border-slate-700/50 dark:bg-slate-900/30"
-                >
-                  <div className="mb-4 flex items-center justify-between">
+                <div key={section.id}>
+                  <div className="flex items-center justify-between mb-2">
                     <div>
-                      <h4 className="font-black text-slate-900 dark:text-slate-100">{section.name}</h4>
-                      <p className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        Leaders: {sectionLeaders.length} | Avg: 72%
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{section.name}</h4>
+                      <p className="text-xs font-medium text-slate-400">
+                        {sectionLeaders.length} leader{sectionLeaders.length !== 1 ? 's' : ''}
                       </p>
                     </div>
-                    <span className="tabular-nums text-lg font-black text-slate-900 dark:text-slate-100">
+                    <span className="tabular-nums text-lg font-bold text-slate-900 dark:text-slate-100">
                       {sectionMembers.length}
                     </span>
                   </div>
 
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-primary-500 to-violet-500 transition-all duration-1000"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
 
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400">
+                  <div className="mt-1.5 flex items-center justify-between">
+                    <span className="text-[10px] font-semibold text-slate-400">
                       {percentage.toFixed(0)}% of total
                     </span>
-                    <div className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600">
-                      <Zap className="w-2.5 h-2.5" />
-                      Live 88%
-                    </div>
                   </div>
                 </div>
               );
@@ -432,22 +442,24 @@ const DashboardOverview = ({
         onViewAll={() => navigate('/admin/rewards')}
       />
 
-      <div className="flex flex-wrap items-center justify-center gap-3 px-4 text-xs text-slate-500 dark:text-slate-400">
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800/70">
+      <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 dark:bg-slate-800/50 dark:border-slate-700/50 px-3 py-1.5 backdrop-blur-sm">
           <Clock3 className="h-3.5 w-3.5" />
           <span>Standard Time</span>
           <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
           <span className="font-semibold text-slate-700 dark:text-slate-200">GMT+3 (EAT)</span>
         </div>
 
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800/70">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 dark:bg-slate-800/50 dark:border-slate-700/50 px-3 py-1.5 backdrop-blur-sm">
+          <span className="h-2 w-2 rounded-full bg-emerald-500 relative">
+            <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
+          </span>
           <span>Live</span>
           <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
           <span className="font-semibold text-slate-700 dark:text-slate-200">Attendance synced</span>
         </div>
 
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800/70">
+        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 dark:bg-slate-800/50 dark:border-slate-700/50 px-3 py-1.5 backdrop-blur-sm">
           <Calendar className="h-3.5 w-3.5" />
           <span>Updated</span>
           <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
