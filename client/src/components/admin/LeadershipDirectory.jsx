@@ -33,8 +33,10 @@ const LeadershipDirectory = () => {
       const res = await adminAPI.getLeadershipDirectory(params);
       setData(res.data || { directory: [], titles: [], sections: [] });
       setTotalPages(Math.ceil((res.data?.total || res.data?.directory?.length || 0) / limit));
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error('Failed to load leadership directory:', err);
+      alert('Failed to load leadership directory: ' + (err.message || 'Unknown error'));
+    } finally { setLoading(false); }
   };
 
   // Initialize filters from URL on mount
@@ -125,7 +127,9 @@ const LeadershipDirectory = () => {
   // Load all members for the assign modal
   useEffect(() => {
     if (showAssignModal && allMembers.length === 0) {
-      adminAPI.getMembers({ limit: 5000 }).then((res) => setAllMembers(res.data?.members || [])).catch(() => {});
+      adminAPI.getMembers({ limit: 5000 })
+        .then((res) => setAllMembers(res.data || []))
+        .catch((err) => { console.error('Failed to load members for assign modal:', err); alert('Failed to load members: ' + err.message); });
     }
   }, [showAssignModal]);
 
@@ -158,7 +162,7 @@ const LeadershipDirectory = () => {
       });
       setShowAssignModal(false);
       setAssignSearch('');
-      setAssignDirty(false);
+      setAssignFocused(false);
       setSelectedMemberId(null);
       setSelectedTitleId('');
       setAppointmentDate('');
@@ -399,18 +403,27 @@ const LeadershipDirectory = () => {
       <Modal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} title="Assign Leadership Title" subtitle="Search and select a member to assign a leadership role">
         <form onSubmit={handleAssignLeader}>
           <div className="space-y-4">
-            <div className="relative" ref={assignRef}>
-              <label className="input-label">Member</label>
-              <input
-                required
-                type="text"
-                value={assignFocused ? assignSearch : (assignSelectedMember ? assignSelectedMember.full_name : assignSearch)}
-                onChange={(e) => { setAssignSearch(e.target.value); setShowMemberDropdown(true); if (selectedMemberId) setSelectedMemberId(null); }}
-                onFocus={() => { setAssignFocused(true); setShowMemberDropdown(true); }}
-                onBlur={() => { setTimeout(() => { setAssignFocused(false); if (!selectedMemberId) setAssignSearch(''); }, 200); }}
-                placeholder="Search member name..."
-                className="input w-full"
-              />
+             <div className="relative" ref={assignRef}>
+               <label className="input-label">Member</label>
+               <input
+                 required
+                 type="text"
+                 value={assignFocused ? assignSearch : (assignSelectedMember ? assignSelectedMember.full_name : assignSearch)}
+                 onChange={(e) => { setAssignSearch(e.target.value); setShowMemberDropdown(true); if (selectedMemberId) setSelectedMemberId(null); }}
+                 onFocus={() => { setAssignFocused(true); setShowMemberDropdown(true); }}
+                 onBlur={() => { setTimeout(() => { setAssignFocused(false); if (!selectedMemberId) setAssignSearch(''); }, 200); }}
+                 placeholder={allMembers.length === 0 ? "Loading members..." : "Search member name..."}
+                 disabled={allMembers.length === 0}
+                 className="input w-full"
+               />
+               {allMembers.length === 0 && (
+                 <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 py-2 animate-fade-in">
+                   <div className="px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                     <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                     Loading members...
+                   </div>
+                 </div>
+               )}
               {showMemberDropdown && assignMemberList.length > 0 && (
                 <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
                   {assignMemberList.map((m) => (
@@ -442,15 +455,22 @@ const LeadershipDirectory = () => {
                 <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
               )}
             </div>
-            <div>
-              <label className="input-label">Title</label>
-              <select required className="select h-10 w-full" value={selectedTitleId} onChange={(e) => setSelectedTitleId(e.target.value)}>
-                <option value="">Select a title...</option>
-                {data.titles.filter((t) => t.is_active).map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-            </div>
+             <div>
+               <label className="input-label">Title</label>
+               <select required className="select h-10 w-full" value={selectedTitleId} onChange={(e) => setSelectedTitleId(e.target.value)} disabled={!data.titles || data.titles.length === 0}>
+                 <option value="">Select a title...</option>
+                 {!data.titles || data.titles.length === 0 ? (
+                   <option value="" disabled>Loading titles...</option>
+                 ) : (
+                   data.titles.filter((t) => t.is_active).map((t) => (
+                     <option key={t.id} value={t.id}>{t.name}</option>
+                   ))
+                 )}
+               </select>
+               {!data.titles || data.titles.length === 0 && (
+                 <p className="text-[11px] text-slate-400 mt-1">Loading available titles...</p>
+               )}
+             </div>
             <div>
               <label className="input-label">Appointment Date</label>
               <input type="date" className="input h-10 w-full" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} />
@@ -461,7 +481,7 @@ const LeadershipDirectory = () => {
             </div>
           </div>
           <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100 dark:border-white/5">
-            <button type="button" onClick={() => { setShowAssignModal(false); setAssignSearch(''); setSelectedMemberId(null); setSelectedTitleId(''); setAppointmentDate(''); setAssignNotes(''); }} className="btn-secondary flex-1 active:scale-[0.97]">Cancel</button>
+            <button type="button" onClick={() => { setShowAssignModal(false); setAssignSearch(''); setAssignFocused(false); setSelectedMemberId(null); setSelectedTitleId(''); setAppointmentDate(''); setAssignNotes(''); }} className="btn-secondary flex-1 active:scale-[0.97]">Cancel</button>
             <button type="submit" disabled={!selectedMemberId || !selectedTitleId || assignSaving} className="btn-primary flex-1 active:scale-[0.97]">
               {assignSaving ? (
                 <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Assigning...</span>
