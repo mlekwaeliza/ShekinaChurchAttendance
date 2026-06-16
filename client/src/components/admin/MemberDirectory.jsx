@@ -89,6 +89,29 @@ const MemberDirectory = ({
 
   useEffect(() => { fetchAllTitles(); }, [fetchAllTitles]);
 
+  // Preload all members for the assign modal (in case allMembers prop is empty/stale)
+  const [allMembersLoaded, setAllMembersLoaded] = useState(false);
+  const [modalMembers, setModalMembers] = useState([]);
+
+  useEffect(() => {
+    if (!allMembersLoaded && allMembers.length > 0) {
+      setModalMembers(allMembers);
+      setAllMembersLoaded(true);
+    }
+  }, [allMembers, allMembersLoaded]);
+
+  const ensureModalMembersLoaded = useCallback(async () => {
+    if (modalMembers.length === 0) {
+      try {
+        const res = await adminAPI.getMembers({ limit: 5000 });
+        setModalMembers(res.data || []);
+      } catch (err) {
+        console.error('Failed to load members for modal:', err);
+        showToast({ type: 'error', title: 'Failed to load members', message: err.message });
+      }
+    }
+  }, [modalMembers.length, showToast]);
+
   useEffect(() => {
     if (!viewHistoryFor) { setTitleHistory([]); return; }
     let cancelled = false;
@@ -638,7 +661,7 @@ const MemberDirectory = ({
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-0.5">
                             <button
-                              onClick={() => { setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
+                                            onClick={() => { ensureModalMembersLoaded(); setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
                               className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
                               title="Assign Title"
                             >
@@ -706,7 +729,7 @@ const MemberDirectory = ({
                                 <div className="flex items-center justify-between mb-2">
                                   <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titles</p>
                                   <button
-                                    onClick={() => { setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
+                              onClick={() => { ensureModalMembersLoaded(); setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
                                     className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all active:scale-95"
                                   >
                                     <Plus className="w-3 h-3" /> Add Title
@@ -827,7 +850,7 @@ const MemberDirectory = ({
             </div>
             <div className="p-6 space-y-4">
               <MemberSearchSelect
-                members={allMembers}
+                members={modalMembers.length > 0 ? modalMembers : allMembers}
                 selectedId={titleAssignMember}
                 onChange={(id) => setTitleAssignMember(id)}
               />
@@ -1028,6 +1051,8 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
 
   const displayValue = focused ? search : (selected ? selected.full_name : search);
 
+  const isLoading = members.length === 0;
+
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setFocused(false); if (!selectedId) { setSearch(''); } } };
     document.addEventListener('mousedown', handler);
@@ -1043,10 +1068,19 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
         onChange={(e) => { setSearch(e.target.value); setOpen(true); if (selectedId) onChange(null); }}
         onFocus={() => { setFocused(true); setOpen(true); }}
         onBlur={() => { setTimeout(() => { setFocused(false); if (!selectedId) setSearch(''); }, 200); }}
-        placeholder="Search member name..."
+        placeholder={isLoading ? "Loading members..." : "Search member name..."}
+        disabled={isLoading}
         className="input w-full"
       />
-      {open && filtered.length > 0 && (
+      {isLoading && (
+        <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 py-2 animate-fade-in">
+          <div className="px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+            Loading members...
+          </div>
+        </div>
+      )}
+      {open && !isLoading && filtered.length > 0 && (
         <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
           {filtered.map((m) => (
             <button
