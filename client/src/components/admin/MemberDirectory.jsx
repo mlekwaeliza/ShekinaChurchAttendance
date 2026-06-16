@@ -71,15 +71,21 @@ const MemberDirectory = ({
     try {
       const res = await adminAPI.getMemberTitles(memberId);
       setMemberTitles((prev) => ({ ...prev, [memberId]: res.data || [] }));
-    } catch { /* ignore */ }
-  }, []);
+    } catch (err) {
+      console.error('Failed to fetch member titles:', err);
+      showToast({ type: 'error', title: 'Failed to load titles', message: err.message || 'Could not load member titles' });
+    }
+  }, [showToast]);
 
   const fetchAllTitles = useCallback(async () => {
     try {
       const res = await adminAPI.getTitles();
       setAllTitles(res.data || []);
-    } catch { /* ignore */ }
-  }, []);
+    } catch (err) {
+      console.error('Failed to fetch titles:', err);
+      showToast({ type: 'error', title: 'Failed to load titles', message: err.message || 'Could not load title list' });
+    }
+  }, [showToast]);
 
   useEffect(() => { fetchAllTitles(); }, [fetchAllTitles]);
 
@@ -1009,10 +1015,10 @@ const MemberDirectory = ({
 const MemberSearchSelect = ({ members, selectedId, onChange }) => {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  const [focused, setFocused] = useState(false);
   const ref = useRef(null);
 
-  const selected = useMemo(() => members.find((m) => m.id === selectedId), [members, selectedId]);
+  const selected = useMemo(() => members.find((m) => Number(m.id) === Number(selectedId)), [members, selectedId]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return members.slice(0, 20);
@@ -1020,24 +1026,23 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
     return members.filter((m) => (m.full_name || '').toLowerCase().includes(t)).slice(0, 20);
   }, [search, members]);
 
+  const displayValue = focused ? search : (selected ? selected.full_name : search);
+
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); if (dirty && !selectedId) setSearch(''); } };
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setFocused(false); if (!selectedId) { setSearch(''); } } };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [dirty, selectedId]);
-
-  // When selected member changes from outside, clear search
-  useEffect(() => { if (selectedId && !dirty) setSearch(''); }, [selectedId]);
+  }, [selectedId]);
 
   return (
     <div className="relative" ref={ref}>
       <label className="input-label">Member</label>
       <input
         type="text"
-        value={dirty ? search : (selected ? selected.full_name : search)}
-        onChange={(e) => { setSearch(e.target.value); setOpen(true); setDirty(true); if (selectedId) onChange(null); }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => { if (dirty && !selectedId) { setTimeout(() => { setSearch(''); setDirty(false); }, 200); } }}
+        value={displayValue}
+        onChange={(e) => { setSearch(e.target.value); setOpen(true); if (selectedId) onChange(null); }}
+        onFocus={() => { setFocused(true); setOpen(true); }}
+        onBlur={() => { setTimeout(() => { setFocused(false); if (!selectedId) setSearch(''); }, 200); }}
         placeholder="Search member name..."
         className="input w-full"
       />
@@ -1047,9 +1052,9 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
             <button
               key={m.id}
               type="button"
-              onClick={() => { onChange(m.id); setSearch(''); setDirty(false); setOpen(false); }}
+              onClick={() => { onChange(m.id); setSearch(''); setOpen(false); setFocused(false); }}
               className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
-                m.id === selectedId
+                Number(m.id) === Number(selectedId)
                   ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
                   : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
               }`}
@@ -1063,7 +1068,7 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
           ))}
         </div>
       )}
-      {dirty && !selectedId && !open && (
+      {focused && !selectedId && !open && search.trim() && (
         <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
       )}
     </div>

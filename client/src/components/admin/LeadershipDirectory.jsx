@@ -111,7 +111,7 @@ const LeadershipDirectory = () => {
   // Assign leader modal state
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignSearch, setAssignSearch] = useState('');
-  const [assignDirty, setAssignDirty] = useState(false);
+  const [assignFocused, setAssignFocused] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
   const [selectedTitleId, setSelectedTitleId] = useState('');
@@ -120,7 +120,7 @@ const LeadershipDirectory = () => {
   const [assignSaving, setAssignSaving] = useState(false);
   const [allMembers, setAllMembers] = useState([]);
   const assignRef = useRef(null);
-  const assignSelectedMember = useMemo(() => allMembers.find((m) => m.id === selectedMemberId), [allMembers, selectedMemberId]);
+  const assignSelectedMember = useMemo(() => allMembers.find((m) => Number(m.id) === Number(selectedMemberId)), [allMembers, selectedMemberId]);
 
   // Load all members for the assign modal
   useEffect(() => {
@@ -131,11 +131,11 @@ const LeadershipDirectory = () => {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (assignRef.current && !assignRef.current.contains(e.target)) { setShowMemberDropdown(false); if (assignDirty && !selectedMemberId) { setAssignSearch(''); setAssignDirty(false); } }
+      if (assignRef.current && !assignRef.current.contains(e.target)) { setShowMemberDropdown(false); setAssignFocused(false); if (!selectedMemberId) setAssignSearch(''); }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [assignDirty, selectedMemberId]);
+  }, [selectedMemberId]);
 
   const assignMemberList = useMemo(() => {
     if (!assignSearch.trim()) return allMembers.slice(0, 20);
@@ -404,10 +404,10 @@ const LeadershipDirectory = () => {
               <input
                 required
                 type="text"
-                value={assignDirty ? assignSearch : (assignSelectedMember ? assignSelectedMember.full_name : assignSearch)}
-                onChange={(e) => { setAssignSearch(e.target.value); setShowMemberDropdown(true); setAssignDirty(true); if (selectedMemberId) setSelectedMemberId(null); }}
-                onFocus={() => setShowMemberDropdown(true)}
-                onBlur={() => { if (assignDirty && !selectedMemberId) { setTimeout(() => { setAssignSearch(''); setAssignDirty(false); }, 200); } }}
+                value={assignFocused ? assignSearch : (assignSelectedMember ? assignSelectedMember.full_name : assignSearch)}
+                onChange={(e) => { setAssignSearch(e.target.value); setShowMemberDropdown(true); if (selectedMemberId) setSelectedMemberId(null); }}
+                onFocus={() => { setAssignFocused(true); setShowMemberDropdown(true); }}
+                onBlur={() => { setTimeout(() => { setAssignFocused(false); if (!selectedMemberId) setAssignSearch(''); }, 200); }}
                 placeholder="Search member name..."
                 className="input w-full"
               />
@@ -420,11 +420,11 @@ const LeadershipDirectory = () => {
                       onClick={() => {
                         setSelectedMemberId(m.id);
                         setAssignSearch('');
-                        setAssignDirty(false);
+                        setAssignFocused(false);
                         setShowMemberDropdown(false);
                       }}
                       className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
-                        m.id === selectedMemberId
+                        Number(m.id) === Number(selectedMemberId)
                           ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
                           : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
                       }`}
@@ -438,7 +438,7 @@ const LeadershipDirectory = () => {
                   ))}
                 </div>
               )}
-              {assignDirty && !selectedMemberId && !showMemberDropdown && (
+              {assignFocused && !selectedMemberId && !showMemberDropdown && assignSearch.trim() && (
                 <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
               )}
             </div>

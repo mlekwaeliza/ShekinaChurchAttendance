@@ -1442,15 +1442,15 @@ const queries = {
   getMembersByLeader: (leaderId) => all(`
     SELECT m.*, s.name as section_name
     FROM members m
-    JOIN sections s ON m.section_id = s.id
+    LEFT JOIN sections s ON m.section_id = s.id
     WHERE m.leader_id = ? AND m.is_active = 1
     ORDER BY m.full_name
   `, [leaderId]),
   getMembersBySection: (sectionId) => all(`
     SELECT m.*, u.full_name as leader_name
     FROM members m
-    JOIN leaders l ON m.leader_id = l.id
-    JOIN users u ON l.user_id = u.id
+    LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users u ON l.user_id = u.id
     WHERE m.section_id = ? AND m.is_active = 1
     ORDER BY m.full_name
   `, [sectionId]),
@@ -1755,9 +1755,9 @@ const queries = {
       hcm.cell_id as home_cell_id,
       hc.name as home_cell_name
     FROM members m
-    JOIN sections s ON m.section_id = s.id
-    JOIN leaders l ON m.leader_id = l.id
-    JOIN users u ON l.user_id = u.id
+    LEFT JOIN sections s ON m.section_id = s.id
+    LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users u ON l.user_id = u.id
     LEFT JOIN home_cell_members hcm ON hcm.church_member_id = m.id AND hcm.is_active = 1
     LEFT JOIN home_cells hc ON hc.id = hcm.cell_id
     WHERE m.is_active = 1

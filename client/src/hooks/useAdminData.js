@@ -161,8 +161,12 @@ const useAdminData = () => {
       if (sectionsRes.status === 'fulfilled') setSections(sectionsRes.value.data);
       else console.error('Failed to load sections:', sectionsRes.reason);
 
-      if (membersRes.status === 'fulfilled') setAllMembers(membersRes.value.data);
-      else console.error('Failed to load members:', membersRes.reason);
+      if (membersRes.status === 'fulfilled') {
+        setAllMembers(membersRes.value.data);
+      } else {
+        console.error('Failed to load members:', membersRes.reason);
+        // Don't show toast here as loadCoreData runs on mount and polling
+      }
 
       if (birthdaysRes.status === 'fulfilled') setBirthdays(birthdaysRes.value.data);
       else {

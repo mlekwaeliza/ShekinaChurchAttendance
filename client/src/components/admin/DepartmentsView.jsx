@@ -54,13 +54,13 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
   // Member additions
   const [memberSearch, setMemberSearch] = useState('');
-  const [memberDirty, setMemberDirty] = useState(false);
+  const [memberFocused, setMemberFocused] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [selectedMemberToAdd, setSelectedMemberToAdd] = useState('');
   const [addingMember, setAddingMember] = useState(false);
 
   const memberSearchRef = useRef(null);
-  const selectedAddMember = useMemo(() => sortedMembers.find((m) => m.id === parseInt(selectedMemberToAdd)), [sortedMembers, selectedMemberToAdd]);
+  const selectedAddMember = useMemo(() => sortedMembers.find((m) => Number(m.id) === Number(selectedMemberToAdd)), [sortedMembers, selectedMemberToAdd]);
 
   // filteredMembers moved below sortedMembers to avoid TDZ
 
@@ -68,12 +68,13 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
     const handleClickOutside = (e) => {
       if (memberSearchRef.current && !memberSearchRef.current.contains(e.target)) {
         setShowMemberDropdown(false);
-        if (memberDirty && !selectedMemberToAdd) { setMemberSearch(''); setMemberDirty(false); }
+        setMemberFocused(false);
+        if (!selectedMemberToAdd) setMemberSearch('');
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [memberDirty, selectedMemberToAdd]);
+  }, [selectedMemberToAdd]);
 
   const loadData = async () => {
     setLoading(true);
@@ -985,10 +986,10 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                     <input
                       required
                       type="text"
-                      value={memberDirty ? memberSearch : (selectedAddMember ? selectedAddMember.full_name : memberSearch)}
-                      onChange={(e) => { setMemberSearch(e.target.value); setShowMemberDropdown(true); setMemberDirty(true); if (selectedMemberToAdd) setSelectedMemberToAdd(''); }}
-                      onFocus={() => setShowMemberDropdown(true)}
-                      onBlur={() => { if (memberDirty && !selectedMemberToAdd) { setTimeout(() => { setMemberSearch(''); setMemberDirty(false); }, 200); } }}
+                      value={memberFocused ? memberSearch : (selectedAddMember ? selectedAddMember.full_name : memberSearch)}
+                      onChange={(e) => { setMemberSearch(e.target.value); setShowMemberDropdown(true); if (selectedMemberToAdd) setSelectedMemberToAdd(''); }}
+                      onFocus={() => { setMemberFocused(true); setShowMemberDropdown(true); }}
+                      onBlur={() => { setTimeout(() => { setMemberFocused(false); if (!selectedMemberToAdd) setMemberSearch(''); }, 200); }}
                       placeholder="Search member name..."
                       className="input rounded-xl w-full"
                     />
@@ -1001,11 +1002,11 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                             onClick={() => {
                               setSelectedMemberToAdd(String(m.id));
                               setMemberSearch('');
-                              setMemberDirty(false);
+                              setMemberFocused(false);
                               setShowMemberDropdown(false);
                             }}
                             className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
-                              m.id === parseInt(selectedMemberToAdd)
+                              Number(m.id) === Number(selectedMemberToAdd)
                                 ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300'
                                 : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
                             }`}
@@ -1021,7 +1022,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                         ))}
                       </div>
                     )}
-                    {memberDirty && !selectedMemberToAdd && !showMemberDropdown && (
+                    {memberFocused && !selectedMemberToAdd && !showMemberDropdown && memberSearch.trim() && (
                       <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
                     )}
                   </div>
