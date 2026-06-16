@@ -11,7 +11,6 @@ const {
   monthsAgo,
   likeEscapePattern,
   likeClause,
-  likeClause,
   likeClauseCaseInsensitive,
   upsertAttendanceSql
 } = require('./utils/sqlDialect');
