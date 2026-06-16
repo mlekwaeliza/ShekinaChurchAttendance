@@ -475,9 +475,7 @@ const LeadershipDirectory = () => {
                 {!loading && data.titles && data.titles.length > 0 && data.titles.filter((t) => !!t.is_active).length === 0 && (
                   <p className="text-[11px] text-amber-500 mt-1">No active titles available. Create one in Titles section.</p>
                 )}
-                {!loading && data.titles && (
-                  <p className="text-[10px] text-slate-400 mt-1">Debug: {data.titles.length} title(s) loaded, {data.titles.filter(t => !!t.is_active).length} active</p>
-                )}
+
               </div>
             <div>
               <label className="input-label">Appointment Date</label>

@@ -1136,17 +1136,19 @@ router.get('/leadership-directory', async (req, res) => {
       }),
     ]);
 
-    if (directoryResult.status === 'rejected') console.error('getLeadershipDirectory error:', directoryResult.reason?.message);
-    if (titlesResult.status === 'rejected') console.error('getAllTitles error:', titlesResult.reason?.message);
-    if (sectionsResult.status === 'rejected') console.error('getAllSections error:', sectionsResult.reason?.message);
-    if (countResult.status === 'rejected') console.error('getLeadershipDirectoryCount error:', countResult.reason?.message);
+    const errors = [];
+
+    if (directoryResult.status === 'rejected') { errors.push(`getLeadershipDirectory: ${directoryResult.reason?.message}`); console.error('getLeadershipDirectory error:', directoryResult.reason?.message); }
+    if (titlesResult.status === 'rejected') { errors.push(`getAllTitles: ${titlesResult.reason?.message}`); console.error('getAllTitles error:', titlesResult.reason?.message); }
+    if (sectionsResult.status === 'rejected') { errors.push(`getAllSections: ${sectionsResult.reason?.message}`); console.error('getAllSections error:', sectionsResult.reason?.message); }
+    if (countResult.status === 'rejected') { errors.push(`getLeadershipDirectoryCount: ${countResult.reason?.message}`); console.error('getLeadershipDirectoryCount error:', countResult.reason?.message); }
 
     const directory = directoryResult.status === 'fulfilled' ? directoryResult.value : [];
     const titles = titlesResult.status === 'fulfilled' ? titlesResult.value : [];
     const sections = sectionsResult.status === 'fulfilled' ? sectionsResult.value : [];
     const total = countResult.status === 'fulfilled' ? (countResult.value[0]?.total || 0) : 0;
 
-    res.json({ directory, titles, sections, total });
+    res.json({ directory, titles, sections, total, errors: errors.length > 0 ? errors : undefined });
   } catch (error) {
     console.error('Leadership directory error:', error.message, error.stack?.split('\n')[1]);
     res.status(500).json({ error: error.message || 'Failed to fetch leadership directory' });
