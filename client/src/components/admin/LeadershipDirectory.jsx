@@ -31,8 +31,10 @@ const LeadershipDirectory = () => {
       if (appointmentFrom) params.appointment_from = appointmentFrom;
       if (appointmentTo) params.appointment_to = appointmentTo;
       const res = await adminAPI.getLeadershipDirectory(params);
-      setData(res.data || { directory: [], titles: [], sections: [] });
-      setTotalPages(Math.ceil((res.data?.total || res.data?.directory?.length || 0) / limit));
+      const payload = res.data || { directory: [], titles: [], sections: [] };
+      console.log('[LeadershipDirectory] Loaded:', { titlesCount: payload.titles?.length, activeTitles: payload.titles?.filter(t => !!t.is_active).length, sectionsCount: payload.sections?.length });
+      setData(payload);
+      setTotalPages(Math.ceil((payload.total || payload.directory?.length || 0) / limit));
     } catch (err) {
       console.error('Failed to load leadership directory:', err);
       alert('Failed to load leadership directory: ' + (err.message || 'Unknown error'));
@@ -455,25 +457,28 @@ const LeadershipDirectory = () => {
                 <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
               )}
             </div>
-             <div>
-               <label className="input-label">Title</label>
-               <select required className="select h-10 w-full" value={selectedTitleId} onChange={(e) => setSelectedTitleId(e.target.value)} disabled={loading || !data.titles || data.titles.length === 0}>
-                 <option value="">Select a title...</option>
-                 {loading || !data.titles || data.titles.length === 0 ? (
-                   <option value="" disabled>Loading titles...</option>
-                 ) : (
-                   data.titles.filter((t) => t.is_active).map((t) => (
-                     <option key={t.id} value={t.id}>{t.name}</option>
-                   ))
-                 )}
-               </select>
-               {(loading || !data.titles || data.titles.length === 0) && (
-                 <p className="text-[11px] text-slate-400 mt-1">Loading available titles...</p>
-               )}
-               {!loading && data.titles && data.titles.length > 0 && data.titles.filter((t) => t.is_active).length === 0 && (
-                 <p className="text-[11px] text-amber-500 mt-1">No active titles available. Create one in Titles section.</p>
-               )}
-             </div>
+              <div>
+                <label className="input-label">Title</label>
+                <select required className="select h-10 w-full" value={selectedTitleId} onChange={(e) => setSelectedTitleId(e.target.value)} disabled={loading || !data.titles || data.titles.length === 0}>
+                  <option value="">Select a title...</option>
+                  {loading || !data.titles || data.titles.length === 0 ? (
+                    <option value="" disabled>Loading titles...</option>
+                  ) : (
+                    data.titles.filter((t) => !!t.is_active).map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))
+                  )}
+                </select>
+                {(loading || !data.titles || data.titles.length === 0) && (
+                  <p className="text-[11px] text-slate-400 mt-1">Loading available titles...</p>
+                )}
+                {!loading && data.titles && data.titles.length > 0 && data.titles.filter((t) => !!t.is_active).length === 0 && (
+                  <p className="text-[11px] text-amber-500 mt-1">No active titles available. Create one in Titles section.</p>
+                )}
+                {!loading && data.titles && (
+                  <p className="text-[10px] text-slate-400 mt-1">Debug: {data.titles.length} title(s) loaded, {data.titles.filter(t => !!t.is_active).length} active</p>
+                )}
+              </div>
             <div>
               <label className="input-label">Appointment Date</label>
               <input type="date" className="input h-10 w-full" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} />
