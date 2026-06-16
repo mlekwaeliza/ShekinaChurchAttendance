@@ -1110,31 +1110,50 @@ router.get('/members/:id/titles/:titleId/history', async (req, res) => {
 router.get('/leadership-directory', async (req, res) => {
   try {
     const { title_id, status, search, section_id, appointment_from, appointment_to, page = 1, limit = 50 } = req.query;
-    const p = parseInt(page);
-    const lim = parseInt(limit);
+    const p = parseInt(page) || 1;
+    const lim = parseInt(limit) || 50;
     const offset = (p - 1) * lim;
-    const directory = await queries.getLeadershipDirectory({
-      titleId: title_id || null,
-      status: status || null,
-      search: search || null,
-      sectionId: section_id || null,
-      appointmentFrom: appointment_from || null,
-      appointmentTo: appointment_to || null,
-      limit: lim,
-      offset,
-    });
-    const titles = await queries.getAllTitles();
-    const sections = await queries.getAllSections();
-    // Get total count for pagination
-    const countRes = await queries.getLeadershipDirectoryCount({
-      titleId: title_id || null,
-      status: status || null,
-      search: search || null,
-      sectionId: section_id || null,
-      appointmentFrom: appointment_from || null,
-      appointmentTo: appointment_to || null,
-    });
-    const total = countRes[0]?.total || 0;
+    let directory = [];
+    let titles = [];
+    let sections = [];
+    let total = 0;
+    try {
+      directory = await queries.getLeadershipDirectory({
+        titleId: title_id || null,
+        status: status || null,
+        search: search || null,
+        sectionId: section_id || null,
+        appointmentFrom: appointment_from || null,
+        appointmentTo: appointment_to || null,
+        limit: lim,
+        offset,
+      });
+    } catch (e) {
+      console.error('getLeadershipDirectory failed:', e.message);
+    }
+    try {
+      titles = await queries.getAllTitles();
+    } catch (e) {
+      console.error('getAllTitles failed:', e.message);
+    }
+    try {
+      sections = await queries.getAllSections();
+    } catch (e) {
+      console.error('getAllSections failed:', e.message);
+    }
+    try {
+      const countRes = await queries.getLeadershipDirectoryCount({
+        titleId: title_id || null,
+        status: status || null,
+        search: search || null,
+        sectionId: section_id || null,
+        appointmentFrom: appointment_from || null,
+        appointmentTo: appointment_to || null,
+      });
+      total = countRes[0]?.total || 0;
+    } catch (e) {
+      console.error('getLeadershipDirectoryCount failed:', e.message);
+    }
     res.json({ directory, titles, sections, total });
   } catch (error) {
     console.error('Leadership directory error:', error.message, error.stack?.split('\n')[1]);
