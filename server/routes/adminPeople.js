@@ -1113,12 +1113,8 @@ router.get('/leadership-directory', async (req, res) => {
     const p = parseInt(page) || 1;
     const lim = parseInt(limit) || 50;
     const offset = (p - 1) * lim;
-    let directory = [];
-    let titles = [];
-    let sections = [];
-    let total = 0;
-    try {
-      directory = await queries.getLeadershipDirectory({
+    const [directoryResult, titlesResult, sectionsResult, countResult] = await Promise.allSettled([
+      queries.getLeadershipDirectory({
         titleId: title_id || null,
         status: status || null,
         search: search || null,
@@ -1127,33 +1123,29 @@ router.get('/leadership-directory', async (req, res) => {
         appointmentTo: appointment_to || null,
         limit: lim,
         offset,
-      });
-    } catch (e) {
-      console.error('getLeadershipDirectory failed:', e.message);
-    }
-    try {
-      titles = await queries.getAllTitles();
-    } catch (e) {
-      console.error('getAllTitles failed:', e.message);
-    }
-    try {
-      sections = await queries.getAllSections();
-    } catch (e) {
-      console.error('getAllSections failed:', e.message);
-    }
-    try {
-      const countRes = await queries.getLeadershipDirectoryCount({
+      }),
+      queries.getAllTitles(),
+      queries.getAllSections(),
+      queries.getLeadershipDirectoryCount({
         titleId: title_id || null,
         status: status || null,
         search: search || null,
         sectionId: section_id || null,
         appointmentFrom: appointment_from || null,
         appointmentTo: appointment_to || null,
-      });
-      total = countRes[0]?.total || 0;
-    } catch (e) {
-      console.error('getLeadershipDirectoryCount failed:', e.message);
-    }
+      }),
+    ]);
+
+    if (directoryResult.status === 'rejected') console.error('getLeadershipDirectory error:', directoryResult.reason?.message);
+    if (titlesResult.status === 'rejected') console.error('getAllTitles error:', titlesResult.reason?.message);
+    if (sectionsResult.status === 'rejected') console.error('getAllSections error:', sectionsResult.reason?.message);
+    if (countResult.status === 'rejected') console.error('getLeadershipDirectoryCount error:', countResult.reason?.message);
+
+    const directory = directoryResult.status === 'fulfilled' ? directoryResult.value : [];
+    const titles = titlesResult.status === 'fulfilled' ? titlesResult.value : [];
+    const sections = sectionsResult.status === 'fulfilled' ? sectionsResult.value : [];
+    const total = countResult.status === 'fulfilled' ? (countResult.value[0]?.total || 0) : 0;
+
     res.json({ directory, titles, sections, total });
   } catch (error) {
     console.error('Leadership directory error:', error.message, error.stack?.split('\n')[1]);

@@ -243,7 +243,9 @@ const Layout = ({ children, showNav = true }) => {
 
   const isActive = (item) => {
     if (item.exact) return location.pathname === item.path;
-    return location.pathname.startsWith(item.path);
+    const path = location.pathname;
+    if (!path.startsWith(item.path)) return false;
+    return path.length === item.path.length || path[item.path.length] === '/' || path[item.path.length] === '?';
   };
 
   const pageTitle = (() => {
