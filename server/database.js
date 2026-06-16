@@ -11,6 +11,8 @@ const {
   monthsAgo,
   likeEscapePattern,
   likeClause,
+  likeClause,
+  likeClauseCaseInsensitive,
   upsertAttendanceSql
 } = require('./utils/sqlDialect');
 
@@ -2620,6 +2622,7 @@ const queries = {
     const { titleId = null, status = null, search = null, sectionId = null, appointmentFrom = null, appointmentTo = null, limit = 500, offset = 0 } = filters;
     const conditions = ['m.is_active = 1', 'mt.id IS NOT NULL'];
     const params = [];
+    const likeCI = likeClauseCaseInsensitive();
     if (titleId) {
       conditions.push('mt.title_id = ?');
       params.push(titleId);
@@ -2629,8 +2632,8 @@ const queries = {
       params.push(status);
     }
     if (search) {
-      conditions.push('(m.full_name ILIKE ? OR ct.name ILIKE ?)');
-      const like = `%${search}%`;
+      const like = `%${likeEscapePattern(search)}%`;
+      conditions.push(`(m.full_name ${likeCI} OR ct.name ${likeCI})`);
       params.push(like, like);
     }
     if (sectionId) {
@@ -2664,6 +2667,7 @@ const queries = {
     const { titleId = null, status = null, search = null, sectionId = null, appointmentFrom = null, appointmentTo = null } = filters;
     const conditions = ['m.is_active = 1', 'mt.id IS NOT NULL'];
     const params = [];
+    const likeCI = likeClauseCaseInsensitive();
     if (titleId) {
       conditions.push('mt.title_id = ?');
       params.push(titleId);
@@ -2673,8 +2677,8 @@ const queries = {
       params.push(status);
     }
     if (search) {
-      conditions.push('(m.full_name ILIKE ? OR ct.name ILIKE ?)');
-      const like = `%${search}%`;
+      const like = `%${likeEscapePattern(search)}%`;
+      conditions.push(`(m.full_name ${likeCI} OR ct.name ${likeCI})`);
       params.push(like, like);
     }
     if (sectionId) {
