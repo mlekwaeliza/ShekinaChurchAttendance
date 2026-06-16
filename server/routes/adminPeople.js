@@ -1138,7 +1138,7 @@ router.get('/leadership-directory', async (req, res) => {
     res.json({ directory, titles, sections, total });
   } catch (error) {
     console.error('Leadership directory error:', error.message, error.stack?.split('\n')[1]);
-    res.status(500).json({ error: 'Failed to fetch leadership directory' });
+    res.status(500).json({ error: error.message || 'Failed to fetch leadership directory' });
   }
 });
 
