@@ -60,21 +60,6 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
   const [addingMember, setAddingMember] = useState(false);
 
   const memberSearchRef = useRef(null);
-  const selectedAddMember = useMemo(() => sortedMembers.find((m) => Number(m.id) === Number(selectedMemberToAdd)), [sortedMembers, selectedMemberToAdd]);
-
-  // filteredMembers moved below sortedMembers to avoid TDZ
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (memberSearchRef.current && !memberSearchRef.current.contains(e.target)) {
-        setShowMemberDropdown(false);
-        setMemberFocused(false);
-        if (!selectedMemberToAdd) setMemberSearch('');
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selectedMemberToAdd]);
 
   const loadData = async () => {
     setLoading(true);
@@ -142,6 +127,21 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
     }
     return list;
   }, [departments, searchTerm]);
+
+  // selectedAddMember placed after sortedMembers to avoid TDZ
+  const selectedAddMember = useMemo(() => sortedMembers.find((m) => Number(m.id) === Number(selectedMemberToAdd)), [sortedMembers, selectedMemberToAdd]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (memberSearchRef.current && !memberSearchRef.current.contains(e.target)) {
+        setShowMemberDropdown(false);
+        setMemberFocused(false);
+        if (!selectedMemberToAdd) setMemberSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [selectedMemberToAdd]);
 
   // Stats calculation
   const totalMembersInDepts = useMemo(() => {
