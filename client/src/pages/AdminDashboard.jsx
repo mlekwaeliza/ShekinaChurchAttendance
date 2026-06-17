@@ -30,6 +30,7 @@ import HomeCellsView from '../components/admin/HomeCellsView';
 import TitleManager from '../components/admin/TitleManager';
 import LeadershipDirectory from '../components/admin/LeadershipDirectory';
 import DepartmentsView from '../components/admin/DepartmentsView';
+import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
 
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
 
@@ -219,6 +220,9 @@ const AdminDashboard = () => {
 
       case 'departments':
         return <DepartmentsView allMembers={data.allMembers} showMessage={data.showMessage} />;
+
+      case 'new-members':
+        return <NewMemberLeaderView />;
 
       case 'reports':
         return (

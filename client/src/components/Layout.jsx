@@ -196,6 +196,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/titles', label: 'Titles', icon: Award },
         { path: '/admin/leadership', label: 'Leadership', icon: Users },
         { path: '/admin/departments', label: 'Departments', icon: Building2 },
+        { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
       ]},
       { section: 'INSIGHTS', items: [
         { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
@@ -225,6 +226,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/leader/history', label: 'History', icon: Clock },
         { path: '/leader/reports', label: 'Reports', icon: BarChart3 },
         ...(user?.is_head ? [{ path: '/leader/overview', label: 'Section Overview', icon: Eye }] : []),
+        ...(user?.is_new_member_leader ? [{ path: '/leader/new-members', label: 'New Members', icon: UserPlus }] : []),
       ]},
     ],
     pastor: [

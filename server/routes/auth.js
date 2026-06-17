@@ -138,7 +138,8 @@ router.post('/login', async (req, res) => {
       role: user.role,
       full_name: user.full_name,
       profile_picture: user.profile_picture,
-      is_head: user.is_head
+      is_head: user.is_head,
+      is_new_member_leader: user.is_new_member_leader
     };
 
     req.session.regenerate((err) => {
@@ -183,6 +184,7 @@ router.get('/me', async (req, res) => {
           req.session.user.profile_picture = user.profile_picture;
           req.session.user.full_name = user.full_name;
           req.session.user.is_head = user.is_head;
+          req.session.user.is_new_member_leader = user.is_new_member_leader;
         }
         res.json({ user: req.session.user });
       } catch (e) {
@@ -243,7 +245,7 @@ router.post('/change-password', async (req, res) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });
     req.session.userId = user.id;
-    req.session.user = { id: user.id, username: user.username, role: user.role, full_name: user.full_name };
+    req.session.user = { id: user.id, username: user.username, role: user.role, full_name: user.full_name, is_new_member_leader: user.is_new_member_leader };
     req.session.createdAt = Date.now();
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));

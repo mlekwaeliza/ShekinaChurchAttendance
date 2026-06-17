@@ -88,6 +88,7 @@ const birthdayRoutes = require('./routes/birthdays');
 const calendarRoutes = require('./routes/calendar');
 const eventsRoutes = require('./realtime/events');
 const realtimeBus = require('./realtime/bus');
+const newMemberLeaderRoutes = require('./routes/newMemberLeader');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -442,6 +443,7 @@ app.use('/api/birthdays', birthdayRoutes);
 app.use('/api/outreach', outreachRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/events', eventsRoutes);
+app.use('/api/new-member-leader', newMemberLeaderRoutes);
 // H3-fix: per-route limiters mounted as middleware on the specific
 // sensitive paths. These run BEFORE the route handlers because the
 // mount points above happen later. Unused limiters cost nothing.

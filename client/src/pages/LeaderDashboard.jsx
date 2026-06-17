@@ -14,6 +14,7 @@ import SectionOverview from '../components/leader/SectionOverview';
 import ConflictResolutionModal from '../components/leader/ConflictResolutionModal';
 import ChurchCalendar from '../components/ChurchCalendar';
 import HomeCellMembers from '../components/leader/HomeCellMembers';
+import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
 
 const LeaderDashboard = () => {
   const { tab } = useParams();
@@ -151,6 +152,9 @@ const LeaderDashboard = () => {
 
       case 'outreach':
         return <LeaderOutreach members={data.members} />;
+
+      case 'new-members':
+        return <NewMemberLeaderView />;
 
       case 'overview':
         if (!data.isHead) {

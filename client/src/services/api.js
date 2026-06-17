@@ -269,6 +269,23 @@ export const analyticsAPI = {
   getDashboardMetrics: (serviceId) => api.get('/analytics/dashboard-metrics', { params: { service_id: serviceId } }),
 };
 
+// New Member Leader API
+export const newMemberLeaderAPI = {
+  getNewMembers: (status) => api.get('/new-member-leader/new-members', { params: { status } }),
+  getNewMember: (id) => api.get(`/new-member-leader/new-members/${id}`),
+  createNewMember: (data) => api.post('/new-member-leader/new-members', data),
+  updateNewMember: (id, data) => api.put(`/new-member-leader/new-members/${id}`, data),
+  deleteNewMember: (id) => api.delete(`/new-member-leader/new-members/${id}`),
+  graduateNewMember: (id, sectionId) => api.post(`/new-member-leader/new-members/${id}/graduate`, { section_id: sectionId }),
+  makePermanent: (id) => api.post(`/new-member-leader/new-members/${id}/permanent`),
+  getAttendance: (id) => api.get(`/new-member-leader/new-members/${id}/attendance`),
+  recordAttendance: (id, weekStart, attended, notes) =>
+    api.post(`/new-member-leader/new-members/${id}/attendance`, { week_start: weekStart, attended, notes }),
+  getReport: (params) => api.get('/new-member-leader/reports/new-members', { params }),
+  getSections: () => api.get('/new-member-leader/sections'),
+  getSectionWithLeastMembers: () => api.get('/new-member-leader/sections/least-members'),
+};
+
 // Birthdays API
 export const birthdayAPI = {
   getBirthdays: (params) => api.get('/birthdays', { params }),
