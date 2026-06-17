@@ -1179,26 +1179,52 @@ router.get('/members/:id/departments', async (req, res) => {
 // --- Departments CRUD ---
 
 // GET all departments
+// GET all departments
 router.get('/departments', async (req, res) => {
   try {
-    const departments = await queries.getAllDepartments();
-    const titles = await queries.getAllTitlesWithCategory ? await queries.getAllTitlesWithCategory() : await queries.getAllTitles();
-    res.json({ departments, titles });
+    const [departmentsResult, titlesResult] = await Promise.allSettled([
+      queries.getAllDepartments(),
+      queries.getAllTitlesWithCategory ? queries.getAllTitlesWithCategory() : queries.getAllTitles(),
+    ]);
+    const errors = [];
+    if (departmentsResult.status === 'rejected') { errors.push(`getAllDepartments: ${departmentsResult.reason?.message}`); console.error('getAllDepartments error:', departmentsResult.reason?.message); }
+    if (titlesResult.status === 'rejected') { errors.push(`getAllTitles: ${titlesResult.reason?.message}`); console.error('getAllTitles error:', titlesResult.reason?.message); }
+    res.json({
+      departments: departmentsResult.status === 'fulfilled' ? departmentsResult.value : [],
+      titles: titlesResult.status === 'fulfilled' ? titlesResult.value : [],
+      errors: errors.length > 0 ? errors : undefined,
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch departments' });
+    console.error('Departments error:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to fetch departments' });
   }
 });
 
 // GET single department with members and history
 router.get('/departments/:id', async (req, res) => {
   try {
-    const dept = await queries.getDepartmentById(req.params.id);
+    const [deptResult, membersResult, historyResult] = await Promise.allSettled([
+      queries.getDepartmentById(req.params.id),
+      queries.getDepartmentMembers(req.params.id),
+      queries.getDepartmentHistory(req.params.id),
+    ]);
+    const errors = [];
+    if (deptResult.status === 'rejected') { errors.push(`getDepartmentById: ${deptResult.reason?.message}`); console.error('getDepartmentById error:', deptResult.reason?.message); }
+    if (membersResult.status === 'rejected') { errors.push(`getDepartmentMembers: ${membersResult.reason?.message}`); console.error('getDepartmentMembers error:', membersResult.reason?.message); }
+    if (historyResult.status === 'rejected') { errors.push(`getDepartmentHistory: ${historyResult.reason?.message}`); console.error('getDepartmentHistory error:', historyResult.reason?.message); }
+
+    const dept = deptResult.status === 'fulfilled' ? deptResult.value : null;
     if (!dept) return res.status(404).json({ error: 'Department not found' });
-    const members = await queries.getDepartmentMembers(req.params.id);
-    const history = await queries.getDepartmentHistory(req.params.id);
-    res.json({ department: dept, members, history });
+
+    res.json({
+      department: dept,
+      members: membersResult.status === 'fulfilled' ? membersResult.value : [],
+      history: historyResult.status === 'fulfilled' ? historyResult.value : [],
+      errors: errors.length > 0 ? errors : undefined,
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch department' });
+    console.error('Department detail error:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to fetch department' });
   }
 });
 
