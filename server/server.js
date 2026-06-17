@@ -112,7 +112,7 @@ app.use(helmet({
     ? {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
+          scriptSrc: ["'self'", 'blob:'],
           // L1-fix: drop 'unsafe-inline' for styles. The compiled bundle
           // uses external CSS, React's JSX style={{}} props set styles
           // via element.style (CSP-safe), and index.html has no inline
