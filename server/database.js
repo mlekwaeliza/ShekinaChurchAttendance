@@ -2648,7 +2648,7 @@ const queries = {
       params.push(appointmentTo);
     }
     return all(`
-      SELECT DISTINCT m.id, m.full_name, m.membership_id, m.phone, m.email,
+      SELECT m.id, m.full_name, m.membership_id, m.phone, m.email,
              s.name as section_name, ct.name as title_name, ct.id as title_id,
              mt.status as title_status, mt.appointment_date, mt.assigned_at,
              u2.full_name as assigned_by_name
