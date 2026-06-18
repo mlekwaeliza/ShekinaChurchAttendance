@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 import useLeaderData from '../hooks/useLeaderData';
 import { CheckCircle2 } from 'lucide-react';
 import useOffline from '../hooks/useOffline';
@@ -19,6 +20,7 @@ import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
 const LeaderDashboard = () => {
   const { tab } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const activeTab = tab || 'dashboard';
   const data = useLeaderData();
   const { conflicts, resolveConflict } = useOffline();
@@ -49,6 +51,13 @@ const LeaderDashboard = () => {
       </div>
     );
   }
+
+  // Redirect new member leaders to the new-members tab
+  useEffect(() => {
+    if (user?.is_new_member_leader && !tab) {
+      navigate('/leader/new-members', { replace: true });
+    }
+  }, [user, tab, navigate]);
 
   const handleSubmitAndRedirect = async () => {
     const success = await data.handleSubmit();
