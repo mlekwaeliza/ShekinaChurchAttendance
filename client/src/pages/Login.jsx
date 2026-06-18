@@ -18,7 +18,8 @@ const Login = () => {
   const navigate = useNavigate();
 
   if (user && !requires2FA) {
-    return <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'leader' ? '/leader' : '/pastor'} />;
+    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'pastor' ? '/pastor' : user.is_new_member_leader ? '/leader/new-members' : '/leader';
+    return <Navigate to={redirectPath} />;
   }
 
   // Auto-clear the ?expired=1 query param after first render so a
@@ -58,7 +59,8 @@ const Login = () => {
 
   const handle2FASuccess = (loggedInUser) => {
     setUser(loggedInUser);
-    navigate(loggedInUser.role === 'admin' ? '/admin' : loggedInUser.role === 'leader' ? '/leader' : '/pastor');
+    const redirectPath = loggedInUser.role === 'admin' ? '/admin' : loggedInUser.role === 'pastor' ? '/pastor' : loggedInUser.is_new_member_leader ? '/leader/new-members' : '/leader';
+    navigate(redirectPath);
   };
 
   if (requires2FA) {
