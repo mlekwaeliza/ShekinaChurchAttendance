@@ -21,7 +21,7 @@ const LeaderDashboard = () => {
   const { tab } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const activeTab = tab || 'dashboard';
+  const activeTab = tab || (user?.is_new_member_leader ? 'new-members' : 'dashboard');
   const data = useLeaderData();
   const { conflicts, resolveConflict } = useOffline();
   const [showConflicts, setShowConflicts] = useState(false);
@@ -39,13 +39,6 @@ const LeaderDashboard = () => {
       data.loadOverview();
     }
   }, [activeTab, data.isHead, data.selectedDate, data.selectedServiceId]);
-
-  // Redirect new member leaders to the new-members tab
-  useEffect(() => {
-    if (user?.is_new_member_leader && !tab) {
-      navigate('/leader/new-members', { replace: true });
-    }
-  }, [user, tab, navigate]);
 
   if (data.loading) {
     return (
