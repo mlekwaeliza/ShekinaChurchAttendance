@@ -47,8 +47,8 @@ const NewMemberLeaderView = () => {
   const loadMembers = useCallback(async (status) => {
     setLoading(true);
     try {
-      const data = await newMemberLeaderAPI.getNewMembers(status);
-      setMembers(data);
+      const res = await newMemberLeaderAPI.getNewMembers(status);
+      setMembers(res.data);
     } catch (err) {
       console.error('Failed to load members:', err);
     } finally {
@@ -58,8 +58,8 @@ const NewMemberLeaderView = () => {
 
   const loadSections = useCallback(async () => {
     try {
-      const data = await newMemberLeaderAPI.getSections();
-      setSections(data);
+      const res = await newMemberLeaderAPI.getSections();
+      setSections(res.data);
     } catch (err) {
       console.error('Failed to load sections:', err);
     }
@@ -100,9 +100,9 @@ const NewMemberLeaderView = () => {
     }
     setExpanded(memberId);
     try {
-      const records = await newMemberLeaderAPI.getAttendance(memberId);
+      const res = await newMemberLeaderAPI.getAttendance(memberId);
       const attMap = {};
-      records.forEach(r => { attMap[r.week_start] = r; });
+      res.data.forEach(r => { attMap[r.week_start] = r; });
       setAttendance(prev => ({ ...prev, [memberId]: attMap }));
     } catch (err) {
       console.error('Failed to load attendance:', err);
@@ -124,7 +124,8 @@ const NewMemberLeaderView = () => {
 
   const handleGraduate = async (memberId) => {
     try {
-      const suggested = await newMemberLeaderAPI.getSectionWithLeastMembers();
+      const res = await newMemberLeaderAPI.getSectionWithLeastMembers();
+      const suggested = res.data;
       if (!suggested) { alert('No sections available'); return; }
       await newMemberLeaderAPI.graduateNewMember(memberId, suggested.id);
       showMessage(`Member graduated to ${suggested.name} section`);
@@ -381,7 +382,7 @@ const ReportsView = () => {
       setLoading(true);
       try {
         const result = await newMemberLeaderAPI.getReport({ year });
-        setData(result);
+        setData(result.data);
       } catch (err) {
         console.error('Failed to load report:', err);
       } finally {
