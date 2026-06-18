@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
+import { useAuth } from '../context/AuthContext';
 import useLeaderData from '../hooks/useLeaderData';
 import { CheckCircle2 } from 'lucide-react';
 import useOffline from '../hooks/useOffline';

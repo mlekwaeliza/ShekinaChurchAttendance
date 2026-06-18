@@ -694,13 +694,13 @@ async function initializeAdmin() {
       } catch (e1) {
         console.warn('createUser failed for ghance:', e1.message);
       }
-      // Set new member leader flag (safe to run even on first insert)
+    }
+    // Ensure is_new_member_leader is set to 1 (covers existing users too)
+    const ghanceUser = await queries.findUserByUsername('ghance');
+    if (ghanceUser) {
       try {
-        const user = await queries.findUserByUsername('ghance');
-        if (user) {
-          await queries.run('UPDATE users SET is_new_member_leader = 1 WHERE id = ?', [user.id]);
-          console.log('Genoveva Hance account seeded (leader, is_new_member_leader=1).');
-        }
+        await queries.run('UPDATE users SET is_new_member_leader = 1 WHERE id = ?', [ghanceUser.id]);
+        console.log('Genoveva Hance account seeded (leader, is_new_member_leader=1).');
       } catch (e2) {
         console.warn('Failed to set is_new_member_leader on ghance:', e2.message);
       }
