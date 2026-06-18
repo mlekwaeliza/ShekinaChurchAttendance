@@ -40,6 +40,13 @@ const LeaderDashboard = () => {
     }
   }, [activeTab, data.isHead, data.selectedDate, data.selectedServiceId]);
 
+  // Redirect new member leaders to the new-members tab
+  useEffect(() => {
+    if (user?.is_new_member_leader && !tab) {
+      navigate('/leader/new-members', { replace: true });
+    }
+  }, [user, tab, navigate]);
+
   if (data.loading) {
     return (
       <div className="space-y-4 animate-fade-in">
@@ -51,13 +58,6 @@ const LeaderDashboard = () => {
       </div>
     );
   }
-
-  // Redirect new member leaders to the new-members tab
-  useEffect(() => {
-    if (user?.is_new_member_leader && !tab) {
-      navigate('/leader/new-members', { replace: true });
-    }
-  }, [user, tab, navigate]);
 
   const handleSubmitAndRedirect = async () => {
     const success = await data.handleSubmit();
