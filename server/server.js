@@ -673,16 +673,36 @@ async function initializeAdmin() {
     const adminExists = await queries.findUserByUsername('admin');
     if (!adminExists) {
       const bcrypt = require('bcryptjs');
-      const crypto = require('crypto');
       const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
       if (initialPassword && initialPassword.length >= 12) {
-        // M4-fix: async bcrypt to keep the event loop responsive.
         const passwordHash = await bcrypt.hash(initialPassword, 10);
         await queries.createUser('admin', passwordHash, 'admin', 'System Administrator');
         console.log('Default admin user created from INITIAL_ADMIN_PASSWORD env var.');
       } else {
         console.warn('No admin user exists. Set INITIAL_ADMIN_PASSWORD (>=12 chars) and restart to bootstrap.');
         console.warn('Admin login will be unavailable until this is configured.');
+      }
+    }
+    // Seed Genoveva Hance test account (leader with new member leader flag)
+    const genovevaExists = await queries.findUserByUsername('ghance');
+    if (!genovevaExists) {
+      const bcrypt = require('bcryptjs');
+      const passwordHash = await bcrypt.hash('password123', 10);
+      // First check if createUser supports is_new_member_leader; use raw query if not
+      try {
+        await queries.createUser('ghance', passwordHash, 'leader', 'Genoveva Hance');
+      } catch (e1) {
+        console.warn('createUser failed for ghance:', e1.message);
+      }
+      // Set new member leader flag (safe to run even on first insert)
+      try {
+        const user = await queries.findUserByUsername('ghance');
+        if (user) {
+          await queries.run('UPDATE users SET is_new_member_leader = 1 WHERE id = ?', [user.id]);
+          console.log('Genoveva Hance account seeded (leader, is_new_member_leader=1).');
+        }
+      } catch (e2) {
+        console.warn('Failed to set is_new_member_leader on ghance:', e2.message);
       }
     }
   } catch (error) {

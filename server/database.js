@@ -1144,10 +1144,13 @@ async function ensureHomeCellSchema() {
         totp_secret TEXT,
         totp_enabled INTEGER DEFAULT 0,
         backup_codes TEXT,
+        failed_login_attempts INTEGER DEFAULT 0,
+        locked_until TIMESTAMPTZ,
         password_reset_token TEXT,
         password_reset_expires TIMESTAMPTZ,
         password_reset_used INTEGER DEFAULT 0,
         lockout_count INTEGER DEFAULT 0,
+        is_new_member_leader INTEGER DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
@@ -1508,6 +1511,8 @@ async function ensureHomeCellSchema() {
       await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_used INTEGER DEFAULT 0');
       await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS lockout_count INTEGER DEFAULT 0');
       await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_new_member_leader INTEGER DEFAULT 0');
+      await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0');
+      await run('ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ');
       await run('CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token) WHERE password_reset_token IS NOT NULL');
     } catch (e) {
       console.warn('password-reset column ensure failed (non-fatal):', e.message);
