@@ -13,6 +13,7 @@ import './index.css';
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'));
 const LeaderDashboard = lazy(() => import('./pages/LeaderDashboard.jsx'));
 const PastorDashboard = lazy(() => import('./pages/PastorDashboard.jsx'));
+const EvangelistDashboard = lazy(() => import('./pages/EvangelistDashboard.jsx'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage.jsx'));
 const ChurchCalendar = lazy(() => import('./components/ChurchCalendar.jsx'));
 
@@ -79,6 +80,15 @@ function AppRoutes() {
           <ProtectedRoute allowedRoles={['pastor']}>
             <Layout>
               <PastorDashboard />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* Evangelist Routes */}
+        <Route path="/evangelist/:tab?" element={
+          <ProtectedRoute allowedRoles={['pastor', 'admin']}>
+            <Layout>
+              <EvangelistDashboard />
             </Layout>
           </ProtectedRoute>
         } />

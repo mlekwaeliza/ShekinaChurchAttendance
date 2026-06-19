@@ -305,4 +305,38 @@ export const outreachAPI = {
   getHistory: () => api.get('/outreach/history'),
 };
 
+// Evangelism API
+export const evangelismAPI = {
+  getStats: () => api.get('/evangelism/stats'),
+  getTrend: () => api.get('/evangelism/trend'),
+  getFunnel: () => api.get('/evangelism/funnel'),
+  getMonthlyReport: (year) => api.get('/evangelism/report/monthly', { params: { year } }),
+  getAnnualReport: (year) => api.get('/evangelism/report/annual', { params: { year } }),
+
+  getOutreachEvents: (filters = {}) => api.get('/evangelism/outreach-events', { params: filters }),
+  createOutreachEvent: (data) => api.post('/evangelism/outreach-events', data),
+  updateOutreachEvent: (id, data) => api.put(`/evangelism/outreach-events/${id}`, data),
+  deleteOutreachEvent: (id) => api.delete(`/evangelism/outreach-events/${id}`),
+
+  getSoulsWon: (filters = {}) => api.get('/evangelism/souls-won', { params: filters }),
+  getSoulWon: (id) => api.get(`/evangelism/souls-won/${id}`),
+  createSoulWon: (data) => api.post('/evangelism/souls-won', data),
+  updateSoulWon: (id, data) => api.put(`/evangelism/souls-won/${id}`, data),
+  deleteSoulWon: (id) => api.delete(`/evangelism/souls-won/${id}`),
+
+  getFollowUps: (soulWonId) => api.get(`/evangelism/follow-ups/${soulWonId}`),
+  createFollowUp: (data) => api.post('/evangelism/follow-ups', data),
+  updateFollowUp: (id, data) => api.put(`/evangelism/follow-ups/${id}`, data),
+
+  getTeam: () => api.get('/evangelism/team'),
+  createTeamMember: (data) => api.post('/evangelism/team', data),
+  updateTeamMember: (id, data) => api.put(`/evangelism/team/${id}`, data),
+  deleteTeamMember: (id) => api.delete(`/evangelism/team/${id}`),
+
+  getBaptismRecords: () => api.get('/evangelism/baptism'),
+  createBaptismRecord: (data) => api.post('/evangelism/baptism', data),
+  updateBaptismRecord: (id, data) => api.put(`/evangelism/baptism/${id}`, data),
+  deleteBaptismRecord: (id) => api.delete(`/evangelism/baptism/${id}`),
+};
+
 export default api;

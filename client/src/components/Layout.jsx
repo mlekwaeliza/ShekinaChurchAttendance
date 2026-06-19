@@ -47,6 +47,8 @@ import {
   Edit3,
   Award,
   Building2,
+  Heart,
+  Cross,
 } from 'lucide-react';
 
 const Layout = ({ children, showNav = true }) => {
@@ -237,6 +239,15 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/pastor/engagement', label: 'Engagement', icon: MessageSquare },
         { path: '/pastor/weekly', label: 'Weekly Summary', icon: Calendar },
         { path: '/pastor/birthdays', label: 'Birthdays', icon: Cake },
+      ]},
+      { section: 'EVANGELISM', items: [
+        { path: '/evangelist', label: 'Evangelist Dashboard', icon: Heart, exact: true },
+        { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
+        { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
+        { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },
+        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
+        { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
+        { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
       ]},
     ],
   };

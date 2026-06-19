@@ -68,7 +68,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const { queries, db, all, run, ensureHomeCellSchema } = require('./database');
+const { queries, db, all, run, ensureHomeCellSchema, ensureEvangelismSchema } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const authRoutes = require('./routes/auth');
@@ -89,6 +89,7 @@ const calendarRoutes = require('./routes/calendar');
 const eventsRoutes = require('./realtime/events');
 const realtimeBus = require('./realtime/bus');
 const newMemberLeaderRoutes = require('./routes/newMemberLeader');
+const evangelismRoutes = require('./routes/evangelism');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -450,6 +451,7 @@ app.use('/api/outreach', outreachRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/events', eventsRoutes);
 app.use('/api/new-member-leader', newMemberLeaderRoutes);
+app.use('/api/evangelism', evangelismRoutes);
 // H3-fix: per-route limiters mounted as middleware on the specific
 // sensitive paths. These run BEFORE the route handlers because the
 // mount points above happen later. Unused limiters cost nothing.
@@ -795,6 +797,7 @@ async function startServer() {
     });
     console.log('Database connection established');
     await ensureHomeCellSchema();
+    await ensureEvangelismSchema();
     await initializeAdmin();
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);
