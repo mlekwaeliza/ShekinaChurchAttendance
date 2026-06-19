@@ -678,17 +678,39 @@ app.get('*', (req, res) => {
 // Initialize default admin if not exists
 async function initializeAdmin() {
   try {
+    // Helper: look up a member by name keywords and return {id, full_name}
+    const findMemberByName = async (keywords) => {
+      try {
+        const conditions = keywords.map(k => `full_name LIKE '%${k}%'`).join(' OR ');
+        const rows = await all(`SELECT id, full_name FROM members WHERE ${conditions} LIMIT 1`);
+        return rows && rows[0] ? rows[0] : null;
+      } catch { return null; }
+    };
+
+    // Seed admin account — linked to member record
     const adminExists = await queries.findUserByUsername('admin');
     if (!adminExists) {
       const bcrypt = require('bcryptjs');
       const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
       if (initialPassword && initialPassword.length >= 12) {
         const passwordHash = await bcrypt.hash(initialPassword, 10);
-        await queries.createUser('admin', passwordHash, 'admin', 'System Administrator');
-        console.log('Default admin user created from INITIAL_ADMIN_PASSWORD env var.');
+        const member = await findMemberByName(['Daniel', 'Mulesi']);
+        const fullName = member ? member.full_name : 'System Administrator';
+        await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
+          ['admin', passwordHash, 'admin', fullName, member ? member.id : null]);
+        console.log(`Admin user created${member ? ` linked to member "${fullName}"` : ''}.`);
       } else {
         console.warn('No admin user exists. Set INITIAL_ADMIN_PASSWORD (>=12 chars) and restart to bootstrap.');
-        console.warn('Admin login will be unavailable until this is configured.');
+      }
+    } else {
+      // Link existing admin to member record if not yet linked
+      if (!adminExists.member_id) {
+        const member = await findMemberByName(['Daniel', 'Mulesi']);
+        if (member) {
+          await run('UPDATE users SET full_name = ?, member_id = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
+            [member.full_name, member.id, 'admin']);
+          console.log(`Admin account linked to member "${member.full_name}".`);
+        }
       }
     }
     // Seed Genoveva Hance test account (leader with new member leader flag)
@@ -696,9 +718,11 @@ async function initializeAdmin() {
     if (!genovevaExists) {
       const bcrypt = require('bcryptjs');
       const passwordHash = await bcrypt.hash('password123', 10);
-      // First check if createUser supports is_new_member_leader; use raw query if not
       try {
-        await queries.createUser('ghance', passwordHash, 'leader', 'Genoveva Hance');
+        const member = await findMemberByName(['Genoveva', 'Hance']);
+        const fullName = member ? member.full_name : 'Genoveva Hance';
+        await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
+          ['ghance', passwordHash, 'leader', fullName, member ? member.id : null]);
       } catch (e1) {
         console.warn('createUser failed for ghance:', e1.message);
       }
@@ -713,29 +737,15 @@ async function initializeAdmin() {
         console.warn('Failed to set is_new_member_leader on ghance:', e2.message);
       }
     }
-    // Seed evangelist test user
-    const evangelistExists = await queries.findUserByUsername('evangelist');
-    if (!evangelistExists) {
-      try {
-        const bcrypt = require('bcryptjs');
-        const passwordHash = await bcrypt.hash('password123', 10);
-        await queries.createUser('evangelist', passwordHash, 'evangelist', 'Evangelist Pastor');
-        console.log('Evangelist pastor account seeded (evangelist/password123).');
-      } catch (e3) {
-        console.warn('Failed to create evangelist user:', e3.message);
-      }
-    }
     // Seed Jeremiah Nicholaus evangelist account — linked to member record
     const jeremiahExists = await queries.findUserByUsername('jnicholaus');
     if (!jeremiahExists) {
       try {
-        // Look up the member record to get the exact name from the catalog
-        const members = await all("SELECT id, full_name FROM members WHERE full_name LIKE '%Jeremiah%' OR full_name LIKE '%Nicholaus%' LIMIT 1");
-        const member = members && members[0];
-        const fullName = member ? member.full_name : 'PST. JEREMIAH NICHOLAUS';
         const bcrypt = require('bcryptjs');
         const passwordHash = await bcrypt.hash('password123', 10);
-        const result = await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
+        const member = await findMemberByName(['Jeremiah', 'Nicholaus']);
+        const fullName = member ? member.full_name : 'PST. JEREMIAH NICHOLAUS';
+        await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
           ['jnicholaus', passwordHash, 'evangelist', fullName, member ? member.id : null]);
         console.log(`Jeremiah Nicholaus account seeded (jnicholaus/password123) linked to member "${fullName}".`);
       } catch (e4) {
