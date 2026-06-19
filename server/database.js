@@ -459,6 +459,10 @@ db.serialize(() => {
       address TEXT,
       date_joined DATE NOT NULL DEFAULT CURRENT_DATE,
       decision_type TEXT,
+      marital_status TEXT,
+      date_of_birth DATE,
+      occupation TEXT,
+      invitation_source TEXT,
       added_by INTEGER,
       mentor_id INTEGER,
       status TEXT DEFAULT 'probation' CHECK(status IN ('probation', 'graduated', 'permanent')),
@@ -492,6 +496,27 @@ db.serialize(() => {
     CREATE INDEX IF NOT EXISTS idx_new_members_status ON new_members(status);
     CREATE INDEX IF NOT EXISTS idx_new_members_joined ON new_members(date_joined);
   `);
+
+  db.run(`ALTER TABLE new_members ADD COLUMN marital_status TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+  db.run(`ALTER TABLE new_members ADD COLUMN date_of_birth DATE`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+  db.run(`ALTER TABLE new_members ADD COLUMN occupation TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+  db.run(`ALTER TABLE new_members ADD COLUMN invitation_source TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
 
   // Migration: Add columns to member_titles for leadership roles enhancement
   db.run(`ALTER TABLE member_titles ADD COLUMN appointment_date DATE`, (err) => {
@@ -1365,6 +1390,10 @@ async function ensureHomeCellSchema() {
           address TEXT,
           date_joined DATE NOT NULL DEFAULT CURRENT_DATE,
           decision_type TEXT,
+          marital_status TEXT,
+          date_of_birth DATE,
+          occupation TEXT,
+          invitation_source TEXT,
           added_by INTEGER,
           mentor_id INTEGER,
           status TEXT DEFAULT 'probation',
@@ -1447,6 +1476,10 @@ async function ensureHomeCellSchema() {
         address TEXT,
         date_joined DATE NOT NULL DEFAULT CURRENT_DATE,
         decision_type TEXT,
+        marital_status TEXT,
+        date_of_birth DATE,
+        occupation TEXT,
+        invitation_source TEXT,
         added_by INTEGER,
         mentor_id INTEGER,
         status TEXT DEFAULT 'probation' CHECK(status IN ('probation', 'graduated', 'permanent')),
@@ -1541,6 +1574,15 @@ async function ensureHomeCellSchema() {
       await run('CREATE INDEX IF NOT EXISTS idx_attendance_date_service ON attendance(date, service_type_id)');
     } catch (e) {
       console.warn('Additional index creation failed (non-fatal):', e.message);
+    }
+
+    try {
+      await run('ALTER TABLE new_members ADD COLUMN IF NOT EXISTS marital_status TEXT');
+      await run('ALTER TABLE new_members ADD COLUMN IF NOT EXISTS date_of_birth DATE');
+      await run('ALTER TABLE new_members ADD COLUMN IF NOT EXISTS occupation TEXT');
+      await run('ALTER TABLE new_members ADD COLUMN IF NOT EXISTS invitation_source TEXT');
+    } catch (e) {
+      console.warn('new_members column migration failed (non-fatal):', e.message);
     }
   }
 }
@@ -3026,13 +3068,13 @@ const queries = {
     WHERE nm.id = ?
   `, [id]),
   createNewMember: (data) => run(`
-    INSERT INTO new_members (full_name, phone, email, address, date_joined, decision_type, added_by, mentor_id, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [data.full_name, data.phone || null, data.email || null, data.address || null, data.date_joined, data.decision_type || null, data.added_by || null, data.mentor_id || null, data.notes || null]),
+    INSERT INTO new_members (full_name, phone, email, address, date_joined, decision_type, marital_status, date_of_birth, occupation, invitation_source, added_by, mentor_id, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [data.full_name, data.phone || null, data.email || null, data.address || null, data.date_joined, data.decision_type || null, data.marital_status || null, data.date_of_birth || null, data.occupation || null, data.invitation_source || null, data.added_by || null, data.mentor_id || null, data.notes || null]),
   updateNewMember: (id, data) => run(`
-    UPDATE new_members SET full_name = ?, phone = ?, email = ?, address = ?, date_joined = ?, decision_type = ?, mentor_id = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+    UPDATE new_members SET full_name = ?, phone = ?, email = ?, address = ?, date_joined = ?, decision_type = ?, marital_status = ?, date_of_birth = ?, occupation = ?, invitation_source = ?, mentor_id = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
-  `, [data.full_name, data.phone || null, data.email || null, data.address || null, data.date_joined, data.decision_type || null, data.mentor_id || null, data.notes || null, id]),
+  `, [data.full_name, data.phone || null, data.email || null, data.address || null, data.date_joined, data.decision_type || null, data.marital_status || null, data.date_of_birth || null, data.occupation || null, data.invitation_source || null, data.mentor_id || null, data.notes || null, id]),
   graduateNewMember: (id, sectionId, graduatedBy) => run(`
     UPDATE new_members SET status = 'graduated', graduation_date = CURRENT_DATE, graduated_to_section_id = ?, graduated_by = ?, is_active = 0, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?

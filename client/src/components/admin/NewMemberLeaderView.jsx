@@ -36,7 +36,7 @@ const NewMemberLeaderView = () => {
   const [form, setForm] = useState({
     full_name: '', phone: '', email: '', address: '',
     date_joined: new Date().toISOString().split('T')[0],
-    decision_type: '', mentor_id: '', notes: ''
+    decision_type: '', marital_status: '', date_of_birth: '', occupation: '', invitation_source: '', mentor_id: '', notes: ''
   });
 
   const showMessage = useCallback((text) => {
@@ -85,7 +85,7 @@ const NewMemberLeaderView = () => {
       setForm({
         full_name: '', phone: '', email: '', address: '',
         date_joined: new Date().toISOString().split('T')[0],
-        decision_type: '', mentor_id: '', notes: ''
+        decision_type: '', marital_status: '', date_of_birth: '', occupation: '', invitation_source: '', mentor_id: '', notes: ''
       });
       loadMembers(activeTab);
     } catch (err) {
@@ -214,6 +214,40 @@ const NewMemberLeaderView = () => {
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Marital Status</label>
+              <select value={form.marital_status} onChange={e => setForm({ ...form, marital_status: e.target.value })}
+                className="input w-full">
+                <option value="">Select...</option>
+                <option value="Single">Single</option>
+                <option value="Married">Married</option>
+                <option value="Divorced">Divorced</option>
+                <option value="Widowed">Widowed</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date of Birth</label>
+              <input type="date" value={form.date_of_birth} onChange={e => setForm({ ...form, date_of_birth: e.target.value })}
+                className="input w-full" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Occupation</label>
+              <input type="text" value={form.occupation} onChange={e => setForm({ ...form, occupation: e.target.value })}
+                className="input w-full" placeholder="e.g. Student, Engineer" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Invitation Source</label>
+              <select value={form.invitation_source} onChange={e => setForm({ ...form, invitation_source: e.target.value })}
+                className="input w-full">
+                <option value="">Select...</option>
+                <option value="Friend">Friend</option>
+                <option value="Social Media">Social Media</option>
+                <option value="Church Outreach">Church Outreach</option>
+                <option value="Family Member">Family Member</option>
+                <option value="Walk-in">Walk-in</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
               <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
                 className="input w-full" placeholder="Any notes" />
@@ -311,6 +345,26 @@ const NewMemberLeaderView = () => {
                       {member.address && (
                         <div className="flex items-center gap-2 text-slate-600">
                           <MapPin className="w-3.5 h-3.5 text-slate-400" /> {member.address}
+                        </div>
+                      )}
+                      {member.marital_status && (
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <span className="font-semibold text-slate-400 text-xs">Marital:</span> {member.marital_status}
+                        </div>
+                      )}
+                      {member.date_of_birth && (
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <span className="font-semibold text-slate-400 text-xs">DOB:</span> {new Date(member.date_of_birth).toLocaleDateString()}
+                        </div>
+                      )}
+                      {member.occupation && (
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <span className="font-semibold text-slate-400 text-xs">Occupation:</span> {member.occupation}
+                        </div>
+                      )}
+                      {member.invitation_source && (
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <span className="font-semibold text-slate-400 text-xs">Source:</span> {member.invitation_source}
                         </div>
                       )}
                     </div>

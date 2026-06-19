@@ -341,11 +341,17 @@ function buildSessionStore() {
   // MemoryStore never expires entries, which is a memory leak.
   const memStore = new session.MemoryStore();
   const sweep = setInterval(() => {
-    const now = Date.now();
-    for (const [sid, entry] of memStore.entries()) {
-      if (entry?.cookie?.expires && new Date(entry.cookie.expires).getTime() < now) {
-        memStore.destroy(sid, () => {});
-      }
+    if (typeof memStore.all === 'function') {
+      memStore.all((err, sessions) => {
+        if (!err && sessions) {
+          const now = Date.now();
+          for (const [sid, sess] of Object.entries(sessions)) {
+            if (sess?.cookie?.expires && new Date(sess.cookie.expires).getTime() < now) {
+              memStore.destroy(sid, () => {});
+            }
+          }
+        }
+      });
     }
   }, 15 * 60 * 1000);
   sweep.unref?.();

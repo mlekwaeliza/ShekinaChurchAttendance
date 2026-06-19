@@ -40,12 +40,13 @@ router.get('/new-members/:id', async (req, res) => {
 
 router.post('/new-members', async (req, res) => {
   try {
-    const { full_name, phone, email, address, date_joined, decision_type, mentor_id, notes } = req.body;
+    const { full_name, phone, email, address, date_joined, decision_type, marital_status, date_of_birth, occupation, invitation_source, mentor_id, notes } = req.body;
     if (!full_name) return res.status(400).json({ error: 'Full name is required' });
     const result = await queries.createNewMember({
       full_name, phone, email, address,
       date_joined: date_joined || new Date().toISOString().split('T')[0],
-      decision_type, added_by: req.session.userId, mentor_id, notes
+      decision_type, marital_status, date_of_birth, occupation, invitation_source,
+      added_by: req.session.userId, mentor_id, notes
     });
     res.status(201).json({ id: result.lastID || result.id, message: 'New member added' });
   } catch (err) {
@@ -56,10 +57,10 @@ router.post('/new-members', async (req, res) => {
 
 router.put('/new-members/:id', async (req, res) => {
   try {
-    const { full_name, phone, email, address, date_joined, decision_type, mentor_id, notes } = req.body;
+    const { full_name, phone, email, address, date_joined, decision_type, marital_status, date_of_birth, occupation, invitation_source, mentor_id, notes } = req.body;
     if (!full_name) return res.status(400).json({ error: 'Full name is required' });
     await queries.updateNewMember(req.params.id, {
-      full_name, phone, email, address, date_joined, decision_type, mentor_id, notes
+      full_name, phone, email, address, date_joined, decision_type, marital_status, date_of_birth, occupation, invitation_source, mentor_id, notes
     });
     res.json({ message: 'New member updated' });
   } catch (err) {
