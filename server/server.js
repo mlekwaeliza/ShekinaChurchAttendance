@@ -725,6 +725,18 @@ async function initializeAdmin() {
         console.warn('Failed to create evangelist user:', e3.message);
       }
     }
+    // Seed Jeremiah Nicholaus evangelist account
+    const jeremiahExists = await queries.findUserByUsername('jnicholaus');
+    if (!jeremiahExists) {
+      try {
+        const bcrypt = require('bcryptjs');
+        const passwordHash = await bcrypt.hash('password123', 10);
+        await queries.createUser('jnicholaus', passwordHash, 'evangelist', 'Jeremiah Nicholaus');
+        console.log('Jeremiah Nicholaus account seeded (jnicholaus/password123).');
+      } catch (e4) {
+        console.warn('Failed to create jnicholaus user:', e4.message);
+      }
+    }
   } catch (error) {
     console.error('Failed to create admin user:', error);
   }
