@@ -250,6 +250,10 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
         { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
       ]},
+      { section: 'ACCOUNT', items: [
+        { path: '/change-password', label: 'Change Password', icon: Shield },
+        { path: '/evangelist/settings', label: 'Settings', icon: Settings },
+      ]},
     ],
     pastor: [
       { section: 'MAIN', items: [

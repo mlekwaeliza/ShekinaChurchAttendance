@@ -1787,8 +1787,10 @@ const queries = {
     run('INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)', [username, password_hash, role, full_name, profile_picture]),
   updateUserPassword: (password_hash, userId) =>
     run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [password_hash, userId]),
-  updateUserFullName: (full_name, userId) =>
-    run('UPDATE users SET full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [full_name, userId]),
+  updateUserFullName: (full_name, userId, member_id = null) =>
+    member_id
+      ? run('UPDATE users SET full_name = ?, member_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [full_name, member_id, userId])
+      : run('UPDATE users SET full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [full_name, userId]),
 
   // Section queries
   getAllSections: () => all('SELECT * FROM sections ORDER BY name'),

@@ -262,15 +262,16 @@ router.post('/change-password', async (req, res) => {
 // Update profile details
 router.put('/profile', async (req, res) => {
   try {
-    const { full_name } = req.body;
+    const { full_name, member_id } = req.body;
     if (!full_name || full_name.trim().length === 0) {
       return res.status(400).json({ error: 'Name cannot be empty' });
     }
     if (!req.session.userId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-    await queries.updateUserFullName(full_name.trim(), req.session.userId);
+    await queries.updateUserFullName(full_name.trim(), req.session.userId, member_id || null);
     req.session.user.full_name = full_name.trim();
+    if (member_id) req.session.user.member_id = member_id;
     res.json({ message: 'Profile updated', full_name: full_name.trim() });
   } catch (error) {
     console.error('Profile update error:', error);

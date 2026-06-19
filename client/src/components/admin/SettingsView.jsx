@@ -8,6 +8,7 @@ import Modal from '../ui/Modal';
 
 const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
   const { user, updateUser } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [profileName, setProfileName] = useState(user?.full_name || '');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -27,6 +28,7 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [members, setMembers] = useState([]);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
 
   useEffect(() => {
     load2FAStatus();
@@ -107,8 +109,8 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
     if (!profileName.trim() || profileName.trim() === user?.full_name) return;
     setSaving(true);
     try {
-      const res = await authAPI.updateProfile({ full_name: profileName });
-      updateUser({ full_name: res.data.full_name });
+      const res = await authAPI.updateProfile({ full_name: profileName, member_id: selectedMemberId });
+      updateUser({ full_name: res.data.full_name, member_id: selectedMemberId });
       showMessage('Profile updated successfully');
     } catch (err) {
       alert('Failed to update profile');
@@ -169,7 +171,12 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
             <div className="flex gap-3">
               <select
                 value={profileName}
-                onChange={(e) => setProfileName(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const [name, id] = val.split('|');
+                  setProfileName(name);
+                  setSelectedMemberId(id ? Number(id) : null);
+                }}
                 className="select flex-1"
               >
                 <option value="">Select a member...</option>
@@ -177,7 +184,7 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
                   .filter((m) => m.full_name)
                   .sort((a, b) => a.full_name.localeCompare(b.full_name))
                   .map((m) => (
-                    <option key={m.id} value={m.full_name}>{m.full_name}</option>
+                    <option key={m.id} value={`${m.full_name}|${m.id}`}>{m.full_name}</option>
                   ))}
               </select>
               <button
@@ -260,6 +267,7 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
       </div>
 
       {/* Leader Password Reset */}
+      {isAdmin && (
       <div className="card p-6">
       <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
         <Key className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
@@ -310,8 +318,10 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
           </div>
         )}
       </div>
+      )}
 
       {/* CSV Import */}
+      {isAdmin && (
       <div className="card overflow-hidden">
         <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-8 text-white">
           <h3 className="text-lg font-bold mb-2">Data Import</h3>
@@ -368,8 +378,10 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
           </div>
         )}
       </div>
+      )}
 
       {/* Hall of Fame Configuration */}
+      {isAdmin && (
       <div className="card p-6">
         <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
           <Trophy className="w-4.5 h-4.5 text-amber-500" />
@@ -426,6 +438,7 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
           </button>
         </div>
       </div>
+      )}
 
       {/* 2FA Setup Modal */}
       {show2FAModal && (
