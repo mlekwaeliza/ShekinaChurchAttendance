@@ -3047,6 +3047,9 @@ const queries = {
   getNewMemberAttendance: (newMemberId) => all(`
     SELECT * FROM new_member_attendance WHERE new_member_id = ? ORDER BY week_start ASC
   `, [newMemberId]),
+  getNewMembersAttendanceByWeek: (weekStart) => all(`
+    SELECT * FROM new_member_attendance WHERE week_start = ?
+  `, [weekStart]),
   upsertNewMemberAttendance: (newMemberId, weekStart, attended, notes, recordedBy) => run(usePostgres ? `
     INSERT INTO new_member_attendance (new_member_id, week_start, attended, notes, recorded_by)
     VALUES ($1, $2, $3, $4, $5)

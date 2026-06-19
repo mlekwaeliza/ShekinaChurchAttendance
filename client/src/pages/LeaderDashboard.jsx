@@ -16,12 +16,13 @@ import ConflictResolutionModal from '../components/leader/ConflictResolutionModa
 import ChurchCalendar from '../components/ChurchCalendar';
 import HomeCellMembers from '../components/leader/HomeCellMembers';
 import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
+import NewMemberLeaderOverview from '../components/leader/NewMemberLeaderOverview';
 
 const LeaderDashboard = () => {
   const { tab } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const activeTab = tab || (user?.is_new_member_leader ? 'new-members' : 'dashboard');
+  const activeTab = tab || 'dashboard';
   const data = useLeaderData();
   const { conflicts, resolveConflict } = useOffline();
   const [showConflicts, setShowConflicts] = useState(false);
@@ -64,6 +65,23 @@ const LeaderDashboard = () => {
   const renderTab = () => {
     switch (activeTab) {
       case 'dashboard':
+        if (user?.is_new_member_leader) {
+          return (
+            <NewMemberLeaderOverview
+              members={data.members}
+              attendance={data.attendance}
+              selectedDate={data.selectedDate}
+              setSelectedDate={data.handleDateSelection}
+              onStatusChange={data.handleStatusChange}
+              onSubmit={handleSubmitAndRedirect}
+              submitting={data.submitting}
+              submitted={data.submitted}
+              submitError={data.submitError}
+              isOnline={data.isOnline}
+              leaderName={user.full_name}
+            />
+          );
+        }
         return (
           <LeaderOverview
             members={data.members}

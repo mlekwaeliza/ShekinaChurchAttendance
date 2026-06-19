@@ -284,6 +284,7 @@ export const newMemberLeaderAPI = {
   getReport: (params) => api.get('/new-member-leader/reports/new-members', { params }),
   getSections: () => api.get('/new-member-leader/sections'),
   getSectionWithLeastMembers: () => api.get('/new-member-leader/sections/least-members'),
+  getWeekAttendance: (weekStart) => api.get(`/new-member-leader/attendance/${weekStart}`),
 };
 
 // Birthdays API

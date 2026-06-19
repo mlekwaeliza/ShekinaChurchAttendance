@@ -126,6 +126,16 @@ router.post('/new-members/:id/attendance', async (req, res) => {
   }
 });
 
+router.get('/attendance/:weekStart', async (req, res) => {
+  try {
+    const records = await queries.getNewMembersAttendanceByWeek(req.params.weekStart);
+    res.json(records);
+  } catch (err) {
+    console.error('Error fetching week attendance:', err);
+    res.status(500).json({ error: 'Failed to fetch week attendance' });
+  }
+});
+
 // ── Reports ─────────────────────────────────────────────────────────────
 
 router.get('/reports/new-members', async (req, res) => {

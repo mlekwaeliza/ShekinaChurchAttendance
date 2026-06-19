@@ -1,9 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { leaderAPI } from '../services/api';
+import { leaderAPI, newMemberLeaderAPI } from '../services/api';
 import { getQueuedSubmissionForDate } from '../services/offlineDB';
 import useOffline from './useOffline';
 import { formatLocalDate } from '../utils/date';
+
+function getWeekStart(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  d.setDate(diff);
+  return d.toISOString().split('T')[0];
+}
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -121,6 +129,7 @@ const useLeaderData = () => {
   // --- Data Loaders ---
   // Eligibility Filter Helper
   const checkEligibility = useCallback((member, service) => {
+    if (user?.is_new_member_leader) return true;
     if (!service) return true;
     const rules = service.eligibility_rules || {};
     
@@ -159,7 +168,7 @@ const useLeaderData = () => {
     }
 
     return true;
-  }, []);
+  }, [user]);
 
   const eligibleMembers = members.filter(m => 
     checkEligibility(m, serviceTypes.find(s => s.id === selectedServiceId))
@@ -167,12 +176,61 @@ const useLeaderData = () => {
 
   // --- Data Loaders ---
   const loadMembers = useCallback(async () => {
-    if (user?.is_new_member_leader) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
+      if (user?.is_new_member_leader) {
+        const [newMembersRes, servicesRes] = await Promise.all([
+          newMemberLeaderAPI.getNewMembers('probation'),
+          leaderAPI.getServiceTypes()
+        ]);
+        
+        const mappedMembers = (newMembersRes.data || []).map(m => ({
+          id: m.id,
+          membership_id: `NM-${m.id}`,
+          full_name: m.full_name,
+          phone: m.phone || '',
+          email: m.email || '',
+        }));
+
+        const snapshot = {
+          sectionInfo: {
+            section_id: 'new-members',
+            name: 'New Members Registration',
+            leader_id: user.id,
+            leader: user.full_name,
+          },
+          members: mappedMembers,
+          isHead: false,
+          sectionLeaders: [],
+          attendanceLeaderId: user.id,
+          attendanceLeaderName: user.full_name,
+          actingOnBehalf: false,
+          serviceTypes: servicesRes.data,
+        };
+
+        setSectionInfo(snapshot.sectionInfo);
+        setMembers(snapshot.members);
+        setIsHead(snapshot.isHead);
+        setSectionLeaders(snapshot.sectionLeaders);
+        setAttendanceLeaderId(snapshot.attendanceLeaderId);
+        setAttendanceLeaderName(snapshot.attendanceLeaderName);
+        setActingOnBehalf(snapshot.actingOnBehalf);
+        setServiceTypes(snapshot.serviceTypes);
+        setAttendance({});
+
+        const weekStart = getWeekStart(new Date(selectedDate));
+        const attRes = await newMemberLeaderAPI.getWeekAttendance(weekStart);
+        const attData = attRes.data || [];
+        const attMap = {};
+        attData.forEach(r => {
+          attMap[r.new_member_id] = r.attended === 1 ? 'present' : 'absent';
+        });
+        setAttendance(attMap);
+        
+        setLoading(false);
+        return;
+      }
+
       const [membersRes, servicesRes] = await Promise.all([
         leaderAPI.getMembers(attendanceLeaderId),
         leaderAPI.getServiceTypes()
@@ -223,7 +281,7 @@ const useLeaderData = () => {
     } finally {
       setLoading(false);
     }
-  }, [attendanceLeaderId, showMessage, user?.is_new_member_leader]);
+  }, [attendanceLeaderId, showMessage, user, selectedDate]);
 
   const handleAttendanceLeaderSelection = useCallback((leaderId) => {
     setAttendanceLeaderId(leaderId ? Number(leaderId) : null);
@@ -337,6 +395,23 @@ const useLeaderData = () => {
 
   const checkSubmission = useCallback(async () => {
     try {
+      if (user?.is_new_member_leader) {
+        setIsUnauthorized(false);
+        setSubmitted(false);
+        const weekStart = getWeekStart(new Date(selectedDate));
+        const response = await newMemberLeaderAPI.getWeekAttendance(weekStart);
+        if (response.data && response.data.length > 0) {
+          const existing = {};
+          response.data.forEach((r) => {
+            existing[r.new_member_id] = r.attended === 1 ? 'present' : 'absent';
+          });
+          setAttendance(existing);
+        } else {
+          setAttendance({});
+        }
+        return;
+      }
+
       const response = await leaderAPI.getAttendanceStatus(selectedDate, selectedServiceId, attendanceLeaderId);
       if (response.data.unauthorized) {
         setIsUnauthorized(true);
@@ -358,7 +433,7 @@ const useLeaderData = () => {
     } catch (error) {
       console.error('Failed to check submission:', error);
     }
-  }, [selectedDate, selectedServiceId, attendanceLeaderId]);
+  }, [selectedDate, selectedServiceId, attendanceLeaderId, user]);
 
   // --- Attendance Handlers ---
   const handleStatusChange = useCallback(
@@ -387,6 +462,27 @@ const useLeaderData = () => {
 
     setSubmitting(true);
     try {
+      if (user?.is_new_member_leader) {
+        if (!isOnline) {
+          setSubmitError('Please reconnect to submit new member attendance.');
+          return false;
+        }
+        const weekStart = getWeekStart(new Date(selectedDate));
+        await Promise.all(
+          Object.entries(attendance).map(([memberId, status]) =>
+            newMemberLeaderAPI.recordAttendance(
+              parseInt(memberId),
+              weekStart,
+              status === 'present' ? 1 : 0,
+              ''
+            )
+          )
+        );
+        setSubmitted(true);
+        showMessage('Attendance submitted successfully!');
+        return true;
+      }
+
       const attendanceArray = Object.entries(attendance).map(
         ([member_id, status]) => ({
           member_id: parseInt(member_id),
@@ -431,7 +527,7 @@ const useLeaderData = () => {
     } finally {
       setSubmitting(false);
     }
-  }, [submitted, attendance, eligibleMembers.length, selectedDate, selectedServiceId, attendanceLeaderId, actingOnBehalf, sectionInfo, loadHistory, showMessage, isOnline, queueSubmission]);
+  }, [submitted, attendance, eligibleMembers.length, selectedDate, selectedServiceId, attendanceLeaderId, actingOnBehalf, sectionInfo, loadHistory, showMessage, isOnline, queueSubmission, user]);
 
   // --- Member CRUD Handlers ---
   const openAddMember = useCallback(() => {

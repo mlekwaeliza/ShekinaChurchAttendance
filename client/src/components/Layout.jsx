@@ -247,7 +247,9 @@ const Layout = ({ children, showNav = true }) => {
         {
           section: 'NEW MEMBERS',
           items: [
-            { path: '/leader', label: 'New Members', icon: UserPlus, exact: true },
+            { path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+            { path: '/leader/new-members', label: 'New Members', icon: UserPlus },
+            { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
             { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
           ]
         }

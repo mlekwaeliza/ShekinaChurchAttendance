@@ -40,7 +40,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (!allowedRoles || !allowedRoles.includes(user.role)) {
-    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'pastor' ? '/pastor' : user.is_new_member_leader ? '/leader/new-members' : '/leader';
+    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'pastor' ? '/pastor' : '/leader';
     return <Navigate to={redirectPath} />;
   }
 
