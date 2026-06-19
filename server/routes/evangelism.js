@@ -280,4 +280,15 @@ router.delete('/baptism/:id', async (req, res) => {
   }
 });
 
+// ── Member Names (for settings display name dropdown) ────────────────
+router.get('/member-names', async (req, res) => {
+  try {
+    const members = await all("SELECT id, full_name FROM members WHERE full_name IS NOT NULL AND full_name != '' ORDER BY full_name ASC");
+    res.json(members);
+  } catch (err) {
+    console.error('Error fetching member names:', err);
+    res.status(500).json({ error: 'Failed to fetch members' });
+  }
+});
+
 module.exports = router;

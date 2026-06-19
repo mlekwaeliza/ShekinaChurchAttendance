@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { authAPI, adminAPI } from '../../services/api';
+import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import TwoFactorSetup from '../TwoFactorSetup';
 import Modal from '../ui/Modal';
 
@@ -38,7 +38,7 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
 
   const loadMembers = async () => {
     try {
-      const res = await adminAPI.getMembers();
+      const res = isAdmin ? await adminAPI.getMembers() : await evangelismAPI.getMemberNames();
       setMembers(res.data);
     } catch (e) {
       console.error('Failed to load members:', e);

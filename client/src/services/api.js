@@ -337,6 +337,8 @@ export const evangelismAPI = {
   createBaptismRecord: (data) => api.post('/evangelism/baptism', data),
   updateBaptismRecord: (id, data) => api.put(`/evangelism/baptism/${id}`, data),
   deleteBaptismRecord: (id) => api.delete(`/evangelism/baptism/${id}`),
+
+  getMemberNames: () => api.get('/evangelism/member-names'),
 };
 
 export default api;
