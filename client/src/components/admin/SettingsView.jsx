@@ -26,11 +26,22 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
     midweek_day: 'Wednesday'
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [members, setMembers] = useState([]);
 
   useEffect(() => {
     load2FAStatus();
     loadHallOfFameSettings();
+    loadMembers();
   }, []);
+
+  const loadMembers = async () => {
+    try {
+      const res = await adminAPI.getMembers();
+      setMembers(res.data);
+    } catch (e) {
+      console.error('Failed to load members:', e);
+    }
+  };
 
   const loadHallOfFameSettings = async () => {
     try {
@@ -156,12 +167,19 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
           <div>
             <label className="input-label">Display Name</label>
             <div className="flex gap-3">
-              <input
-                type="text"
+              <select
                 value={profileName}
                 onChange={(e) => setProfileName(e.target.value)}
-                className="input flex-1"
-              />
+                className="select flex-1"
+              >
+                <option value="">Select a member...</option>
+                {members
+                  .filter((m) => m.full_name)
+                  .sort((a, b) => a.full_name.localeCompare(b.full_name))
+                  .map((m) => (
+                    <option key={m.id} value={m.full_name}>{m.full_name}</option>
+                  ))}
+              </select>
               <button
                 onClick={handleSaveName}
                 disabled={saving || !profileName.trim() || profileName.trim() === user?.full_name}
