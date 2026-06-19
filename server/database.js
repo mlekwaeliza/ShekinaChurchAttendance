@@ -43,6 +43,7 @@ db.serialize(() => {
       password_reset_used INTEGER DEFAULT 0,
       -- P1-fix: brute-force lockout tracking with exponential backoff
       lockout_count INTEGER DEFAULT 0,
+      member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -717,6 +718,11 @@ db.serialize(() => {
       console.log('Migration note:', err.message);
     }
   });
+  db.run(`ALTER TABLE users ADD COLUMN member_id INTEGER REFERENCES members(id) ON DELETE SET NULL`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
   db.run(`CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token) WHERE password_reset_token IS NOT NULL`, (err) => {
     if (err) console.log('Migration note:', err.message);
   });
@@ -1176,6 +1182,7 @@ async function ensureHomeCellSchema() {
         password_reset_used INTEGER DEFAULT 0,
         lockout_count INTEGER DEFAULT 0,
         is_new_member_leader INTEGER DEFAULT 0,
+        member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       )
@@ -1593,6 +1600,7 @@ async function migrateUsersRoleConstraint() {
     if (usePostgres) {
       await run(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
       await run(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'leader', 'pastor', 'evangelist'))`);
+      await run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS member_id INTEGER REFERENCES members(id) ON DELETE SET NULL`);
       console.log('PostgreSQL users role constraint migrated.');
     } else {
       const row = await get(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`);
@@ -1613,6 +1621,7 @@ async function migrateUsersRoleConstraint() {
           password_reset_expires DATETIME,
           password_reset_used INTEGER DEFAULT 0,
           lockout_count INTEGER DEFAULT 0,
+          member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);

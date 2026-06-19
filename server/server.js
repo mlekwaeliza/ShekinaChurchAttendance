@@ -725,14 +725,19 @@ async function initializeAdmin() {
         console.warn('Failed to create evangelist user:', e3.message);
       }
     }
-    // Seed Jeremiah Nicholaus evangelist account
+    // Seed Jeremiah Nicholaus evangelist account — linked to member record
     const jeremiahExists = await queries.findUserByUsername('jnicholaus');
     if (!jeremiahExists) {
       try {
+        // Look up the member record to get the exact name from the catalog
+        const members = await all("SELECT id, full_name FROM members WHERE full_name LIKE '%Jeremiah%' OR full_name LIKE '%Nicholaus%' LIMIT 1");
+        const member = members && members[0];
+        const fullName = member ? member.full_name : 'PST. JEREMIAH NICHOLAUS';
         const bcrypt = require('bcryptjs');
         const passwordHash = await bcrypt.hash('password123', 10);
-        await queries.createUser('jnicholaus', passwordHash, 'evangelist', 'Jeremiah Nicholaus');
-        console.log('Jeremiah Nicholaus account seeded (jnicholaus/password123).');
+        const result = await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
+          ['jnicholaus', passwordHash, 'evangelist', fullName, member ? member.id : null]);
+        console.log(`Jeremiah Nicholaus account seeded (jnicholaus/password123) linked to member "${fullName}".`);
       } catch (e4) {
         console.warn('Failed to create jnicholaus user:', e4.message);
       }
