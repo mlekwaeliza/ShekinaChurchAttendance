@@ -18,7 +18,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   if (user && !requires2FA) {
-    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'pastor' ? '/pastor' : user.is_new_member_leader ? '/leader/new-members' : '/leader';
+    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'pastor' ? '/pastor' : '/leader';
     return <Navigate to={redirectPath} />;
   }
 
@@ -59,7 +59,7 @@ const Login = () => {
 
   const handle2FASuccess = (loggedInUser) => {
     setUser(loggedInUser);
-    const redirectPath = loggedInUser.role === 'admin' ? '/admin' : loggedInUser.role === 'pastor' ? '/pastor' : loggedInUser.is_new_member_leader ? '/leader/new-members' : '/leader';
+    const redirectPath = loggedInUser.role === 'admin' ? '/admin' : loggedInUser.role === 'pastor' ? '/pastor' : '/leader';
     navigate(redirectPath);
   };
 
