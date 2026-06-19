@@ -1587,6 +1587,49 @@ async function ensureHomeCellSchema() {
   }
 }
 
+// ── Users Role Constraint Migration ──────────────────────────────────────
+async function migrateUsersRoleConstraint() {
+  try {
+    if (usePostgres) {
+      await run(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
+      await run(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'leader', 'pastor', 'evangelist'))`);
+      console.log('PostgreSQL users role constraint migrated.');
+    } else {
+      const row = await get(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`);
+      if (row && row.sql && !row.sql.includes('evangelist')) {
+        await run(`PRAGMA foreign_keys=OFF`);
+        await run(`BEGIN TRANSACTION`);
+        await run(`CREATE TABLE users_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          role TEXT NOT NULL CHECK(role IN ('admin', 'leader', 'pastor', 'evangelist')),
+          full_name TEXT NOT NULL,
+          profile_picture TEXT,
+          totp_secret TEXT,
+          totp_enabled INTEGER DEFAULT 0,
+          backup_codes TEXT,
+          password_reset_token TEXT,
+          password_reset_expires DATETIME,
+          password_reset_used INTEGER DEFAULT 0,
+          lockout_count INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        await run(`INSERT INTO users_new SELECT * FROM users`);
+        await run(`DROP TABLE users`);
+        await run(`ALTER TABLE users_new RENAME TO users`);
+        await run(`CREATE INDEX IF NOT EXISTS idx_users_password_reset_token ON users (password_reset_token) WHERE password_reset_token IS NOT NULL`);
+        await run(`COMMIT`);
+        await run(`PRAGMA foreign_keys=ON`);
+        console.log('SQLite users role constraint migrated.');
+      }
+    }
+  } catch (err) {
+    console.error('Failed to migrate users role constraint:', err.message);
+  }
+}
+
 // ── Evangelism Tables Migration ──────────────────────────────────────────
 async function ensureEvangelismSchema() {
   const idType = usePostgres
@@ -3457,5 +3500,6 @@ module.exports = {
   all,
   transaction,
   ensureHomeCellSchema,
-  ensureEvangelismSchema
+  ensureEvangelismSchema,
+  migrateUsersRoleConstraint
 };
