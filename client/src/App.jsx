@@ -86,7 +86,7 @@ function AppRoutes() {
 
         {/* Evangelist Routes */}
         <Route path="/evangelist/:tab?" element={
-          <ProtectedRoute allowedRoles={['pastor', 'admin']}>
+          <ProtectedRoute allowedRoles={['pastor', 'admin', 'evangelist']}>
             <Layout>
               <EvangelistDashboard />
             </Layout>
@@ -94,7 +94,7 @@ function AppRoutes() {
         } />
 
         <Route path="/change-password" element={
-          <ProtectedRoute allowedRoles={['admin', 'leader', 'pastor']}>
+          <ProtectedRoute allowedRoles={['admin', 'leader', 'pastor', 'evangelist']}>
             <Layout>
               <ChangePasswordPage />
             </Layout>
@@ -102,7 +102,7 @@ function AppRoutes() {
         } />
 
         <Route path="/calendar" element={
-          <ProtectedRoute allowedRoles={['admin', 'leader', 'pastor']}>
+          <ProtectedRoute allowedRoles={['admin', 'leader', 'pastor', 'evangelist']}>
             <Layout>
               <ChurchCalendar />
             </Layout>
