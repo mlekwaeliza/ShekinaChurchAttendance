@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { evangelismAPI } from '../services/api';
 import {
   Heart, TrendingUp, Users, Calendar, Target, UserPlus, Church, BookOpen,
@@ -30,6 +31,8 @@ const EvangelistDashboard = () => {
 
 // ── Overview ────────────────────────────────────────────────────────
 const Overview = () => {
+  const { user } = useAuth();
+  const welcomeName = user?.full_name || 'Evangelist Pastor';
   const [stats, setStats] = useState(null);
   const [trend, setTrend] = useState([]);
   const [funnel, setFunnel] = useState(null);
@@ -79,6 +82,20 @@ const Overview = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Welcome Hero */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-600 to-rose-500 p-8 text-white shadow-xl shadow-amber-500/20">
+        <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-white/5 translate-y-24" />
+        <div className="relative z-10">
+          <h2 className="text-2xl font-bold tracking-tight">
+            Welcome, {welcomeName}
+          </h2>
+          <p className="mt-2 max-w-lg text-base text-white/80">
+            Evangelism dashboard is ready. Track souls won, manage outreach events, follow up with converts, and monitor your evangelism team.
+          </p>
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
         <button onClick={() => setShowConvertModal(true)} className="btn-primary flex items-center gap-2"><UserPlus className="w-4 h-4" /> Register New Convert</button>
