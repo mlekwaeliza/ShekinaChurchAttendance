@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { leaderAPI } from '../services/api';
 import { getQueuedSubmissionForDate } from '../services/offlineDB';
 import useOffline from './useOffline';
@@ -60,6 +61,7 @@ const writeLeaderCoreCache = (leaderId, snapshot) => {
 
 const useLeaderData = () => {
   const { isOnline, queueSubmission, syncPending } = useOffline();
+  const { user } = useAuth();
 
   // Section & Members
   const [sectionInfo, setSectionInfo] = useState(null);
@@ -165,6 +167,10 @@ const useLeaderData = () => {
 
   // --- Data Loaders ---
   const loadMembers = useCallback(async () => {
+    if (user?.is_new_member_leader) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [membersRes, servicesRes] = await Promise.all([
@@ -217,7 +223,7 @@ const useLeaderData = () => {
     } finally {
       setLoading(false);
     }
-  }, [attendanceLeaderId, showMessage]);
+  }, [attendanceLeaderId, showMessage, user?.is_new_member_leader]);
 
   const handleAttendanceLeaderSelection = useCallback((leaderId) => {
     setAttendanceLeaderId(leaderId ? Number(leaderId) : null);
@@ -226,15 +232,20 @@ const useLeaderData = () => {
   }, []);
 
   const loadAssignments = useCallback(async () => {
+    if (user?.is_new_member_leader) return;
     try {
       const response = await leaderAPI.getAssignments();
       setLeaderAssignments(response.data);
     } catch (error) {
       console.error('Failed to load leader assignments:', error);
     }
-  }, []);
+  }, [user?.is_new_member_leader]);
 
   const loadHistory = useCallback(async () => {
+    if (user?.is_new_member_leader) {
+      setHistoryLoading(false);
+      return;
+    }
     setHistoryLoading(true);
     try {
       const response = await leaderAPI.getHistory();
@@ -244,9 +255,13 @@ const useLeaderData = () => {
     } finally {
       setHistoryLoading(false);
     }
-  }, []);
+  }, [user?.is_new_member_leader]);
 
   const loadOverview = useCallback(async () => {
+    if (user?.is_new_member_leader) {
+      setOverviewLoading(false);
+      return;
+    }
     setOverviewLoading(true);
     try {
       const response = await leaderAPI.getSectionOverview(selectedDate, selectedServiceId);
@@ -256,9 +271,13 @@ const useLeaderData = () => {
     } finally {
       setOverviewLoading(false);
     }
-  }, [selectedDate, selectedServiceId]);
+  }, [selectedDate, selectedServiceId, user?.is_new_member_leader]);
 
   const loadTrends = useCallback(async () => {
+    if (user?.is_new_member_leader) {
+      setTrendsLoading(false);
+      return;
+    }
     setTrendsLoading(true);
     try {
       const response = await leaderAPI.getAttendanceTrends(90);
@@ -269,25 +288,27 @@ const useLeaderData = () => {
     } finally {
       setTrendsLoading(false);
     }
-  }, []);
+  }, [user?.is_new_member_leader]);
 
   const loadConsecutiveAbsences = useCallback(async () => {
+    if (user?.is_new_member_leader) return;
     try {
       const response = await leaderAPI.getConsecutiveAbsences();
       setConsecutiveAbsences(response.data);
     } catch (error) {
       console.error('Failed to load consecutive absences:', error);
     }
-  }, []);
+  }, [user?.is_new_member_leader]);
 
   const loadFollowUps = useCallback(async () => {
+    if (user?.is_new_member_leader) return;
     try {
       const response = await leaderAPI.getFollowUps();
       setFollowUps(response.data);
     } catch (error) {
       console.error('Failed to load follow-ups:', error);
     }
-  }, []);
+  }, [user?.is_new_member_leader]);
 
   const handleUpdateFollowUp = useCallback(async (memberId, data) => {
     await leaderAPI.updateFollowUp(memberId, data);
@@ -483,12 +504,17 @@ const useLeaderData = () => {
 
   // --- Initial Load ---
   useEffect(() => {
+    if (user?.is_new_member_leader) {
+      setLoading(false);
+      setHistoryLoading(false);
+      return;
+    }
     loadMembers();
     loadHistory();
     loadConsecutiveAbsences();
     loadFollowUps();
     loadAssignments();
-  }, [loadMembers, loadHistory, loadConsecutiveAbsences, loadFollowUps, loadAssignments]);
+  }, [user?.is_new_member_leader, loadMembers, loadHistory, loadConsecutiveAbsences, loadFollowUps, loadAssignments]);
 
   useEffect(() => {
     if (selectedDate !== previousSelectedDateRef.current) {

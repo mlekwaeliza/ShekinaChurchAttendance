@@ -21,6 +21,14 @@ const CATEGORY_COLORS = {
   'General': 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
 };
 
+const CATEGORY_ACTIVE_CLASSES = {
+  'Pastoral & Spiritual Care': 'border-violet-400 dark:border-violet-500 bg-violet-50/40 dark:bg-violet-950/10 shadow-lg shadow-violet-500/5 scale-[1.01]',
+  'Small Groups & Discipleship': 'border-blue-400 dark:border-blue-500 bg-blue-50/40 dark:bg-blue-950/10 shadow-lg shadow-blue-500/5 scale-[1.01]',
+  'Operations & Administration': 'border-amber-400 dark:border-amber-500 bg-amber-50/40 dark:bg-amber-950/10 shadow-lg shadow-amber-500/5 scale-[1.01]',
+  'Ministry Support': 'border-emerald-400 dark:border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/10 shadow-lg shadow-emerald-500/5 scale-[1.01]',
+  'General': 'border-slate-400 dark:border-slate-500 bg-slate-50/40 dark:bg-slate-700/10 shadow-lg shadow-slate-500/5 scale-[1.01]',
+};
+
 const CATEGORY_ICONS = {
   'Pastoral & Spiritual Care': Shield,
   'Small Groups & Discipleship': Users2,
@@ -261,8 +269,8 @@ const TitleManager = ({ showMessage }) => {
               onClick={() => setCategoryFilter(prev => prev === cat ? '' : cat)}
               className={`flex flex-col items-start gap-1 p-3 rounded-xl border transition-all text-left ${
                 categoryFilter === cat
-                  ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 shadow-md'
-                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary-300 hover:shadow-sm'
+                  ? CATEGORY_ACTIVE_CLASSES[cat] || 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 shadow-md'
+                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary-300 hover:shadow-sm hover:scale-[1.005]'
               }`}
             >
               <div className={`p-1.5 rounded-lg ${CATEGORY_COLORS[cat]}`}>
@@ -358,7 +366,7 @@ const TitleManager = ({ showMessage }) => {
                 </div>
                 <div className="divide-y divide-slate-100 dark:divide-slate-700">
                   {catTitles.map(title => (
-                    <div key={title.id} className="flex items-center gap-4 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
+                    <div key={title.id} className={`flex items-center gap-4 px-5 py-3 transition-colors group ${selectedIds.has(title.id) ? 'bg-primary-50/40 dark:bg-primary-950/10' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30'}`}>
                       <input
                         type="checkbox"
                         checked={selectedIds.has(title.id)}
@@ -412,7 +420,7 @@ const TitleManager = ({ showMessage }) => {
               <label className="input-label">Title Name *</label>
               <input
                 type="text"
-                className="input-field"
+                className="input"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="e.g. Lead Pastor, Youth Pastor"
@@ -421,14 +429,14 @@ const TitleManager = ({ showMessage }) => {
             </div>
             <div className="col-span-2">
               <label className="input-label">Category</label>
-              <select className="input-field" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              <select className="select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="col-span-2">
               <label className="input-label">Reports To (Parent Title)</label>
               <select
-                className="input-field"
+                className="select"
                 value={form.reports_to_title_id}
                 onChange={(e) => setForm({ ...form, reports_to_title_id: e.target.value })}
               >
@@ -442,7 +450,7 @@ const TitleManager = ({ showMessage }) => {
             <div className="col-span-2">
               <label className="input-label">Description</label>
               <textarea
-                className="input-field"
+                className="input"
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 placeholder="Brief description of this role's responsibilities"
@@ -453,7 +461,7 @@ const TitleManager = ({ showMessage }) => {
               <label className="input-label">Sort Order</label>
               <input
                 type="number"
-                className="input-field"
+                className="input"
                 value={form.sort_order}
                 onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
                 min="0"
@@ -462,7 +470,7 @@ const TitleManager = ({ showMessage }) => {
             <div>
               <label className="input-label">Status</label>
               <select
-                className="input-field"
+                className="select"
                 value={form.is_active ? 'active' : 'inactive'}
                 onChange={(e) => setForm({ ...form, is_active: e.target.value === 'active' })}
               >

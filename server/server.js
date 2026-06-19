@@ -68,7 +68,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const { queries, db, all, ensureHomeCellSchema } = require('./database');
+const { queries, db, all, run, ensureHomeCellSchema } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const authRoutes = require('./routes/auth');
@@ -699,7 +699,7 @@ async function initializeAdmin() {
     const ghanceUser = await queries.findUserByUsername('ghance');
     if (ghanceUser) {
       try {
-        await queries.run('UPDATE users SET is_new_member_leader = 1 WHERE id = ?', [ghanceUser.id]);
+        await run('UPDATE users SET is_new_member_leader = 1 WHERE id = ?', [ghanceUser.id]);
         console.log('Genoveva Hance account seeded (leader, is_new_member_leader=1).');
       } catch (e2) {
         console.warn('Failed to set is_new_member_leader on ghance:', e2.message);
