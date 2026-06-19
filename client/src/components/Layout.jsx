@@ -241,7 +241,20 @@ const Layout = ({ children, showNav = true }) => {
     ],
   };
 
-  const currentNav = navConfig[user?.role] || [];
+  const currentNav = (() => {
+    if (user?.role === 'leader' && user?.is_new_member_leader) {
+      return [
+        {
+          section: 'NEW MEMBERS',
+          items: [
+            { path: '/leader', label: 'New Members', icon: UserPlus, exact: true },
+            { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
+          ]
+        }
+      ];
+    }
+    return navConfig[user?.role] || [];
+  })();
 
   const isActive = (item) => {
     if (item.exact) return location.pathname === item.path;
@@ -266,7 +279,7 @@ const Layout = ({ children, showNav = true }) => {
 
   const roleLabel = {
     admin: 'Administrator',
-    leader: user?.is_head ? 'Head Leader' : 'Section Leader',
+    leader: user?.is_new_member_leader ? 'New Member Leader' : user?.is_head ? 'Head Leader' : 'Section Leader',
     pastor: 'Pastor',
   };
 
