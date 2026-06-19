@@ -212,6 +212,15 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/attendance-corrections', label: 'Attendance Corrections', icon: Edit3 },
         { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
       ]},
+      { section: 'EVANGELISM', items: [
+        { path: '/evangelist', label: 'Evangelist Dashboard', icon: Heart, exact: true },
+        { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
+        { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
+        { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },
+        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
+        { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
+        { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
+      ]},
       { section: 'SYSTEM', items: [
         { path: '/admin/audit', label: 'Audit Log', icon: ShieldCheck },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
