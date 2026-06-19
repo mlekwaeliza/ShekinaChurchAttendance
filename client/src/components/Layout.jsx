@@ -240,6 +240,17 @@ const Layout = ({ children, showNav = true }) => {
         ...(user?.is_new_member_leader ? [{ path: '/leader/new-members', label: 'New Members', icon: UserPlus }] : []),
       ]},
     ],
+    evangelist: [
+      { section: 'EVANGELISM', items: [
+        { path: '/evangelist', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+        { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
+        { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
+        { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },
+        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
+        { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
+        { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
+      ]},
+    ],
     pastor: [
       { section: 'MAIN', items: [
         { path: '/pastor', label: 'Overview', icon: LayoutDashboard, exact: true },
@@ -303,12 +314,14 @@ const Layout = ({ children, showNav = true }) => {
     admin: 'Administrator',
     leader: user?.is_new_member_leader ? 'New Member Leader' : user?.is_head ? 'Head Leader' : 'Section Leader',
     pastor: 'Pastor',
+    evangelist: 'Evangelist Pastor',
   };
 
   const roleBadgeColor = {
     admin: 'bg-primary-500/20 text-primary-300',
     leader: 'bg-emerald-500/20 text-emerald-300',
     pastor: 'bg-accent-500/20 text-accent-300',
+    evangelist: 'bg-amber-500/20 text-amber-300',
   };
 
   // --- Sidebar Content ---

@@ -41,7 +41,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (!allowedRoles || !allowedRoles.includes(user.role)) {
-    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'pastor' ? '/pastor' : '/leader';
+    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'pastor' ? '/pastor' : user.role === 'evangelist' ? '/evangelist' : '/leader';
     return <Navigate to={redirectPath} />;
   }
 
@@ -55,7 +55,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'leader' ? '/leader' : '/pastor'} /> : <Login />} />
+        <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'evangelist' ? '/evangelist' : user.role === 'leader' ? '/leader' : '/pastor'} /> : <Login />} />
 
         {/* Admin Routes */}
         <Route path="/admin/:tab?" element={

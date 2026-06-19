@@ -1,9 +1,10 @@
 const { queries } = require('../database');
 
 const rolePermissions = {
-  admin: ['admin', 'leader', 'pastor'],
+  admin: ['admin', 'leader', 'pastor', 'evangelist'],
   leader: ['leader'],
-  pastor: ['pastor']
+  pastor: ['pastor'],
+  evangelist: ['evangelist']
 };
 
 function requireRole(allowedRoles) {
@@ -36,7 +37,7 @@ async function isAuthenticated(req, res, next) {
       });
     }
 
-    return requireRole(['admin', 'leader', 'pastor'])(req, res, next);
+    return requireRole(['admin', 'leader', 'pastor', 'evangelist'])(req, res, next);
   }
   res.status(401).json({ error: 'Not authenticated' });
 }

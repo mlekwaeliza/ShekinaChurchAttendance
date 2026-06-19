@@ -713,6 +713,18 @@ async function initializeAdmin() {
         console.warn('Failed to set is_new_member_leader on ghance:', e2.message);
       }
     }
+    // Seed evangelist test user
+    const evangelistExists = await queries.findUserByUsername('evangelist');
+    if (!evangelistExists) {
+      try {
+        const bcrypt = require('bcryptjs');
+        const passwordHash = await bcrypt.hash('password123', 10);
+        await queries.createUser('evangelist', passwordHash, 'evangelist', 'Evangelist Pastor');
+        console.log('Evangelist pastor account seeded (evangelist/password123).');
+      } catch (e3) {
+        console.warn('Failed to create evangelist user:', e3.message);
+      }
+    }
   } catch (error) {
     console.error('Failed to create admin user:', error);
   }

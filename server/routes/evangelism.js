@@ -4,7 +4,7 @@ const { isAuthenticated, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(isAuthenticated);
-router.use(requireRole(['admin', 'pastor']));
+router.use(requireRole(['admin', 'pastor', 'evangelist']));
 
 // ── Stats ────────────────────────────────────────────────────────────
 router.get('/stats', async (req, res) => {
