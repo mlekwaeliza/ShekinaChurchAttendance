@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import useLeaderData from '../hooks/useLeaderData';
 import { CheckCircle2 } from 'lucide-react';
 import useOffline from '../hooks/useOffline';
@@ -20,6 +21,7 @@ import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
 const LeaderDashboard = () => {
   const { tab } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const activeTab = tab || 'dashboard';
   const data = useLeaderData();
   const { conflicts, resolveConflict } = useOffline();
@@ -78,7 +80,7 @@ const LeaderDashboard = () => {
             submitted={data.submitted}
             serviceTypes={data.serviceTypes}
             selectedServiceId={data.selectedServiceId}
-            leaderName={data.sectionInfo?.leader}
+            leaderName={data.sectionInfo?.leader || user?.full_name}
             onGoToAttendance={() => navigate('/leader/attendance')}
           />
         );
@@ -191,7 +193,7 @@ const LeaderDashboard = () => {
               submitted={data.submitted}
               serviceTypes={data.serviceTypes}
               selectedServiceId={data.selectedServiceId}
-              leaderName={data.sectionInfo?.leader}
+              leaderName={data.sectionInfo?.leader || user?.full_name}
               onGoToAttendance={() => navigate('/leader/attendance')}
             />
           );
@@ -220,7 +222,7 @@ const LeaderDashboard = () => {
             submitted={data.submitted}
             serviceTypes={data.serviceTypes}
             selectedServiceId={data.selectedServiceId}
-            leaderName={data.sectionInfo?.leader}
+            leaderName={data.sectionInfo?.leader || user?.full_name}
             onGoToAttendance={() => navigate('/leader/attendance')}
           />
         );
