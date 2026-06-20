@@ -287,6 +287,12 @@ const Layout = ({ children, showNav = true }) => {
             { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
             { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
           ]
+        },
+        {
+          section: 'ACCOUNT',
+          items: [
+            { path: '/leader/settings', label: 'Settings', icon: Settings },
+          ]
         }
       ];
     }

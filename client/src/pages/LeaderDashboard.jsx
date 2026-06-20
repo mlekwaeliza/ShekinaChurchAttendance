@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useLeaderData from '../hooks/useLeaderData';
 import { CheckCircle2 } from 'lucide-react';
 import useOffline from '../hooks/useOffline';
+import SettingsView from '../components/admin/SettingsView';
 
 import LeaderOverview from '../components/leader/LeaderOverview';
 import TakeAttendance from '../components/leader/TakeAttendance';
@@ -23,6 +24,12 @@ const LeaderDashboard = () => {
   const data = useLeaderData();
   const { conflicts, resolveConflict } = useOffline();
   const [showConflicts, setShowConflicts] = useState(false);
+  const [settingsToast, setSettingsToast] = useState(null);
+
+  const showMessage = useCallback((msg) => {
+    setSettingsToast(msg);
+    setTimeout(() => setSettingsToast(null), 3000);
+  }, []);
 
   // Load trends when reports tab is active
   useEffect(() => {
@@ -155,6 +162,23 @@ const LeaderDashboard = () => {
 
       case 'new-members':
         return <NewMemberLeaderView />;
+
+      case 'settings':
+        return (
+          <div>
+            {settingsToast && (
+              <div className="toast-success mb-6">
+                <span>{settingsToast}</span>
+              </div>
+            )}
+            <SettingsView
+              leaders={[]}
+              loadCoreData={() => {}}
+              loadLeaders={() => {}}
+              showMessage={showMessage}
+            />
+          </div>
+        );
 
       case 'overview':
         if (!data.isHead) {

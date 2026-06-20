@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import TwoFactorSetup from '../TwoFactorSetup';
@@ -199,10 +198,6 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
 
           {/* Action row */}
           <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-            <Link to="/change-password" className="btn-secondary">
-              <Shield className="w-4 h-4" />
-              Change Password
-            </Link>
             <button onClick={triggerProfileUpload} className="btn-secondary">
               <Camera className="w-4 h-4" />
               Update Photo
