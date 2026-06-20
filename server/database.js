@@ -1639,6 +1639,30 @@ async function migrateUsersRoleConstraint() {
   }
 }
 
+// ── Link Users to Members ─────────────────────────────────────────────
+async function linkUsersToMembers() {
+  try {
+    const users = await all("SELECT id, full_name, member_id FROM users WHERE member_id IS NULL");
+    let linked = 0;
+    for (const user of users) {
+      if (!user.full_name) continue;
+      // Split name into parts and build a LIKE search
+      const parts = user.full_name.trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) continue;
+      const conditions = parts.map(p => `full_name LIKE '%${p.replace(/'/g, "''")}%'`).join(' AND ');
+      const member = await get(`SELECT id, full_name FROM members WHERE ${conditions} LIMIT 1`);
+      if (member) {
+        await run('UPDATE users SET full_name = ?, member_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [member.full_name, member.id, user.id]);
+        linked++;
+      }
+    }
+    if (linked > 0) console.log(`Linked ${linked} user(s) to member records.`);
+  } catch (err) {
+    console.error('Failed to link users to members:', err.message);
+  }
+}
+
 // ── Evangelism Tables Migration ──────────────────────────────────────────
 async function ensureEvangelismSchema() {
   const idType = usePostgres
@@ -3512,5 +3536,6 @@ module.exports = {
   transaction,
   ensureHomeCellSchema,
   ensureEvangelismSchema,
-  migrateUsersRoleConstraint
+  migrateUsersRoleConstraint,
+  linkUsersToMembers
 };

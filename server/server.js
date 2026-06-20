@@ -68,7 +68,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const { queries, db, all, run, ensureHomeCellSchema, ensureEvangelismSchema, migrateUsersRoleConstraint } = require('./database');
+const { queries, db, all, run, ensureHomeCellSchema, ensureEvangelismSchema, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const authRoutes = require('./routes/auth');
@@ -838,6 +838,7 @@ async function startServer() {
     await ensureHomeCellSchema();
     await ensureEvangelismSchema();
     await migrateUsersRoleConstraint();
+    await linkUsersToMembers();
     await initializeAdmin();
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);
