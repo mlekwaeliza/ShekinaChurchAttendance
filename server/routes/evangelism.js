@@ -4,6 +4,20 @@ const { isAuthenticated, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 router.use(isAuthenticated);
+
+// ── Member Names (for settings display name dropdown) ────────────────
+// Placed before role restriction so all authenticated users (admin,
+// leader, pastor, evangelist) can populate the display-name selector.
+router.get('/member-names', async (req, res) => {
+  try {
+    const members = await all("SELECT id, full_name FROM members WHERE full_name IS NOT NULL AND full_name != '' ORDER BY full_name ASC");
+    res.json(members);
+  } catch (err) {
+    console.error('Error fetching member names:', err);
+    res.status(500).json({ error: 'Failed to fetch members' });
+  }
+});
+
 router.use(requireRole(['admin', 'pastor', 'evangelist']));
 
 // ── Stats ────────────────────────────────────────────────────────────
@@ -277,17 +291,6 @@ router.delete('/baptism/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting baptism record:', err);
     res.status(500).json({ error: 'Failed to delete record' });
-  }
-});
-
-// ── Member Names (for settings display name dropdown) ────────────────
-router.get('/member-names', async (req, res) => {
-  try {
-    const members = await all("SELECT id, full_name FROM members WHERE full_name IS NOT NULL AND full_name != '' ORDER BY full_name ASC");
-    res.json(members);
-  } catch (err) {
-    console.error('Error fetching member names:', err);
-    res.status(500).json({ error: 'Failed to fetch members' });
   }
 });
 
