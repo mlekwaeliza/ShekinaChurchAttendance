@@ -67,6 +67,10 @@ const uploadsDir = path.join(__dirname, 'uploads', 'profiles');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
+const financeUploadsDir = path.join(__dirname, 'uploads', 'finance');
+if (!fs.existsSync(financeUploadsDir)) {
+  fs.mkdirSync(financeUploadsDir, { recursive: true });
+}
 
 const { queries, db, all, run, ensureHomeCellSchema, ensureEvangelismSchema, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
 const { backupDatabase } = require('./backup');
@@ -80,6 +84,7 @@ const adminOperationsRoutes = require('./routes/adminOperations');
 const adminPeopleRoutes = require('./routes/adminPeople');
 const adminSystemRoutes = require('./routes/adminSystem');
 const adminContributionsRoutes = require('./routes/adminContributions');
+const adminFinanceRoutes = require('./routes/adminFinance');
 const leaderRoutes = require('./routes/leader');
 const outreachRoutes = require('./routes/outreach');
 const pastorRoutes = require('./routes/pastor');
@@ -443,6 +448,7 @@ app.use('/api/admin', adminOperationsRoutes);
 app.use('/api/admin', adminPeopleRoutes);
 app.use('/api/admin', adminSystemRoutes);
 app.use('/api/admin', adminContributionsRoutes);
+app.use('/api/admin', adminFinanceRoutes);
 app.use('/api/leader', leaderRoutes);
 app.use('/api/pastor', pastorRoutes);
 app.use('/api/analytics', analyticsRoutes);

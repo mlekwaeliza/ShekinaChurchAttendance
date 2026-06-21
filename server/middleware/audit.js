@@ -18,6 +18,8 @@ const ENTITY_MAP = {
   '/api/admin/upload-csv': 'csv_import',
   '/api/admin/contribution-types': 'contribution_type',
   '/api/admin/contributions': 'contribution',
+  '/api/admin/finance/records': 'finance_record',
+  '/api/admin/finance/expenses': 'finance_expense',
   '/api/leader/members': 'member',
   '/api/leader/attendance': 'attendance',
   '/api/leader/home-cell-members': 'home_cell_member',
@@ -68,6 +70,8 @@ const SAFE_FIELDS_BY_ENTITY = {
   outreach_log: new Set(['member_id', 'contact_method', 'outcome', 'service_id', 'message']),
   calendar_event: new Set(['title', 'date', 'is_active', 'assigned_to']),
   user_2fa: new Set(['enabled', 'method']),
+  finance_record: new Set(['status', 'notes', 'record_date']),
+  finance_expense: new Set(['category', 'amount', 'description']),
 };
 
 function hashValue(value) {

@@ -323,6 +323,34 @@ export const contributionAPI = {
   getDetail: (from, to) => api.get('/admin/contributions/detail', { params: { from, to } }),
 };
 
+// Finance API
+export const financeAPI = {
+  getRecords: (filters = {}) => api.get('/admin/finance/records', { params: filters }),
+  getRecord: (id) => api.get(`/admin/finance/records/${id}`),
+  createRecord: (data) => api.post('/admin/finance/records', data),
+  updateRecord: (id, data) => api.put(`/admin/finance/records/${id}`, data),
+  deleteRecord: (id) => api.delete(`/admin/finance/records/${id}`),
+  submitRecord: (id) => api.post(`/admin/finance/records/${id}/submit`),
+  approveRecord: (id) => api.put(`/admin/finance/records/${id}/approve`),
+  rejectRecord: (id, reason) => api.put(`/admin/finance/records/${id}/reject`, { reason }),
+
+  addExpense: (recordId, data) => api.post(`/admin/finance/records/${recordId}/expenses`, data),
+  updateExpense: (id, data) => api.put(`/admin/finance/expenses/${id}`, data),
+  deleteExpense: (id) => api.delete(`/admin/finance/expenses/${id}`),
+  uploadReceipt: (expenseId, file) => {
+    const fd = new FormData();
+    fd.append('receipt', file);
+    return api.post(`/admin/finance/expenses/${expenseId}/receipt`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
+  getSubmissions: (status) => api.get('/admin/finance/submissions', { params: status ? { status } : {} }),
+  getSummary: (dateFrom, dateTo) => api.get('/admin/finance/reports/summary', { params: { date_from: dateFrom, date_to: dateTo } }),
+  getTrend: (year) => api.get('/admin/finance/reports/trend', { params: { year } }),
+  getExport: (dateFrom, dateTo) => api.get('/admin/finance/reports/export', { params: { date_from: dateFrom, date_to: dateTo } }),
+};
+
 export const evangelismAPI = {
   getStats: () => api.get('/evangelism/stats'),
   getTrend: () => api.get('/evangelism/trend'),

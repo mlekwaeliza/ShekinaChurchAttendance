@@ -533,6 +533,50 @@ db.serialize(() => {
     CREATE INDEX IF NOT EXISTS idx_contributions_date ON contributions(payment_date);
     CREATE INDEX IF NOT EXISTS idx_contributions_method ON contributions(payment_method);
     CREATE INDEX IF NOT EXISTS idx_contributions_recorded_by ON contributions(recorded_by);
+
+    -- ── Finance Daily Records ──────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS finance_daily_records (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      record_date DATE NOT NULL UNIQUE,
+      morning_offering REAL DEFAULT 0,
+      afternoon_offering REAL DEFAULT 0,
+      total_tithes REAL DEFAULT 0,
+      total_income REAL DEFAULT 0,
+      mission_fund REAL DEFAULT 0,
+      remaining_after_mission REAL DEFAULT 0,
+      bishop_fund REAL DEFAULT 0,
+      usable_church_funds REAL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'submitted', 'approved', 'rejected')),
+      notes TEXT,
+      submitted_at DATETIME,
+      submitted_by INTEGER,
+      approved_at DATETIME,
+      approved_by INTEGER,
+      rejection_reason TEXT,
+      created_by INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (submitted_by) REFERENCES users(id),
+      FOREIGN KEY (approved_by) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_finance_records_date ON finance_daily_records(record_date);
+    CREATE INDEX IF NOT EXISTS idx_finance_records_status ON finance_daily_records(status);
+    CREATE INDEX IF NOT EXISTS idx_finance_records_created_by ON finance_daily_records(created_by);
+
+    -- ── Finance Expenses ───────────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS finance_expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      record_id INTEGER NOT NULL,
+      category TEXT NOT NULL CHECK(category IN ('Food', 'Water', 'Fruits', 'Sugar', 'Media', 'Visitors', 'Transport', 'Other')),
+      amount REAL NOT NULL CHECK(amount > 0),
+      description TEXT,
+      receipt_path TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (record_id) REFERENCES finance_daily_records(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_finance_expenses_record ON finance_expenses(record_id);
+    CREATE INDEX IF NOT EXISTS idx_finance_expenses_category ON finance_expenses(category);
   `);
 
   db.run(`ALTER TABLE new_members ADD COLUMN marital_status TEXT`, (err) => {
@@ -3671,6 +3715,137 @@ const queries = {
     WHERE c.payment_date >= ? AND c.payment_date <= ?
     ORDER BY c.payment_date DESC
   `, [from, to]),
+
+  // ── Finance Daily Records ──────────────────────────────────────────────
+  getFinanceRecords: (filters = {}) => {
+    const WHERE = [], params = [];
+    if (filters.status) { WHERE.push('f.status=?'); params.push(filters.status); }
+    if (filters.created_by) { WHERE.push('f.created_by=?'); params.push(filters.created_by); }
+    if (filters.date_from) { WHERE.push('f.record_date>=?'); params.push(filters.date_from); }
+    if (filters.date_to) { WHERE.push('f.record_date<=?'); params.push(filters.date_to); }
+    const where = WHERE.length ? `WHERE ${WHERE.join(' AND ')}` : '';
+    return all(`
+      SELECT f.*, u.full_name as created_by_name, sb.full_name as submitted_by_name, ap.full_name as approved_by_name
+      FROM finance_daily_records f
+      LEFT JOIN users u ON u.id = f.created_by
+      LEFT JOIN users sb ON sb.id = f.submitted_by
+      LEFT JOIN users ap ON ap.id = f.approved_by
+      ${where}
+      ORDER BY f.record_date DESC
+    `, params);
+  },
+
+  getFinanceRecordById: (id) => get(`
+    SELECT f.*, u.full_name as created_by_name, sb.full_name as submitted_by_name, ap.full_name as approved_by_name
+    FROM finance_daily_records f
+    LEFT JOIN users u ON u.id = f.created_by
+    LEFT JOIN users sb ON sb.id = f.submitted_by
+    LEFT JOIN users ap ON ap.id = f.approved_by
+    WHERE f.id = ?
+  `, [id]),
+
+  createFinanceRecord: (data) => run(`
+    INSERT INTO finance_daily_records (record_date, morning_offering, afternoon_offering, total_tithes,
+      total_income, mission_fund, remaining_after_mission, bishop_fund, usable_church_funds, notes, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [data.record_date, data.morning_offering, data.afternoon_offering, data.total_tithes,
+    data.total_income, data.mission_fund, data.remaining_after_mission, data.bishop_fund, data.usable_church_funds,
+    data.notes, data.created_by]),
+
+  updateFinanceRecord: (id, data) => {
+    const SET = [], params = [];
+    if (data.record_date !== undefined) { SET.push('record_date=?'); params.push(data.record_date); }
+    if (data.morning_offering !== undefined) { SET.push('morning_offering=?'); params.push(data.morning_offering); }
+    if (data.afternoon_offering !== undefined) { SET.push('afternoon_offering=?'); params.push(data.afternoon_offering); }
+    if (data.total_tithes !== undefined) { SET.push('total_tithes=?'); params.push(data.total_tithes); }
+    if (data.total_income !== undefined) { SET.push('total_income=?'); params.push(data.total_income); }
+    if (data.mission_fund !== undefined) { SET.push('mission_fund=?'); params.push(data.mission_fund); }
+    if (data.remaining_after_mission !== undefined) { SET.push('remaining_after_mission=?'); params.push(data.remaining_after_mission); }
+    if (data.bishop_fund !== undefined) { SET.push('bishop_fund=?'); params.push(data.bishop_fund); }
+    if (data.usable_church_funds !== undefined) { SET.push('usable_church_funds=?'); params.push(data.usable_church_funds); }
+    if (data.notes !== undefined) { SET.push('notes=?'); params.push(data.notes); }
+    SET.push('updated_at=CURRENT_TIMESTAMP');
+    params.push(id);
+    return run(`UPDATE finance_daily_records SET ${SET.join(', ')} WHERE id=?`, params);
+  },
+
+  deleteFinanceRecord: (id) => run('DELETE FROM finance_daily_records WHERE id = ?', [id]),
+
+  submitFinanceRecord: (id, userId) => run(`
+    UPDATE finance_daily_records SET status='submitted', submitted_at=CURRENT_TIMESTAMP, submitted_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?
+  `, [userId, id]),
+
+  approveFinanceRecord: (id, userId) => run(`
+    UPDATE finance_daily_records SET status='approved', approved_at=CURRENT_TIMESTAMP, approved_by=?, rejection_reason=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?
+  `, [userId, id]),
+
+  rejectFinanceRecord: (id, userId, reason) => run(`
+    UPDATE finance_daily_records SET status='rejected', approved_at=CURRENT_TIMESTAMP, approved_by=?, rejection_reason=?, updated_at=CURRENT_TIMESTAMP WHERE id=?
+  `, [userId, reason, id]),
+
+  // ── Finance Expenses ────────────────────────────────────────────────────
+  getFinanceExpenses: (recordId) => all(`
+    SELECT * FROM finance_expenses WHERE record_id = ? ORDER BY category, created_at
+  `, [recordId]),
+
+  createFinanceExpense: (data) => run(`
+    INSERT INTO finance_expenses (record_id, category, amount, description, receipt_path) VALUES (?, ?, ?, ?, ?)
+  `, [data.record_id, data.category, data.amount, data.description, data.receipt_path || null]),
+
+  updateFinanceExpense: (id, data) => run(`
+    UPDATE finance_expenses SET category=?, amount=?, description=?, receipt_path=? WHERE id=?
+  `, [data.category, data.amount, data.description, data.receipt_path || null, id]),
+
+  deleteFinanceExpense: (id) => run('DELETE FROM finance_expenses WHERE id = ?', [id]),
+
+  updateFinanceExpenseReceipt: (id, receiptPath) => run(`
+    UPDATE finance_expenses SET receipt_path=? WHERE id=?
+  `, [receiptPath, id]),
+
+  // ── Finance Reports ─────────────────────────────────────────────────────
+  getFinanceSubmissions: (status) => {
+    const where = status ? 'WHERE f.status=?' : '';
+    const params = status ? [status] : [];
+    return all(`
+      SELECT f.*, u.full_name as created_by_name,
+        (SELECT COUNT(*) FROM finance_expenses WHERE record_id = f.id) as expense_count,
+        (SELECT COALESCE(SUM(amount), 0) FROM finance_expenses WHERE record_id = f.id) as total_expenses
+      FROM finance_daily_records f
+      LEFT JOIN users u ON u.id = f.created_by
+      ${where}
+      ORDER BY f.updated_at DESC
+    `, params);
+  },
+
+  getFinanceSummary: (dateFrom, dateTo) => {
+    const WHERE = ['f.record_date>=?', 'f.record_date<=?'];
+    return get(`
+      SELECT
+        COUNT(*) as day_count,
+        COALESCE(SUM(f.morning_offering), 0) as total_morning,
+        COALESCE(SUM(f.afternoon_offering), 0) as total_afternoon,
+        COALESCE(SUM(f.total_tithes), 0) as total_tithes,
+        COALESCE(SUM(f.total_income), 0) as total_income,
+        COALESCE(SUM(f.mission_fund), 0) as total_mission,
+        COALESCE(SUM(f.bishop_fund), 0) as total_bishop,
+        COALESCE(SUM(f.usable_church_funds), 0) as total_usable,
+        COALESCE(SUM((SELECT COALESCE(SUM(amount), 0) FROM finance_expenses WHERE record_id = f.id)), 0) as total_expenses
+      FROM finance_daily_records f
+      WHERE ${WHERE.join(' AND ')}
+    `, [dateFrom, dateTo]);
+  },
+
+  getFinanceYearTrend: (year) => all(`
+    SELECT
+      strftime('%m', record_date) as month,
+      COUNT(*) as day_count,
+      COALESCE(SUM(total_income), 0) as total_income,
+      COALESCE(SUM(usable_church_funds), 0) as total_usable
+    FROM finance_daily_records
+    WHERE strftime('%Y', record_date) = ? AND status IN ('submitted', 'approved')
+    GROUP BY strftime('%m', record_date)
+    ORDER BY month
+  `, [String(year)]),
 };
 
 // Transaction helper
