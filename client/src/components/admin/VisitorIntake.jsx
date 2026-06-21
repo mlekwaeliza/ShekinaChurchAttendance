@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { UserPlus, Save, Phone, Mail, MapPin } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 
-const VisitorIntake = ({ sections = [], showMessage }) => {
+const VisitorIntake = ({ showMessage }) => {
   const [visitors, setVisitors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -10,7 +10,8 @@ const VisitorIntake = ({ sections = [], showMessage }) => {
     full_name: '',
     phone: '',
     email: '',
-    section_interest: '',
+    invitation_source: '',
+    address: '',
     notes: '',
   });
 
@@ -48,7 +49,7 @@ const VisitorIntake = ({ sections = [], showMessage }) => {
         ...form,
         full_name: form.full_name.trim(),
       });
-      setForm({ full_name: '', phone: '', email: '', section_interest: '', notes: '' });
+      setForm({ full_name: '', phone: '', email: '', invitation_source: '', address: '', notes: '' });
       await loadVisitors();
       showMessage?.(`${form.full_name.trim()} added to visitor intake.`);
     } catch (error) {
@@ -91,14 +92,23 @@ const VisitorIntake = ({ sections = [], showMessage }) => {
                 <input value={form.email} onChange={(event) => updateField('email', event.target.value)} className="input w-full" />
               </div>
             </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Section Interest</label>
-              <select value={form.section_interest} onChange={(event) => updateField('section_interest', event.target.value)} className="select w-full">
-                <option value="">Not assigned yet</option>
-                {sections.map((section) => (
-                  <option key={section.id} value={section.name}>{section.name}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Invitation Source</label>
+                <select value={form.invitation_source} onChange={(event) => updateField('invitation_source', event.target.value)} className="select w-full">
+                  <option value="">Select...</option>
+                  <option value="Friend">Friend</option>
+                  <option value="Social Media">Social Media</option>
+                  <option value="Church Outreach">Church Outreach</option>
+                  <option value="Family Member">Family Member</option>
+                  <option value="Walk-in">Walk-in</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Address</label>
+                <input value={form.address} onChange={(event) => updateField('address', event.target.value)} className="input w-full" placeholder="e.g. 123 Main St" />
+              </div>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Notes</label>
@@ -135,7 +145,8 @@ const VisitorIntake = ({ sections = [], showMessage }) => {
                 <div className="mt-2 flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
                   {visitor.phone && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{visitor.phone}</span>}
                   {visitor.email && <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" />{visitor.email}</span>}
-                  {visitor.section_interest && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{visitor.section_interest}</span>}
+                  {visitor.address && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{visitor.address}</span>}
+                  {visitor.invitation_source && <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{visitor.invitation_source}</span>}
                 </div>
                 {visitor.notes && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{visitor.notes}</p>}
               </div>

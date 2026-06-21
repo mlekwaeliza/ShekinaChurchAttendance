@@ -617,6 +617,30 @@ db.serialize(() => {
     }
   });
 
+  db.run(`ALTER TABLE visitor_intake ADD COLUMN address TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+
+  db.run(`ALTER TABLE visitor_intake ADD COLUMN invitation_source TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+
+  db.run(`ALTER TABLE members ADD COLUMN marital_status TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+
+  db.run(`ALTER TABLE members ADD COLUMN occupation TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+
   db.run(`UPDATE members SET is_active = 1 WHERE is_active IS NULL`);
   db.run(`UPDATE leaders SET is_active = 1 WHERE is_active IS NULL`);
 
@@ -1591,6 +1615,13 @@ async function ensureHomeCellSchema() {
     } catch (e) {
       console.warn('new_members column migration failed (non-fatal):', e.message);
     }
+
+    try {
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS marital_status TEXT');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS occupation TEXT');
+    } catch (e) {
+      console.warn('members column migration failed (non-fatal):', e.message);
+    }
   }
 }
 
@@ -2179,17 +2210,17 @@ const queries = {
     WHERE m.is_active = 1
     ORDER BY s.name, m.full_name LIMIT 1000
   `),
-  createMember: (membershipId, fullName, sectionId, leaderId, phone, email, gender, ageGroup, dob = null, showAge = 0, hideBday = 0, optOuts = '[]', address = null) =>
+  createMember: (membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob = null, showAge = 0, hideBday = 0, optOuts = '[]', address = null) =>
     run(`
-      INSERT INTO members (membership_id, full_name, section_id, leader_id, phone, email, gender, age_group, date_of_birth, show_age_to_leaders, hide_from_birthday_list, opt_out_services, address)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [membershipId, fullName, sectionId, leaderId, phone, email, gender, ageGroup, dob, showAge, hideBday, optOuts, address]),
-  updateMember: (fullName, phone, email, gender, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId) =>
+      INSERT INTO members (membership_id, full_name, section_id, leader_id, phone, email, gender, marital_status, occupation, age_group, date_of_birth, show_age_to_leaders, hide_from_birthday_list, opt_out_services, address)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address]),
+  updateMember: (fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId) =>
     run(`
       UPDATE members
-      SET full_name = ?, phone = ?, email = ?, gender = ?, age_group = ?, date_of_birth = ?, show_age_to_leaders = ?, hide_from_birthday_list = ?, opt_out_services = ?, address = ?, section_id = ?, leader_id = ?, updated_at = CURRENT_TIMESTAMP
+      SET full_name = ?, phone = ?, email = ?, gender = ?, marital_status = ?, occupation = ?, age_group = ?, date_of_birth = ?, show_age_to_leaders = ?, hide_from_birthday_list = ?, opt_out_services = ?, address = ?, section_id = ?, leader_id = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [fullName, phone, email, gender, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId]),
+    `, [fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId]),
   deleteMember: (id) => run('DELETE FROM members WHERE id = ?', [id]),
   getMemberByMembershipId: (membershipId) => get('SELECT * FROM members WHERE membership_id = ?', [membershipId]),
   findActiveMemberByName: (fullName, excludeMemberId = null) => get(`

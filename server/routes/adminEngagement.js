@@ -156,13 +156,14 @@ router.post('/visitors', async (req, res) => {
     }
 
     const result = await run(`
-      INSERT INTO visitor_intake (full_name, phone, email, section_interest, notes, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO visitor_intake (full_name, phone, email, invitation_source, address, notes, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [
       fullName,
       req.body.phone || null,
       req.body.email || null,
-      req.body.section_interest || null,
+      req.body.invitation_source || null,
+      req.body.address || null,
       req.body.notes || null,
       req.session.userId
     ]);

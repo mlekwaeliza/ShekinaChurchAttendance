@@ -232,7 +232,7 @@ router.put('/members/bulk-update', async (req, res) => {
 router.put('/members/:id', async (req, res) => {
   try {
     const { 
-      full_name, phone, email, gender, age_group, 
+      full_name, phone, email, gender, marital_status, occupation, age_group, 
       date_of_birth, show_age_to_leaders, hide_from_birthday_list, 
       opt_out_services, section_id, leader_id
     } = req.body;
@@ -259,7 +259,7 @@ router.put('/members/:id', async (req, res) => {
     }
 
     await queries.updateMember(
-      full_name, phone, email, gender, age_group, 
+      full_name, phone, email, gender, marital_status || null, occupation || null, age_group, 
       date_of_birth || null, show_age_to_leaders ? 1 : 0, 
       hide_from_birthday_list ? 1 : 0, 
       JSON.stringify(opt_out_services || []),
@@ -876,7 +876,7 @@ router.post('/members', async (req, res) => {
   try {
     const { 
       membership_id, full_name, section_id, leader_id, 
-      phone, email, gender, age_group, 
+      phone, email, gender, marital_status, occupation, age_group, 
       date_of_birth, show_age_to_leaders, hide_from_birthday_list, address 
     } = req.body;
     
@@ -923,7 +923,7 @@ router.post('/members', async (req, res) => {
 
     const created = await queries.createMember(
       membership_id, full_name, sectionId, leaderId, 
-      phone || null, email || null, gender || null, age_group || null,
+      phone || null, email || null, gender || null, marital_status || null, occupation || null, age_group || null,
       date_of_birth || null, 
       show_age_to_leaders ? 1 : 0, 
       hide_from_birthday_list ? 1 : 0,

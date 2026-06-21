@@ -11,6 +11,8 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
     phone: '',
     email: '',
     gender: '',
+    marital_status: '',
+    occupation: '',
     age_group: '',
     section_id: '',
     leader_id: '',
@@ -39,6 +41,8 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
           phone: member.phone || '',
           email: member.email || '',
           gender: member.gender || '',
+          marital_status: member.marital_status || '',
+          occupation: member.occupation || '',
           age_group: member.age_group || '',
           section_id: member.section_id || '',
           leader_id: member.leader_id || '',
@@ -57,7 +61,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
         for (let i = 0; i < 8; i++) genId += chars.charAt(Math.floor(Math.random() * chars.length));
         setFormData({
           membership_id: genId,
-          full_name: '', phone: '', email: '', gender: '', age_group: '', section_id: '', leader_id: '', home_cell_id: '',
+          full_name: '', phone: '', email: '', gender: '', marital_status: '', occupation: '', age_group: '', section_id: '', leader_id: '', home_cell_id: '',
           date_of_birth: '', address: '', show_age_to_leaders: false, hide_from_birthday_list: false,
           opt_out_services: []
         });
@@ -281,6 +285,34 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Marital Status</label>
+                <select
+                  name="marital_status"
+                  value={formData.marital_status}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
+                >
+                  <option value="">Select...</option>
+                  <option value="Single">Single</option>
+                  <option value="Married">Married</option>
+                  <option value="Divorced">Divorced</option>
+                  <option value="Widowed">Widowed</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Occupation</label>
+                <input
+                  type="text"
+                  name="occupation"
+                  placeholder="e.g. Engineer, Teacher"
+                  value={formData.occupation}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                />
               </div>
 
               <div>
