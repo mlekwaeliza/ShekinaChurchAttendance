@@ -17,6 +17,7 @@ import ConflictResolutionModal from '../components/leader/ConflictResolutionModa
 import ChurchCalendar from '../components/ChurchCalendar';
 import HomeCellMembers from '../components/leader/HomeCellMembers';
 import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
+import LeaderContributions from '../components/leader/LeaderContributions';
 
 const LeaderDashboard = () => {
   const { tab } = useParams();
@@ -164,6 +165,9 @@ const LeaderDashboard = () => {
 
       case 'new-members':
         return <NewMemberLeaderView />;
+
+      case 'contributions':
+        return <LeaderContributions />;
 
       case 'settings':
         return (

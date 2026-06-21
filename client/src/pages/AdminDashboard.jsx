@@ -30,6 +30,7 @@ import TitleManager from '../components/admin/TitleManager';
 import LeadershipDirectory from '../components/admin/LeadershipDirectory';
 import DepartmentsView from '../components/admin/DepartmentsView';
 import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
+import ContributionsView from '../components/admin/ContributionsView';
 import EvangelistDashboard from './EvangelistDashboard';
 
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
@@ -322,6 +323,9 @@ const AdminDashboard = () => {
             showMessage={data.showMessage}
           />
         );
+
+      case 'contributions':
+        return <ContributionsView allMembers={data.allMembers} showMessage={data.showMessage} />;
 
       default:
         return (

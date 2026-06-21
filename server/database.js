@@ -496,6 +496,43 @@ db.serialize(() => {
     CREATE INDEX IF NOT EXISTS idx_new_member_attendance_member ON new_member_attendance(new_member_id);
     CREATE INDEX IF NOT EXISTS idx_new_members_status ON new_members(status);
     CREATE INDEX IF NOT EXISTS idx_new_members_joined ON new_members(date_joined);
+
+    -- ── Contribution Types ────────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS contribution_types (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      description TEXT,
+      is_active INTEGER DEFAULT 1,
+      sort_order INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_contribution_types_active ON contribution_types(is_active, sort_order);
+
+    -- ── Contributions ─────────────────────────────────────────────────────
+    CREATE TABLE IF NOT EXISTS contributions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      member_id INTEGER NOT NULL,
+      contribution_type_id INTEGER NOT NULL,
+      amount REAL NOT NULL CHECK(amount > 0),
+      payment_date DATE NOT NULL,
+      payment_method TEXT NOT NULL DEFAULT 'Cash' CHECK(payment_method IN ('Cash', 'Mobile Money', 'Bank Transfer', 'Other')),
+      reference_number TEXT,
+      notes TEXT,
+      recorded_by INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
+      FOREIGN KEY (contribution_type_id) REFERENCES contribution_types(id) ON DELETE RESTRICT,
+      FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_contributions_member ON contributions(member_id);
+    CREATE INDEX IF NOT EXISTS idx_contributions_type ON contributions(contribution_type_id);
+    CREATE INDEX IF NOT EXISTS idx_contributions_date ON contributions(payment_date);
+    CREATE INDEX IF NOT EXISTS idx_contributions_method ON contributions(payment_method);
+    CREATE INDEX IF NOT EXISTS idx_contributions_recorded_by ON contributions(recorded_by);
   `);
 
   db.run(`ALTER TABLE new_members ADD COLUMN marital_status TEXT`, (err) => {
@@ -704,6 +741,16 @@ db.serialize(() => {
           'INSERT INTO service_types (name, default_day, eligibility_rules, points_config) VALUES (?, ?, ?, ?)',
           [d.name, d.day, d.rules, d.points]
         );
+      });
+    }
+  });
+
+  // Seed default contribution types
+  db.get('SELECT COUNT(*) as count FROM contribution_types', (err, row) => {
+    if (!err && row.count === 0) {
+      const defaults = ['Tithes', 'Offerings', 'First Fruit', 'Building Fund', 'Missions', 'Thanksgiving', 'Project'];
+      defaults.forEach((name, i) => {
+        db.run('INSERT INTO contribution_types (name, sort_order) VALUES (?, ?)', [name, i]);
       });
     }
   });
@@ -3524,6 +3571,105 @@ const queries = {
     FROM souls_won
     WHERE strftime('%Y', date_saved) = ?
   `, [String(year)]),
+
+  // ── Contribution Types ──────────────────────────────────────────────────
+  getContributionTypes: () => all('SELECT * FROM contribution_types ORDER BY sort_order, name'),
+
+  getContributionTypeById: (id) => get('SELECT * FROM contribution_types WHERE id = ?', [id]),
+
+  createContributionType: ({ name, description, sort_order }) => run(
+    'INSERT INTO contribution_types (name, description, sort_order) VALUES (?, ?, ?)',
+    [name, description, sort_order]
+  ),
+
+  updateContributionType: (id, { name, description, is_active, sort_order }) => {
+    const SET = [], params = [];
+    if (name !== undefined) { SET.push('name=?'); params.push(name); }
+    if (description !== undefined) { SET.push('description=?'); params.push(description); }
+    if (is_active !== undefined) { SET.push('is_active=?'); params.push(is_active); }
+    if (sort_order !== undefined) { SET.push('sort_order=?'); params.push(sort_order); }
+    SET.push('updated_at=CURRENT_TIMESTAMP');
+    params.push(id);
+    return run(`UPDATE contribution_types SET ${SET.join(', ')} WHERE id=?`, params);
+  },
+
+  deleteContributionType: (id) => run('DELETE FROM contribution_types WHERE id = ?', [id]),
+
+  // ── Contributions ───────────────────────────────────────────────────────
+  getContributions: (filters = {}) => {
+    const WHERE = [], params = [];
+    if (filters.member_id) { WHERE.push('c.member_id=?'); params.push(filters.member_id); }
+    if (filters.contribution_type_id) { WHERE.push('c.contribution_type_id=?'); params.push(filters.contribution_type_id); }
+    if (filters.payment_method) { WHERE.push('c.payment_method=?'); params.push(filters.payment_method); }
+    if (filters.date_from) { WHERE.push('c.payment_date>=?'); params.push(filters.date_from); }
+    if (filters.date_to) { WHERE.push('c.payment_date<=?'); params.push(filters.date_to); }
+    const where = WHERE.length ? `WHERE ${WHERE.join(' AND ')}` : '';
+    return all(`
+      SELECT c.*, ct.name as contribution_type_name, m.full_name, m.email, m.phone
+      FROM contributions c
+      LEFT JOIN contribution_types ct ON ct.id = c.contribution_type_id
+      LEFT JOIN members m ON m.id = c.member_id
+      ${where}
+      ORDER BY c.payment_date DESC, c.created_at DESC
+    `, params);
+  },
+
+  getContributionById: (id) => get(`
+    SELECT c.*, ct.name as contribution_type_name, m.full_name, m.email, m.phone
+    FROM contributions c
+    LEFT JOIN contribution_types ct ON ct.id = c.contribution_type_id
+    LEFT JOIN members m ON m.id = c.member_id
+    WHERE c.id=?
+  `, [id]),
+
+  createContribution: (data) => run(`
+    INSERT INTO contributions (member_id, contribution_type_id, amount, payment_date, payment_method, reference_number, notes, recorded_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [data.member_id, data.contribution_type_id, data.amount, data.payment_date, data.payment_method, data.reference_number, data.notes, data.recorded_by]),
+
+  updateContribution: (id, data) => {
+    const SET = [], params = [];
+    if (data.member_id !== undefined) { SET.push('member_id=?'); params.push(data.member_id); }
+    if (data.contribution_type_id !== undefined) { SET.push('contribution_type_id=?'); params.push(data.contribution_type_id); }
+    if (data.amount !== undefined) { SET.push('amount=?'); params.push(data.amount); }
+    if (data.payment_date !== undefined) { SET.push('payment_date=?'); params.push(data.payment_date); }
+    if (data.payment_method !== undefined) { SET.push('payment_method=?'); params.push(data.payment_method); }
+    if (data.reference_number !== undefined) { SET.push('reference_number=?'); params.push(data.reference_number); }
+    if (data.notes !== undefined) { SET.push('notes=?'); params.push(data.notes); }
+    SET.push('updated_at=CURRENT_TIMESTAMP');
+    params.push(id);
+    return run(`UPDATE contributions SET ${SET.join(', ')} WHERE id=?`, params);
+  },
+
+  deleteContribution: (id) => run('DELETE FROM contributions WHERE id = ?', [id]),
+
+  getContributionSummary: (filters = {}) => {
+    const WHERE = [], params = [];
+    if (filters.date_from) { WHERE.push('c.payment_date>=?'); params.push(filters.date_from); }
+    if (filters.date_to) { WHERE.push('c.payment_date<=?'); params.push(filters.date_to); }
+    if (filters.contribution_type_id) { WHERE.push('c.contribution_type_id=?'); params.push(filters.contribution_type_id); }
+    if (filters.member_id) { WHERE.push('c.member_id=?'); params.push(filters.member_id); }
+    const where = WHERE.length ? `WHERE ${WHERE.join(' AND ')}` : '';
+    return all(`
+      SELECT ct.id as type_id, ct.name as type_name,
+        COUNT(c.id) as count, SUM(c.amount) as total,
+        MIN(c.amount) as min_amount, MAX(c.amount) as max_amount
+      FROM contributions c
+      JOIN contribution_types ct ON ct.id = c.contribution_type_id
+      ${where}
+      GROUP BY ct.id, ct.name
+      ORDER BY ct.sort_order, ct.name
+    `, params);
+  },
+
+  getContributionsByDateRange: (from, to) => all(`
+    SELECT c.*, ct.name as contribution_type_name, m.full_name
+    FROM contributions c
+    LEFT JOIN contribution_types ct ON ct.id = c.contribution_type_id
+    LEFT JOIN members m ON m.id = c.member_id
+    WHERE c.payment_date >= ? AND c.payment_date <= ?
+    ORDER BY c.payment_date DESC
+  `, [from, to]),
 };
 
 // Transaction helper

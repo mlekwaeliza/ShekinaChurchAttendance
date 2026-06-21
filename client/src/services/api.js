@@ -305,7 +305,24 @@ export const outreachAPI = {
   getHistory: () => api.get('/outreach/history'),
 };
 
-// Evangelism API
+// Contributions API
+export const contributionAPI = {
+  getTypes: () => api.get('/admin/contribution-types'),
+  getType: (id) => api.get(`/admin/contribution-types/${id}`),
+  createType: (data) => api.post('/admin/contribution-types', data),
+  updateType: (id, data) => api.put(`/admin/contribution-types/${id}`, data),
+  deleteType: (id) => api.delete(`/admin/contribution-types/${id}`),
+
+  getContributions: (filters = {}) => api.get('/admin/contributions', { params: filters }),
+  getContribution: (id) => api.get(`/admin/contributions/${id}`),
+  createContribution: (data) => api.post('/admin/contributions', data),
+  updateContribution: (id, data) => api.put(`/admin/contributions/${id}`, data),
+  deleteContribution: (id) => api.delete(`/admin/contributions/${id}`),
+
+  getSummary: (filters = {}) => api.get('/admin/contributions/summary', { params: filters }),
+  getDetail: (from, to) => api.get('/admin/contributions/detail', { params: { from, to } }),
+};
+
 export const evangelismAPI = {
   getStats: () => api.get('/evangelism/stats'),
   getTrend: () => api.get('/evangelism/trend'),

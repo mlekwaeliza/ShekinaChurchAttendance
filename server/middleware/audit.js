@@ -16,6 +16,8 @@ const ENTITY_MAP = {
   '/api/admin/backups': 'backup',
   '/api/admin/settings': 'setting',
   '/api/admin/upload-csv': 'csv_import',
+  '/api/admin/contribution-types': 'contribution_type',
+  '/api/admin/contributions': 'contribution',
   '/api/leader/members': 'member',
   '/api/leader/attendance': 'attendance',
   '/api/leader/home-cell-members': 'home_cell_member',
