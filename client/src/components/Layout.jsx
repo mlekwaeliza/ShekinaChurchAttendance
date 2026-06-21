@@ -242,13 +242,13 @@ const Layout = ({ children, showNav = true }) => {
     ],
     evangelist: [
       { section: 'EVANGELISM', items: [
-        { path: '/evangelist', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-        { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
-        { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
-        { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },
-        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
-        { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
-        { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
+        { path: '/admin/evangelism', label: 'Evangelism Dashboard', icon: Heart, exact: true },
+        { path: '/admin/evangelism', label: 'Outreach Events', icon: Calendar, search: '?subtab=outreach' },
+        { path: '/admin/evangelism', label: 'Souls Won', icon: Users, search: '?subtab=souls' },
+        { path: '/admin/evangelism', label: 'Follow-Ups', icon: MessageSquare, search: '?subtab=follow-ups' },
+        { path: '/admin/evangelism', label: 'Evangelism Team', icon: Users, search: '?subtab=team' },
+        { path: '/admin/evangelism', label: 'Baptism', icon: Cross, search: '?subtab=baptism' },
+        { path: '/admin/evangelism', label: 'Reports', icon: BarChart3, search: '?subtab=reports' },
       ]},
       { section: 'ACCOUNT', items: [
         { path: '/change-password', label: 'Change Password', icon: Shield },
@@ -365,8 +365,8 @@ const Layout = ({ children, showNav = true }) => {
               const active = isActive(item);
               return (
                 <Link
-                  key={item.path}
-                  to={item.path}
+                  key={item.path + (item.search || '')}
+                  to={item.path + (item.search || '')}
                   title={collapsed ? item.label : undefined}
                   className={`sidebar-nav-item ${active ? 'active' : ''} ${collapsed ? 'justify-center px-0' : ''}`}
                 >

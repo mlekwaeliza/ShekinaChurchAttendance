@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI } from '../services/api';
 import useAdminData from '../hooks/useAdminData';
@@ -31,11 +31,13 @@ import TitleManager from '../components/admin/TitleManager';
 import LeadershipDirectory from '../components/admin/LeadershipDirectory';
 import DepartmentsView from '../components/admin/DepartmentsView';
 import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
+import EvangelistDashboard from './EvangelistDashboard';
 
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { tab } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const activeTab = tab || 'dashboard';
   const { user } = useAuth();
@@ -223,6 +225,9 @@ const AdminDashboard = () => {
 
       case 'new-members':
         return <NewMemberLeaderView />;
+
+      case 'evangelism':
+        return <EvangelistDashboard subtab={searchParams.get('subtab')} />;
 
       case 'reports':
         return (

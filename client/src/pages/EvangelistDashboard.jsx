@@ -15,10 +15,10 @@ const YEAR = new Date().getFullYear();
 
 const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
 
-const EvangelistDashboard = () => {
+const EvangelistDashboard = ({ subtab: propTab }) => {
   const { tab } = useParams();
   const { user } = useAuth();
-  const activeTab = tab || 'overview';
+  const activeTab = propTab || tab || 'overview';
   const [toast, setToast] = useState(null);
 
   const showMessage = useCallback((msg) => {
@@ -54,8 +54,6 @@ const EvangelistDashboard = () => {
 
 // ── Overview ────────────────────────────────────────────────────────
 const Overview = () => {
-  const { user } = useAuth();
-  const welcomeName = user?.full_name || 'Evangelist Pastor';
   const [stats, setStats] = useState(null);
   const [trend, setTrend] = useState([]);
   const [funnel, setFunnel] = useState(null);
@@ -111,10 +109,10 @@ const Overview = () => {
         <div className="absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-white/5 translate-y-24" />
         <div className="relative z-10">
           <h2 className="text-2xl font-bold tracking-tight">
-            Welcome, {welcomeName}
+            Evangelism Department Report
           </h2>
           <p className="mt-2 max-w-lg text-base text-white/80">
-            Evangelism dashboard is ready. Track souls won, manage outreach events, follow up with converts, and monitor your evangelism team.
+            Overview of souls won, outreach events, follow-ups, and evangelism team performance.
           </p>
         </div>
       </div>
