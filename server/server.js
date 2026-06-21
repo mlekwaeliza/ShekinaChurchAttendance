@@ -72,7 +72,7 @@ if (!fs.existsSync(financeUploadsDir)) {
   fs.mkdirSync(financeUploadsDir, { recursive: true });
 }
 
-const { queries, db, all, run, ensureHomeCellSchema, ensureEvangelismSchema, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
+const { queries, db, all, run, get, ensureHomeCellSchema, ensureEvangelismSchema, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const authRoutes = require('./routes/auth');
@@ -847,6 +847,17 @@ async function startServer() {
     await ensureEvangelismSchema();
     await migrateUsersRoleConstraint();
     await linkUsersToMembers();
+
+    // Seed default accountant user if none exists
+    const bcrypt = require('bcryptjs');
+    const accountantExists = await get('SELECT id FROM users WHERE role = ?', ['accountant']);
+    if (!accountantExists) {
+      const hash = bcrypt.hashSync('accountant123', 10);
+      await run('INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)',
+        ['accountant', hash, 'accountant', 'Church Accountant']);
+      console.log('Default accountant user created: username=accountant, password=accountant123');
+    }
+
     await initializeAdmin();
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);
