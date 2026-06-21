@@ -212,6 +212,15 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/follow-ups', label: 'Follow-ups', icon: ClipboardCheck },
         { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
       ]},
+      { section: 'EVANGELISM', items: [
+        { path: '/admin/evangelism', label: 'Evangelism Dashboard', icon: Heart, exact: true },
+        { path: '/admin/evangelism', label: 'Outreach Events', icon: Calendar, search: '?subtab=outreach' },
+        { path: '/admin/evangelism', label: 'Souls Won', icon: Users, search: '?subtab=souls' },
+        { path: '/admin/evangelism', label: 'Follow-Ups', icon: MessageSquare, search: '?subtab=follow-ups' },
+        { path: '/admin/evangelism', label: 'Evangelism Team', icon: Users, search: '?subtab=team' },
+        { path: '/admin/evangelism', label: 'Baptism', icon: Cross, search: '?subtab=baptism' },
+        { path: '/admin/evangelism', label: 'Reports', icon: BarChart3, search: '?subtab=reports' },
+      ]},
       { section: 'SYSTEM', items: [
         { path: '/admin/audit', label: 'Audit Log', icon: ShieldCheck },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
@@ -257,7 +266,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/pastor/birthdays', label: 'Birthdays', icon: Cake },
       ]},
       { section: 'EVANGELISM', items: [
-        { path: '/evangelist', label: 'Evangelist Dashboard', icon: Heart, exact: true },
+        { path: '/evangelist', label: 'Evangelism Dashboard', icon: Heart, exact: true },
         { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
         { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
         { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },

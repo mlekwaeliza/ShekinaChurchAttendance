@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
   ResponsiveContainer,
   LineChart,
@@ -60,6 +61,7 @@ function rateVariant(rate) {
 
 const PastorDashboard = () => {
   const { tab } = useParams();
+  const { user } = useAuth();
   const activeTab = tab || 'overview';
   const isOverview = activeTab === 'overview' || activeTab === 'dashboard';
 
@@ -281,7 +283,7 @@ const PastorDashboard = () => {
               <span>{reportSummary.windowLabel}</span>
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Pastor Overview</h2>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Welcome, Pst. {user?.full_name || 'Jeremiah'}</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Attendance health, leader reporting, and follow-up priorities in one working view.
               </p>
