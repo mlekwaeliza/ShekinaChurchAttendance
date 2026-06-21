@@ -212,15 +212,6 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/follow-ups', label: 'Follow-ups', icon: ClipboardCheck },
         { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
       ]},
-      { section: 'EVANGELISM', items: [
-        { path: '/evangelist', label: 'Evangelist Dashboard', icon: Heart, exact: true },
-        { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
-        { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
-        { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },
-        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
-        { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
-        { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
-      ]},
       { section: 'SYSTEM', items: [
         { path: '/admin/audit', label: 'Audit Log', icon: ShieldCheck },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
@@ -301,20 +292,30 @@ const Layout = ({ children, showNav = true }) => {
   })();
 
   const isActive = (item) => {
-    if (item.exact) return location.pathname === item.path;
+    if (item.exact) return location.pathname === item.path && (!item.search || location.search === item.search);
     const path = location.pathname;
     if (!path.startsWith(item.path)) return false;
-    return path.length === item.path.length || path[item.path.length] === '/' || path[item.path.length] === '?';
+    const rest = path.slice(item.path.length);
+    if (rest && rest[0] !== '/' && rest[0] !== '?') return false;
+    if (item.search && location.search !== item.search) return false;
+    return true;
   };
 
   const pageTitle = (() => {
     const path = location.pathname;
-    // Find the matching nav item
+    const search = location.search;
+    // Prefer item with matching search params first
     for (const group of currentNav) {
       for (const item of group.items) {
-        if (item.exact ? path === item.path : path.startsWith(item.path)) {
-          return item.label;
-        }
+        const matchPath = item.exact ? path === item.path : path.startsWith(item.path);
+        if (matchPath && item.search && search === item.search) return item.label;
+      }
+    }
+    // Fallback to any matching item
+    for (const group of currentNav) {
+      for (const item of group.items) {
+        const matchPath = item.exact ? path === item.path : path.startsWith(item.path);
+        if (matchPath && !item.search) return item.label;
       }
     }
     if (path.includes('change-password')) return 'Change Password';
