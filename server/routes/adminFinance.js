@@ -81,9 +81,10 @@ router.put('/finance/records/:id', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (existing.status !== 'draft') return res.status(400).json({ error: 'Only draft records can be edited' });
+    if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
     const { morning_offering, afternoon_offering, total_tithes, notes } = req.body;
     const data = {};
+    if (existing.status === 'rejected') { data.status = 'draft'; data.rejection_reason = null; }
     if (morning_offering !== undefined) data.morning_offering = Number(morning_offering);
     if (afternoon_offering !== undefined) data.afternoon_offering = Number(afternoon_offering);
     if (total_tithes !== undefined) data.total_tithes = Number(total_tithes);
@@ -112,7 +113,7 @@ router.delete('/finance/records/:id', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (existing.status !== 'draft') return res.status(400).json({ error: 'Only draft records can be deleted' });
+    if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be deleted' });
     await queries.deleteFinanceRecord(req.params.id);
     res.json({ message: 'Record deleted' });
   } catch (err) {
@@ -125,7 +126,7 @@ router.post('/finance/records/:id/submit', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (existing.status !== 'draft') return res.status(400).json({ error: 'Only draft records can be submitted' });
+    if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be submitted' });
     await queries.submitFinanceRecord(req.params.id, req.session.userId);
     res.json({ message: 'Record submitted for approval' });
   } catch (err) {
@@ -140,7 +141,7 @@ router.post('/finance/records/:id/expenses', async (req, res) => {
     if (!category || !amount) return res.status(400).json({ error: 'Category and amount are required' });
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (existing.status !== 'draft') return res.status(400).json({ error: 'Only draft records can be edited' });
+    if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
     await queries.createFinanceExpense({ record_id: req.params.id, category, amount, description });
     res.status(201).json({ message: 'Expense added' });
   } catch (err) {
@@ -208,6 +209,19 @@ router.put('/finance/records/:id/reject', async (req, res) => {
   } catch (err) {
     console.error('Error rejecting record:', err);
     res.status(500).json({ error: 'Failed to reject record' });
+  }
+});
+
+router.put('/finance/records/:id/send-back', async (req, res) => {
+  try {
+    const existing = await queries.getFinanceRecordById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Record not found' });
+    if (!['submitted', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only submitted or rejected records can be sent back' });
+    await run(`UPDATE finance_daily_records SET status='draft', rejection_reason=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?`, [req.params.id]);
+    res.json({ message: 'Record sent back for correction' });
+  } catch (err) {
+    console.error('Error sending back record:', err);
+    res.status(500).json({ error: 'Failed to send back record' });
   }
 });
 

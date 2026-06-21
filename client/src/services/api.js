@@ -333,6 +333,7 @@ export const financeAPI = {
   submitRecord: (id) => api.post(`/admin/finance/records/${id}/submit`),
   approveRecord: (id) => api.put(`/admin/finance/records/${id}/approve`),
   rejectRecord: (id, reason) => api.put(`/admin/finance/records/${id}/reject`, { reason }),
+  sendBackRecord: (id) => api.put(`/admin/finance/records/${id}/send-back`),
 
   addExpense: (recordId, data) => api.post(`/admin/finance/records/${recordId}/expenses`, data),
   updateExpense: (id, data) => api.put(`/admin/finance/expenses/${id}`, data),

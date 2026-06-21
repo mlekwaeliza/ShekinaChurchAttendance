@@ -257,7 +257,7 @@ const FinanceView = ({ showMessage }) => {
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[r.status] || ''}`}>{r.status}</span>
                       <button onClick={() => openRecord(r.id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary-600" title="View details"><Eye className="w-4 h-4" /></button>
-                      {r.status === 'draft' && (
+                      {['draft', 'rejected'].includes(r.status) && (
                         <>
                           <button onClick={() => handleEdit(r)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary-600"><Edit3 className="w-4 h-4" /></button>
                           <button onClick={() => handleSubmit(r.id)} className="p-1.5 rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-600" title="Submit for approval"><Send className="w-4 h-4" /></button>
