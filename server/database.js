@@ -3599,6 +3599,7 @@ const queries = {
   getContributions: (filters = {}) => {
     const WHERE = [], params = [];
     if (filters.member_id) { WHERE.push('c.member_id=?'); params.push(filters.member_id); }
+    if (filters.leader_id) { WHERE.push('m.leader_id=?'); params.push(filters.leader_id); }
     if (filters.contribution_type_id) { WHERE.push('c.contribution_type_id=?'); params.push(filters.contribution_type_id); }
     if (filters.payment_method) { WHERE.push('c.payment_method=?'); params.push(filters.payment_method); }
     if (filters.date_from) { WHERE.push('c.payment_date>=?'); params.push(filters.date_from); }

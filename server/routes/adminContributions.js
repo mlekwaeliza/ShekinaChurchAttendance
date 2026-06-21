@@ -12,6 +12,17 @@ function parseId(value) {
   return Number.isInteger(n) ? n : null;
 }
 
+async function resolveLeaderId(req) {
+  const queryLeaderId = parseId(req.query.leader_id);
+  if (queryLeaderId) return queryLeaderId;
+  if (req.session?.userRole === 'leader') {
+    const { get } = require('../database');
+    const row = await get('SELECT id FROM leaders WHERE user_id = ?', [req.session.userId]);
+    return row ? row.id : null;
+  }
+  return null;
+}
+
 // ── Contribution Types ─────────────────────────────────────────────────────
 
 router.get('/contribution-types', async (req, res) => {
@@ -88,8 +99,10 @@ router.delete('/contribution-types/:id', async (req, res) => {
 router.get('/contributions', async (req, res) => {
   try {
     const { member_id, contribution_type_id, payment_method, date_from, date_to } = req.query;
+    const leader_id = await resolveLeaderId(req);
     const contributions = await queries.getContributions({
       member_id: parseId(member_id),
+      leader_id,
       contribution_type_id: parseId(contribution_type_id),
       payment_method,
       date_from,

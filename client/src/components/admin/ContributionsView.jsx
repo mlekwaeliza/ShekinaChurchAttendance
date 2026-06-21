@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Edit3, Trash2, Filter, X, DollarSign, ChevronDown, ChevronUp, FileText, PieChart, List } from 'lucide-react';
+import { Search, Plus, Edit3, Trash2, Filter, X, DollarSign, ChevronDown, ChevronUp, FileText, PieChart, List, Calendar, Download, RotateCw, TrendingUp, Receipt } from 'lucide-react';
 import { contributionAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const PAYMENT_METHODS = ['Cash', 'Mobile Money', 'Bank Transfer', 'Other'];
+const CURRENCY = 'TZS';
+const fmt = (n) => (n || 0).toLocaleString('en-TZ', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 export default function ContributionsView({ showMessage, allMembers = [] }) {
   const { user } = useAuth();
@@ -24,26 +26,30 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
   const [saving, setSaving] = useState(false);
 
   const [summary, setSummary] = useState(null);
-  const [summaryDateRange, setSummaryDateRange] = useState({ from: '', to: '' });
+  const [summaryDateRange, setSummaryDateRange] = useState({ from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0], to: new Date().toISOString().split('T')[0] });
 
   const [typeModalOpen, setTypeModalOpen] = useState(false);
-  const [typeForm, setTypeForm] = useState({ name: '', description: '', sort_order: 0 });
-  const [editingType, setEditingType] = useState(null);
-  const [savingType, setSavingType] = useState(false);
 
   useEffect(() => {
     setMembers(allMembers);
-    loadData();
+    loadInitial();
   }, [allMembers.length]);
 
-  async function loadData() {
+  useEffect(() => {
+    if (contributions.length === 0 && !loading) loadContributions();
+  }, [types.length]);
+
+  async function loadInitial() {
     setLoading(true);
     try {
       setMembers(allMembers);
-      const [typesRes] = await Promise.all([
-        contributionAPI.getTypes()
-      ]);
-      setTypes(typesRes.data);
+      const { data: typesData } = await contributionAPI.getTypes();
+      setTypes(typesData);
+      const defaultFrom = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
+      const defaultTo = new Date().toISOString().split('T')[0];
+      const { data: contribs } = await contributionAPI.getContributions({ date_from: defaultFrom, date_to: defaultTo });
+      setContributions(contribs);
+      setFilters(f => ({ ...f, date_from: defaultFrom, date_to: defaultTo }));
     } catch (err) {
       console.error('Failed to load initial data:', err);
     }
@@ -58,8 +64,8 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
       if (f.date_to) params.date_to = f.date_to;
       if (f.contribution_type_id) params.contribution_type_id = f.contribution_type_id;
       if (f.payment_method) params.payment_method = f.payment_method;
-      const res = await contributionAPI.getContributions(params);
-      setContributions(res.data);
+      const { data } = await contributionAPI.getContributions(params);
+      setContributions(data);
     } catch (err) {
       console.error('Failed to load contributions:', err);
     }
@@ -67,13 +73,12 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
   }
 
   async function loadSummary() {
+    if (!summaryDateRange.from || !summaryDateRange.to) return;
     try {
-      const params = {};
-      if (summaryDateRange.from) params.date_from = summaryDateRange.from;
-      if (summaryDateRange.to) params.date_to = summaryDateRange.to;
+      const params = { date_from: summaryDateRange.from, date_to: summaryDateRange.to };
       if (filters.contribution_type_id) params.contribution_type_id = filters.contribution_type_id;
-      const res = await contributionAPI.getSummary(params);
-      setSummary(res.data);
+      const { data } = await contributionAPI.getSummary(params);
+      setSummary(data);
     } catch (err) {
       console.error('Failed to load summary:', err);
     }
@@ -81,6 +86,7 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!form.member_id || !form.contribution_type_id || !form.amount || Number(form.amount) <= 0) return;
     setSaving(true);
     try {
       const payload = {
@@ -94,17 +100,15 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
       };
       if (editing) {
         await contributionAPI.updateContribution(editing.id, payload);
-        showMessage?.('Contribution updated');
       } else {
         await contributionAPI.createContribution(payload);
-        showMessage?.('Contribution recorded');
       }
       setIsModalOpen(false);
       setEditing(null);
       resetForm();
-      loadContributions();
+      await loadContributions();
     } catch (err) {
-      showMessage?.(err.message || 'Failed to save contribution');
+      showMessage?.(err.message || 'Failed to save');
     }
     setSaving(false);
   }
@@ -113,8 +117,7 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
     if (!window.confirm('Delete this contribution record?')) return;
     try {
       await contributionAPI.deleteContribution(id);
-      showMessage?.('Contribution deleted');
-      loadContributions();
+      await loadContributions();
     } catch (err) {
       showMessage?.(err.message || 'Failed to delete');
     }
@@ -155,231 +158,318 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
   }, [contributions, filters.search]);
 
   const totalAmount = useMemo(() => filteredContributions.reduce((s, c) => s + c.amount, 0), [filteredContributions]);
+  const totalByType = useMemo(() => {
+    const map = {};
+    filteredContributions.forEach(c => {
+      const key = c.contribution_type_name || 'Unknown';
+      map[key] = (map[key] || 0) + c.amount;
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [filteredContributions]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Contributions</h2>
-          <p className="text-gray-400 text-sm mt-1">Record and manage member contributions</p>
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30">
+            <Receipt className="w-6 h-6 text-emerald-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Contributions</h1>
+            <p className="text-sm text-gray-400 mt-0.5">Record and manage member contributions</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex bg-gray-800 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded text-sm ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}><List size={16} /></button>
-            <button onClick={() => { setViewMode('summary'); loadSummary(); }} className={`px-3 py-1.5 rounded text-sm ${viewMode === 'summary' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}><PieChart size={16} /></button>
+          <button onClick={loadInitial} className="btn-ghost p-2 text-gray-400 hover:text-white" title="Refresh"><RotateCw size={16} /></button>
+          <div className="flex bg-gray-800/80 rounded-xl p-0.5 border border-gray-700/50">
+            <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-all ${viewMode === 'list' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-400 hover:text-white'}`}><List size={15} /> List</button>
+            <button onClick={() => { setViewMode('summary'); loadSummary(); }} className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1.5 transition-all ${viewMode === 'summary' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20' : 'text-gray-400 hover:text-white'}`}><PieChart size={15} /> Summary</button>
           </div>
           {isAdmin && (
             <>
-              <button onClick={() => setTypeModalOpen(true)} className="btn-secondary text-sm"><FileText size={16} /> Types</button>
-              <button onClick={openAdd} className="btn-primary text-sm"><Plus size={16} /> Record Contribution</button>
+              <button onClick={() => setTypeModalOpen(true)} className="btn-secondary text-sm"><FileText size={15} /> Types</button>
+              <button onClick={openAdd} className="btn-primary text-sm"><Plus size={15} /> Record</button>
             </>
           )}
         </div>
       </div>
 
-      <div className="bg-gray-800 rounded-lg p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="relative flex-1 max-w-xs">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Search by name, type, ref..." value={filters.search} onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} className="pl-9 pr-3 py-2 bg-gray-700 rounded w-full text-sm" />
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-emerald-900/30 to-emerald-800/10 rounded-xl p-5 border border-emerald-700/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-emerald-400/80 uppercase tracking-wider">Total Contributions</p>
+              <p className="text-2xl font-bold text-white mt-1">{CURRENCY} {fmt(totalAmount)}</p>
+              <p className="text-xs text-gray-500 mt-1">{filteredContributions.length} records</p>
+            </div>
+            <div className="p-3 rounded-xl bg-emerald-500/20"><DollarSign className="w-6 h-6 text-emerald-400" /></div>
           </div>
-          <button onClick={() => setShowFilters(!showFilters)} className="btn-secondary text-sm"><Filter size={16} /> Filters {showFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}</button>
+        </div>
+        <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/10 rounded-xl p-5 border border-blue-700/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-blue-400/80 uppercase tracking-wider">Contribution Types</p>
+              <p className="text-2xl font-bold text-white mt-1">{types.length}</p>
+              <p className="text-xs text-gray-500 mt-1">{totalByType.length} active this period</p>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-500/20"><TrendingUp className="w-6 h-6 text-blue-400" /></div>
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/10 rounded-xl p-5 border border-purple-700/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium text-purple-400/80 uppercase tracking-wider">Avg Per Record</p>
+              <p className="text-2xl font-bold text-white mt-1">{CURRENCY} {fmt(filteredContributions.length ? totalAmount / filteredContributions.length : 0)}</p>
+              <p className="text-xs text-gray-500 mt-1">Across all types</p>
+            </div>
+            <div className="p-3 rounded-xl bg-purple-500/20"><Receipt className="w-6 h-6 text-purple-400" /></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/50 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="text" placeholder="Search by name, type, or ref..." value={filters.search} onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} className="pl-10 pr-4 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500/50 transition-all" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 text-sm text-gray-400">
+              <Calendar size={14} />
+              <span>{filters.date_from || 'Start'} - {filters.date_to || 'End'}</span>
+            </div>
+            <button onClick={() => setShowFilters(!showFilters)} className={`btn-ghost px-3 py-2 text-sm rounded-xl flex items-center gap-1.5 transition-all ${showFilters ? 'bg-emerald-500/10 text-emerald-400' : 'text-gray-400 hover:text-white'}`}>
+              <Filter size={15} /> Filters {showFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+            <button onClick={() => loadContributions()} className="btn-primary px-4 py-2 text-sm rounded-xl">Search</button>
+          </div>
         </div>
         {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 p-3 bg-gray-750 rounded-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-700/50">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Date From</label>
-              <input type="date" value={filters.date_from} onChange={e => setFilters(f => ({ ...f, date_from: e.target.value }))} className="input-sm w-full" />
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">From Date</label>
+              <input type="date" value={filters.date_from} onChange={e => setFilters(f => ({ ...f, date_from: e.target.value }))} className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Date To</label>
-              <input type="date" value={filters.date_to} onChange={e => setFilters(f => ({ ...f, date_to: e.target.value }))} className="input-sm w-full" />
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">To Date</label>
+              <input type="date" value={filters.date_to} onChange={e => setFilters(f => ({ ...f, date_to: e.target.value }))} className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Type</label>
-              <select value={filters.contribution_type_id} onChange={e => setFilters(f => ({ ...f, contribution_type_id: e.target.value }))} className="input-sm w-full">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Type</label>
+              <select value={filters.contribution_type_id} onChange={e => setFilters(f => ({ ...f, contribution_type_id: e.target.value }))} className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
                 <option value="">All Types</option>
                 {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Method</label>
-              <select value={filters.payment_method} onChange={e => setFilters(f => ({ ...f, payment_method: e.target.value }))} className="input-sm w-full">
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Method</label>
+              <select value={filters.payment_method} onChange={e => setFilters(f => ({ ...f, payment_method: e.target.value }))} className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
                 <option value="">All Methods</option>
                 {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
-            <div className="col-span-full flex justify-end gap-2 mt-2">
-              <button onClick={() => { setFilters({ date_from: '', date_to: '', contribution_type_id: '', payment_method: '', search: '' }); loadContributions({}); }} className="btn-secondary text-xs">Clear</button>
-              <button onClick={() => loadContributions()} className="btn-primary text-xs">Apply</button>
+            <div className="col-span-full flex justify-end gap-2">
+              <button onClick={() => { setFilters(f => ({ ...f, date_from: '', date_to: '', contribution_type_id: '', payment_method: '' })); }} className="btn-ghost text-xs px-3 py-1.5 text-gray-400 hover:text-white">Clear</button>
             </div>
           </div>
         )}
       </div>
 
+      {/* Content */}
       {viewMode === 'summary' ? (
-        <div className="space-y-4">
-          <div className="bg-gray-800 rounded-lg p-4">
-            <h3 className="text-lg font-semibold mb-3">Summary Report</h3>
-            <div className="flex gap-3 mb-4">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">From</label>
-                <input type="date" value={summaryDateRange.from} onChange={e => setSummaryDateRange(d => ({ ...d, from: e.target.value }))} className="input-sm" />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1">To</label>
-                <input type="date" value={summaryDateRange.to} onChange={e => setSummaryDateRange(d => ({ ...d, to: e.target.value }))} className="input-sm" />
-              </div>
-              <div className="flex items-end">
-                <button onClick={loadSummary} className="btn-primary text-sm">Generate</button>
-              </div>
+        <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/50 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2"><PieChart size={18} className="text-emerald-400" /> Contribution Summary</h3>
+            <div className="flex items-center gap-3">
+              <input type="date" value={summaryDateRange.from} onChange={e => setSummaryDateRange(d => ({ ...d, from: e.target.value }))} className="px-3 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm" />
+              <span className="text-gray-500">-</span>
+              <input type="date" value={summaryDateRange.to} onChange={e => setSummaryDateRange(d => ({ ...d, to: e.target.value }))} className="px-3 py-1.5 bg-gray-700/50 border border-gray-600/50 rounded-lg text-sm" />
+              <button onClick={loadSummary} className="btn-primary px-4 py-1.5 text-sm rounded-lg"><Download size={14} /> Generate</button>
             </div>
-            {summary && (
+          </div>
+          {summary ? (
+            <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-700 text-gray-400">
-                      <th className="text-left py-2">Type</th>
-                      <th className="text-right py-2">Count</th>
-                      <th className="text-right py-2">Total</th>
-                      <th className="text-right py-2">Min</th>
-                      <th className="text-right py-2">Max</th>
-                      <th className="text-right py-2">Avg</th>
+                    <tr className="border-b border-gray-700/60 text-gray-400 text-left">
+                      <th className="pb-3 font-medium">Type</th>
+                      <th className="pb-3 font-medium text-right">Count</th>
+                      <th className="pb-3 font-medium text-right">Total ({CURRENCY})</th>
+                      <th className="pb-3 font-medium text-right">Min</th>
+                      <th className="pb-3 font-medium text-right">Max</th>
+                      <th className="pb-3 font-medium text-right">Avg</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {summary.rows?.map(row => (
-                      <tr key={row.type_id} className="border-b border-gray-700/50">
-                        <td className="py-2 font-medium">{row.type_name}</td>
-                        <td className="py-2 text-right">{row.count}</td>
-                        <td className="py-2 text-right text-green-400 font-medium">GH¢{row.total?.toFixed(2)}</td>
-                        <td className="py-2 text-right">GH¢{row.min_amount?.toFixed(2)}</td>
-                        <td className="py-2 text-right">GH¢{row.max_amount?.toFixed(2)}</td>
-                        <td className="py-2 text-right">GH¢{(row.total / row.count)?.toFixed(2)}</td>
+                    {summary.rows?.map((row, i) => (
+                      <tr key={row.type_id} className="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors">
+                        <td className="py-3 font-medium text-white">{row.type_name}</td>
+                        <td className="py-3 text-right text-gray-300">{row.count}</td>
+                        <td className="py-3 text-right text-emerald-400 font-semibold">{CURRENCY} {fmt(row.total)}</td>
+                        <td className="py-3 text-right text-gray-400">{CURRENCY} {fmt(row.min_amount)}</td>
+                        <td className="py-3 text-right text-gray-400">{CURRENCY} {fmt(row.max_amount)}</td>
+                        <td className="py-3 text-right text-gray-400">{CURRENCY} {fmt(row.total / row.count)}</td>
                       </tr>
                     ))}
                     {summary.rows?.length > 0 && (
-                      <tr className="font-semibold text-gray-200">
-                        <td className="py-3">Grand Total</td>
-                        <td className="py-3 text-right">{summary.grandCount}</td>
-                        <td className="py-3 text-right text-green-400">GH¢{summary.grandTotal?.toFixed(2)}</td>
+                      <tr className="border-t-2 border-emerald-500/30 bg-emerald-900/10">
+                        <td className="py-3 font-semibold text-white">Grand Total</td>
+                        <td className="py-3 text-right font-semibold text-white">{summary.grandCount}</td>
+                        <td className="py-3 text-right font-bold text-emerald-400">{CURRENCY} {fmt(summary.grandTotal)}</td>
                         <td colSpan={3}></td>
                       </tr>
                     )}
                   </tbody>
                 </table>
                 {(!summary.rows || summary.rows.length === 0) && (
-                  <p className="text-gray-500 text-center py-4">No data for selected period</p>
+                  <div className="text-center py-12 text-gray-500">No data for selected period</div>
                 )}
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="text-center py-12 text-gray-500">Select date range and click Generate</div>
+          )}
         </div>
       ) : (
-        <div className="bg-gray-800 rounded-lg overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-            <span className="text-sm text-gray-400">{filteredContributions.length} records</span>
-            <span className="text-sm font-semibold text-green-400">Total: GH¢{totalAmount.toFixed(2)}</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-700 text-gray-400 text-left">
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Member</th>
-                  <th className="py-3 px-4">Type</th>
-                  <th className="py-3 px-4">Amount</th>
-                  <th className="py-3 px-4">Method</th>
-                  <th className="py-3 px-4">Ref</th>
-                  {isAdmin && <th className="py-3 px-4 text-right">Actions</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredContributions.map(c => (
-                  <tr key={c.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                    <td className="py-3 px-4">{c.payment_date}</td>
-                    <td className="py-3 px-4 font-medium">{c.full_name || 'Unknown'}</td>
-                    <td className="py-3 px-4"><span className="px-2 py-0.5 bg-blue-900/50 text-blue-300 rounded text-xs">{c.contribution_type_name}</span></td>
-                    <td className="py-3 px-4 text-green-400 font-medium">GH¢{c.amount?.toFixed(2)}</td>
-                    <td className="py-3 px-4 text-gray-400">{c.payment_method}</td>
-                    <td className="py-3 px-4 text-gray-500 text-xs">{c.reference_number || '-'}</td>
-                    {isAdmin && (
-                      <td className="py-3 px-4 text-right">
-                        <button onClick={() => openEdit(c)} className="text-blue-400 hover:text-blue-300 mr-2"><Edit3 size={14} /></button>
-                        <button onClick={() => handleDelete(c.id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
-                      </td>
-                    )}
-                  </tr>
+        <>
+          {/* Type Breakdown */}
+          {totalByType.length > 0 && (
+            <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/50 p-5">
+              <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2"><TrendingUp size={15} className="text-emerald-400" /> Breakdown by Type</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {totalByType.map(([name, amt]) => (
+                  <div key={name} className="flex items-center justify-between px-3 py-2.5 bg-gray-700/30 rounded-lg">
+                    <span className="text-sm text-gray-300">{name}</span>
+                    <span className="text-sm font-semibold text-emerald-400">{CURRENCY} {fmt(amt)}</span>
+                  </div>
                 ))}
-                {filteredContributions.length === 0 && (
-                  <tr><td colSpan={isAdmin ? 7 : 6} className="py-8 text-center text-gray-500">No contributions found</td></tr>
-                )}
-              </tbody>
-            </table>
+              </div>
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
+            {loading ? (
+              <div className="p-8 space-y-3">
+                {[1,2,3,4,5].map(i => <div key={i} className="skeleton h-10 rounded-lg" />)}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700/50 bg-gray-800/40">
+                  <span className="text-sm text-gray-400">{filteredContributions.length} record{filteredContributions.length !== 1 ? 's' : ''}</span>
+                  <span className="text-sm font-semibold text-emerald-400">Total: {CURRENCY} {fmt(totalAmount)}</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-700/50 text-gray-400 text-left">
+                        <th className="py-3.5 px-5 font-medium">Date</th>
+                        <th className="py-3.5 px-5 font-medium">Member</th>
+                        <th className="py-3.5 px-5 font-medium">Type</th>
+                        <th className="py-3.5 px-5 font-medium text-right">Amount ({CURRENCY})</th>
+                        <th className="py-3.5 px-5 font-medium">Method</th>
+                        <th className="py-3.5 px-5 font-medium">Ref</th>
+                        {isAdmin && <th className="py-3.5 px-5 font-medium text-right">Actions</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredContributions.map(c => (
+                        <tr key={c.id} className="border-b border-gray-700/20 hover:bg-gray-700/20 transition-colors">
+                          <td className="py-3 px-5 text-gray-300 whitespace-nowrap">{c.payment_date}</td>
+                          <td className="py-3 px-5 font-medium text-white">{c.full_name || 'Unknown'}</td>
+                          <td className="py-3 px-5"><span className="inline-flex px-2.5 py-1 bg-emerald-900/40 text-emerald-300 rounded-lg text-xs font-medium">{c.contribution_type_name}</span></td>
+                          <td className="py-3 px-5 text-right text-emerald-400 font-semibold whitespace-nowrap">{CURRENCY} {fmt(c.amount)}</td>
+                          <td className="py-3 px-5 text-gray-400"><span className="inline-flex px-2 py-1 bg-gray-700/50 rounded-lg text-xs">{c.payment_method}</span></td>
+                          <td className="py-3 px-5 text-gray-500 text-xs font-mono">{c.reference_number || '-'}</td>
+                          {isAdmin && (
+                            <td className="py-3 px-5 text-right whitespace-nowrap">
+                              <button onClick={() => openEdit(c)} className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-all"><Edit3 size={14} /></button>
+                              <button onClick={() => handleDelete(c.id)} className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all ml-1"><Trash2 size={14} /></button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                      {filteredContributions.length === 0 && (
+                        <tr><td colSpan={isAdmin ? 7 : 6} className="py-12 text-center text-gray-500">No contributions found</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </>
       )}
 
+      {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-gray-800 rounded-lg w-full max-w-lg mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-gray-700">
-              <h3 className="text-lg font-semibold">{editing ? 'Edit Contribution' : 'Record Contribution'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white"><X size={20} /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-gray-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl border border-gray-700/50" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-gray-700/50">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Receipt size={18} className="text-emerald-400" />
+                {editing ? 'Edit Contribution' : 'Record Contribution'}
+              </h3>
+              <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all"><X size={20} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1">Member</label>
-                  <select value={form.member_id} onChange={e => setForm(f => ({ ...f, member_id: e.target.value }))} required className="input w-full">
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Member</label>
+                  <select value={form.member_id} onChange={e => setForm(f => ({ ...f, member_id: e.target.value }))} required className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
                     <option value="">Select member...</option>
                     {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Contribution Type</label>
-                  <select value={form.contribution_type_id} onChange={e => setForm(f => ({ ...f, contribution_type_id: e.target.value }))} required className="input w-full">
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Contribution Type</label>
+                  <select value={form.contribution_type_id} onChange={e => setForm(f => ({ ...f, contribution_type_id: e.target.value }))} required className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
                     <option value="">Select type...</option>
                     {types.filter(t => t.is_active !== 0).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Amount (GH¢)</label>
-                  <input type="number" step="0.01" min="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} required className="input w-full" />
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Amount ({CURRENCY})</label>
+                  <input type="number" step="1" min="1" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} required className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Date</label>
-                  <input type="date" value={form.payment_date} onChange={e => setForm(f => ({ ...f, payment_date: e.target.value }))} required className="input w-full" />
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Date</label>
+                  <input type="date" value={form.payment_date} onChange={e => setForm(f => ({ ...f, payment_date: e.target.value }))} required className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Payment Method</label>
-                  <select value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))} className="input w-full">
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Payment Method</label>
+                  <select value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))} className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
                     {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1">Reference Number</label>
-                  <input type="text" value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="e.g. MOMO ref, cheque no." className="input w-full" />
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Reference Number</label>
+                  <input type="text" value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="e.g. MOMO ref, cheque no." className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm text-gray-400 mb-1">Notes</label>
-                  <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="input w-full" placeholder="Optional notes..." />
+                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Notes</label>
+                  <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" placeholder="Optional notes..." />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : editing ? 'Update' : 'Record'}</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="btn-ghost px-4 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>
+                <button type="submit" disabled={saving} className="btn-primary px-5 py-2 text-sm rounded-xl">{saving ? 'Saving...' : editing ? 'Update' : 'Record Contribution'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* Type Manager Modal */}
       {typeModalOpen && (
         <ContributionTypeManager
           types={types}
           onClose={() => setTypeModalOpen(false)}
-          onRefresh={async () => { const r = await contributionAPI.getTypes(); setTypes(r.data); }}
+          onRefresh={async () => { const { data } = await contributionAPI.getTypes(); setTypes(data); }}
           showMessage={showMessage}
         />
       )}
@@ -402,16 +492,14 @@ function ContributionTypeManager({ types, onClose, onRefresh, showMessage }) {
     try {
       if (editingId) {
         await contributionAPI.updateType(editingId, { name: form.name.trim(), description: form.description, sort_order: Number(form.sort_order) });
-        showMessage?.('Type updated');
       } else {
         await contributionAPI.createType({ name: form.name.trim(), description: form.description, sort_order: Number(form.sort_order) });
-        showMessage?.('Type created');
       }
       setForm({ name: '', description: '', sort_order: 0 });
       setEditingId(null);
       await onRefresh();
     } catch (err) {
-      showMessage?.(err.message || 'Failed to save type');
+      showMessage?.(err.message || 'Failed to save');
     }
     setSaving(false);
   }
@@ -420,10 +508,9 @@ function ContributionTypeManager({ types, onClose, onRefresh, showMessage }) {
     if (!window.confirm('Delete this contribution type?')) return;
     try {
       await contributionAPI.deleteType(id);
-      showMessage?.('Type deleted');
       await onRefresh();
     } catch (err) {
-      showMessage?.(err.message || err.response?.data?.error || 'Failed to delete');
+      showMessage?.(err.message || 'Failed to delete');
     }
   }
 
@@ -433,39 +520,39 @@ function ContributionTypeManager({ types, onClose, onRefresh, showMessage }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-gray-800 rounded-lg w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h3 className="text-lg font-semibold">Contribution Types</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={20} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-gray-800 rounded-2xl w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto shadow-2xl border border-gray-700/50" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-gray-700/50">
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2"><FileText size={18} className="text-emerald-400" /> Contribution Types</h3>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all"><X size={20} /></button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="p-5 space-y-4">
           <form onSubmit={handleSubmit} className="flex gap-2 items-end">
             <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">Name</label>
-              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required className="input w-full" placeholder="e.g. Building Fund" />
+              <label className="block text-xs font-medium text-gray-400 mb-1">Name</label>
+              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" placeholder="e.g. Building Fund" />
             </div>
             <div className="w-20">
-              <label className="block text-xs text-gray-400 mb-1">Order</label>
-              <input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} className="input w-full" />
+              <label className="block text-xs font-medium text-gray-400 mb-1">Order</label>
+              <input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: e.target.value }))} className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
             </div>
-            <button type="submit" disabled={saving} className="btn-primary text-sm whitespace-nowrap">{saving ? '...' : editingId ? 'Update' : 'Add'}</button>
-            {editingId && <button type="button" onClick={() => { setEditingId(null); setForm({ name: '', description: '', sort_order: 0 }); }} className="btn-secondary text-sm">Cancel</button>}
+            <button type="submit" disabled={saving} className="btn-primary px-4 py-2 text-sm whitespace-nowrap rounded-xl">{saving ? '...' : editingId ? 'Update' : 'Add'}</button>
+            {editingId && <button type="button" onClick={() => { setEditingId(null); setForm({ name: '', description: '', sort_order: 0 }); }} className="btn-ghost px-3 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>}
           </form>
-          <div className="space-y-1">
+          <div className="space-y-1.5 mt-4">
             {localTypes.map(t => (
-              <div key={t.id} className="flex items-center justify-between px-3 py-2 bg-gray-700/50 rounded hover:bg-gray-700">
+              <div key={t.id} className="flex items-center justify-between px-4 py-3 bg-gray-700/30 rounded-xl hover:bg-gray-700/50 transition-colors border border-gray-700/30">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-500 w-6">{t.sort_order}</span>
+                  <span className="text-xs text-gray-600 w-6 font-mono">{t.sort_order}</span>
                   <div>
-                    <span className="text-sm font-medium">{t.name}</span>
-                    {t.description && <p className="text-xs text-gray-500">{t.description}</p>}
+                    <span className="text-sm font-medium text-white">{t.name}</span>
+                    {t.description && <p className="text-xs text-gray-500 mt-0.5">{t.description}</p>}
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded ${t.is_active ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'}`}>{t.is_active ? 'Active' : 'Inactive'}</span>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-lg font-medium ${t.is_active ? 'bg-emerald-900/40 text-emerald-300' : 'bg-red-900/40 text-red-300'}`}>{t.is_active ? 'Active' : 'Inactive'}</span>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => startEdit(t)} className="text-blue-400 hover:text-blue-300"><Edit3 size={14} /></button>
-                  <button onClick={() => handleDelete(t.id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                <div className="flex gap-1">
+                  <button onClick={() => startEdit(t)} className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-all"><Edit3 size={14} /></button>
+                  <button onClick={() => handleDelete(t.id)} className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all"><Trash2 size={14} /></button>
                 </div>
               </div>
             ))}

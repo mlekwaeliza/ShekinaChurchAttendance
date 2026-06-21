@@ -167,7 +167,7 @@ const LeaderDashboard = () => {
         return <NewMemberLeaderView />;
 
       case 'contributions':
-        return <LeaderContributions />;
+        return <LeaderContributions members={data.members} showMessage={data.showMessage} />;
 
       case 'settings':
         return (
