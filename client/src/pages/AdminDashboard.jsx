@@ -23,7 +23,6 @@ import BirthdayModule from '../components/admin/BirthdayModule';
 import ServiceAssignmentsModal from '../components/admin/ServiceAssignmentsModal';
 import AnnouncementCenter from '../components/admin/AnnouncementCenter';
 import FollowUpsView from '../components/admin/FollowUpsView';
-import VisitorIntake from '../components/admin/VisitorIntake';
 import AttendanceCorrections from '../components/admin/AttendanceCorrections';
 import ChurchCalendar from '../components/ChurchCalendar';
 import HomeCellsView from '../components/admin/HomeCellsView';
@@ -320,14 +319,6 @@ const AdminDashboard = () => {
             dashboardMetrics={data.dashboardMetrics}
             leaders={data.leaders}
             allMembers={data.allMembers}
-            showMessage={data.showMessage}
-          />
-        );
-
-      case 'visitors':
-        return (
-          <VisitorIntake
-            sections={data.sections}
             showMessage={data.showMessage}
           />
         );

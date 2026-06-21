@@ -208,8 +208,6 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
         { path: '/admin/announcements', label: 'Announcements', icon: Megaphone },
         { path: '/admin/follow-ups', label: 'Follow-ups', icon: ClipboardCheck },
-        { path: '/admin/visitors', label: 'Visitors', icon: UserPlus },
-        { path: '/admin/attendance-corrections', label: 'Attendance Corrections', icon: Edit3 },
         { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
       ]},
       { section: 'EVANGELISM', items: [

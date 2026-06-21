@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { newMemberLeaderAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import VisitorIntake from './VisitorIntake';
 import {
   Users, UserPlus, GraduationCap, BarChart3, Calendar, CheckCircle2, X, AlertTriangle, Loader2,
   ChevronDown, ChevronUp, Search, Phone, Mail, MapPin, FileText, Clock, BookOpen
@@ -10,6 +11,7 @@ const TABS = [
   { key: 'probation', label: 'Probationary Members', icon: Users },
   { key: 'graduated', label: 'Graduated Members', icon: GraduationCap },
   { key: 'permanent', label: 'Permanent Members', icon: CheckCircle2 },
+  { key: 'visitors', label: 'Visitors', icon: UserPlus },
   { key: 'reports', label: 'Reports', icon: BarChart3 },
 ];
 
@@ -295,6 +297,8 @@ const NewMemberLeaderView = () => {
 
       {activeTab === 'reports' ? (
         <ReportsView />
+      ) : activeTab === 'visitors' ? (
+        <VisitorIntake showMessage={showMessage} />
       ) : (
         <div className="space-y-3">
           {loading ? (
