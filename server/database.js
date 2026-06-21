@@ -799,6 +799,17 @@ db.serialize(() => {
     }
   });
 
+  // Seed default accountant user
+  const bcrypt = require('bcryptjs');
+  db.get('SELECT COUNT(*) as count FROM users WHERE role=?', ['accountant'], (err, row) => {
+    if (!err && row && row.count === 0) {
+      const hash = bcrypt.hashSync('accountant123', 10);
+      db.run('INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)',
+        ['accountant', hash, 'accountant', 'Church Accountant']);
+      console.log('Default accountant user created: username=accountant, password=accountant123');
+    }
+  });
+
   // Data cleanup: Map old service_type text to service_type_id
   db.run(`UPDATE attendance SET service_type_id = 1 WHERE service_type_id IS NULL AND (service_type IN ('main', 'morning', 'evening') OR service_type IS NULL)`);
   db.run(`UPDATE attendance SET service_type_id = 3 WHERE service_type_id IS NULL AND service_type IN ('youth_service', 'midweek')`);
