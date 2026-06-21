@@ -792,7 +792,7 @@ db.serialize(() => {
   // Seed default contribution types
   db.get('SELECT COUNT(*) as count FROM contribution_types', (err, row) => {
     if (!err && row.count === 0) {
-      const defaults = ['Tithes', 'Offerings', 'First Fruit', 'Building Fund', 'Missions', 'Thanksgiving', 'Project'];
+      const defaults = ['Tithes', 'Evangelism Offering', 'Offerings', 'First Fruit', 'Building Fund', 'Missions', 'Thanksgiving', 'Project'];
       defaults.forEach((name, i) => {
         db.run('INSERT INTO contribution_types (name, sort_order) VALUES (?, ?)', [name, i]);
       });
@@ -968,6 +968,10 @@ db.serialize(() => {
     }
   });
 
+  // Migration: Ensure Evangelism Offering contribution type exists
+  db.run(`INSERT OR IGNORE INTO contribution_types (name, description, sort_order) VALUES ('Evangelism Offering', 'Dedicated offering for evangelism ministry', 1)`, (err) => {
+    if (err) console.log('Migration note (evangelism offering):', err.message);
+  });
 });
 }
 
@@ -3644,7 +3648,16 @@ const queries = {
     const WHERE = [], params = [];
     if (filters.member_id) { WHERE.push('c.member_id=?'); params.push(filters.member_id); }
     if (filters.leader_id) { WHERE.push('m.leader_id=?'); params.push(filters.leader_id); }
-    if (filters.contribution_type_id) { WHERE.push('c.contribution_type_id=?'); params.push(filters.contribution_type_id); }
+    if (filters.contribution_type_id) {
+      if (Array.isArray(filters.contribution_type_id)) {
+        const placeholders = filters.contribution_type_id.map(() => '?').join(',');
+        WHERE.push(`c.contribution_type_id IN (${placeholders})`);
+        params.push(...filters.contribution_type_id);
+      } else {
+        WHERE.push('c.contribution_type_id=?');
+        params.push(filters.contribution_type_id);
+      }
+    }
     if (filters.payment_method) { WHERE.push('c.payment_method=?'); params.push(filters.payment_method); }
     if (filters.date_from) { WHERE.push('c.payment_date>=?'); params.push(filters.date_from); }
     if (filters.date_to) { WHERE.push('c.payment_date<=?'); params.push(filters.date_to); }
@@ -3692,7 +3705,16 @@ const queries = {
     const WHERE = [], params = [];
     if (filters.date_from) { WHERE.push('c.payment_date>=?'); params.push(filters.date_from); }
     if (filters.date_to) { WHERE.push('c.payment_date<=?'); params.push(filters.date_to); }
-    if (filters.contribution_type_id) { WHERE.push('c.contribution_type_id=?'); params.push(filters.contribution_type_id); }
+    if (filters.contribution_type_id) {
+      if (Array.isArray(filters.contribution_type_id)) {
+        const placeholders = filters.contribution_type_id.map(() => '?').join(',');
+        WHERE.push(`c.contribution_type_id IN (${placeholders})`);
+        params.push(...filters.contribution_type_id);
+      } else {
+        WHERE.push('c.contribution_type_id=?');
+        params.push(filters.contribution_type_id);
+      }
+    }
     if (filters.member_id) { WHERE.push('c.member_id=?'); params.push(filters.member_id); }
     const where = WHERE.length ? `WHERE ${WHERE.join(' AND ')}` : '';
     return all(`

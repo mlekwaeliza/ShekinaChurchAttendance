@@ -5,11 +5,17 @@ const { isAuthenticated, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(isAuthenticated);
-router.use(requireRole(['admin', 'leader']));
+router.use(requireRole(['admin', 'leader', 'accountant']));
 
 function parseId(value) {
   const n = Number(value);
   return Number.isInteger(n) ? n : null;
+}
+
+function parseIds(value) {
+  if (!value) return null;
+  const parts = String(value).split(',').map(v => Number(v.trim())).filter(n => Number.isInteger(n));
+  return parts.length > 0 ? parts : null;
 }
 
 async function resolveLeaderId(req) {
@@ -103,7 +109,7 @@ router.get('/contributions', async (req, res) => {
     const contributions = await queries.getContributions({
       member_id: parseId(member_id),
       leader_id,
-      contribution_type_id: parseId(contribution_type_id),
+      contribution_type_id: parseIds(contribution_type_id),
       payment_method,
       date_from,
       date_to
@@ -185,7 +191,7 @@ router.get('/contributions/summary', async (req, res) => {
     const { date_from, date_to, contribution_type_id, member_id } = req.query;
     const summary = await queries.getContributionSummary({
       date_from, date_to,
-      contribution_type_id: parseId(contribution_type_id),
+      contribution_type_id: parseIds(contribution_type_id),
       member_id: parseId(member_id)
     });
     const grandTotal = summary.reduce((sum, s) => sum + s.total, 0);

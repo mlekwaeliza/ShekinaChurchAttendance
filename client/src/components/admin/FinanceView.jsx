@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { financeAPI } from '../../services/api';
+import { financeAPI, contributionAPI, adminAPI } from '../../services/api';
 import {
   DollarSign, TrendingUp, Calendar, CheckCircle2, XCircle, Clock,
   Loader2, Plus, Search, Filter, ChevronDown, ChevronUp, Edit3, Trash2,
@@ -156,6 +156,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
 
   const tabs = [
     { key: 'entry', label: '📝 Entry', icon: DollarSign },
+    { key: 'tithes', label: '🙏 Member Tithes', icon: HandCoins },
     ...(userRole === 'admin' ? [
       { key: 'review', label: '✅ Review', icon: CheckCircle2 },
       { key: 'reports', label: '📊 Reports', icon: TrendingUp },
@@ -424,6 +425,10 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
         </>
       )}
 
+      {tab === 'tithes' && (
+        <MemberTithes showMessage={showMessage} />
+      )}
+
       {tab === 'review' && (
         <ReviewView showMessage={showMessage} />
       )}
@@ -431,6 +436,207 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
       {tab === 'reports' && (
         <ReportsView />
       )}
+    </div>
+  );
+};
+
+// ── Member Tithes ─────────────────────────────────────────────────────
+const MemberTithes = ({ showMessage }) => {
+  const [members, setMembers] = useState([]);
+  const [contributionTypes, setContributionTypes] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ member_id: '', contribution_type_id: '', amount: '', payment_date: today(), payment_method: 'Cash', notes: '' });
+  const [saving, setSaving] = useState(false);
+  const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
+  const [dateTo, setDateTo] = useState(today());
+  const [typeFilter, setTypeFilter] = useState('');
+
+  const loadTypes = useCallback(async () => {
+    try {
+      const res = await contributionAPI.getTypes();
+      const titheTypes = (res.data || []).filter(t =>
+        ['Tithes', 'Evangelism Offering'].includes(t.name)
+      );
+      setContributionTypes(titheTypes);
+      return titheTypes;
+    } catch (err) { console.error(err); return []; }
+  }, []);
+
+  const loadRecords = useCallback(async (types) => {
+    if (!types || types.length === 0) return [];
+    const typeIds = types.map(t => t.id).join(',');
+    try {
+      const res = await contributionAPI.getContributions({ contribution_type_id: typeIds, date_from: dateFrom, date_to: dateTo });
+      return res.data || [];
+    } catch (err) { console.error(err); return []; }
+  }, [dateFrom, dateTo]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const types = await loadTypes();
+      setContributionTypes(types);
+      const allRecords = await loadRecords(types);
+      setRecords(allRecords);
+      if (!form.contribution_type_id && types.length > 0) {
+        setForm(f => ({ ...f, contribution_type_id: types[0].id }));
+      }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  }, [loadTypes, loadRecords, form.contribution_type_id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.member_id || !form.amount || !form.contribution_type_id) return;
+    setSaving(true);
+    try {
+      await contributionAPI.createContribution({
+        member_id: form.member_id,
+        contribution_type_id: Number(form.contribution_type_id),
+        amount: Number(form.amount),
+        payment_date: form.payment_date,
+        payment_method: form.payment_method,
+        notes: form.notes,
+      });
+      const typeName = contributionTypes.find(t => t.id === Number(form.contribution_type_id))?.name || 'Contribution';
+      showMessage(`${typeName} recorded`);
+      setForm({ ...form, member_id: '', amount: '', notes: '' });
+      load();
+    } catch (err) { alert(err.response?.data?.error || 'Failed to record'); }
+    finally { setSaving(false); }
+  };
+
+  const filteredRecords = typeFilter
+    ? records.filter(r => r.contribution_type_id === Number(typeFilter))
+    : records;
+
+  const totalsByType = {};
+  const grandTotal = records.reduce((s, r) => {
+    const typeName = r.contribution_type_name || 'Other';
+    totalsByType[typeName] = (totalsByType[typeName] || 0) + Number(r.amount);
+    return s + Number(r.amount);
+  }, 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Member Contributions</h2>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {contributionTypes.map(t => (
+          <div key={t.id} className="rounded-xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-3 shadow-sm">
+            <p className="text-xs font-medium text-slate-500 mb-1">{t.name}</p>
+            <p className="text-lg font-bold text-emerald-600">TZS {(totalsByType[t.name] || 0).toLocaleString()}</p>
+          </div>
+        ))}
+        <div className="rounded-xl border border-primary-200/70 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-700 p-3 shadow-sm">
+          <p className="text-xs font-medium text-primary-600 mb-1">Total</p>
+          <p className="text-lg font-bold text-primary-700 dark:text-primary-300">TZS {grandTotal.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Entry Form */}
+        <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm lg:col-span-1">
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Record Contribution</h3>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type *</label>
+              <select value={form.contribution_type_id} onChange={e => setForm({...form, contribution_type_id: e.target.value})} className="input w-full" required>
+                <option value="">Select type...</option>
+                {contributionTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Member *</label>
+              <select value={form.member_id} onChange={e => setForm({...form, member_id: e.target.value})} className="input w-full" required>
+                <option value="">Select member...</option>
+                {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Amount (TZS) *</label>
+              <input type="number" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="input w-full" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date</label>
+              <input type="date" value={form.payment_date} onChange={e => setForm({...form, payment_date: e.target.value})} className="input w-full" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Payment Method</label>
+              <select value={form.payment_method} onChange={e => setForm({...form, payment_method: e.target.value})} className="input w-full">
+                <option value="Cash">Cash</option>
+                <option value="Mobile Money">Mobile Money</option>
+                <option value="Bank Transfer">Bank Transfer</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notes</label>
+              <input type="text" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="input w-full" placeholder="Optional" />
+            </div>
+            <button type="submit" disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <HandCoins className="w-4 h-4" />}
+              Record
+            </button>
+          </form>
+        </div>
+
+        {/* Records List */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3">
+            <div><label className="block text-xs font-medium text-slate-500 mb-1">From</label><input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input" /></div>
+            <div><label className="block text-xs font-medium text-slate-500 mb-1">To</label><input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input" /></div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1">Type</label>
+              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="input">
+                <option value="">All Types</option>
+                {contributionTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
+          ) : (
+            <>
+              {/* Records Table */}
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-left py-3 px-4 font-semibold text-slate-600">Type</th>
+                      <th className="text-left py-3 px-4 font-semibold text-slate-600">Member</th>
+                      <th className="text-left py-3 px-4 font-semibold text-slate-600">Date</th>
+                      <th className="text-left py-3 px-4 font-semibold text-slate-600">Method</th>
+                      <th className="text-right py-3 px-4 font-semibold text-slate-600">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRecords.length === 0 ? (
+                      <tr><td colSpan={5} className="text-center py-12 text-slate-400">No contributions recorded</td></tr>
+                    ) : filteredRecords.map(r => (
+                      <tr key={r.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{r.contribution_type_name || 'N/A'}</span></td>
+                        <td className="py-3 px-4 font-medium text-slate-900 dark:text-white">{r.full_name || 'Unknown'}</td>
+                        <td className="py-3 px-4 text-slate-600">{r.payment_date ? new Date(r.payment_date).toLocaleDateString() : '-'}</td>
+                        <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600">{r.payment_method}</span></td>
+                        <td className="py-3 px-4 text-right font-semibold text-emerald-600">TZS {Number(r.amount).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
