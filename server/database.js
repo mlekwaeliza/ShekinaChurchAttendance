@@ -1726,14 +1726,14 @@ async function migrateUsersRoleConstraint() {
       console.log('PostgreSQL users role constraint migrated.');
     } else {
       const row = await get(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`);
-      if (row && row.sql && !row.sql.includes('evangelist')) {
+      if (row && row.sql && !row.sql.includes('accountant')) {
         await run(`PRAGMA foreign_keys=OFF`);
         await run(`BEGIN TRANSACTION`);
         await run(`CREATE TABLE users_new (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           username TEXT UNIQUE NOT NULL,
           password_hash TEXT NOT NULL,
-          role TEXT NOT NULL CHECK(role IN ('admin', 'leader', 'pastor', 'evangelist')),
+      role TEXT NOT NULL CHECK(role IN ('admin', 'leader', 'pastor', 'evangelist', 'accountant')),
           full_name TEXT NOT NULL,
           profile_picture TEXT,
           totp_secret TEXT,

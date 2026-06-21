@@ -8,7 +8,7 @@ const fs = require('fs');
 
 const router = express.Router();
 router.use(isAuthenticated);
-router.use(requireRole(['admin']));
+router.use(requireRole(['admin', 'accountant']));
 
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']);
 const uploadsDir = path.join(__dirname, '../uploads/finance');

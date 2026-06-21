@@ -329,7 +329,7 @@ const AdminDashboard = () => {
         return <ContributionsView allMembers={data.allMembers} showMessage={data.showMessage} />;
 
       case 'finance':
-        return <FinanceView showMessage={data.showMessage} />;
+        return <FinanceView showMessage={data.showMessage} userRole="admin" />;
 
       default:
         return (

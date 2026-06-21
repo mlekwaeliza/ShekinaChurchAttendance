@@ -277,6 +277,15 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
       ]},
     ],
+    accountant: [
+      { section: 'ACCOUNTING', items: [
+        { path: '/accountant', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+        { path: '/accountant/finance', label: 'Finance Entry', icon: Banknote },
+      ]},
+      { section: 'ACCOUNT', items: [
+        { path: '/change-password', label: 'Change Password', icon: Shield },
+      ]},
+    ],
   };
 
   const currentNav = (() => {
@@ -338,6 +347,7 @@ const Layout = ({ children, showNav = true }) => {
     leader: user?.is_new_member_leader ? 'New Member Leader' : user?.is_head ? 'Head Leader' : 'Section Leader',
     pastor: 'Pastor',
     evangelist: 'Evangelist Pastor',
+    accountant: 'Accountant',
   };
 
   const roleBadgeColor = {
@@ -345,6 +355,7 @@ const Layout = ({ children, showNav = true }) => {
     leader: 'bg-emerald-500/20 text-emerald-300',
     pastor: 'bg-accent-500/20 text-accent-300',
     evangelist: 'bg-amber-500/20 text-amber-300',
+    accountant: 'bg-cyan-500/20 text-cyan-300',
   };
 
   // --- Sidebar Content ---

@@ -19,7 +19,7 @@ const STATUS_COLORS = {
 
 function today() { return new Date().toISOString().split('T')[0]; }
 
-const FinanceView = ({ showMessage }) => {
+const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   const [tab, setTab] = useState('entry');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -156,8 +156,10 @@ const FinanceView = ({ showMessage }) => {
 
   const tabs = [
     { key: 'entry', label: '📝 Entry', icon: DollarSign },
-    { key: 'review', label: '✅ Review', icon: CheckCircle2 },
-    { key: 'reports', label: '📊 Reports', icon: TrendingUp },
+    ...(userRole === 'admin' ? [
+      { key: 'review', label: '✅ Review', icon: CheckCircle2 },
+      { key: 'reports', label: '📊 Reports', icon: TrendingUp },
+    ] : []),
   ];
 
   return (
