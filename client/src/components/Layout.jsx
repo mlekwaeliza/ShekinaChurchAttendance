@@ -474,7 +474,7 @@ const Layout = ({ children, showNav = true }) => {
   return (
     <BreadcrumbProvider>
       <RealtimeBridge user={user}>
-        <div className="min-h-screen bg-slate-50 dark:bg-[#070b16]">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#070b16] overflow-hidden">
         {/* Hidden file input for profile uploads */}
         <input type="file" id="profile-upload" className="hidden" accept="image/*" onChange={handleProfileUpload} disabled={uploading} />
 
@@ -498,7 +498,7 @@ const Layout = ({ children, showNav = true }) => {
       </aside>
 
       {/* Main Content */}
-      <div className={`transition-all duration-350 ${collapsed ? 'md:ml-sidebar-collapsed' : 'md:ml-sidebar'}`}>
+      <div className={`transition-all duration-350 ${collapsed ? 'md:ml-sidebar-collapsed' : 'md:ml-sidebar'} h-screen overflow-hidden`}>
         {/* Header */}
         <header className="app-header">
           <div className="flex items-center gap-4">
@@ -601,7 +601,7 @@ const Layout = ({ children, showNav = true }) => {
         </header>
 
         {/* Page Content */}
-        <main className="p-6 lg:p-8">
+        <main className="p-6 lg:p-8 h-[calc(100vh-4rem)] overflow-y-auto scroll-smooth">
           <div className="animate-fade-in">
             {children}
           </div>
