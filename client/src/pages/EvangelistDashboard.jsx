@@ -48,12 +48,12 @@ const EvangelistDashboard = ({ subtab: propTab }) => {
     case 'team': return <EvangelismTeam />;
     case 'baptism': return <BaptismTracking />;
     case 'reports': return <EvangelismReports />;
-    default: return <Overview />;
+    default: return <Overview user={user} />;
   }
 };
 
 // ── Overview ────────────────────────────────────────────────────────
-const Overview = () => {
+const Overview = ({ user }) => {
   const [stats, setStats] = useState(null);
   const [trend, setTrend] = useState([]);
   const [funnel, setFunnel] = useState(null);
@@ -108,7 +108,10 @@ const Overview = () => {
         <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
         <div className="absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-white/5 translate-y-24" />
         <div className="relative z-10">
-          <h2 className="text-2xl font-bold tracking-tight">
+          <p className="text-white/80 text-sm font-medium tracking-wide uppercase">
+            Welcome{user?.full_name ? `, ${user.full_name}` : ''}
+          </p>
+          <h2 className="text-2xl font-bold tracking-tight mt-1">
             Evangelism Department Report
           </h2>
           <p className="mt-2 max-w-lg text-base text-white/80">
