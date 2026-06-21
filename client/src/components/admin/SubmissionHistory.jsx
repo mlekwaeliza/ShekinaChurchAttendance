@@ -90,7 +90,7 @@ const SubmissionHistory = ({
   };
 
   const totalSubmissions = groupedByDate.reduce((sum, [, logs]) => sum + logs.length, 0);
-  const totalRecords = groupedByDate.reduce((sum, [, logs]) => sum + logs.reduce((s, l) => s + (l.records_count || 0), 0), 0);
+  const totalRecords = groupedByDate.reduce((sum, [, logs]) => sum + logs.reduce((s, l) => s + Number(l.records_count || 0), 0), 0);
 
   if (historyLoading) {
     return (
@@ -170,7 +170,7 @@ const SubmissionHistory = ({
         <div className="space-y-4">
           {groupedByDate.map(([date, logs]) => {
             const isExpanded = expandedDates[date];
-            const dayTotal = logs.reduce((sum, l) => sum + (l.records_count || 0), 0);
+            const dayTotal = logs.reduce((sum, l) => sum + Number(l.records_count || 0), 0);
 
             return (
               <div key={date}>

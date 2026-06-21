@@ -46,8 +46,8 @@ const PastorWeeklySummary = () => {
   const leaders = summary?.leaders || [];
   const submitted = leaders.filter(l => l.submitted > 0).length;
   const total = leaders.length;
-  const totalOutreach = leaders.reduce((sum, l) => sum + l.outreach_count, 0);
-  const totalAbsent = leaders.reduce((sum, l) => sum + l.absent_members, 0);
+  const totalOutreach = leaders.reduce((sum, l) => sum + Number(l.outreach_count), 0);
+  const totalAbsent = leaders.reduce((sum, l) => sum + Number(l.absent_members), 0);
 
   const weekEnd = addDays(weekStart, 6);
 

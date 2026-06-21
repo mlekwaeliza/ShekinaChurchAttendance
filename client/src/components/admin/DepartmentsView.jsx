@@ -145,7 +145,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
   // Stats calculation
   const totalMembersInDepts = useMemo(() => {
-    return departments.reduce((acc, curr) => acc + (curr.member_count || 0), 0);
+    return departments.reduce((acc, curr) => acc + Number(curr.member_count || 0), 0);
   }, [departments]);
 
   const activeDeptCount = useMemo(() => {

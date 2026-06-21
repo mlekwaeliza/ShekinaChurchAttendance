@@ -10,9 +10,9 @@ import DataTable from '../ui/DataTable';
 
 const LeaderReports = ({ trendsData, trendsLoading, loadTrends }) => {
   const summaryStats = useMemo(() => {
-    const total = trendsData.reduce((sum, d) => sum + d.total_members, 0);
-    const present = trendsData.reduce((sum, d) => sum + d.present_count, 0);
-    const absent = trendsData.reduce((sum, d) => sum + d.absent_count, 0);
+    const total = trendsData.reduce((sum, d) => sum + Number(d.total_members), 0);
+    const present = trendsData.reduce((sum, d) => sum + Number(d.present_count), 0);
+    const absent = trendsData.reduce((sum, d) => sum + Number(d.absent_count), 0);
     const avgAttendance = trendsData.length > 0 ? Math.round((present / total) * 100) : 0;
     return { total, present, absent, avgAttendance };
   }, [trendsData]);

@@ -29,8 +29,8 @@ router.get('/predictions', async (req, res) => {
 
     let trend = 'stable';
     if (recentWeeks.length >= 4) {
-      const recentAvg = recentWeeks.slice(0, 2).reduce((s, w) => s + w.rate, 0) / 2;
-      const olderAvg = recentWeeks.slice(2, 4).reduce((s, w) => s + w.rate, 0) / 2;
+      const recentAvg = recentWeeks.slice(0, 2).reduce((s, w) => s + Number(w.rate), 0) / 2;
+      const olderAvg = recentWeeks.slice(2, 4).reduce((s, w) => s + Number(w.rate), 0) / 2;
       if (recentAvg - olderAvg > 3) trend = 'improving';
       else if (olderAvg - recentAvg > 3) trend = 'declining';
     }
