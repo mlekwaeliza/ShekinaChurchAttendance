@@ -1159,7 +1159,7 @@ router.get('/leadership-directory', async (req, res) => {
 router.get('/leadership-stats', async (req, res) => {
   try {
     const stats = await queries.getLeadershipStats();
-    const totalLeaders = stats.reduce((sum, s) => sum + s.active_count, 0);
+    const totalLeaders = stats.reduce((sum, s) => sum + Number(s.active_count), 0);
     res.json({ stats, totalLeaders });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch leadership stats' });

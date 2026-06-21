@@ -31,8 +31,8 @@ const LeadershipWidget = ({ onNavigate }) => {
     );
   }
 
-  const active = stats.stats.reduce((s, t) => s + t.active_count, 0);
-  const inactive = stats.stats.reduce((s, t) => s + t.inactive_count, 0);
+  const active = stats.stats.reduce((s, t) => s + Number(t.active_count), 0);
+  const inactive = stats.stats.reduce((s, t) => s + Number(t.inactive_count), 0);
 
   const handleNavigate = (filter = {}) => {
     if (onNavigate) {

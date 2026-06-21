@@ -3118,8 +3118,8 @@ const queries = {
   },
   getLeadershipStats: () => all(`
     SELECT ct.id, ct.name, ct.description,
-           COUNT(mt.id) FILTER (WHERE mt.status = 'active') as active_count,
-           COUNT(mt.id) FILTER (WHERE mt.status = 'inactive') as inactive_count,
+           SUM(CASE WHEN mt.status = 'active' THEN 1 ELSE 0 END) as active_count,
+           SUM(CASE WHEN mt.status = 'inactive' THEN 1 ELSE 0 END) as inactive_count,
            COUNT(mt.id) as total_count
     FROM congregation_titles ct
     LEFT JOIN member_titles mt ON mt.title_id = ct.id
