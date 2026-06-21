@@ -1737,7 +1737,7 @@ async function migrateUsersRoleConstraint() {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           username TEXT UNIQUE NOT NULL,
           password_hash TEXT NOT NULL,
-      role TEXT NOT NULL CHECK(role IN ('admin', 'leader', 'pastor', 'evangelist', 'accountant')),
+          role TEXT NOT NULL CHECK(role IN ('admin', 'leader', 'pastor', 'evangelist', 'accountant')),
           full_name TEXT NOT NULL,
           profile_picture TEXT,
           totp_secret TEXT,
@@ -1749,7 +1749,10 @@ async function migrateUsersRoleConstraint() {
           lockout_count INTEGER DEFAULT 0,
           member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          failed_login_attempts INTEGER DEFAULT 0,
+          locked_until DATETIME,
+          is_new_member_leader INTEGER DEFAULT 0
         )`);
         await run(`INSERT INTO users_new SELECT * FROM users`);
         await run(`DROP TABLE users`);
