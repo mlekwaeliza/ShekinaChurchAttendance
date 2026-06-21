@@ -1721,7 +1721,7 @@ async function migrateUsersRoleConstraint() {
   try {
     if (usePostgres) {
       await run(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
-      await run(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'leader', 'pastor', 'evangelist'))`);
+      await run(`ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('admin', 'leader', 'pastor', 'evangelist', 'accountant'))`);
       await run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS member_id INTEGER REFERENCES members(id) ON DELETE SET NULL`);
       console.log('PostgreSQL users role constraint migrated.');
     } else {
