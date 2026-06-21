@@ -180,7 +180,7 @@ const NewMemberLeaderView = () => {
               <GraduationCap className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">New Member Department</h1>
+              <h1 className="text-2xl font-bold tracking-tight">New Members Department</h1>
               <p className="text-sm text-white/80 font-medium mt-0.5">
                 Manage probationary, graduated, and permanent members
               </p>
