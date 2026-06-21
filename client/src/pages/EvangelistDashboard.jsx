@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { evangelismAPI } from '../services/api';
 import SettingsView from '../components/admin/SettingsView';
@@ -17,15 +17,8 @@ const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slat
 
 const EvangelistDashboard = ({ subtab: propTab }) => {
   const { tab } = useParams();
-  const location = useLocation();
   const { user } = useAuth();
-  // Read tab from URL pathname for reliability (optional useParams params can
-  // be stale when navigating between /evangelist and /evangelist/tab-name)
-  const pathTab = useMemo(() => {
-    const segments = location.pathname.split('/').filter(Boolean);
-    return segments[1] || null;
-  }, [location.pathname]);
-  const activeTab = propTab || tab || pathTab || 'overview';
+  const activeTab = propTab || tab || 'overview';
   const [toast, setToast] = useState(null);
 
   const showMessage = useCallback((msg) => {
