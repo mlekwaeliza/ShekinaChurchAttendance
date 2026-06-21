@@ -335,7 +335,7 @@ const Layout = ({ children, showNav = true }) => {
   };
 
   // --- Sidebar Content ---
-  const SidebarContent = () => (
+  const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
       <div className={`flex items-center gap-3 px-4 h-16 shrink-0 border-b border-sidebar-border/30 ${collapsed ? 'justify-center' : ''}`}>
@@ -487,14 +487,14 @@ const Layout = ({ children, showNav = true }) => {
       <aside
         className={`sidebar hidden md:flex ${collapsed ? 'w-sidebar-collapsed' : 'w-sidebar'}`}
       >
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       {/* Sidebar - Mobile */}
       <aside
         className={`sidebar md:hidden w-sidebar transform transition-transform duration-350 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       {/* Main Content */}
