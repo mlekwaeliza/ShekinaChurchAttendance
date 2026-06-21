@@ -171,11 +171,25 @@ const NewMemberLeaderView = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900">New Member Leader Dashboard</h2>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary flex items-center gap-2">
-          <UserPlus className="w-4 h-4" /> Add New Member
-        </button>
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 p-6 text-white shadow-xl shadow-purple-500/20">
+        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
+        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-inner">
+              <GraduationCap className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">New Member Department</h1>
+              <p className="text-sm text-white/80 font-medium mt-0.5">
+                Manage probationary, graduated, and permanent members
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setShowForm(!showForm)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-purple-700 font-semibold text-sm shadow-lg hover:bg-purple-50 transition-colors">
+            <UserPlus className="w-4 h-4" /> Add New Member
+          </button>
+        </div>
       </div>
 
       {showForm && (
