@@ -13,6 +13,7 @@ import {
   Activity,
   Shield,
   ChevronRight,
+  X,
   Zap,
   Award,
   Clock,
@@ -20,8 +21,11 @@ import {
   Layers,
   CheckCircle2,
   Flame,
-  ArrowUpRight,
-  ArrowDownRight,
+  Heart,
+  UserCheck,
+  UserX,
+  Star,
+  Info,
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
 import StatCard from '../ui/StatCard';
@@ -78,7 +82,7 @@ const formatPeriodLabel = (filterType, filterValue) => {
 
 const generateAIInsights = (data) => {
   const insights = [];
-  const { overview, prediction, anomalies, leaderMetrics } = data;
+  const { overview, prediction, anomalies, leaderMetrics, sectionComparison } = data;
   if (!overview) return insights;
 
   const stats = overview.stats || {};
@@ -114,7 +118,22 @@ const generateAIInsights = (data) => {
     }
   }
 
-  return insights.slice(0, 6);
+  if (sectionComparison?.length > 0) {
+    const best = sectionComparison[0];
+    const worst = sectionComparison[sectionComparison.length - 1];
+    if (best && best.attendance_rate >= 80) {
+      insights.push({ type: 'success', text: `${best.name} is the top-performing section with ${best.attendance_rate}% attendance.`, icon: Star });
+    }
+    if (worst && worst.attendance_rate < 60) {
+      insights.push({ type: 'danger', text: `${worst.name} needs attention with only ${worst.attendance_rate}% attendance.`, icon: AlertTriangle });
+    }
+    const lowSections = sectionComparison.filter(s => s.attendance_rate < 60);
+    if (lowSections.length > 1) {
+      insights.push({ type: 'warning', text: `${lowSections.length} sections have attendance below 60%. Consider targeted outreach.`, icon: Heart });
+    }
+  }
+
+  return insights.slice(0, 8);
 };
 
 const MiniSparkline = ({ data, color = '#6366f1' }) => {
@@ -150,6 +169,7 @@ const AttendanceReports = ({
   const [activeTab, setActiveTab] = useState('overview');
   const [analytics, setAnalytics] = useState({});
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [selectedSection, setSelectedSection] = useState(null);
 
   useEffect(() => {
     if (filterValue) loadOverview();
@@ -209,6 +229,7 @@ const AttendanceReports = ({
     prediction: analytics.prediction,
     anomalies: analytics.anomalies,
     leaderMetrics: analytics.leaderMetrics,
+    sectionComparison: analytics.sectionComparison,
   }), [overviewData, analytics]);
 
   const trendChartData = useMemo(() => {
@@ -373,146 +394,199 @@ const AttendanceReports = ({
     }
   };
 
-  const renderOverviewTab = () => (
-    <div className="space-y-6">
-      {insights.length > 0 && (
-        <div className="rounded-2xl bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">AI Intelligence Summary</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {insights.map((insight, i) => {
-              const Icon = insight.icon;
-              const colors = {
-                success: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 text-emerald-700 dark:text-emerald-300',
-                warning: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200/50 dark:border-amber-800/30 text-amber-700 dark:text-amber-300',
-                danger: 'bg-rose-50 dark:bg-rose-900/20 border-rose-200/50 dark:border-rose-800/30 text-rose-700 dark:text-rose-300',
-                info: 'bg-sky-50 dark:bg-sky-900/20 border-sky-200/50 dark:border-sky-800/30 text-sky-700 dark:text-sky-300',
-              };
-              return (
-                <div key={i} className={`flex items-start gap-2.5 p-3 rounded-xl border ${colors[insight.type]}`}>
-                  <Icon className="w-4 h-4 mt-0.5 shrink-0" />
-                  <p className="text-xs leading-relaxed">{insight.text}</p>
+  const renderOverviewTab = () => {
+    const sectionComparison = analytics.sectionComparison || [];
+    const sectionRankings = analytics.sectionRankings || [];
+    const churchHealthScore = useMemo(() => {
+      if (!sectionComparison.length) return null;
+      const scores = sectionComparison.map(s => calculateHealthScore(
+        s.attendance_rate || 0,
+        (sectionRankings.find(r => r.id === s.id))?.consistency_score,
+        s.new_members || 0,
+        s.submission_days || 0,
+        90
+      ));
+      return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    }, [sectionComparison, sectionRankings]);
+
+    const healthInfo = churchHealthScore != null ? getHealthLabel(churchHealthScore) : null;
+
+    return (
+      <div className="space-y-6">
+        {churchHealthScore != null && (
+          <div className="rounded-2xl bg-gradient-to-br from-emerald-500/5 via-sky-500/5 to-indigo-500/5 border border-emerald-200/40 dark:border-emerald-800/30 p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center">
+                  <Heart className="w-6 h-6 text-white" />
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Present</p>
-          <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.present ?? 0}</p>
-          <MiniSparkline data={trendChartData.slice(-7).map((t) => ({ v: t.present }))} color="#10b981" />
-        </div>
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Absent</p>
-          <p className="text-2xl font-bold text-rose-500 dark:text-rose-400">{stats.absent ?? 0}</p>
-          <MiniSparkline data={trendChartData.slice(-7).map((t) => ({ v: t.absent }))} color="#ef4444" />
-        </div>
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Excused</p>
-          <p className="text-2xl font-bold text-amber-500 dark:text-amber-400">{stats.excused ?? 0}</p>
-          <MiniSparkline data={trendChartData.slice(-7).map((t) => ({ v: t.excused }))} color="#f59e0b" />
-        </div>
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Submitted</p>
-          <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.total_submitted_leaders ?? 0}<span className="text-sm font-normal text-slate-400">/{stats.total_leaders ?? 0}</span></p>
-          <MiniSparkline data={trendChartData.slice(-7).map((t) => ({ v: t.rate }))} color="#6366f1" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <ChartCard title="Attendance Rate Trend" subtitle="Last 90 days" height="h-[250px]" icon={TrendingUp}>
-          {trendChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="rateGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                <Area type="monotone" dataKey="rate" stroke="#6366f1" fill="url(#rateGrad)" strokeWidth={2} name="Rate %" />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-full text-slate-400 text-sm">No trend data available</div>
-          )}
-        </ChartCard>
-
-        <div className="rounded-2xl bg-gradient-to-br from-violet-500/5 to-purple-500/5 border border-violet-200/40 dark:border-violet-800/30 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Predictive Analytics</h3>
-          </div>
-          {analytics.prediction ? (
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Predicted Rate</span>
-                <span className="text-lg font-bold text-violet-600 dark:text-violet-400">{analytics.prediction.avg_rate || 0}%</span>
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Church Health Score</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Aggregate score across all sections</p>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Predicted Present</span>
-                <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{analytics.prediction.avg_present || 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Trend</span>
-                <Badge variant={analytics.prediction.trend === 'increasing' ? 'success' : analytics.prediction.trend === 'decreasing' ? 'danger' : 'info'}>
-                  {analytics.prediction.trend === 'increasing' ? '↑ Increasing' : analytics.prediction.trend === 'decreasing' ? '↓ Decreasing' : '→ Stable'}
-                </Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500 dark:text-slate-400">Weeks Analyzed</span>
-                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{analytics.prediction.weeks_analyzed || 0}</span>
+              <div className="text-right">
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-3xl font-bold ${healthInfo?.color || 'text-slate-900 dark:text-slate-100'}`}>{churchHealthScore}</span>
+                  <span className="text-xs text-slate-400">/100</span>
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${healthInfo?.bg || ''} ${healthInfo?.color || ''}`}>{healthInfo?.label}</span>
               </div>
             </div>
-          ) : (
-            <p className="text-sm text-slate-400 dark:text-slate-500">Prediction data loading...</p>
-          )}
+            <div className="mt-3 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${churchHealthScore}%`,
+                  background: churchHealthScore >= 85 ? 'linear-gradient(90deg, #10b981, #34d399)'
+                    : churchHealthScore >= 70 ? 'linear-gradient(90deg, #0ea5e9, #38bdf8)'
+                    : churchHealthScore >= 50 ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                    : 'linear-gradient(90deg, #ef4444, #f87171)',
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {insights.length > 0 && (
+          <div className="rounded-2xl bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">AI Intelligence Summary</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {insights.map((insight, i) => {
+                const Icon = insight.icon;
+                const colors = {
+                  success: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 text-emerald-700 dark:text-emerald-300',
+                  warning: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200/50 dark:border-amber-800/30 text-amber-700 dark:text-amber-300',
+                  danger: 'bg-rose-50 dark:bg-rose-900/20 border-rose-200/50 dark:border-rose-800/30 text-rose-700 dark:text-rose-300',
+                  info: 'bg-sky-50 dark:bg-sky-900/20 border-sky-200/50 dark:border-sky-800/30 text-sky-700 dark:text-sky-300',
+                };
+                return (
+                  <div key={i} className={`flex items-start gap-2.5 p-3 rounded-xl border ${colors[insight.type]}`}>
+                    <Icon className="w-4 h-4 mt-0.5 shrink-0" />
+                    <p className="text-xs leading-relaxed">{insight.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Present</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.present ?? 0}</p>
+            <MiniSparkline data={trendChartData.slice(-7).map((t) => ({ v: t.present }))} color="#10b981" />
+          </div>
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Absent</p>
+            <p className="text-2xl font-bold text-rose-500 dark:text-rose-400">{stats.absent ?? 0}</p>
+            <MiniSparkline data={trendChartData.slice(-7).map((t) => ({ v: t.absent }))} color="#ef4444" />
+          </div>
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Excused</p>
+            <p className="text-2xl font-bold text-amber-500 dark:text-amber-400">{stats.excused ?? 0}</p>
+            <MiniSparkline data={trendChartData.slice(-7).map((t) => ({ v: t.excused }))} color="#f59e0b" />
+          </div>
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Submitted</p>
+            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{stats.total_submitted_leaders ?? 0}<span className="text-sm font-normal text-slate-400">/{stats.total_leaders ?? 0}</span></p>
+            <MiniSparkline data={trendChartData.slice(-7).map((t) => ({ v: t.rate }))} color="#6366f1" />
+          </div>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <ChartCard title="Attendance Rate Trend" subtitle="Last 90 days" height="h-[250px]" icon={TrendingUp}>
+            {trendChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="rateGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                  <Area type="monotone" dataKey="rate" stroke="#6366f1" fill="url(#rateGrad)" strokeWidth={2} name="Rate %" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-400 text-sm">No trend data available</div>
+            )}
+          </ChartCard>
+
+          <div className="rounded-2xl bg-gradient-to-br from-violet-500/5 to-purple-500/5 border border-violet-200/40 dark:border-violet-800/30 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Predictive Analytics</h3>
+            </div>
+            {analytics.prediction ? (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Predicted Rate</span>
+                  <span className="text-lg font-bold text-violet-600 dark:text-violet-400">{analytics.prediction.avg_rate || 0}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Predicted Present</span>
+                  <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{analytics.prediction.avg_present || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Trend</span>
+                  <Badge variant={analytics.prediction.trend === 'increasing' ? 'success' : analytics.prediction.trend === 'decreasing' ? 'danger' : 'info'}>
+                    {analytics.prediction.trend === 'increasing' ? '↑ Increasing' : analytics.prediction.trend === 'decreasing' ? '↓ Decreasing' : '→ Stable'}
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Weeks Analyzed</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{analytics.prediction.weeks_analyzed || 0}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400 dark:text-slate-500">Prediction data loading...</p>
+            )}
+          </div>
+        </div>
+
+        {sectionBarData.length > 0 && (
+          <ChartCard title="Leader Section Overview" subtitle="Attendance by leader this period" height="h-[300px]" icon={BarChart3}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sectionBarData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+                <Bar dataKey="present" name="Present" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="excused" name="Excused" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        )}
+
+        {yoyData.length > 0 && (
+          <ChartCard title="Year-over-Year Comparison" subtitle="Monthly attendance rate comparison" height="h-[280px]" icon={Calendar}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={yoyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+                <Line type="monotone" dataKey="current" name="Current Year" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="previous" name="Previous Year" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        )}
       </div>
-
-      {sectionBarData.length > 0 && (
-        <ChartCard title="Leader Section Overview" subtitle="Attendance by leader this period" height="h-[300px]" icon={BarChart3}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={sectionBarData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Bar dataKey="present" name="Present" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="excused" name="Excused" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      )}
-
-      {yoyData.length > 0 && (
-        <ChartCard title="Year-over-Year Comparison" subtitle="Monthly attendance rate comparison" height="h-[280px]" icon={Calendar}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={yoyData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Line type="monotone" dataKey="current" name="Current Year" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="previous" name="Previous Year" stroke="#94a3b8" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      )}
-    </div>
-  );
+    );
+  };
 
   const renderTrendsTab = () => (
     <div className="space-y-6">
@@ -594,236 +668,414 @@ const AttendanceReports = ({
   const sectionComparison = analytics.sectionComparison || [];
   const sectionRankings = analytics.sectionRankings || [];
 
+  const calculateHealthScore = (rate, consistency, newMembers, submissionDays, totalDays) => {
+    let score = 0;
+    score += Math.min(40, (rate / 100) * 40);
+    if (consistency != null) score += Math.min(25, (consistency / 100) * 25);
+    score += Math.min(15, Math.min(15, (newMembers || 0) * 3));
+    score += Math.min(20, ((submissionDays || 0) / Math.max(totalDays || 90, 1)) * 20);
+    return Math.round(Math.min(100, Math.max(0, score)));
+  };
+
+  const getHealthLabel = (score) => {
+    if (score >= 85) return { label: 'Excellent', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' };
+    if (score >= 70) return { label: 'Good', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20' };
+    if (score >= 50) return { label: 'Fair', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' };
+    return { label: 'Needs Attention', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/20' };
+  };
+
+  const sectionSummary = useMemo(() => {
+    if (!sectionComparison.length) return null;
+    const totalMembers = sectionComparison.reduce((s, sec) => s + (sec.member_count || 0), 0);
+    const totalPresent = sectionComparison.reduce((s, sec) => s + (sec.total_present || 0), 0);
+    const totalAbsent = sectionComparison.reduce((s, sec) => s + (sec.total_absent || 0), 0);
+    const totalExcused = sectionComparison.reduce((s, sec) => s + (sec.total_excused || 0), 0);
+    const totalNew = sectionComparison.reduce((s, sec) => s + (sec.new_members || 0), 0);
+    const totalActive = sectionComparison.reduce((s, sec) => s + (sec.active_members || 0), 0);
+    const totalRecords = totalPresent + totalAbsent + totalExcused;
+    const avgRate = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
+    return { totalSections: sectionComparison.length, totalMembers, totalPresent, totalAbsent, totalExcused, totalNew, totalActive, avgRate, bestSection: sectionComparison[0], worstSection: sectionComparison[sectionComparison.length - 1] };
+  }, [sectionComparison]);
+
   const sectionComparisonBarData = useMemo(() => {
     if (!sectionComparison.length) return [];
     return sectionComparison.map((s) => ({
-      name: s.name?.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
+      name: s.name?.length > 10 ? s.name.slice(0, 10) + '\u2026' : s.name,
       fullName: s.name,
       rate: s.attendance_rate || 0,
       members: s.member_count || 0,
       present: s.total_present || 0,
       absent: s.total_absent || 0,
       excused: s.total_excused || 0,
+      total: (s.total_present || 0) + (s.total_absent || 0) + (s.total_excused || 0),
       newMembers: s.new_members || 0,
       activeMembers: s.active_members || 0,
+      submissionDays: s.submission_days || 0,
+      lastSubmission: s.last_submission_date,
+      healthScore: calculateHealthScore(
+        s.attendance_rate || 0,
+        (sectionRankings.find(r => r.id === s.id))?.consistency_score,
+        s.new_members || 0,
+        s.submission_days || 0,
+        90
+      ),
     }));
-  }, [sectionComparison]);
+  }, [sectionComparison, sectionRankings]);
 
-  const renderSectionsTab = () => (
-    <div className="space-y-6">
-      {sectionComparisonBarData.length > 0 ? (
-        <>
-          {/* Section Comparison Bar Chart */}
-          <ChartCard title="Section Attendance Comparison" subtitle="Attendance rate by section (last 90 days)" height="h-[350px]" icon={Target}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sectionComparisonBarData} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value, name) => [`${value}%`, name]} />
-                <Bar dataKey="rate" name="Attendance Rate" radius={[6, 6, 0, 0]}>
-                  {sectionComparisonBarData.map((entry, i) => (
-                    <Cell key={i} fill={entry.rate >= 80 ? '#10b981' : entry.rate >= 60 ? '#f59e0b' : '#ef4444'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
+  const renderSectionsTab = () => {
+    const radarHealthData = useMemo(() => {
+      if (!sectionComparisonBarData.length) return [];
+      return sectionComparisonBarData.slice(0, 8).map((s) => ({
+        name: s.name,
+        rate: s.rate,
+        health: s.healthScore,
+      }));
+    }, [sectionComparisonBarData]);
 
-          {/* Section Radar Chart */}
-          {sectionComparisonBarData.length <= 8 && (
-            <ChartCard title="Section Performance Radar" subtitle="Attendance rate across sections" height="h-[350px]" icon={BarChart3}>
+    return (
+      <div className="space-y-6">
+        {sectionComparisonBarData.length > 0 ? (
+          <>
+            {sectionSummary && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Sections</p>
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{sectionSummary.totalSections}</p>
+                </div>
+                <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Total Members</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{sectionSummary.totalMembers}</p>
+                </div>
+                <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Total Present</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{sectionSummary.totalPresent}</p>
+                </div>
+                <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Total Absent</p>
+                  <p className="text-2xl font-bold text-rose-500 dark:text-rose-400">{sectionSummary.totalAbsent}</p>
+                </div>
+                <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Total Excused</p>
+                  <p className="text-2xl font-bold text-amber-500 dark:text-amber-400">{sectionSummary.totalExcused}</p>
+                </div>
+                <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">Avg Rate</p>
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{sectionSummary.avgRate}%</p>
+                </div>
+              </div>
+            )}
+
+            <ChartCard title="Section Attendance Comparison" subtitle="Present / Excused / Absent by section (last 90 days)" height="h-[380px]" icon={Target}>
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={sectionComparisonBarData}>
+                <BarChart data={sectionComparisonBarData} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                  <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  <Bar dataKey="present" name="Present" fill="#10b981" stackId="a" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="excused" name="Excused" fill="#f59e0b" stackId="a" />
+                  <Bar dataKey="absent" name="Absent" fill="#ef4444" stackId="a" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {sectionComparisonBarData.map((s, i) => {
+                const healthInfo = getHealthLabel(s.healthScore);
+                return (
+                  <div
+                    key={i}
+                    onClick={() => setSelectedSection(s)}
+                    className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all group"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{s.fullName || s.name}</h4>
+                      <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-indigo-500 transition-colors shrink-0" />
+                    </div>
+                    <div className="mb-3">
+                      <div className="flex items-baseline justify-between mb-1">
+                        <span className={`text-lg font-bold ${healthInfo.color}`}>{s.healthScore}</span>
+                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${healthInfo.bg} ${healthInfo.color}`}>{healthInfo.label}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${s.healthScore}%`,
+                            background: s.healthScore >= 85 ? '#10b981' : s.healthScore >= 70 ? '#0ea5e9' : s.healthScore >= 50 ? '#f59e0b' : '#ef4444',
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Members</p>
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">{s.members}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">Rate</p>
+                        <p className={`text-sm font-bold ${s.rate >= 80 ? 'text-emerald-600 dark:text-emerald-400' : s.rate >= 60 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-500 dark:text-rose-400'}`}>{s.rate}%</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">New</p>
+                        <p className="text-sm font-bold text-indigo-500 dark:text-indigo-400">{s.newMembers}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-500" />
+                Full Section Comparison
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100 dark:border-slate-700">
+                      <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rank</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Section</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Members</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Present</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Absent</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Excused</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Total</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">New</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rate</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Health</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Consistency</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(sectionRankings.length ? sectionRankings : sectionComparison).map((s, i) => {
+                      const rate = s.attendance_rate || 0;
+                      const hs = calculateHealthScore(
+                        rate,
+                        s.consistency_score,
+                        s.new_members || 0,
+                        s.submission_days || 0,
+                        90
+                      );
+                      const healthInfo = getHealthLabel(hs);
+                      return (
+                        <tr
+                          key={s.id || i}
+                          className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
+                          onClick={() => setSelectedSection({
+                            fullName: s.name,
+                            rate,
+                            members: s.member_count || s.active_members || 0,
+                            present: s.total_present || 0,
+                            absent: s.total_absent || 0,
+                            excused: s.total_excused || 0,
+                            total: (s.total_present || 0) + (s.total_absent || 0) + (s.total_excused || 0),
+                            newMembers: s.new_members || 0,
+                            healthScore: hs,
+                            submissionDays: s.submission_days || 0,
+                          })}
+                        >
+                          <td className="py-2.5 px-3">
+                            <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${
+                              i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                              i === 1 ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                              i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                              'text-slate-400 dark:text-slate-500'
+                            }`}>{s.rank || i + 1}</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-slate-100">
+                            {s.name}
+                            {s.is_best && <Badge variant="success" className="ml-2">Best</Badge>}
+                            {s.is_lowest && <Badge variant="danger" className="ml-2">Lowest</Badge>}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-sm text-slate-600 dark:text-slate-400">{s.member_count || s.active_members || 0}</td>
+                          <td className="py-2.5 px-3 text-right text-sm text-emerald-600 dark:text-emerald-400 font-semibold">{s.total_present || 0}</td>
+                          <td className="py-2.5 px-3 text-right text-sm text-rose-500 dark:text-rose-400">{s.total_absent || 0}</td>
+                          <td className="py-2.5 px-3 text-right text-sm text-amber-500 dark:text-amber-400">{s.total_excused || 0}</td>
+                          <td className="py-2.5 px-3 text-right text-sm font-medium text-slate-700 dark:text-slate-300">{(s.total_present || 0) + (s.total_absent || 0) + (s.total_excused || 0)}</td>
+                          <td className="py-2.5 px-3 text-right text-sm text-indigo-500 dark:text-indigo-400">{s.new_members || 0}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Badge variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}>{rate}%</Badge>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${healthInfo.bg} ${healthInfo.color}`}>{hs}</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            {s.consistency_score != null ? (
+                              <Badge variant={s.consistency_score >= 70 ? 'success' : s.consistency_score >= 40 ? 'warning' : 'danger'}>{s.consistency_score}</Badge>
+                            ) : (
+                              <span className="text-xs text-slate-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {radarHealthData.length > 0 && (
+              <ChartCard title="Attendance Rate vs Health Score" subtitle="Comparing metrics across sections (up to 8)" height="h-[350px]" icon={BarChart3}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={radarHealthData}>
+                    <PolarGrid stroke="rgba(0,0,0,0.06)" />
+                    <PolarAngleAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                    <Radar name="Attendance Rate" dataKey="rate" stroke="#6366f1" fill="#6366f1" fillOpacity={0.2} strokeWidth={2} />
+                    <Radar name="Health Score" dataKey="health" stroke="#10b981" fill="#10b981" fillOpacity={0.15} strokeWidth={2} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </ChartCard>
+            )}
+          </>
+        ) : sectionRadarData.length > 0 ? (
+          <>
+            <ChartCard title="Section Performance Radar" subtitle="Attendance rate comparison across sections" height="h-[350px]" icon={Target}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={sectionRadarData}>
                   <PolarGrid stroke="rgba(0,0,0,0.06)" />
-                  <PolarAngleAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <PolarAngleAxis dataKey="section" tick={{ fill: '#64748b', fontSize: 11 }} />
                   <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                   <Radar name="Attendance Rate" dataKey="rate" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value) => [`${value}%`, 'Rate']} />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                 </RadarChart>
               </ResponsiveContainer>
             </ChartCard>
-          )}
 
-          {/* Section Rankings Table */}
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-500" />
+                Section Leaderboard
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100 dark:border-slate-700">
+                      <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rank</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Leader</th>
+                      <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Section</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Submissions</th>
+                      <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaders.slice(0, 10).map((l, i) => {
+                      const total = (l.stats?.present || 0) + (l.stats?.absent || 0) + (l.stats?.excused || 0);
+                      const rate = total > 0 ? Math.round(((l.stats?.present || 0) / total) * 100) : 0;
+                      return (
+                        <tr key={l.leader_id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer" onClick={() => onLeaderClick(l.leader_id)}>
+                          <td className="py-2.5 px-3">
+                            <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${
+                              i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                              i === 1 ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                              i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                              'text-slate-400 dark:text-slate-500'
+                            }`}>{i + 1}</span>
+                          </td>
+                          <td className="py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-slate-100">{l.leader_name}</td>
+                          <td className="py-2.5 px-3 text-sm text-slate-500 dark:text-slate-400">{l.section_name}</td>
+                          <td className="py-2.5 px-3 text-right text-sm text-slate-600 dark:text-slate-400">{l.submissions_count}</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Badge variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}>{rate}%</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
+              <Layers className="w-8 h-8 text-slate-300 dark:text-slate-500" />
+            </div>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No section data available</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Ensure sections have members and attendance records</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderLeadersTab = () => {
+    const leaderWithHealth = useMemo(() => {
+      return leaderRankData.map((l) => {
+        const rate = l.attendance_rate || 0;
+        const submission_rate = Math.min(100, ((l.submissions_count || 0) / 4) * 100);
+        const member_count = l.member_count || 0;
+        const leaderHealth = Math.round(rate * 0.5 + submission_rate * 0.3 + (member_count > 0 ? 20 : 0));
+        return { ...l, leaderHealth };
+      });
+    }, [leaderRankData]);
+
+    return (
+      <div className="space-y-6">
+        {leaderWithHealth.length > 0 && (
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-500" />
-              Section Rankings
+              <Users className="w-4 h-4 text-indigo-500" />
+              Leader Performance Rankings
             </h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-slate-100 dark:border-slate-700">
-                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rank</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Section</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Members</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Present</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Absent</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">New</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rate</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Consistency</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(sectionRankings.length ? sectionRankings : sectionComparison).map((s, i) => {
-                    const rate = s.attendance_rate || 0;
-                    return (
-                      <tr key={s.id || i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="py-2.5 px-3">
-                          <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${
-                            i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
-                            i === 1 ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
-                            i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                            'text-slate-400 dark:text-slate-500'
-                          }`}>{s.rank || i + 1}</span>
-                        </td>
-                        <td className="py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-slate-100">
-                          {s.name}
-                          {s.is_best && <Badge variant="success" className="ml-2">Best</Badge>}
-                          {s.is_lowest && <Badge variant="danger" className="ml-2">Lowest</Badge>}
-                        </td>
-                        <td className="py-2.5 px-3 text-right text-sm text-slate-600 dark:text-slate-400">{s.member_count || s.active_members || 0}</td>
-                        <td className="py-2.5 px-3 text-right text-sm text-emerald-600 dark:text-emerald-400 font-semibold">{s.total_present || 0}</td>
-                        <td className="py-2.5 px-3 text-right text-sm text-rose-500 dark:text-rose-400">{s.total_absent || 0}</td>
-                        <td className="py-2.5 px-3 text-right text-sm text-indigo-500 dark:text-indigo-400">{s.new_members || 0}</td>
-                        <td className="py-2.5 px-3 text-right">
-                          <Badge variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}>{rate}%</Badge>
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          {s.consistency_score != null ? (
-                            <Badge variant={s.consistency_score >= 70 ? 'success' : s.consistency_score >= 40 ? 'warning' : 'danger'}>{s.consistency_score}</Badge>
-                          ) : (
-                            <span className="text-xs text-slate-400">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {leaderWithHealth.map((l, i) => {
+                const healthInfo = getHealthLabel(l.leaderHealth);
+                return (
+                  <div key={l.leader_id || i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer" onClick={() => onLeaderClick(l.leader_id)}>
+                    <span className={`text-sm font-bold w-8 h-8 inline-flex items-center justify-center rounded-full shrink-0 ${
+                      i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                      i === 1 ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200' :
+                      i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                      'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+                    }`}>{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{l.leader_name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{l.section_name}</p>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${healthInfo.bg} ${healthInfo.color}`}>{healthInfo.label}</span>
+                          <span className={`text-xs font-bold ${healthInfo.color}`}>{l.leaderHealth}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{l.attendance_rate || 0}%</p>
+                      <p className="text-xs text-slate-400">{l.reporting_days || 0} days</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        </>
-      ) : sectionRadarData.length > 0 ? (
-        <>
-          <ChartCard title="Section Performance Radar" subtitle="Attendance rate comparison across sections" height="h-[350px]" icon={Target}>
+        )}
+
+        {sectionBarData.length > 0 && (
+          <ChartCard title="Leader Submission Breakdown" subtitle="Present vs Absent vs Excused per leader" height="h-[350px]" icon={BarChart3}>
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={sectionRadarData}>
-                <PolarGrid stroke="rgba(0,0,0,0.06)" />
-                <PolarAngleAxis dataKey="section" tick={{ fill: '#64748b', fontSize: 11 }} />
-                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                <Radar name="Attendance Rate" dataKey="rate" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
+              <BarChart data={sectionBarData} layout="vertical" margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(0,0,0,0.04)" />
+                <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <YAxis type="category" dataKey="fullName" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} width={80} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-              </RadarChart>
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+                <Bar dataKey="present" name="Present" fill="#10b981" radius={[0, 4, 4, 0]} stackId="a" />
+                <Bar dataKey="excused" name="Excused" fill="#f59e0b" radius={[0, 0, 0, 0]} stackId="a" />
+                <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[0, 4, 4, 0]} stackId="a" />
+              </BarChart>
             </ResponsiveContainer>
           </ChartCard>
-
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-500" />
-              Section Leaderboard
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-slate-100 dark:border-slate-700">
-                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rank</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Leader</th>
-                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Section</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Submissions</th>
-                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaders.slice(0, 10).map((l, i) => {
-                    const total = (l.stats?.present || 0) + (l.stats?.absent || 0) + (l.stats?.excused || 0);
-                    const rate = total > 0 ? Math.round(((l.stats?.present || 0) / total) * 100) : 0;
-                    return (
-                      <tr key={l.leader_id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer" onClick={() => onLeaderClick(l.leader_id)}>
-                        <td className="py-2.5 px-3">
-                          <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${
-                            i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
-                            i === 1 ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
-                            i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                            'text-slate-400 dark:text-slate-500'
-                          }`}>{i + 1}</span>
-                        </td>
-                        <td className="py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-slate-100">{l.leader_name}</td>
-                        <td className="py-2.5 px-3 text-sm text-slate-500 dark:text-slate-400">{l.section_name}</td>
-                        <td className="py-2.5 px-3 text-right text-sm text-slate-600 dark:text-slate-400">{l.submissions_count}</td>
-                        <td className="py-2.5 px-3 text-right">
-                          <Badge variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}>{rate}%</Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
-            <Layers className="w-8 h-8 text-slate-300 dark:text-slate-500" />
-          </div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No section data available</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Ensure sections have members and attendance records</p>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderLeadersTab = () => (
-    <div className="space-y-6">
-      {leaderRankData.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-            <Users className="w-4 h-4 text-indigo-500" />
-            Leader Performance Rankings
-          </h3>
-          <div className="space-y-2">
-            {leaderRankData.map((l, i) => (
-              <div key={l.leader_id || i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer" onClick={() => onLeaderClick(l.leader_id)}>
-                <span className={`text-sm font-bold w-8 h-8 inline-flex items-center justify-center rounded-full shrink-0 ${
-                  i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
-                  i === 1 ? 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200' :
-                  i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                  'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
-                }`}>{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{l.leader_name}</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">{l.section_name}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{l.attendance_rate || 0}%</p>
-                  <p className="text-xs text-slate-400">{l.reporting_days || 0} days</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {sectionBarData.length > 0 && (
-        <ChartCard title="Leader Submission Breakdown" subtitle="Present vs Absent vs Excused per leader" height="h-[350px]" icon={BarChart3}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={sectionBarData} layout="vertical" margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(0,0,0,0.04)" />
-              <XAxis type="number" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <YAxis type="category" dataKey="fullName" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} width={80} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
-              <Bar dataKey="present" name="Present" fill="#10b981" radius={[0, 4, 4, 0]} stackId="a" />
-              <Bar dataKey="excused" name="Excused" fill="#f59e0b" radius={[0, 0, 0, 0]} stackId="a" />
-              <Bar dataKey="absent" name="Absent" fill="#ef4444" radius={[0, 4, 4, 0]} stackId="a" />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
+  };
 
   const renderDepartmentsTab = () => (
     <div className="space-y-6">
@@ -1113,6 +1365,15 @@ const AttendanceReports = ({
               </div>
             </div>
           )}
+          {sectionComparison.length > 0 && sectionComparison[sectionComparison.length - 1]?.attendance_rate < 50 && (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-white dark:bg-slate-800 border border-rose-200/50 dark:border-rose-800/30">
+              <Heart className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{sectionComparison[sectionComparison.length - 1].name} critically low attendance</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">This section needs urgent attention and support.</p>
+              </div>
+            </div>
+          )}
           {(!analytics.anomalies?.length && unsubmitted === 0) && (
             <div className="flex items-start gap-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/30">
               <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
@@ -1255,6 +1516,112 @@ const AttendanceReports = ({
         </div>
       ) : (
         renderTabContent()
+      )}
+
+      {selectedSection && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setSelectedSection(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-slate-200/60 dark:border-slate-700">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{selectedSection.fullName || selectedSection.name || 'Section Detail'}</h3>
+                {selectedSection.healthScore != null && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-sm font-bold ${getHealthLabel(selectedSection.healthScore).color}`}>{selectedSection.healthScore}</span>
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${getHealthLabel(selectedSection.healthScore).bg} ${getHealthLabel(selectedSection.healthScore).color}`}>
+                      {getHealthLabel(selectedSection.healthScore).label}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setSelectedSection(null)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+              </button>
+            </div>
+            {selectedSection.healthScore != null && (
+              <div className="px-5 pt-4">
+                <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${selectedSection.healthScore}%`,
+                      background: selectedSection.healthScore >= 85 ? '#10b981' : selectedSection.healthScore >= 70 ? '#0ea5e9' : selectedSection.healthScore >= 50 ? '#f59e0b' : '#ef4444',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-center">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Members</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{selectedSection.members || 0}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-center">
+                <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mb-1">Present</p>
+                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{selectedSection.present || 0}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-900/20 text-center">
+                <p className="text-xs text-rose-600/80 dark:text-rose-400/80 mb-1">Absent</p>
+                <p className="text-lg font-bold text-rose-500 dark:text-rose-400">{selectedSection.absent || 0}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 text-center">
+                <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mb-1">Excused</p>
+                <p className="text-lg font-bold text-amber-500 dark:text-amber-400">{selectedSection.excused || 0}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-center">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Total Records</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{selectedSection.total || 0}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 text-center">
+                <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mb-1">Attendance Rate</p>
+                <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{selectedSection.rate || 0}%</p>
+              </div>
+              <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-900/20 text-center">
+                <p className="text-xs text-sky-600/80 dark:text-sky-400/80 mb-1">New Members</p>
+                <p className="text-lg font-bold text-sky-600 dark:text-sky-400">{selectedSection.newMembers || 0}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-center">
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Submission Days</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{selectedSection.submissionDays || 0}</p>
+              </div>
+            </div>
+            {selectedSection.total > 0 && (
+              <div className="px-5 pb-5">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wider">Attendance Composition</p>
+                <div className="h-4 rounded-full overflow-hidden flex">
+                  <div
+                    className="bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${Math.round((selectedSection.present / selectedSection.total) * 100)}%` }}
+                    title={`Present: ${Math.round((selectedSection.present / selectedSection.total) * 100)}%`}
+                  />
+                  <div
+                    className="bg-amber-500 transition-all duration-500"
+                    style={{ width: `${Math.round((selectedSection.excused / selectedSection.total) * 100)}%` }}
+                    title={`Excused: ${Math.round((selectedSection.excused / selectedSection.total) * 100)}%`}
+                  />
+                  <div
+                    className="bg-rose-500 transition-all duration-500"
+                    style={{ width: `${Math.round((selectedSection.absent / selectedSection.total) * 100)}%` }}
+                    title={`Absent: ${Math.round((selectedSection.absent / selectedSection.total) * 100)}%`}
+                  />
+                </div>
+                <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Present ({Math.round((selectedSection.present / selectedSection.total) * 100)}%)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Excused ({Math.round((selectedSection.excused / selectedSection.total) * 100)}%)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Absent ({Math.round((selectedSection.absent / selectedSection.total) * 100)}%)</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
