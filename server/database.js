@@ -1945,6 +1945,29 @@ const queries = {
       ? run('UPDATE users SET full_name = ?, member_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [full_name, member_id, userId])
       : run('UPDATE users SET full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [full_name, userId]),
 
+  // User Management queries (admin)
+  getAllUsers: () => all(`
+    SELECT u.id, u.username, u.role, u.full_name, u.profile_picture, u.totp_enabled,
+           u.member_id, u.created_at, u.updated_at, u.failed_login_attempts, u.locked_until,
+           l.id as leader_id, s.name as section_name
+    FROM users u
+    LEFT JOIN leaders l ON l.user_id = u.id
+    LEFT JOIN sections s ON l.section_id = s.id
+    ORDER BY u.role, u.full_name
+  `),
+  getUserById: (userId) => get(`
+    SELECT u.id, u.username, u.role, u.full_name, u.profile_picture, u.totp_enabled,
+           u.member_id, u.created_at, u.updated_at, l.id as leader_id, s.name as section_name
+    FROM users u
+    LEFT JOIN leaders l ON l.user_id = u.id
+    LEFT JOIN sections s ON l.section_id = s.id
+    WHERE u.id = ?
+  `, [userId]),
+  updateUserRole: (userId, role) =>
+    run('UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [role, userId]),
+  updateUserUsername: (userId, username) =>
+    run('UPDATE users SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [username, userId]),
+
   // Section queries
   getAllSections: () => all('SELECT * FROM sections ORDER BY name'),
   getSectionByName: (name) => get('SELECT * FROM sections WHERE name = ?', [name]),
@@ -2876,6 +2899,440 @@ const queries = {
       ELSE 4
     END
   `),
+
+  // ── Executive Dashboard ────────────────────────────────────────────────
+  getExecutiveDashboard: () => get(`
+    SELECT
+      (SELECT COUNT(*) FROM members WHERE is_active = 1 AND soft_deleted_at IS NULL) as total_members,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = date('now') AND status = 'present') as present_today,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = date('now') AND status = 'absent') as absent_today,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = date('now')) as total_today,
+      (SELECT COUNT(*) FROM members WHERE visitor_date IS NOT NULL AND visitor_date >= date('now', '-7 days')) as visitors_this_week,
+      (SELECT COUNT(*) FROM members WHERE visitor_date IS NOT NULL AND visitor_date >= date('now', '-30 days')) as visitors_this_month,
+      (SELECT COUNT(*) FROM attendance WHERE status = 'excused' AND date = date('now')) as excused_today
+  `),
+
+  getGrowthPercentages: () => get(`
+    SELECT
+      (SELECT ROUND(
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-7 days') THEN a.member_id END) AS REAL) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-14 days') AND a.date < date('now', '-7 days') THEN a.member_id END) AS REAL))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-14 days') AND a.date < date('now', '-7 days') THEN a.member_id END) AS REAL)) * 100, 1)
+      FROM attendance a) as weekly_growth,
+      (SELECT ROUND(
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-30 days') THEN a.member_id END) AS REAL) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-60 days') AND a.date < date('now', '-30 days') THEN a.member_id END) AS REAL))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-60 days') AND a.date < date('now', '-30 days') THEN a.member_id END) AS REAL)) * 100, 1)
+      FROM attendance a) as monthly_growth,
+      (SELECT ROUND(
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-365 days') THEN a.member_id END) AS REAL) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-730 days') AND a.date < date('now', '-365 days') THEN a.member_id END) AS REAL))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-730 days') AND a.date < date('now', '-365 days') THEN a.member_id END) AS REAL)) * 100, 1)
+      FROM attendance a) as annual_growth
+  `),
+
+  // ── Comparison Analytics ──────────────────────────────────────────────
+  getComparisonAnalytics: (period1Start, period1End, period2Start, period2End) => get(`
+    SELECT
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'present') as p1_present,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'present') as p2_present,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ?) as p1_total,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ?) as p2_total,
+      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date BETWEEN ? AND ?) as p1_rate,
+      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date BETWEEN ? AND ?) as p2_rate
+  `, [period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End]),
+
+  // ── Historical Stats ──────────────────────────────────────────────────
+  getHistoricalStats: (startDate, endDate) => get(`
+    SELECT
+      COUNT(DISTINCT date) as service_days,
+      COUNT(*) as total_records,
+      ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as avg_rate,
+      MAX(daily_present) as highest_attendance,
+      MIN(daily_present) as lowest_attendance
+    FROM (
+      SELECT date,
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as daily_present,
+        AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
+      FROM attendance
+      WHERE date BETWEEN ? AND ?
+      GROUP BY date
+    )
+  `, [startDate, endDate]),
+
+  getHistoricalDaily: (startDate, endDate) => all(`
+    SELECT
+      date,
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+      SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+      SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused,
+      ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as rate
+    FROM attendance
+    WHERE date BETWEEN ? AND ?
+    GROUP BY date
+    ORDER BY date
+  `, [startDate, endDate]),
+
+  // ── Enhanced Section Rankings ──────────────────────────────────────────
+  getSectionRankings: (days = 90) => all(`
+    SELECT
+      s.id,
+      s.name,
+      COUNT(DISTINCT m.id) as member_count,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= date('now', '-' || ? || ' days')) as new_members,
+      (SELECT MAX(daily_rate) FROM (
+        SELECT AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
+        FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
+        WHERE m2.section_id = s.id AND a2.date >= date('now', '-' || ? || ' days')
+        GROUP BY a2.date
+      )) as best_day_rate,
+      (SELECT MIN(daily_rate) FROM (
+        SELECT AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
+        FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
+        WHERE m2.section_id = s.id AND a2.date >= date('now', '-' || ? || ' days')
+        GROUP BY a2.date
+      )) as worst_day_rate
+    FROM sections s
+    LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    GROUP BY s.id, s.name
+    ORDER BY attendance_rate DESC
+  `, [days, days, days, days]),
+
+  // ── Head Leader Analytics ──────────────────────────────────────────────
+  getHeadLeaderAnalytics: (days = 90) => all(`
+    SELECT
+      l.id as leader_id,
+      u.full_name as leader_name,
+      s.name as section_name,
+      (SELECT COUNT(*) FROM leaders WHERE section_id = l.section_id AND is_head = 0 AND is_active = 1) as leaders_supervised,
+      (SELECT COUNT(*) FROM members WHERE section_id = l.section_id AND is_active = 1) as members_managed,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as overall_attendance,
+      (SELECT COUNT(DISTINCT sub.date) FROM submission_log sub WHERE sub.section_id = l.section_id AND sub.date >= date('now', '-' || ? || ' days')) as submissions_made
+    FROM leaders l
+    JOIN users u ON l.user_id = u.id
+    JOIN sections s ON l.section_id = s.id
+    LEFT JOIN members m ON m.section_id = l.section_id AND m.is_active = 1
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    WHERE l.is_head = 1 AND l.is_active = 1
+    GROUP BY l.id, u.full_name, s.name
+    ORDER BY overall_attendance DESC
+  `, [days, days]),
+
+  // ── Enhanced Leader Rankings ───────────────────────────────────────────
+  getLeaderRankings: (days = 90) => all(`
+    SELECT
+      l.id as leader_id,
+      u.full_name as leader_name,
+      s.name as section_name,
+      COUNT(DISTINCT m.id) as assigned_members,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+      (SELECT COUNT(DISTINCT a2.member_id) FROM attendance a2
+        JOIN members m2 ON a2.member_id = m2.id
+        WHERE m2.leader_id = l.id AND a2.date >= date('now', '-' || ? || ' days')) as unique_attendees,
+      (SELECT COUNT(DISTINCT sub.date) FROM submission_log sub
+        WHERE sub.leader_id = l.id AND sub.date >= date('now', '-' || ? || ' days')) as submission_count,
+      (SELECT COUNT(*) FROM members WHERE leader_id = l.id AND created_at >= date('now', '-' || ? || ' days')) as new_members
+    FROM leaders l
+    JOIN users u ON l.user_id = u.id
+    JOIN sections s ON l.section_id = s.id
+    LEFT JOIN members m ON m.leader_id = l.id AND m.is_active = 1
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    WHERE l.is_active = 1
+    GROUP BY l.id, u.full_name, s.name
+    ORDER BY attendance_rate DESC
+  `, [days, days, days, days]),
+
+  // ── Department Analytics ───────────────────────────────────────────────
+  getDepartmentAnalytics: (days = 90) => all(`
+    SELECT
+      d.id,
+      d.name,
+      COUNT(DISTINCT dm.member_id) as member_count,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent
+    FROM departments d
+    LEFT JOIN department_members dm ON dm.department_id = d.id
+    LEFT JOIN members m ON m.id = dm.member_id AND m.is_active = 1
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    WHERE d.is_active = 1
+    GROUP BY d.id, d.name
+    HAVING member_count > 0
+    ORDER BY attendance_rate DESC
+  `, [days]),
+
+  // ── Member Attendance Intelligence ─────────────────────────────────────
+  getMemberIntelligence: (days = 90) => all(`
+    SELECT
+      m.id,
+      m.full_name,
+      s.name as section_name,
+      l.full_name as leader_name,
+      m.gender,
+      m.age_group,
+      COUNT(a.id) as total_records,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as times_present,
+      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as times_absent,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+      MAX(CASE WHEN a.status = 'present' THEN a.date END) as last_attendance,
+      COUNT(DISTINCT a.date) as services_tracked
+    FROM members m
+    LEFT JOIN sections s ON m.section_id = s.id
+    LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
+    GROUP BY m.id, m.full_name, s.name, l.full_name, m.gender, m.age_group
+    ORDER BY attendance_rate DESC
+  `, [days]),
+
+  getMemberStreakDetails: (memberId) => get(`
+    SELECT
+      (SELECT COUNT(*) FROM (
+        SELECT date, status,
+          ROW_NUMBER() OVER (ORDER BY date DESC) as rn,
+          ROW_NUMBER() OVER (PARTITION BY status ORDER BY date DESC) as grp
+        FROM attendance WHERE member_id = ?
+        ORDER BY date DESC
+      ) WHERE status = 'present' AND rn = grp
+    ) as current_present_streak,
+    (SELECT COUNT(*) FROM (
+      SELECT date, status,
+        ROW_NUMBER() OVER (ORDER BY date DESC) as rn,
+        ROW_NUMBER() OVER (PARTITION BY status ORDER BY date DESC) as grp
+        FROM attendance WHERE member_id = ?
+        ORDER BY date DESC
+      ) WHERE status = 'absent' AND rn = grp
+    ) as current_absent_streak
+  `, [memberId, memberId]),
+
+  // ── Attendance Heat Map Data ───────────────────────────────────────────
+  getAttendanceHeatMap: (months = 6) => all(`
+    SELECT
+      date,
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+      ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as rate,
+      CAST(strftime('%w', date) AS INTEGER) as day_of_week,
+      CAST(strftime('%d', date) AS INTEGER) as day_of_month,
+      strftime('%Y-%m', date) as month
+    FROM attendance
+    WHERE date >= date('now', '-' || ? || ' months')
+    GROUP BY date
+    ORDER BY date
+  `, [months]),
+
+  getSectionHeatMap: (months = 6) => all(`
+    SELECT
+      s.name as section_name,
+      a.date,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as rate
+    FROM attendance a
+    JOIN members m ON a.member_id = m.id
+    JOIN sections s ON m.section_id = s.id
+    WHERE a.date >= date('now', '-' || ? || ' months')
+    GROUP BY s.name, a.date
+    ORDER BY a.date
+  `, [months]),
+
+  // ── Attendance Trends with Moving Average ─────────────────────────────
+  getAttendanceTrendsWithMA: (weeks = 26) => all(`
+    SELECT
+      date,
+      daily_present,
+      daily_total,
+      daily_rate,
+      ROUND(AVG(daily_rate) OVER (ORDER BY date ROWS BETWEEN 3 PRECEDING AND CURRENT ROW), 1) as ma_4week,
+      ROUND(AVG(daily_rate) OVER (ORDER BY date ROWS BETWEEN 7 PRECEDING AND CURRENT ROW), 1) as ma_8week
+    FROM (
+      SELECT
+        date,
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as daily_present,
+        COUNT(*) as daily_total,
+        ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as daily_rate
+      FROM attendance
+      WHERE date >= date('now', '-' || ? || ' weeks')
+      GROUP BY date
+    )
+    ORDER BY date
+  `, [weeks]),
+
+  // ── Risk Analysis ─────────────────────────────────────────────────────
+  getAttendanceRiskAnalysis: () => all(`
+    SELECT
+      m.id,
+      m.full_name,
+      s.name as section_name,
+      l.full_name as leader_name,
+      COALESCE(stats.attendance_rate, 0) as attendance_rate,
+      COALESCE(stats.total_present, 0) as total_present,
+      COALESCE(stats.total_services, 0) as total_services,
+      COALESCE(stats.last_present, 'Never') as last_present,
+      CASE
+        WHEN COALESCE(stats.attendance_rate, 0) >= 80 THEN 'Highly Active'
+        WHEN COALESCE(stats.attendance_rate, 0) >= 60 THEN 'Active'
+        WHEN COALESCE(stats.attendance_rate, 0) >= 40 THEN 'Moderately Active'
+        WHEN COALESCE(stats.attendance_rate, 0) >= 20 THEN 'At Risk'
+        ELSE 'Critical Follow-up Required'
+      END as risk_level
+    FROM members m
+    LEFT JOIN sections s ON m.section_id = s.id
+    LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN (
+      SELECT
+        member_id,
+        ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as total_present,
+        COUNT(*) as total_services,
+        MAX(CASE WHEN status = 'present' THEN date END) as last_present
+      FROM attendance
+      WHERE date >= date('now', '-90 days')
+      GROUP BY member_id
+    ) stats ON m.id = stats.member_id
+    WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
+    ORDER BY stats.attendance_rate DESC
+  `),
+
+  // ── Leader Workload ───────────────────────────────────────────────────
+  getLeaderWorkload: (days = 90) => all(`
+    SELECT
+      l.id as leader_id,
+      u.full_name as leader_name,
+      s.name as section_name,
+      COUNT(DISTINCT m.id) as assigned_members,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as members_present,
+      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as members_absent,
+      (SELECT COUNT(*) FROM absent_followups af
+        JOIN members m2 ON af.member_id = m2.id
+        WHERE m2.leader_id = l.id AND af.contacted = 0
+      ) as pending_followups,
+      (SELECT COUNT(*) FROM absent_followups af
+        JOIN members m2 ON af.member_id = m2.id
+        WHERE m2.leader_id = l.id AND af.contacted = 1
+      ) as completed_followups,
+      (SELECT COUNT(DISTINCT sub.date) FROM submission_log sub
+        WHERE sub.leader_id = l.id AND sub.date >= date('now', '-' || ? || ' days')) as submissions
+    FROM leaders l
+    JOIN users u ON l.user_id = u.id
+    JOIN sections s ON l.section_id = s.id
+    LEFT JOIN members m ON m.leader_id = l.id AND m.is_active = 1
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    WHERE l.is_active = 1
+    GROUP BY l.id, u.full_name, s.name
+    ORDER BY assigned_members DESC
+  `, [days, days]),
+
+  // ── Correlation Analytics ──────────────────────────────────────────────
+  getCorrelationAnalytics: (months = 6) => all(`
+    SELECT
+      strftime('%Y-%m', a.date) as month,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as attendance_count,
+      COALESCE(c.total_tithes, 0) as tithes,
+      COALESCE(c.total_offerings, 0) as offerings,
+      COALESCE(c.total_missions, 0) as missions,
+      COALESCE(c.total_other, 0) as other_contributions,
+      COALESCE(c.total_all, 0) as total_contributions,
+      COALESCE(v.visitor_count, 0) as visitors,
+      COALESCE(sw.souls_won, 0) as souls_won
+    FROM (
+      SELECT DISTINCT date FROM attendance WHERE date >= date('now', '-' || ? || ' months')
+    ) dates
+    LEFT JOIN attendance a ON a.date = dates.date
+    LEFT JOIN (
+      SELECT
+        strftime('%Y-%m', payment_date) as month,
+        SUM(CASE WHEN ct.name = 'Tithes' THEN amount ELSE 0 END) as total_tithes,
+        SUM(CASE WHEN ct.name = 'Offerings' THEN amount ELSE 0 END) as total_offerings,
+        SUM(CASE WHEN ct.name = 'Missions' THEN amount ELSE 0 END) as total_missions,
+        SUM(CASE WHEN ct.name NOT IN ('Tithes', 'Offerings', 'Missions') THEN amount ELSE 0 END) as total_other,
+        SUM(amount) as total_all
+      FROM contributions c
+      JOIN contribution_types ct ON ct.id = c.contribution_type_id
+      WHERE c.payment_date >= date('now', '-' || ? || ' months')
+      GROUP BY month
+    ) c ON strftime('%Y-%m', a.date) = c.month
+    LEFT JOIN (
+      SELECT strftime('%Y-%m', visitor_date) as month, COUNT(*) as visitor_count
+      FROM members WHERE visitor_date >= date('now', '-' || ? || ' months')
+      GROUP BY month
+    ) v ON strftime('%Y-%m', a.date) = v.month
+    LEFT JOIN (
+      SELECT strftime('%Y-%m', date_saved) as month, COUNT(*) as souls_won
+      FROM souls_won WHERE date_saved >= date('now', '-' || ? || ' months')
+      GROUP BY month
+    ) sw ON strftime('%Y-%m', a.date) = sw.month
+    GROUP BY month
+    ORDER BY month
+  `, [months, months, months, months]),
+
+  // ── Church Growth Index ───────────────────────────────────────────────
+  getChurchGrowthIndex: () => get(`
+    SELECT
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date >= date('now', '-30 days')) as current_active,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date >= date('now', '-60 days') AND date < date('now', '-30 days')) as previous_active,
+      (SELECT COUNT(*) FROM members WHERE is_active = 1 AND soft_deleted_at IS NULL) as total_members,
+      (SELECT COUNT(*) FROM leaders WHERE is_active = 1) as total_leaders,
+      (SELECT COUNT(*) FROM departments WHERE is_active = 1) as total_departments,
+      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date >= date('now', '-30 days')) as current_rate,
+      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date >= date('now', '-60 days') AND date < date('now', '-30 days')) as previous_rate,
+      (SELECT COUNT(DISTINCT sub.leader_id) FROM submission_log sub WHERE sub.date >= date('now', '-30 days')) as active_leaders,
+      (SELECT COUNT(*) FROM members WHERE visitor_date >= date('now', '-90 days')) as new_visitors_90d,
+      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= date('now', '-90 days')) as souls_won_90d
+  `),
+
+  // ── AI Insights Generation ────────────────────────────────────────────
+  getAIInsights: () => all(`
+    SELECT 'attendance_trend' as insight_type, 'section' as category, s.name as subject,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as current_value,
+      NULL as previous_value, NULL as change_pct
+    FROM sections s
+    JOIN members m ON m.section_id = s.id
+    JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-30 days')
+    GROUP BY s.id, s.name
+    ORDER BY current_value DESC
+  `),
+
+  getAtRiskMembers: () => all(`
+    SELECT m.id, m.full_name, s.name as section_name, l.full_name as leader_name,
+      l.id as leader_id,
+      COUNT(a.id) as total_services,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present_count
+    FROM members m
+    LEFT JOIN sections s ON m.section_id = s.id
+    LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-90 days')
+    WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
+    GROUP BY m.id, m.full_name, s.name, l.full_name, l.id
+    HAVING present_count < total_services * 0.2
+    ORDER BY present_count ASC
+  `),
+
+  getConsecutiveAbsentees: () => all(`
+    SELECT m.id, m.full_name, s.name as section_name, l.full_name as leader_name,
+      COUNT(*) as consecutive_absences
+    FROM (
+      SELECT member_id, date, status,
+        ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY date DESC) as rn,
+        ROW_NUMBER() OVER (PARTITION BY member_id, status ORDER BY date DESC) as grp
+      FROM attendance
+      WHERE date >= date('now', '-90 days')
+    ) ranked
+    JOIN members m ON ranked.member_id = m.id
+    LEFT JOIN sections s ON m.section_id = s.id
+    LEFT JOIN leaders l ON m.leader_id = l.id
+    WHERE ranked.status = 'absent' AND ranked.rn = ranked.grp
+    GROUP BY m.id, m.full_name, s.name, l.full_name
+    HAVING consecutive_absences >= 3
+    ORDER BY consecutive_absences DESC
+  `),
+
   createNotification: (userId, type, title, message, entityType = null, entityId = null) =>
     run('INSERT INTO notifications (user_id, type, title, message, entity_type, entity_id) VALUES (?, ?, ?, ?, ?, ?)',
       [userId, type, title, message, entityType, entityId])

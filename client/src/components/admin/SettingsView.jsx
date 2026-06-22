@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2 } from 'lucide-react';
+import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2, Users, UserPlus, Edit3, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import TwoFactorSetup from '../TwoFactorSetup';
 import Modal from '../ui/Modal';
 
-const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
+const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showMessage }) => {
   const { user, updateUser } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [profileName, setProfileName] = useState(user?.full_name || '');
@@ -29,10 +29,23 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
   const [members, setMembers] = useState([]);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
 
+  // User Management state
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [showCreateUser, setShowCreateUser] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(null);
+  const [userForm, setUserForm] = useState({ username: '', password: '', role: 'leader', full_name: '', section_id: '', phone: '', email: '' });
+  const [userSaving, setUserSaving] = useState(false);
+  const [userResetResult, setUserResetResult] = useState(null);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('all');
+
   useEffect(() => {
     load2FAStatus();
     loadHallOfFameSettings();
     loadMembers();
+    if (isAdmin) loadUsers();
   }, []);
 
   const loadMembers = async () => {
@@ -43,6 +56,95 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
       console.error('Failed to load members:', e);
     }
   };
+
+  const loadUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const res = await adminAPI.getUsers();
+      setUsers(res.data);
+    } catch (e) {
+      console.error('Failed to load users:', e);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!userForm.username || !userForm.password || !userForm.full_name) {
+      showMessage('Username, password, and full name are required');
+      return;
+    }
+    setUserSaving(true);
+    try {
+      const res = await adminAPI.createUser(userForm);
+      setUsers([...users, { ...res.data.user, leader_id: null, section_name: null }]);
+      setUserResetResult({ username: res.data.user.username, temp_password: res.data.temp_password });
+      setShowCreateUser(false);
+      setUserForm({ username: '', password: '', role: 'leader', full_name: '', section_id: '', phone: '', email: '' });
+      showMessage('User created successfully');
+      loadUsers();
+    } catch (e) {
+      showMessage(e.response?.data?.error || 'Failed to create user');
+    } finally {
+      setUserSaving(false);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    setUserSaving(true);
+    try {
+      await adminAPI.updateUser(editingUser.id, { role: editingUser.role, full_name: editingUser.full_name, username: editingUser.username });
+      setEditingUser(null);
+      showMessage('User updated successfully');
+      loadUsers();
+    } catch (e) {
+      showMessage(e.response?.data?.error || 'Failed to update user');
+    } finally {
+      setUserSaving(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deletingUser) return;
+    setUserSaving(true);
+    try {
+      await adminAPI.deleteUser(deletingUser.id);
+      setDeletingUser(null);
+      showMessage('User deleted successfully');
+      loadUsers();
+    } catch (e) {
+      showMessage(e.response?.data?.error || 'Failed to delete user');
+    } finally {
+      setUserSaving(false);
+    }
+  };
+
+  const handleResetUserPassword = async (userId) => {
+    try {
+      const res = await adminAPI.resetUserPassword(userId);
+      setUserResetResult({ username: res.data.username, temp_password: res.data.temp_password });
+      showMessage('Password reset successfully');
+    } catch (e) {
+      showMessage(e.response?.data?.error || 'Failed to reset password');
+    }
+  };
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = !userSearch || u.full_name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase());
+    const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const roleBadgeColor = {
+    admin: 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300',
+    leader: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    pastor: 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300',
+    evangelist: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+    accountant: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
+  };
+
+  const roleLabels = { admin: 'Administrator', leader: 'Section Leader', pastor: 'Pastor', evangelist: 'Evangelist Pastor', accountant: 'Accountant' };
 
   const loadHallOfFameSettings = async () => {
     try {
@@ -315,6 +417,155 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
       </div>
       )}
 
+      {/* User Management */}
+      {isAdmin && (
+      <div className="card p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Users className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+            User Management
+          </h3>
+          <button onClick={() => { setShowCreateUser(true); setUserForm({ username: '', password: '', role: 'leader', full_name: '', section_id: '', phone: '', email: '' }); }} className="btn-primary text-sm">
+            <UserPlus className="w-4 h-4" />
+            Add User
+          </button>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Manage system users and their roles. Create accounts for leaders, pastors, evangelists, and accountants.
+        </p>
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <input
+            type="text"
+            value={userSearch}
+            onChange={(e) => setUserSearch(e.target.value)}
+            placeholder="Search by name or username..."
+            className="input flex-1"
+          />
+          <select
+            value={userRoleFilter}
+            onChange={(e) => setUserRoleFilter(e.target.value)}
+            className="select w-full sm:w-40"
+          >
+            <option value="all">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="leader">Leader</option>
+            <option value="pastor">Pastor</option>
+            <option value="evangelist">Evangelist</option>
+            <option value="accountant">Accountant</option>
+          </select>
+          <button onClick={loadUsers} disabled={usersLoading} className="btn-secondary">
+            <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+
+        {/* User Reset Result */}
+        {userResetResult && (
+          <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">Credentials</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
+                <span className="text-sm text-slate-600 dark:text-slate-400">Username: <strong>{userResetResult.username}</strong></span>
+                <button onClick={() => copyToClipboard(userResetResult.username, 'user-username')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700">
+                  {copiedField === 'user-username' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
+                <span className="text-sm text-slate-600 dark:text-slate-400">Password: <strong>{userResetResult.temp_password}</strong></span>
+                <button onClick={() => copyToClipboard(userResetResult.temp_password, 'user-password')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700">
+                  {copiedField === 'user-password' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Share these credentials securely.</p>
+            <button onClick={() => setUserResetResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
+          </div>
+        )}
+
+        {/* Users Table */}
+        {usersLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+            <span className="ml-2 text-sm text-slate-500">Loading users...</span>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-8 text-sm text-slate-500 dark:text-slate-400">
+            No users found.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">User</th>
+                  <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">Role</th>
+                  <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden sm:table-cell">Section</th>
+                  <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden md:table-cell">Status</th>
+                  <th className="text-right py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((u) => (
+                  <tr key={u.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-3">
+                        {u.profile_picture ? (
+                          <img src={u.profile_picture} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
+                            {u.full_name?.charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-slate-900 dark:text-slate-100">{u.full_name}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">@{u.username}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeColor[u.role] || ''}`}>
+                        {roleLabels[u.role] || u.role}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-slate-600 dark:text-slate-400 hidden sm:table-cell">
+                      {u.section_name || '-'}
+                    </td>
+                    <td className="py-3 px-3 hidden md:table-cell">
+                      {u.locked_until ? (
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Locked</span>
+                      ) : u.totp_enabled ? (
+                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">2FA</span>
+                      ) : (
+                        <span className="text-xs text-slate-400">Active</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => handleResetUserPassword(u.id)} title="Reset Password" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600">
+                          <Key className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingUser({ ...u })} title="Edit User" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-primary-600">
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setDeletingUser(u)} title="Delete User" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-rose-600">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+          {filteredUsers.length} of {users.length} users shown
+        </div>
+      </div>
+      )}
+
       {/* CSV Import */}
       {isAdmin && (
       <div className="card overflow-hidden">
@@ -502,6 +753,149 @@ const SettingsView = ({ leaders, loadCoreData, loadLeaders, showMessage }) => {
                   <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Disabling...</span>
                 ) : 'Disable 2FA'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create User Modal */}
+      {showCreateUser && (
+        <div className="modal-overlay" onClick={() => setShowCreateUser(false)}>
+          <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+                  <UserPlus className="w-4.5 h-4.5 text-primary-500" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Create New User</h3>
+              </div>
+              <button onClick={() => setShowCreateUser(false)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="modal-body space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Full Name *</label>
+                  <input type="text" value={userForm.full_name} onChange={(e) => setUserForm({ ...userForm, full_name: e.target.value })} className="input w-full" placeholder="e.g. John Doe" />
+                </div>
+                <div>
+                  <label className="input-label">Username *</label>
+                  <input type="text" value={userForm.username} onChange={(e) => setUserForm({ ...userForm, username: e.target.value })} className="input w-full" placeholder="e.g. johndoe" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="input-label">Password *</label>
+                  <input type="text" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} className="input w-full" placeholder="Min 8 characters" />
+                </div>
+                <div>
+                  <label className="input-label">Role *</label>
+                  <select value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value })} className="select w-full">
+                    <option value="leader">Section Leader</option>
+                    <option value="admin">Administrator</option>
+                    <option value="pastor">Pastor</option>
+                    <option value="evangelist">Evangelist Pastor</option>
+                    <option value="accountant">Accountant</option>
+                  </select>
+                </div>
+              </div>
+              {userForm.role === 'leader' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="input-label">Section</label>
+                    <select value={userForm.section_id} onChange={(e) => setUserForm({ ...userForm, section_id: e.target.value })} className="select w-full">
+                      <option value="">Select section...</option>
+                      {sections.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="input-label">Phone</label>
+                    <input type="text" value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })} className="input w-full" placeholder="Optional" />
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowCreateUser(false)} className="btn-secondary">Cancel</button>
+              <button onClick={handleCreateUser} disabled={userSaving || !userForm.username || !userForm.password || !userForm.full_name} className="btn-primary">
+                {userSaving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Creating...</span> : 'Create User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <div className="modal-overlay" onClick={() => setEditingUser(null)}>
+          <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+                  <Edit3 className="w-4.5 h-4.5 text-primary-500" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit User</h3>
+              </div>
+              <button onClick={() => setEditingUser(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90" aria-label="Close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="modal-body space-y-4">
+              <div>
+                <label className="input-label">Full Name</label>
+                <input type="text" value={editingUser.full_name || ''} onChange={(e) => setEditingUser({ ...editingUser, full_name: e.target.value })} className="input w-full" />
+              </div>
+              <div>
+                <label className="input-label">Username</label>
+                <input type="text" value={editingUser.username || ''} onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })} className="input w-full" />
+              </div>
+              <div>
+                <label className="input-label">Role</label>
+                <select value={editingUser.role || 'leader'} onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })} className="select w-full">
+                  <option value="leader">Section Leader</option>
+                  <option value="admin">Administrator</option>
+                  <option value="pastor">Pastor</option>
+                  <option value="evangelist">Evangelist Pastor</option>
+                  <option value="accountant">Accountant</option>
+                </select>
+              </div>
+              <div className="text-xs text-slate-400 dark:text-slate-500">
+                User: @{editingUser.username} | Section: {editingUser.section_name || 'N/A'} | Created: {new Date(editingUser.created_at).toLocaleDateString()}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setEditingUser(null)} className="btn-secondary">Cancel</button>
+              <button onClick={handleUpdateUser} disabled={userSaving || !editingUser.full_name || !editingUser.username} className="btn-primary">
+                {userSaving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span> : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation */}
+      {deletingUser && (
+        <div className="modal-overlay" onClick={() => setDeletingUser(null)}>
+          <div className="modal-content max-w-sm text-center" onClick={(e) => e.stopPropagation()}>
+            <div className="p-8">
+              <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
+                <AlertTriangle className="w-7 h-7 text-rose-500" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Delete User?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+                This will permanently remove <strong className="text-slate-800 dark:text-slate-200">{deletingUser.full_name}</strong> (@{deletingUser.username}).
+                {deletingUser.role === 'leader' && <br />}
+                {deletingUser.role === 'leader' && <span className="text-rose-600 font-medium">This will also remove their leader profile.</span>}
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setDeletingUser(null)} className="btn-secondary flex-1">Cancel</button>
+                <button onClick={handleDeleteUser} disabled={userSaving} className="btn-danger flex-1">
+                  {userSaving ? 'Deleting...' : 'Delete User'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

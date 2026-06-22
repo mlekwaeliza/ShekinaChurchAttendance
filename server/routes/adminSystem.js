@@ -1,6 +1,8 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { queries, db } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
 const { yearEquals, weekEquals } = require('../utils/sqlDialect');
@@ -298,6 +300,146 @@ router.delete('/backups/:filename', requireAdmin, async (req, res) => {
     res.json({ message: 'Backup deleted successfully' });
   } catch (error) {
     res.status(404).json({ error: error.message });
+  }
+});
+
+// --- User Management ---
+router.get('/users', async (req, res) => {
+  try {
+    const users = await queries.getAllUsers();
+    res.json(users);
+  } catch (error) {
+    console.error('Fetch users error:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+router.post('/users', async (req, res) => {
+  try {
+    const { username, password, role, full_name, section_id, phone, email } = req.body;
+
+    if (!username || !password || !role || !full_name) {
+      return res.status(400).json({ error: 'Username, password, role, and full name are required' });
+    }
+
+    const validRoles = ['admin', 'leader', 'pastor', 'evangelist', 'accountant'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const existingUser = await queries.findUserByUsername(username);
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+    const result = await queries.createUser(username, password_hash, role, full_name);
+    const userId = result.lastID;
+
+    if (role === 'leader' && section_id) {
+      const leaderPhone = phone || null;
+      const leaderEmail = email || null;
+      await queries.createLeader(userId, parseInt(section_id, 10), leaderPhone, leaderEmail, 0);
+    }
+
+    const temp_password = password;
+    res.status(201).json({
+      message: 'User created successfully',
+      user: { id: userId, username, role, full_name },
+      temp_password
+    });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+router.put('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role, full_name, username } = req.body;
+
+    const user = await queries.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (role) {
+      const validRoles = ['admin', 'leader', 'pastor', 'evangelist', 'accountant'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+      }
+      await queries.updateUserRole(id, role);
+    }
+
+    if (full_name) {
+      await queries.updateUserFullName(full_name, id);
+    }
+
+    if (username && username !== user.username) {
+      const existing = await queries.findUserByUsername(username);
+      if (existing && existing.id !== Number(id)) {
+        return res.status(400).json({ error: 'Username already taken' });
+      }
+      await queries.updateUserUsername(id, username);
+    }
+
+    const updated = await queries.getUserById(id);
+    res.json({ message: 'User updated', user: updated });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+router.post('/users/:id/reset-password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await queries.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const temp_password = crypto.randomBytes(8).toString('base64url').slice(0, 12);
+    const password_hash = await bcrypt.hash(temp_password, 10);
+    await queries.updateUserPassword(password_hash, id);
+
+    res.json({
+      message: 'Password reset successfully',
+      username: user.username,
+      temp_password
+    });
+  } catch (error) {
+    console.error('Reset user password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await queries.getUserById(id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.role === 'admin') {
+      const users = await queries.getAllUsers();
+      const adminCount = users.filter(u => u.role === 'admin').length;
+      if (adminCount <= 1) {
+        return res.status(400).json({ error: 'Cannot delete the last admin user' });
+      }
+    }
+
+    await queries.deleteUserAndCascade(id);
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 

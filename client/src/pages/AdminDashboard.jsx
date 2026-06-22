@@ -291,6 +291,7 @@ const AdminDashboard = () => {
         return (
           <SettingsView
             leaders={data.leaders}
+            sections={data.sections}
             loadCoreData={data.loadCoreData}
             loadLeaders={data.loadLeaders}
             showMessage={data.showMessage}

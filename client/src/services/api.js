@@ -185,6 +185,12 @@ export const adminAPI = {
   removeDepartmentMember: (id, memberId) => api.delete(`/admin/departments/${id}/members/${memberId}`),
   getDepartmentHistory: (id) => api.get(`/admin/departments/${id}/history`),
   getMemberDepartments: (memberId) => api.get(`/admin/members/${memberId}/departments`),
+  // User Management
+  getUsers: () => api.get('/admin/users'),
+  createUser: (data) => api.post('/admin/users', data),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  resetUserPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
 };
 
 // Shared church calendar API
@@ -273,6 +279,21 @@ export const analyticsAPI = {
   getMonthlyTrends: (months) => api.get('/analytics/monthly-trends', { params: { months } }),
   getEvangelismFunnel: () => api.get('/analytics/evangelism-funnel'),
   getNewMemberFunnel: () => api.get('/analytics/new-member-funnel'),
+  getExecutiveDashboard: () => api.get('/analytics/executive-dashboard'),
+  getComparison: (params) => api.get('/analytics/comparison', { params }),
+  getHistorical: (params) => api.get('/analytics/historical', { params }),
+  getSectionRankings: (days) => api.get('/analytics/section-rankings', { params: { days } }),
+  getHeadLeaderAnalytics: (days) => api.get('/analytics/head-leader-analytics', { params: { days } }),
+  getLeaderRankings: (days) => api.get('/analytics/leader-rankings', { params: { days } }),
+  getDepartments: (days) => api.get('/analytics/departments', { params: { days } }),
+  getMemberIntelligence: (days) => api.get('/analytics/member-intelligence', { params: { days } }),
+  getHeatmap: (months) => api.get('/analytics/heatmap', { params: { months } }),
+  getTrendsMA: (weeks) => api.get('/analytics/trends-ma', { params: { weeks } }),
+  getRiskAnalysis: () => api.get('/analytics/risk-analysis'),
+  getLeaderWorkload: (days) => api.get('/analytics/leader-workload', { params: { days } }),
+  getCorrelations: (months) => api.get('/analytics/correlations', { params: { months } }),
+  getChurchGrowthIndex: () => api.get('/analytics/church-growth-index'),
+  getAIInsights: () => api.get('/analytics/ai-insights'),
 };
 
 // New Member Leader API
