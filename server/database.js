@@ -12,7 +12,17 @@ const {
   likeEscapePattern,
   likeClause,
   likeClauseCaseInsensitive,
-  upsertAttendanceSql
+  upsertAttendanceSql,
+  todayDate,
+  daysAgo,
+  monthsAgoDate,
+  weeksAgo,
+  dayOfWeek,
+  dayOfMonth,
+  yearMonth,
+  yearMonthFirst,
+  yearOnly,
+  monthOnly,
 } = require('./utils/sqlDialect');
 
 const usePostgres = String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
@@ -2777,7 +2787,7 @@ const queries = {
       SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
       SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
-      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= date('now', '-' || ? || ' days')) as new_members,
+      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo()}) as new_members,
       (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as active_members,
       (SELECT MAX(date) FROM attendance a2
         JOIN members m2 ON a2.member_id = m2.id
@@ -2785,7 +2795,7 @@ const queries = {
     FROM sections s
     LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
     LEFT JOIN attendance a ON a.member_id = m.id
-      AND a.date >= date('now', '-' || ? || ' days')
+      AND a.date >= ${daysAgo()}
     GROUP BY s.id, s.name
     ORDER BY attendance_rate DESC
   `, [days, days]),
@@ -2803,7 +2813,7 @@ const queries = {
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate
     FROM service_types st
     LEFT JOIN attendance a ON a.service_type_id = st.id
-      AND a.date >= date('now', '-' || ? || ' days')
+      AND a.date >= ${daysAgo()}
     GROUP BY st.id, st.name
     HAVING total_records > 0
     ORDER BY attendance_rate DESC
@@ -2812,7 +2822,7 @@ const queries = {
   // ── Attendance by Day-of-Week Pattern ────────────────────────────────────
   getAttendanceDayPatterns: (days = 180) => all(`
     SELECT
-      CASE strftime('%w', a.date)
+      CASE ${dayOfWeek('a.date')}
         WHEN '0' THEN 'Sunday'
         WHEN '1' THEN 'Monday'
         WHEN '2' THEN 'Tuesday'
@@ -2821,13 +2831,13 @@ const queries = {
         WHEN '5' THEN 'Friday'
         WHEN '6' THEN 'Saturday'
       END as day_name,
-      CAST(strftime('%w', a.date) AS INTEGER) as day_num,
+      ${dayOfWeek('a.date')} as day_num,
       COUNT(DISTINCT a.date) as service_count,
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as avg_rate,
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * COUNT(DISTINCT m.id), 0) as avg_present
     FROM attendance a
     JOIN members m ON a.member_id = m.id
-    WHERE a.date >= date('now', '-' || ? || ' days')
+    WHERE a.date >= ${daysAgo()}
     GROUP BY day_num, day_name
     ORDER BY day_num
   `, [days]),
@@ -2835,25 +2845,25 @@ const queries = {
   // ── Monthly Attendance + Contributions Combined Trend ────────────────────
   getMonthlyAttendanceContribTrends: (months = 12) => all(`
     SELECT
-      strftime('%Y-%m', a.date) as month,
+      ${yearMonth('a.date')} as month,
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
       SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
       COUNT(*) as total_members
     FROM attendance a
-    WHERE a.date >= date('now', '-' || ? || ' months')
+    WHERE a.date >= ${monthsAgoDate()}
     GROUP BY month
     ORDER BY month
   `, [months]),
 
   getMonthlyContributionTrends: (months = 12) => all(`
     SELECT
-      strftime('%Y-%m', payment_date) as month,
+      ${yearMonth('payment_date')} as month,
       ct.name as type_name,
       SUM(c.amount) as total_amount,
       COUNT(*) as transaction_count
     FROM contributions c
     JOIN contribution_types ct ON ct.id = c.contribution_type_id
-    WHERE c.payment_date >= date('now', '-' || ? || ' months')
+    WHERE c.payment_date >= ${monthsAgoDate()}
     GROUP BY month, ct.name
     ORDER BY month
   `, [months]),
@@ -2861,7 +2871,7 @@ const queries = {
   // ── Monthly Attendance by Section (for trend comparison) ──────────────────
   getMonthlySectionTrends: (months = 6) => all(`
     SELECT
-      strftime('%Y-%m', a.date) as month,
+      ${yearMonth('a.date')} as month,
       s.name as section_name,
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
       COUNT(DISTINCT a.date) as service_days,
@@ -2869,7 +2879,7 @@ const queries = {
     FROM attendance a
     JOIN members m ON a.member_id = m.id
     JOIN sections s ON s.id = m.section_id
-    WHERE a.date >= date('now', '-' || ? || ' months')
+    WHERE a.date >= ${monthsAgoDate()}
     GROUP BY month, s.name
     ORDER BY month
   `, [months]),
@@ -2904,30 +2914,30 @@ const queries = {
   getExecutiveDashboard: () => get(`
     SELECT
       (SELECT COUNT(*) FROM members WHERE is_active = 1 AND soft_deleted_at IS NULL) as total_members,
-      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = date('now') AND status = 'present') as present_today,
-      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = date('now') AND status = 'absent') as absent_today,
-      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = date('now')) as total_today,
-      (SELECT COUNT(*) FROM members WHERE visitor_date IS NOT NULL AND visitor_date >= date('now', '-7 days')) as visitors_this_week,
-      (SELECT COUNT(*) FROM members WHERE visitor_date IS NOT NULL AND visitor_date >= date('now', '-30 days')) as visitors_this_month,
-      (SELECT COUNT(*) FROM attendance WHERE status = 'excused' AND date = date('now')) as excused_today
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = ${todayDate()} AND status = 'present') as present_today,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = ${todayDate()} AND status = 'absent') as absent_today,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date = ${todayDate()}) as total_today,
+      (SELECT COUNT(*) FROM members WHERE visitor_date IS NOT NULL AND visitor_date >= ${daysAgo(7)}) as visitors_this_week,
+      (SELECT COUNT(*) FROM members WHERE visitor_date IS NOT NULL AND visitor_date >= ${daysAgo(30)}) as visitors_this_month,
+      (SELECT COUNT(*) FROM attendance WHERE status = 'excused' AND date = ${todayDate()}) as excused_today
   `),
 
   getGrowthPercentages: () => get(`
     SELECT
       (SELECT ROUND(
-        (CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-7 days') THEN a.member_id END) AS REAL) -
-         CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-14 days') AND a.date < date('now', '-7 days') THEN a.member_id END) AS REAL))
-        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-14 days') AND a.date < date('now', '-7 days') THEN a.member_id END) AS REAL)) * 100, 1)
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(7)} THEN a.member_id END) AS REAL) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(14)} AND a.date < ${daysAgo(7)} THEN a.member_id END) AS REAL))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(14)} AND a.date < ${daysAgo(7)} THEN a.member_id END) AS REAL)) * 100, 1)
       FROM attendance a) as weekly_growth,
       (SELECT ROUND(
-        (CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-30 days') THEN a.member_id END) AS REAL) -
-         CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-60 days') AND a.date < date('now', '-30 days') THEN a.member_id END) AS REAL))
-        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-60 days') AND a.date < date('now', '-30 days') THEN a.member_id END) AS REAL)) * 100, 1)
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(30)} THEN a.member_id END) AS REAL) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(60)} AND a.date < ${daysAgo(30)} THEN a.member_id END) AS REAL))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(60)} AND a.date < ${daysAgo(30)} THEN a.member_id END) AS REAL)) * 100, 1)
       FROM attendance a) as monthly_growth,
       (SELECT ROUND(
-        (CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-365 days') THEN a.member_id END) AS REAL) -
-         CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-730 days') AND a.date < date('now', '-365 days') THEN a.member_id END) AS REAL))
-        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= date('now', '-730 days') AND a.date < date('now', '-365 days') THEN a.member_id END) AS REAL)) * 100, 1)
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(365)} THEN a.member_id END) AS REAL) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(730)} AND a.date < ${daysAgo(365)} THEN a.member_id END) AS REAL))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(730)} AND a.date < ${daysAgo(365)} THEN a.member_id END) AS REAL)) * 100, 1)
       FROM attendance a) as annual_growth
   `),
 
@@ -2985,22 +2995,22 @@ const queries = {
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
       SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
       SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
-      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= date('now', '-' || ? || ' days')) as new_members,
+      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo()}) as new_members,
       (SELECT MAX(daily_rate) FROM (
         SELECT AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
         FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
-        WHERE m2.section_id = s.id AND a2.date >= date('now', '-' || ? || ' days')
+        WHERE m2.section_id = s.id AND a2.date >= ${daysAgo()}
         GROUP BY a2.date
       )) as best_day_rate,
       (SELECT MIN(daily_rate) FROM (
         SELECT AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
         FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
-        WHERE m2.section_id = s.id AND a2.date >= date('now', '-' || ? || ' days')
+        WHERE m2.section_id = s.id AND a2.date >= ${daysAgo()}
         GROUP BY a2.date
       )) as worst_day_rate
     FROM sections s
     LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
     GROUP BY s.id, s.name
     ORDER BY attendance_rate DESC
   `, [days, days, days, days]),
@@ -3014,12 +3024,12 @@ const queries = {
       (SELECT COUNT(*) FROM leaders WHERE section_id = l.section_id AND is_head = 0 AND is_active = 1) as leaders_supervised,
       (SELECT COUNT(*) FROM members WHERE section_id = l.section_id AND is_active = 1) as members_managed,
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as overall_attendance,
-      (SELECT COUNT(DISTINCT sub.date) FROM submission_log sub WHERE sub.section_id = l.section_id AND sub.date >= date('now', '-' || ? || ' days')) as submissions_made
+      (SELECT COUNT(DISTINCT sub.date) FROM submission_log sub WHERE sub.section_id = l.section_id AND sub.date >= ${daysAgo()}) as submissions_made
     FROM leaders l
     JOIN users u ON l.user_id = u.id
     JOIN sections s ON l.section_id = s.id
     LEFT JOIN members m ON m.section_id = l.section_id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
     WHERE l.is_head = 1 AND l.is_active = 1
     GROUP BY l.id, u.full_name, s.name
     ORDER BY overall_attendance DESC
@@ -3035,15 +3045,15 @@ const queries = {
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
       (SELECT COUNT(DISTINCT a2.member_id) FROM attendance a2
         JOIN members m2 ON a2.member_id = m2.id
-        WHERE m2.leader_id = l.id AND a2.date >= date('now', '-' || ? || ' days')) as unique_attendees,
+        WHERE m2.leader_id = l.id AND a2.date >= ${daysAgo()}) as unique_attendees,
       (SELECT COUNT(DISTINCT sub.date) FROM submission_log sub
-        WHERE sub.leader_id = l.id AND sub.date >= date('now', '-' || ? || ' days')) as submission_count,
-      (SELECT COUNT(*) FROM members WHERE leader_id = l.id AND created_at >= date('now', '-' || ? || ' days')) as new_members
+        WHERE sub.leader_id = l.id AND sub.date >= ${daysAgo()}) as submission_count,
+      (SELECT COUNT(*) FROM members WHERE leader_id = l.id AND created_at >= ${daysAgo()}) as new_members
     FROM leaders l
     JOIN users u ON l.user_id = u.id
     JOIN sections s ON l.section_id = s.id
     LEFT JOIN members m ON m.leader_id = l.id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
     WHERE l.is_active = 1
     GROUP BY l.id, u.full_name, s.name
     ORDER BY attendance_rate DESC
@@ -3061,7 +3071,7 @@ const queries = {
     FROM departments d
     LEFT JOIN department_members dm ON dm.department_id = d.id
     LEFT JOIN members m ON m.id = dm.member_id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
     WHERE d.is_active = 1
     GROUP BY d.id, d.name
     HAVING member_count > 0
@@ -3086,7 +3096,7 @@ const queries = {
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
     WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
     GROUP BY m.id, m.full_name, s.name, l.full_name, m.gender, m.age_group
     ORDER BY attendance_rate DESC
@@ -3119,11 +3129,11 @@ const queries = {
       COUNT(*) as total,
       SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
       ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as rate,
-      CAST(strftime('%w', date) AS INTEGER) as day_of_week,
-      CAST(strftime('%d', date) AS INTEGER) as day_of_month,
-      strftime('%Y-%m', date) as month
+      ${dayOfWeek('date')} as day_of_week,
+      ${dayOfMonth('date')} as day_of_month,
+      ${yearMonth('date')} as month
     FROM attendance
-    WHERE date >= date('now', '-' || ? || ' months')
+    WHERE date >= ${monthsAgoDate()}
     GROUP BY date
     ORDER BY date
   `, [months]),
@@ -3136,7 +3146,7 @@ const queries = {
     FROM attendance a
     JOIN members m ON a.member_id = m.id
     JOIN sections s ON m.section_id = s.id
-    WHERE a.date >= date('now', '-' || ? || ' months')
+    WHERE a.date >= ${monthsAgoDate()}
     GROUP BY s.name, a.date
     ORDER BY a.date
   `, [months]),
@@ -3157,7 +3167,7 @@ const queries = {
         COUNT(*) as daily_total,
         ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as daily_rate
       FROM attendance
-      WHERE date >= date('now', '-' || ? || ' weeks')
+      WHERE date >= ${weeksAgo()}
       GROUP BY date
     )
     ORDER BY date
@@ -3173,7 +3183,7 @@ const queries = {
       COALESCE(stats.attendance_rate, 0) as attendance_rate,
       COALESCE(stats.total_present, 0) as total_present,
       COALESCE(stats.total_services, 0) as total_services,
-      COALESCE(stats.last_present, 'Never') as last_present,
+      COALESCE(CAST(stats.last_present AS TEXT), 'Never') as last_present,
       CASE
         WHEN COALESCE(stats.attendance_rate, 0) >= 80 THEN 'Highly Active'
         WHEN COALESCE(stats.attendance_rate, 0) >= 60 THEN 'Active'
@@ -3192,7 +3202,7 @@ const queries = {
         COUNT(*) as total_services,
         MAX(CASE WHEN status = 'present' THEN date END) as last_present
       FROM attendance
-      WHERE date >= date('now', '-90 days')
+      WHERE date >= ${daysAgo(90)}
       GROUP BY member_id
     ) stats ON m.id = stats.member_id
     WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
@@ -3217,12 +3227,12 @@ const queries = {
         WHERE m2.leader_id = l.id AND af.contacted = 1
       ) as completed_followups,
       (SELECT COUNT(DISTINCT sub.date) FROM submission_log sub
-        WHERE sub.leader_id = l.id AND sub.date >= date('now', '-' || ? || ' days')) as submissions
+        WHERE sub.leader_id = l.id AND sub.date >= ${daysAgo()}) as submissions
     FROM leaders l
     JOIN users u ON l.user_id = u.id
     JOIN sections s ON l.section_id = s.id
     LEFT JOIN members m ON m.leader_id = l.id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-' || ? || ' days')
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
     WHERE l.is_active = 1
     GROUP BY l.id, u.full_name, s.name
     ORDER BY assigned_members DESC
@@ -3231,7 +3241,7 @@ const queries = {
   // ── Correlation Analytics ──────────────────────────────────────────────
   getCorrelationAnalytics: (months = 6) => all(`
     SELECT
-      strftime('%Y-%m', a.date) as month,
+      ${yearMonth('a.date')} as month,
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
       SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as attendance_count,
       COALESCE(c.total_tithes, 0) as tithes,
@@ -3242,12 +3252,12 @@ const queries = {
       COALESCE(v.visitor_count, 0) as visitors,
       COALESCE(sw.souls_won, 0) as souls_won
     FROM (
-      SELECT DISTINCT date FROM attendance WHERE date >= date('now', '-' || ? || ' months')
+      SELECT DISTINCT date FROM attendance WHERE date >= ${monthsAgoDate()}
     ) dates
     LEFT JOIN attendance a ON a.date = dates.date
     LEFT JOIN (
       SELECT
-        strftime('%Y-%m', payment_date) as month,
+        ${yearMonth('payment_date')} as month,
         SUM(CASE WHEN ct.name = 'Tithes' THEN amount ELSE 0 END) as total_tithes,
         SUM(CASE WHEN ct.name = 'Offerings' THEN amount ELSE 0 END) as total_offerings,
         SUM(CASE WHEN ct.name = 'Missions' THEN amount ELSE 0 END) as total_missions,
@@ -3255,19 +3265,19 @@ const queries = {
         SUM(amount) as total_all
       FROM contributions c
       JOIN contribution_types ct ON ct.id = c.contribution_type_id
-      WHERE c.payment_date >= date('now', '-' || ? || ' months')
+      WHERE c.payment_date >= ${monthsAgoDate()}
       GROUP BY month
-    ) c ON strftime('%Y-%m', a.date) = c.month
+    ) c ON ${yearMonth('a.date')} = c.month
     LEFT JOIN (
-      SELECT strftime('%Y-%m', visitor_date) as month, COUNT(*) as visitor_count
-      FROM members WHERE visitor_date >= date('now', '-' || ? || ' months')
+      SELECT ${yearMonth('visitor_date')} as month, COUNT(*) as visitor_count
+      FROM members WHERE visitor_date >= ${monthsAgoDate()}
       GROUP BY month
-    ) v ON strftime('%Y-%m', a.date) = v.month
+    ) v ON ${yearMonth('a.date')} = v.month
     LEFT JOIN (
-      SELECT strftime('%Y-%m', date_saved) as month, COUNT(*) as souls_won
-      FROM souls_won WHERE date_saved >= date('now', '-' || ? || ' months')
+      SELECT ${yearMonth('date_saved')} as month, COUNT(*) as souls_won
+      FROM souls_won WHERE date_saved >= ${monthsAgoDate()}
       GROUP BY month
-    ) sw ON strftime('%Y-%m', a.date) = sw.month
+    ) sw ON ${yearMonth('a.date')} = sw.month
     GROUP BY month
     ORDER BY month
   `, [months, months, months, months]),
@@ -3275,16 +3285,16 @@ const queries = {
   // ── Church Growth Index ───────────────────────────────────────────────
   getChurchGrowthIndex: () => get(`
     SELECT
-      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date >= date('now', '-30 days')) as current_active,
-      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date >= date('now', '-60 days') AND date < date('now', '-30 days')) as previous_active,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date >= ${daysAgo(30)}) as current_active,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date >= ${daysAgo(60)} AND date < ${daysAgo(30)}) as previous_active,
       (SELECT COUNT(*) FROM members WHERE is_active = 1 AND soft_deleted_at IS NULL) as total_members,
       (SELECT COUNT(*) FROM leaders WHERE is_active = 1) as total_leaders,
       (SELECT COUNT(*) FROM departments WHERE is_active = 1) as total_departments,
-      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date >= date('now', '-30 days')) as current_rate,
-      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date >= date('now', '-60 days') AND date < date('now', '-30 days')) as previous_rate,
-      (SELECT COUNT(DISTINCT sub.leader_id) FROM submission_log sub WHERE sub.date >= date('now', '-30 days')) as active_leaders,
-      (SELECT COUNT(*) FROM members WHERE visitor_date >= date('now', '-90 days')) as new_visitors_90d,
-      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= date('now', '-90 days')) as souls_won_90d
+      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date >= ${daysAgo(30)}) as current_rate,
+      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date >= ${daysAgo(60)} AND date < ${daysAgo(30)}) as previous_rate,
+      (SELECT COUNT(DISTINCT sub.leader_id) FROM submission_log sub WHERE sub.date >= ${daysAgo(30)}) as active_leaders,
+      (SELECT COUNT(*) FROM members WHERE visitor_date >= ${daysAgo(90)}) as new_visitors_90d,
+      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= ${daysAgo(90)}) as souls_won_90d
   `),
 
   // ── AI Insights Generation ────────────────────────────────────────────
@@ -3294,7 +3304,7 @@ const queries = {
       NULL as previous_value, NULL as change_pct
     FROM sections s
     JOIN members m ON m.section_id = s.id
-    JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-30 days')
+    JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo(30)}
     GROUP BY s.id, s.name
     ORDER BY current_value DESC
   `),
@@ -3307,7 +3317,7 @@ const queries = {
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= date('now', '-90 days')
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo(90)}
     WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
     GROUP BY m.id, m.full_name, s.name, l.full_name, l.id
     HAVING present_count < total_services * 0.2
@@ -3322,7 +3332,7 @@ const queries = {
         ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY date DESC) as rn,
         ROW_NUMBER() OVER (PARTITION BY member_id, status ORDER BY date DESC) as grp
       FROM attendance
-      WHERE date >= date('now', '-90 days')
+      WHERE date >= ${daysAgo(90)}
     ) ranked
     JOIN members m ON ranked.member_id = m.id
     LEFT JOIN sections s ON m.section_id = s.id
@@ -4009,7 +4019,7 @@ const queries = {
     WHERE date_joined >= $1 AND date_joined <= $2 AND is_active = 1
     GROUP BY month ORDER BY month
   ` : `
-    SELECT strftime('%Y-%m-01', date_joined) as month, COUNT(*) as count
+    SELECT ${yearMonthFirst('date_joined')} as month, COUNT(*) as count
     FROM new_members
     WHERE date_joined >= ? AND date_joined <= ? AND is_active = 1
     GROUP BY month ORDER BY month
@@ -4025,12 +4035,12 @@ const queries = {
     GROUP BY month ORDER BY month
   ` : `
     SELECT
-      strftime('%Y-%m-01', date_joined) as month,
+      ${yearMonthFirst('date_joined')} as month,
       SUM(CASE WHEN status = 'probation' THEN 1 ELSE 0 END) as probation,
       SUM(CASE WHEN status = 'graduated' THEN 1 ELSE 0 END) as graduated,
       SUM(CASE WHEN status = 'permanent' THEN 1 ELSE 0 END) as permanent
     FROM new_members
-    WHERE strftime('%Y', date_joined) = ?
+    WHERE ${yearOnly('date_joined')} = ?
     GROUP BY month ORDER BY month
   `, [year]),
   // Section with least members for graduation suggestion
@@ -4172,9 +4182,9 @@ const queries = {
     WHERE date_saved >= CURRENT_DATE - INTERVAL '12 months'
     GROUP BY month ORDER BY month ASC
   ` : `
-    SELECT strftime('%Y-%m', date_saved) as month, COUNT(*) as count
+    SELECT ${yearMonth('date_saved')} as month, COUNT(*) as count
     FROM souls_won
-    WHERE date_saved >= date('now', '-12 months')
+    WHERE date_saved >= ${monthsAgoDate(12)}
     GROUP BY month ORDER BY month ASC
   `),
   getConversionFunnel: async () => {
@@ -4193,11 +4203,11 @@ const queries = {
     WHERE EXTRACT(YEAR FROM date_saved) = $1
     GROUP BY month ORDER BY month
   ` : `
-    SELECT strftime('%m', date_saved) as month,
+    SELECT ${monthOnly('date_saved')} as month,
       COUNT(*) as souls_won,
       SUM(CASE WHEN follow_up_status IN ('joined_cell','joined_church','active_member') THEN 1 ELSE 0 END) as members_added
     FROM souls_won
-    WHERE strftime('%Y', date_saved) = ?
+    WHERE ${yearOnly('date_saved')} = ?
     GROUP BY month ORDER BY month
   `, [String(year)]),
   getEvangelismAnnualStats: (year) => get(usePostgres ? `
@@ -4209,7 +4219,7 @@ const queries = {
     SELECT COUNT(*) as souls_won,
       SUM(CASE WHEN follow_up_status IN ('joined_cell','joined_church','active_member') THEN 1 ELSE 0 END) as members_added
     FROM souls_won
-    WHERE strftime('%Y', date_saved) = ?
+    WHERE ${yearOnly('date_saved')} = ?
   `, [String(year)]),
 
   // ── Contribution Types ──────────────────────────────────────────────────
@@ -4451,13 +4461,13 @@ const queries = {
 
   getFinanceYearTrend: (year) => all(`
     SELECT
-      strftime('%m', record_date) as month,
+      ${monthOnly('record_date')} as month,
       COUNT(*) as day_count,
       COALESCE(SUM(total_income), 0) as total_income,
       COALESCE(SUM(usable_church_funds), 0) as total_usable
     FROM finance_daily_records
-    WHERE strftime('%Y', record_date) = ? AND status IN ('submitted', 'approved')
-    GROUP BY strftime('%m', record_date)
+    WHERE ${yearOnly('record_date')} = ? AND status IN ('submitted', 'approved')
+    GROUP BY ${monthOnly('record_date')}
     ORDER BY month
   `, [String(year)]),
 };
