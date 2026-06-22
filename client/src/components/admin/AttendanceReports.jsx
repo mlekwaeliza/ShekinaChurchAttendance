@@ -394,21 +394,87 @@ const AttendanceReports = ({
     }
   };
 
-  const renderOverviewTab = () => {
-    const sectionComparison = analytics.sectionComparison || [];
-    const sectionRankings = analytics.sectionRankings || [];
-    const churchHealthScore = useMemo(() => {
-      if (!sectionComparison.length) return null;
-      const scores = sectionComparison.map(s => calculateHealthScore(
+  const calculateHealthScore = (rate, consistency, newMembers, submissionDays, totalDays) => {
+    let score = 0;
+    score += Math.min(40, (rate / 100) * 40);
+    if (consistency != null) score += Math.min(25, (consistency / 100) * 25);
+    score += Math.min(15, Math.min(15, (newMembers || 0) * 3));
+    score += Math.min(20, ((submissionDays || 0) / Math.max(totalDays || 90, 1)) * 20);
+    return Math.round(Math.min(100, Math.max(0, score)));
+  };
+
+  const getHealthLabel = (score) => {
+    if (score >= 85) return { label: 'Excellent', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' };
+    if (score >= 70) return { label: 'Good', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20' };
+    if (score >= 50) return { label: 'Fair', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' };
+    return { label: 'Needs Attention', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/20' };
+  };
+
+  const sectionComparison = analytics.sectionComparison || [];
+  const sectionRankings = analytics.sectionRankings || [];
+
+  const churchHealthScore = useMemo(() => {
+    if (!sectionComparison.length) return null;
+    const scores = sectionComparison.map(s => calculateHealthScore(
+      s.attendance_rate || 0,
+      (sectionRankings.find(r => r.id === s.id))?.consistency_score,
+      s.new_members || 0,
+      s.submission_days || 0,
+      90
+    ));
+    return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  }, [sectionComparison, sectionRankings]);
+
+  const sectionSummary = useMemo(() => {
+    if (!sectionComparison.length) return null;
+    return {
+      totalSections: sectionComparison.length,
+      totalMembers: sectionComparison.reduce((a, s) => a + (s.member_count || 0), 0),
+      totalPresent: sectionComparison.reduce((a, s) => a + (s.total_present || 0), 0),
+      totalAbsent: sectionComparison.reduce((a, s) => a + (s.total_absent || 0), 0),
+      totalExcused: sectionComparison.reduce((a, s) => a + (s.total_excused || 0), 0),
+      avgRate: Math.round(sectionComparison.reduce((a, s) => a + (s.attendance_rate || 0), 0) / sectionComparison.length),
+    };
+  }, [sectionComparison]);
+
+  const sectionWithHealth = useMemo(() => {
+    return sectionComparison.map(s => ({
+      name: s.name?.length > 10 ? s.name.slice(0, 10) + '\u2026' : s.name,
+      fullName: s.name,
+      rate: s.attendance_rate || 0,
+      members: s.member_count || 0,
+      present: s.total_present || 0,
+      absent: s.total_absent || 0,
+      excused: s.total_excused || 0,
+      total: (s.total_present || 0) + (s.total_absent || 0) + (s.total_excused || 0),
+      newMembers: s.new_members || 0,
+      activeMembers: s.active_members || 0,
+      submissionDays: s.submission_days || 0,
+      lastSubmission: s.last_submission_date,
+      healthScore: calculateHealthScore(
         s.attendance_rate || 0,
         (sectionRankings.find(r => r.id === s.id))?.consistency_score,
         s.new_members || 0,
         s.submission_days || 0,
         90
-      ));
-      return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-    }, [sectionComparison, sectionRankings]);
+      ),
+    }));
+  }, [sectionComparison, sectionRankings]);
 
+  const leaderWithHealth = useMemo(() => {
+    return leaders.map(l => ({
+      ...l,
+      leaderHealth: calculateHealthScore(
+        l.attendance_rate || 0,
+        l.leader_rate != null ? l.leader_rate : l.attendance_rate,
+        l.member_count || 0,
+        l.submission_count || 0,
+        90
+      ),
+    }));
+  }, [leaders]);
+
+  const renderOverviewTab = () => {
     const healthInfo = churchHealthScore != null ? getHealthLabel(churchHealthScore) : null;
 
     return (
@@ -665,76 +731,21 @@ const AttendanceReports = ({
     </div>
   );
 
-  const sectionComparison = analytics.sectionComparison || [];
-  const sectionRankings = analytics.sectionRankings || [];
-
-  const calculateHealthScore = (rate, consistency, newMembers, submissionDays, totalDays) => {
-    let score = 0;
-    score += Math.min(40, (rate / 100) * 40);
-    if (consistency != null) score += Math.min(25, (consistency / 100) * 25);
-    score += Math.min(15, Math.min(15, (newMembers || 0) * 3));
-    score += Math.min(20, ((submissionDays || 0) / Math.max(totalDays || 90, 1)) * 20);
-    return Math.round(Math.min(100, Math.max(0, score)));
-  };
-
-  const getHealthLabel = (score) => {
-    if (score >= 85) return { label: 'Excellent', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' };
-    if (score >= 70) return { label: 'Good', color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20' };
-    if (score >= 50) return { label: 'Fair', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' };
-    return { label: 'Needs Attention', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/20' };
-  };
-
-  const sectionSummary = useMemo(() => {
-    if (!sectionComparison.length) return null;
-    const totalMembers = sectionComparison.reduce((s, sec) => s + (sec.member_count || 0), 0);
-    const totalPresent = sectionComparison.reduce((s, sec) => s + (sec.total_present || 0), 0);
-    const totalAbsent = sectionComparison.reduce((s, sec) => s + (sec.total_absent || 0), 0);
-    const totalExcused = sectionComparison.reduce((s, sec) => s + (sec.total_excused || 0), 0);
-    const totalNew = sectionComparison.reduce((s, sec) => s + (sec.new_members || 0), 0);
-    const totalActive = sectionComparison.reduce((s, sec) => s + (sec.active_members || 0), 0);
-    const totalRecords = totalPresent + totalAbsent + totalExcused;
-    const avgRate = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 0;
-    return { totalSections: sectionComparison.length, totalMembers, totalPresent, totalAbsent, totalExcused, totalNew, totalActive, avgRate, bestSection: sectionComparison[0], worstSection: sectionComparison[sectionComparison.length - 1] };
-  }, [sectionComparison]);
-
-  const sectionComparisonBarData = useMemo(() => {
-    if (!sectionComparison.length) return [];
-    return sectionComparison.map((s) => ({
+  const radarHealthData = useMemo(() => {
+    if (!sectionWithHealth.length) return [];
+    return sectionWithHealth.slice(0, 8).map((s) => ({
       name: s.name?.length > 10 ? s.name.slice(0, 10) + '\u2026' : s.name,
       fullName: s.name,
       rate: s.attendance_rate || 0,
-      members: s.member_count || 0,
-      present: s.total_present || 0,
-      absent: s.total_absent || 0,
-      excused: s.total_excused || 0,
-      total: (s.total_present || 0) + (s.total_absent || 0) + (s.total_excused || 0),
-      newMembers: s.new_members || 0,
-      activeMembers: s.active_members || 0,
-      submissionDays: s.submission_days || 0,
-      lastSubmission: s.last_submission_date,
-      healthScore: calculateHealthScore(
-        s.attendance_rate || 0,
-        (sectionRankings.find(r => r.id === s.id))?.consistency_score,
-        s.new_members || 0,
-        s.submission_days || 0,
-        90
-      ),
+      health: s.healthScore,
     }));
-  }, [sectionComparison, sectionRankings]);
+  }, [sectionWithHealth]);
 
   const renderSectionsTab = () => {
-    const radarHealthData = useMemo(() => {
-      if (!sectionComparisonBarData.length) return [];
-      return sectionComparisonBarData.slice(0, 8).map((s) => ({
-        name: s.name,
-        rate: s.rate,
-        health: s.healthScore,
-      }));
-    }, [sectionComparisonBarData]);
 
     return (
       <div className="space-y-6">
-        {sectionComparisonBarData.length > 0 ? (
+        {sectionWithHealth.length > 0 ? (
           <>
             {sectionSummary && (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -767,7 +778,7 @@ const AttendanceReports = ({
 
             <ChartCard title="Section Attendance Comparison" subtitle="Present / Excused / Absent by section (last 90 days)" height="h-[380px]" icon={Target}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sectionComparisonBarData} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
+                <BarChart data={sectionWithHealth} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
@@ -781,7 +792,7 @@ const AttendanceReports = ({
             </ChartCard>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {sectionComparisonBarData.map((s, i) => {
+              {sectionWithHealth.map((s, i) => {
                 const healthInfo = getHealthLabel(s.healthScore);
                 return (
                   <div
@@ -1004,27 +1015,28 @@ const AttendanceReports = ({
     );
   };
 
+  const leaderRankWithHealth = useMemo(() => {
+    return leaderRankData.map((l) => {
+      const rate = l.attendance_rate || 0;
+      const submission_rate = Math.min(100, ((l.submissions_count || 0) / 4) * 100);
+      const member_count = l.member_count || 0;
+      const leaderHealth = Math.round(rate * 0.5 + submission_rate * 0.3 + (member_count > 0 ? 20 : 0));
+      return { ...l, leaderHealth };
+    });
+  }, [leaderRankData]);
+
   const renderLeadersTab = () => {
-    const leaderWithHealth = useMemo(() => {
-      return leaderRankData.map((l) => {
-        const rate = l.attendance_rate || 0;
-        const submission_rate = Math.min(100, ((l.submissions_count || 0) / 4) * 100);
-        const member_count = l.member_count || 0;
-        const leaderHealth = Math.round(rate * 0.5 + submission_rate * 0.3 + (member_count > 0 ? 20 : 0));
-        return { ...l, leaderHealth };
-      });
-    }, [leaderRankData]);
 
     return (
       <div className="space-y-6">
-        {leaderWithHealth.length > 0 && (
+        {leaderRankWithHealth.length > 0 && (
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
               <Users className="w-4 h-4 text-indigo-500" />
               Leader Performance Rankings
             </h3>
             <div className="space-y-2">
-              {leaderWithHealth.map((l, i) => {
+              {leaderRankWithHealth.map((l, i) => {
                 const healthInfo = getHealthLabel(l.leaderHealth);
                 return (
                   <div key={l.leader_id || i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-700 hover:shadow-md transition-shadow cursor-pointer" onClick={() => onLeaderClick(l.leader_id)}>
