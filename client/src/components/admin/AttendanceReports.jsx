@@ -176,9 +176,11 @@ const AttendanceReports = ({
         analyticsAPI.getRetention(90),
         analyticsAPI.getEngagementScores(10),
         analyticsAPI.getDashboardMetrics(selectedServiceId),
+        analyticsAPI.getSectionComparison(90),
+        analyticsAPI.getSectionRankings(90),
       ]);
 
-      const keys = ['trends', 'prediction', 'anomalies', 'streaks', 'leaderMetrics', 'demographics', 'yearOverYear', 'retention', 'engagementScores', 'dashboardMetrics'];
+      const keys = ['trends', 'prediction', 'anomalies', 'streaks', 'leaderMetrics', 'demographics', 'yearOverYear', 'retention', 'engagementScores', 'dashboardMetrics', 'sectionComparison', 'sectionRankings'];
       const data = {};
       results.forEach((r, i) => {
         if (r.status === 'fulfilled') {
@@ -589,65 +591,187 @@ const AttendanceReports = ({
     </div>
   );
 
+  const sectionComparison = analytics.sectionComparison || [];
+  const sectionRankings = analytics.sectionRankings || [];
+
+  const sectionComparisonBarData = useMemo(() => {
+    if (!sectionComparison.length) return [];
+    return sectionComparison.map((s) => ({
+      name: s.name?.length > 10 ? s.name.slice(0, 10) + '…' : s.name,
+      fullName: s.name,
+      rate: s.attendance_rate || 0,
+      members: s.member_count || 0,
+      present: s.total_present || 0,
+      absent: s.total_absent || 0,
+      excused: s.total_excused || 0,
+      newMembers: s.new_members || 0,
+      activeMembers: s.active_members || 0,
+    }));
+  }, [sectionComparison]);
+
   const renderSectionsTab = () => (
     <div className="space-y-6">
-      {sectionRadarData.length > 0 && (
-        <ChartCard title="Section Performance Radar" subtitle="Attendance rate comparison across sections" height="h-[350px]" icon={Target}>
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={sectionRadarData}>
-              <PolarGrid stroke="rgba(0,0,0,0.06)" />
-              <PolarAngleAxis dataKey="section" tick={{ fill: '#64748b', fontSize: 11 }} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-              <Radar name="Attendance Rate" dataKey="rate" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      )}
+      {sectionComparisonBarData.length > 0 ? (
+        <>
+          {/* Section Comparison Bar Chart */}
+          <ChartCard title="Section Attendance Comparison" subtitle="Attendance rate by section (last 90 days)" height="h-[350px]" icon={Target}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={sectionComparisonBarData} margin={{ top: 10, right: 10, left: -10, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} domain={[0, 100]} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value, name) => [`${value}%`, name]} />
+                <Bar dataKey="rate" name="Attendance Rate" radius={[6, 6, 0, 0]}>
+                  {sectionComparisonBarData.map((entry, i) => (
+                    <Cell key={i} fill={entry.rate >= 80 ? '#10b981' : entry.rate >= 60 ? '#f59e0b' : '#ef4444'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
 
-      <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-          <Award className="w-4 h-4 text-amber-500" />
-          Section Leaderboard
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-700">
-                <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rank</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Leader</th>
-                <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Section</th>
-                <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Submissions</th>
-                <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaders.slice(0, 10).map((l, i) => {
-                const total = (l.stats?.present || 0) + (l.stats?.absent || 0) + (l.stats?.excused || 0);
-                const rate = total > 0 ? Math.round(((l.stats?.present || 0) / total) * 100) : 0;
-                return (
-                  <tr key={l.leader_id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer" onClick={() => onLeaderClick(l.leader_id)}>
-                    <td className="py-2.5 px-3">
-                      <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${
-                        i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
-                        i === 1 ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
-                        i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
-                        'text-slate-400 dark:text-slate-500'
-                      }`}>{i + 1}</span>
-                    </td>
-                    <td className="py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-slate-100">{l.leader_name}</td>
-                    <td className="py-2.5 px-3 text-sm text-slate-500 dark:text-slate-400">{l.section_name}</td>
-                    <td className="py-2.5 px-3 text-right text-sm text-slate-600 dark:text-slate-400">{l.submissions_count}</td>
-                    <td className="py-2.5 px-3 text-right">
-                      <Badge variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}>{rate}%</Badge>
-                    </td>
+          {/* Section Radar Chart */}
+          {sectionComparisonBarData.length <= 8 && (
+            <ChartCard title="Section Performance Radar" subtitle="Attendance rate across sections" height="h-[350px]" icon={BarChart3}>
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={sectionComparisonBarData}>
+                  <PolarGrid stroke="rgba(0,0,0,0.06)" />
+                  <PolarAngleAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                  <Radar name="Attendance Rate" dataKey="rate" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value) => [`${value}%`, 'Rate']} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          )}
+
+          {/* Section Rankings Table */}
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <Award className="w-4 h-4 text-amber-500" />
+              Section Rankings
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rank</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Section</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Members</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Present</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Absent</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">New</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rate</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Consistency</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {(sectionRankings.length ? sectionRankings : sectionComparison).map((s, i) => {
+                    const rate = s.attendance_rate || 0;
+                    return (
+                      <tr key={s.id || i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                        <td className="py-2.5 px-3">
+                          <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${
+                            i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                            i === 1 ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                            i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                            'text-slate-400 dark:text-slate-500'
+                          }`}>{s.rank || i + 1}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {s.name}
+                          {s.is_best && <Badge variant="success" className="ml-2">Best</Badge>}
+                          {s.is_lowest && <Badge variant="danger" className="ml-2">Lowest</Badge>}
+                        </td>
+                        <td className="py-2.5 px-3 text-right text-sm text-slate-600 dark:text-slate-400">{s.member_count || s.active_members || 0}</td>
+                        <td className="py-2.5 px-3 text-right text-sm text-emerald-600 dark:text-emerald-400 font-semibold">{s.total_present || 0}</td>
+                        <td className="py-2.5 px-3 text-right text-sm text-rose-500 dark:text-rose-400">{s.total_absent || 0}</td>
+                        <td className="py-2.5 px-3 text-right text-sm text-indigo-500 dark:text-indigo-400">{s.new_members || 0}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <Badge variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}>{rate}%</Badge>
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          {s.consistency_score != null ? (
+                            <Badge variant={s.consistency_score >= 70 ? 'success' : s.consistency_score >= 40 ? 'warning' : 'danger'}>{s.consistency_score}</Badge>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : sectionRadarData.length > 0 ? (
+        <>
+          <ChartCard title="Section Performance Radar" subtitle="Attendance rate comparison across sections" height="h-[350px]" icon={Target}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={sectionRadarData}>
+                <PolarGrid stroke="rgba(0,0,0,0.06)" />
+                <PolarAngleAxis dataKey="section" tick={{ fill: '#64748b', fontSize: 11 }} />
+                <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <Radar name="Attendance Rate" dataKey="rate" stroke="#6366f1" fill="#6366f1" fillOpacity={0.25} strokeWidth={2} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <Award className="w-4 h-4 text-amber-500" />
+              Section Leaderboard
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-700">
+                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rank</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Leader</th>
+                    <th className="text-left py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Section</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Submissions</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold uppercase text-slate-400 dark:text-slate-500">Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaders.slice(0, 10).map((l, i) => {
+                    const total = (l.stats?.present || 0) + (l.stats?.absent || 0) + (l.stats?.excused || 0);
+                    const rate = total > 0 ? Math.round(((l.stats?.present || 0) / total) * 100) : 0;
+                    return (
+                      <tr key={l.leader_id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer" onClick={() => onLeaderClick(l.leader_id)}>
+                        <td className="py-2.5 px-3">
+                          <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${
+                            i === 0 ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                            i === 1 ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                            i === 2 ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                            'text-slate-400 dark:text-slate-500'
+                          }`}>{i + 1}</span>
+                        </td>
+                        <td className="py-2.5 px-3 text-sm font-medium text-slate-900 dark:text-slate-100">{l.leader_name}</td>
+                        <td className="py-2.5 px-3 text-sm text-slate-500 dark:text-slate-400">{l.section_name}</td>
+                        <td className="py-2.5 px-3 text-right text-sm text-slate-600 dark:text-slate-400">{l.submissions_count}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <Badge variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}>{rate}%</Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-16">
+          <div className="w-16 h-16 mx-auto rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
+            <Layers className="w-8 h-8 text-slate-300 dark:text-slate-500" />
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No section data available</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Ensure sections have members and attendance records</p>
         </div>
-      </div>
+      )}
     </div>
   );
 
