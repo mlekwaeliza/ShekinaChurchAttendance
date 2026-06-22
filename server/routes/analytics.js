@@ -281,4 +281,84 @@ router.get('/dashboard-metrics', async (req, res) => {
   }
 });
 
+// GET /analytics/section-comparison?days=90
+// Returns multi-metric comparison across all sections
+router.get('/section-comparison', async (req, res) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 90, 365);
+    const sections = await queries.getSectionComparison(days);
+    res.json(sections);
+  } catch (error) {
+    console.error('Section comparison error:', error);
+    res.status(500).json({ error: 'Failed to fetch section comparison' });
+  }
+});
+
+// GET /analytics/service-type-breakdown?days=90
+// Returns attendance breakdown by service type
+router.get('/service-type-breakdown', async (req, res) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 90, 365);
+    const breakdown = await queries.getServiceTypeBreakdown(days);
+    res.json(breakdown);
+  } catch (error) {
+    console.error('Service type breakdown error:', error);
+    res.status(500).json({ error: 'Failed to fetch service type breakdown' });
+  }
+});
+
+// GET /analytics/attendance-patterns?days=180
+// Returns attendance by day-of-week patterns
+router.get('/attendance-patterns', async (req, res) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 180, 365);
+    const patterns = await queries.getAttendanceDayPatterns(days);
+    res.json(patterns);
+  } catch (error) {
+    console.error('Attendance patterns error:', error);
+    res.status(500).json({ error: 'Failed to fetch attendance patterns' });
+  }
+});
+
+// GET /analytics/monthly-trends?months=12
+// Returns combined monthly attendance + contribution trends
+router.get('/monthly-trends', async (req, res) => {
+  try {
+    const months = Math.min(parseInt(req.query.months) || 12, 36);
+    const [attendanceTrends, contributionTrends, sectionTrends] = await Promise.all([
+      queries.getMonthlyAttendanceContribTrends(months),
+      queries.getMonthlyContributionTrends(months),
+      queries.getMonthlySectionTrends(months),
+    ]);
+    res.json({ attendance: attendanceTrends, contributions: contributionTrends, sections: sectionTrends });
+  } catch (error) {
+    console.error('Monthly trends error:', error);
+    res.status(500).json({ error: 'Failed to fetch monthly trends' });
+  }
+});
+
+// GET /analytics/evangelism-funnel
+// Returns evangelism conversion funnel
+router.get('/evangelism-funnel', async (req, res) => {
+  try {
+    const funnel = await queries.getEvangelismFunnel();
+    res.json(funnel);
+  } catch (error) {
+    console.error('Evangelism funnel error:', error);
+    res.status(500).json({ error: 'Failed to fetch evangelism funnel' });
+  }
+});
+
+// GET /analytics/new-member-funnel
+// Returns new member status funnel
+router.get('/new-member-funnel', async (req, res) => {
+  try {
+    const funnel = await queries.getNewMemberFunnel();
+    res.json(funnel);
+  } catch (error) {
+    console.error('New member funnel error:', error);
+    res.status(500).json({ error: 'Failed to fetch new member funnel' });
+  }
+});
+
 module.exports = router;

@@ -267,6 +267,12 @@ export const analyticsAPI = {
   getYearOverYear: () => api.get('/analytics/year-over-year'),
   getRetention: (days) => api.get('/analytics/retention', { params: { days } }),
   getDashboardMetrics: (serviceId) => api.get('/analytics/dashboard-metrics', { params: { service_id: serviceId } }),
+  getSectionComparison: (days) => api.get('/analytics/section-comparison', { params: { days } }),
+  getServiceTypeBreakdown: (days) => api.get('/analytics/service-type-breakdown', { params: { days } }),
+  getAttendancePatterns: (days) => api.get('/analytics/attendance-patterns', { params: { days } }),
+  getMonthlyTrends: (months) => api.get('/analytics/monthly-trends', { params: { months } }),
+  getEvangelismFunnel: () => api.get('/analytics/evangelism-funnel'),
+  getNewMemberFunnel: () => api.get('/analytics/new-member-funnel'),
 };
 
 // New Member Leader API

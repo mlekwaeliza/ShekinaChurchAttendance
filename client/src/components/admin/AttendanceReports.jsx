@@ -12,9 +12,20 @@ import {
   Printer,
   Calendar,
   Edit2,
+  TrendingUp,
+  Users,
+  BarChart3,
+  Building2,
 } from 'lucide-react';
 import StatCard from '../ui/StatCard';
-import { adminAPI } from '../../services/api';
+import { adminAPI, analyticsAPI } from '../../services/api';
+import {
+  ResponsiveContainer,
+  BarChart, Bar,
+  LineChart, Line,
+  PieChart, Pie,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, AreaChart, Area,
+} from 'recharts';
 
 const formatSectionLabel = (name) => {
   if (!name) return 'Unassigned';
@@ -76,6 +87,8 @@ const formatPeriodLabel = (filterType, filterValue) => {
   return filterValue;
 };
 
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
+
 const AttendanceReports = ({
   filterType,
   setFilterType,
@@ -90,10 +103,8 @@ const AttendanceReports = ({
   onLeaderClick,
 }) => {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-
-  useEffect(() => {
-    if (filterValue) loadOverview();
-  }, [filterType, filterValue, selectedServiceId]);
+  const [sectionTrends, setSectionTrends] = useState([]);
+  const [sectionComparison, setSectionComparison] = useState([]);
 
   const currentService = serviceTypes.find((service) => service.id === selectedServiceId);
   const serviceLabel = selectedServiceId === 'all' ? 'All services' : (currentService?.name || 'Selected service');
@@ -103,12 +114,31 @@ const AttendanceReports = ({
   const initializedServiceRef = useRef(false);
 
   useEffect(() => {
+    if (filterValue) loadOverview();
+  }, [filterType, filterValue, selectedServiceId]);
+
+  useEffect(() => {
     if (initializedServiceRef.current) return;
     initializedServiceRef.current = true;
     if (selectedServiceId !== 'all') {
       onServiceChange('all');
     }
   }, [onServiceChange, selectedServiceId]);
+
+  useEffect(() => {
+    if (hasReportData) loadEnhancedAnalytics();
+  }, [filterValue, selectedServiceId, hasReportData]);
+
+  const loadEnhancedAnalytics = async () => {
+    try {
+      const [trends, comparison] = await Promise.allSettled([
+        analyticsAPI.getMonthlyTrends(6),
+        analyticsAPI.getSectionComparison(90),
+      ]);
+      if (trends.status === 'fulfilled') setSectionTrends(trends.value.data?.sections || []);
+      if (comparison.status === 'fulfilled') setSectionComparison(comparison.value.data || []);
+    } catch (e) { console.error('Enhanced analytics failed:', e); }
+  };
 
   const generatePdfReport = async () => {
     if (!overviewData) return;
@@ -297,8 +327,78 @@ const AttendanceReports = ({
                 <div className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-500 dark:bg-slate-700/50 dark:text-slate-300">
                   Select a leader to open detailed attendance
                 </div>
+          </div>
+        </div>
+
+        {/* ── Enhanced Analytics Sections ──────────────────────────────────── */}
+        {hasReportData && sectionComparison.length > 0 && (
+          <div className="space-y-6 mt-6">
+            {/* Section Comparison Bar Chart */}
+            <div className="card p-6">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-indigo-500" />
+                Section Attendance Comparison
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={sectionComparison} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} angle={-20} textAnchor="end" height={60} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+                  <Tooltip contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: '12px', border: '1px solid #e2e8f0' }} />
+                  <Legend wrapperStyle={{ fontSize: '11px' }} />
+                  <Bar dataKey="attendance_rate" name="Attendance Rate (%)" radius={[4, 4, 0, 0]}>
+                    {sectionComparison.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Bar>
+                  <Bar dataKey="member_count" name="Members" fill="#e2e8f0" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Section Detail Table */}
+            <div className="card p-6">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <Users className="w-4 h-4 text-emerald-500" />
+                Section Performance Summary
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-left py-3 px-3 text-xs font-semibold uppercase text-slate-500">Section</th>
+                      <th className="text-right py-3 px-3 text-xs font-semibold uppercase text-slate-500">Members</th>
+                      <th className="text-right py-3 px-3 text-xs font-semibold uppercase text-slate-500">Present</th>
+                      <th className="text-right py-3 px-3 text-xs font-semibold uppercase text-slate-500">Absent</th>
+                      <th className="text-right py-3 px-3 text-xs font-semibold uppercase text-slate-500">Rate</th>
+                      <th className="text-center py-3 px-3 text-xs font-semibold uppercase text-slate-500">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sectionComparison.map((sec) => (
+                      <tr key={sec.id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                        <td className="py-3 px-3 font-medium text-slate-900 dark:text-white">{sec.name}</td>
+                        <td className="py-3 px-3 text-right text-slate-600">{sec.member_count}</td>
+                        <td className="py-3 px-3 text-right text-emerald-600 font-medium">{sec.total_present?.toLocaleString()}</td>
+                        <td className="py-3 px-3 text-right text-rose-500 font-medium">{sec.total_absent?.toLocaleString()}</td>
+                        <td className="py-3 px-3 text-right font-bold">{sec.attendance_rate}%</td>
+                        <td className="py-3 px-3 text-center">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                            Number(sec.attendance_rate) >= 75 ? 'bg-emerald-100 text-emerald-700' :
+                            Number(sec.attendance_rate) >= 50 ? 'bg-amber-100 text-amber-700' :
+                            'bg-rose-100 text-rose-700'
+                          }`}>
+                            {Number(sec.attendance_rate) >= 75 ? 'Strong' : Number(sec.attendance_rate) >= 50 ? 'Average' : 'Needs Attention'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
+          </div>
+        )}
 
             {leaders.length > 0 ? (
               <>

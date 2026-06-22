@@ -2743,7 +2743,139 @@ const queries = {
   `, [recentAttendanceStart, newMemberStart]);
   },
 
-  // Notification queries
+  // ── Section Comparison Analytics ─────────────────────────────────────────
+  getSectionComparison: (days = 90) => all(`
+    SELECT
+      s.id,
+      s.name,
+      COUNT(DISTINCT m.id) as member_count,
+      COUNT(DISTINCT a.date) as submission_days,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+      SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= date('now', '-' || ? || ' days')) as new_members,
+      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as active_members,
+      (SELECT MAX(date) FROM attendance a2
+        JOIN members m2 ON a2.member_id = m2.id
+        WHERE m2.section_id = s.id) as last_submission_date
+    FROM sections s
+    LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
+    LEFT JOIN attendance a ON a.member_id = m.id
+      AND a.date >= date('now', '-' || ? || ' days')
+    GROUP BY s.id, s.name
+    ORDER BY attendance_rate DESC
+  `, [days, days]),
+
+  // ── Service Type Attendance Breakdown ─────────────────────────────────────
+  getServiceTypeBreakdown: (days = 90) => all(`
+    SELECT
+      st.id,
+      st.name as service_type_name,
+      COUNT(DISTINCT a.date) as total_services,
+      COUNT(*) as total_records,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+      SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate
+    FROM service_types st
+    LEFT JOIN attendance a ON a.service_type_id = st.id
+      AND a.date >= date('now', '-' || ? || ' days')
+    GROUP BY st.id, st.name
+    HAVING total_records > 0
+    ORDER BY attendance_rate DESC
+  `, [days]),
+
+  // ── Attendance by Day-of-Week Pattern ────────────────────────────────────
+  getAttendanceDayPatterns: (days = 180) => all(`
+    SELECT
+      CASE strftime('%w', a.date)
+        WHEN '0' THEN 'Sunday'
+        WHEN '1' THEN 'Monday'
+        WHEN '2' THEN 'Tuesday'
+        WHEN '3' THEN 'Wednesday'
+        WHEN '4' THEN 'Thursday'
+        WHEN '5' THEN 'Friday'
+        WHEN '6' THEN 'Saturday'
+      END as day_name,
+      CAST(strftime('%w', a.date) AS INTEGER) as day_num,
+      COUNT(DISTINCT a.date) as service_count,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as avg_rate,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * COUNT(DISTINCT m.id), 0) as avg_present
+    FROM attendance a
+    JOIN members m ON a.member_id = m.id
+    WHERE a.date >= date('now', '-' || ? || ' days')
+    GROUP BY day_num, day_name
+    ORDER BY day_num
+  `, [days]),
+
+  // ── Monthly Attendance + Contributions Combined Trend ────────────────────
+  getMonthlyAttendanceContribTrends: (months = 12) => all(`
+    SELECT
+      strftime('%Y-%m', a.date) as month,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+      COUNT(*) as total_members
+    FROM attendance a
+    WHERE a.date >= date('now', '-' || ? || ' months')
+    GROUP BY month
+    ORDER BY month
+  `, [months]),
+
+  getMonthlyContributionTrends: (months = 12) => all(`
+    SELECT
+      strftime('%Y-%m', payment_date) as month,
+      ct.name as type_name,
+      SUM(c.amount) as total_amount,
+      COUNT(*) as transaction_count
+    FROM contributions c
+    JOIN contribution_types ct ON ct.id = c.contribution_type_id
+    WHERE c.payment_date >= date('now', '-' || ? || ' months')
+    GROUP BY month, ct.name
+    ORDER BY month
+  `, [months]),
+
+  // ── Monthly Attendance by Section (for trend comparison) ──────────────────
+  getMonthlySectionTrends: (months = 6) => all(`
+    SELECT
+      strftime('%Y-%m', a.date) as month,
+      s.name as section_name,
+      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+      COUNT(DISTINCT a.date) as service_days,
+      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present_count
+    FROM attendance a
+    JOIN members m ON a.member_id = m.id
+    JOIN sections s ON s.id = m.section_id
+    WHERE a.date >= date('now', '-' || ? || ' months')
+    GROUP BY month, s.name
+    ORDER BY month
+  `, [months]),
+
+  // ── Evangelism Funnel ────────────────────────────────────────────────────
+  getEvangelismFunnel: () => get(`
+    SELECT
+      (SELECT COUNT(*) FROM outreach_logs) as total_outreach,
+      (SELECT COUNT(*) FROM souls_won) as souls_won,
+      (SELECT COUNT(*) FROM souls_won WHERE follow_up_status IN ('joined_cell','joined_church','active_member')) as members_joined,
+      (SELECT COUNT(*) FROM souls_won WHERE follow_up_status = 'baptized') as baptized,
+      (SELECT COUNT(*) FROM new_members) as new_members,
+      (SELECT COUNT(*) FROM new_members WHERE status = 'graduated') as graduated
+  `),
+
+  // ── New Member Funnel ────────────────────────────────────────────────────
+  getNewMemberFunnel: () => all(`
+    SELECT
+      status,
+      COUNT(*) as count
+    FROM new_members
+    GROUP BY status
+    ORDER BY CASE status
+      WHEN 'probation' THEN 1
+      WHEN 'graduated' THEN 2
+      WHEN 'permanent' THEN 3
+      ELSE 4
+    END
+  `),
   createNotification: (userId, type, title, message, entityType = null, entityId = null) =>
     run('INSERT INTO notifications (user_id, type, title, message, entity_type, entity_id) VALUES (?, ?, ?, ?, ?, ?)',
       [userId, type, title, message, entityType, entityId])
