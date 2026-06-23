@@ -916,7 +916,7 @@ const AttendanceReports = ({
         </div>
       )}
 
-      {analytics.prediction && (
+      {analytics.prediction?.weeks_analyzed > 0 && (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Predictive Analytics</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -974,7 +974,7 @@ const AttendanceReports = ({
             { label: 'PDF Report', icon: FileText, action: handleExportPDF, color: 'rose' },
             { label: 'CSV Export', icon: Download, action: handleCSVExport, color: 'emerald' },
             { label: 'Print View', icon: Printer, action: handlePrint, color: 'sky' },
-            { label: 'Refresh Data', icon: RefreshCw, action: () => { loadOverview(); loadAnalytics(); }, color: 'indigo' },
+            { label: 'Refresh Data', icon: RefreshCw, action: () => { loadOverview(); loadAnalytics(); loadDepartments(comparisonMode); loadComparisonData(comparisonMode); }, color: 'indigo' },
           ].map(exp => (
             <button key={exp.label} onClick={exp.action}
               className={`flex items-center gap-2 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 hover:bg-${exp.color}-50 dark:hover:bg-${exp.color}-900/20 transition-all text-left`}>
