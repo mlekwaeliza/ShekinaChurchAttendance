@@ -554,7 +554,7 @@ const AttendanceReports = ({
                 { key: 'member_count', label: 'Members', align: 'right' },
               ]}
               data={leaderRankData}
-              onRowClick={(row) => { setSelectedLeader(row); setActiveTab('leaders'); }}
+              onRowClick={(row) => setSelectedLeader(row)}
             />
           </div>
         )}
