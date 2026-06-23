@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, AlertTriangle, Users, Building2, Heart,
   Shield, Brain, Layers, UserCheck, Award, PieChart as PieChartIcon,
-  ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle, TrendingDown
+  ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle, TrendingDown,
+  Download, Printer, FileText, Eye, Info
 } from 'lucide-react';
 import { analyticsAPI } from '../../services/api';
 import {
@@ -47,6 +48,23 @@ const Card = ({ icon: Icon, label, value, trend, color = 'indigo', sub }) => (
   </div>
 );
 
+const MiniSparkline = ({ data, color = '#6366f1' }) => {
+  if (!data || data.length < 2) return null;
+  return (
+    <ResponsiveContainer width="100%" height={36}>
+      <AreaChart data={data} margin={{ top: 2, right: 0, left: 0, bottom: 2 }}>
+        <defs>
+          <linearGradient id={`aspark-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <Area type="monotone" dataKey="v" stroke={color} fill={`url(#aspark-${color.replace('#', '')})`} strokeWidth={1.5} dot={false} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+};
+
 const TABS = [
   { key: 'executive', label: 'Executive', icon: Layers },
   { key: 'sections', label: 'Sections', icon: Building2 },
@@ -57,6 +75,7 @@ const TABS = [
   { key: 'insights', label: 'AI Insights', icon: Brain },
   { key: 'health', label: 'Church Health', icon: Heart },
   { key: 'risk', label: 'Risk Analysis', icon: Shield },
+  { key: 'distribution', label: 'Distribution', icon: Eye },
 ];
 
 const AnalyticsView = () => {
@@ -113,7 +132,7 @@ const AnalyticsView = () => {
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><BarChart3 className="w-5 h-5" /></div>
             <div>
               <h2 className="text-xl font-bold">Church Analytics</h2>
-              <p className="text-white/80 text-sm">Comprehensive attendance intelligence & insights</p>
+              <p className="text-white/80 text-sm">Comprehensive attendance intelligence & visual insights</p>
             </div>
           </div>
           <select value={period} onChange={e => setPeriod(Number(e.target.value))}
@@ -144,23 +163,62 @@ const AnalyticsView = () => {
       {tab === 'insights' && <InsightsTab data={data} />}
       {tab === 'health' && <HealthTab data={data} />}
       {tab === 'risk' && <RiskTab data={data} />}
+      {tab === 'distribution' && <DistributionTab data={data} />}
     </div>
   );
 };
 
-// ── Executive Dashboard ────────────────────────────────────────────────────
 const ExecutiveTab = ({ data }) => {
   const ex = data.executive || {};
   const rate = Number(ex.attendance_rate) || 0;
+  const weeklyData = (data.trends || []).slice(-12).map((t, i) => ({ v: t.daily_rate || 0 }));
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-        <Card icon={Users} label="Total Members" value={(ex.total_members || 0).toLocaleString()} color="indigo" />
-        <Card icon={CheckCircle2} label="Present Today" value={(ex.present_today || 0).toLocaleString()} color="emerald" sub={`${rate}% attendance`} trend={Number(ex.weekly_growth)} />
-        <Card icon={XCircle} label="Absent Today" value={(ex.absent_today || 0).toLocaleString()} color="rose" />
-        <Card icon={Heart} label="Visitors (Week)" value={(ex.visitors_this_week || 0).toLocaleString()} color="violet" />
-        <Card icon={Heart} label="Visitors (Month)" value={(ex.visitors_this_month || 0).toLocaleString()} color="pink" />
-        <Card icon={AlertTriangle} label="Excused" value={(ex.excused_today || 0).toLocaleString()} color="amber" />
+        <div className="rounded-2xl border border-indigo-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Members</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center"><Users className="w-4 h-4 text-indigo-600" /></div>
+          </div>
+          <p className="text-xl font-bold text-slate-900 dark:text-white">{(ex.total_members || 0).toLocaleString()}</p>
+          <MiniSparkline data={weeklyData} color="#6366f1" />
+        </div>
+        <div className="rounded-2xl border border-emerald-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Present Today</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center"><CheckCircle2 className="w-4 h-4 text-emerald-600" /></div>
+          </div>
+          <p className="text-xl font-bold text-slate-900 dark:text-white">{(ex.present_today || 0).toLocaleString()}</p>
+          <p className="text-[10px] text-slate-500 mt-0.5">{rate}% attendance</p>
+        </div>
+        <div className="rounded-2xl border border-rose-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Absent Today</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center"><XCircle className="w-4 h-4 text-rose-600" /></div>
+          </div>
+          <p className="text-xl font-bold text-slate-900 dark:text-white">{(ex.absent_today || 0).toLocaleString()}</p>
+        </div>
+        <div className="rounded-2xl border border-violet-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Visitors (Week)</span>
+            <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center"><Heart className="w-4 h-4 text-violet-600" /></div>
+          </div>
+          <p className="text-xl font-bold text-slate-900 dark:text-white">{(ex.visitors_this_week || 0).toLocaleString()}</p>
+        </div>
+        <div className="rounded-2xl border border-pink-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Visitors (Month)</span>
+            <div className="w-8 h-8 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center"><Heart className="w-4 h-4 text-pink-600" /></div>
+          </div>
+          <p className="text-xl font-bold text-slate-900 dark:text-white">{(ex.visitors_this_month || 0).toLocaleString()}</p>
+        </div>
+        <div className="rounded-2xl border border-amber-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Excused</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center"><AlertTriangle className="w-4 h-4 text-amber-600" /></div>
+          </div>
+          <p className="text-xl font-bold text-slate-900 dark:text-white">{(ex.excused_today || 0).toLocaleString()}</p>
+        </div>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
@@ -221,7 +279,6 @@ const ExecutiveTab = ({ data }) => {
   );
 };
 
-// ── Section Analytics ──────────────────────────────────────────────────────
 const SectionsTab = ({ data }) => {
   const s = data.sections || [];
   return (
@@ -259,6 +316,23 @@ const SectionsTab = ({ data }) => {
           </ResponsiveContainer>
         </div>
       )}
+      {data.sectionComparison.length > 0 && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Section Attendance Stacked</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={data.sectionComparison} margin={{ top: 5, right: 10, left: -20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9 }} angle={-20} textAnchor="end" height={50} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <Tooltip content={<Tip />} />
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
+              <Bar dataKey="total_present" name="Present" fill="#10b981" stackId="a" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="total_excused" name="Excused" fill="#f59e0b" stackId="a" />
+              <Bar dataKey="total_absent" name="Absent" fill="#ef4444" stackId="a" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       <div className="card p-6">
         <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Section Rankings</h3>
         <div className="overflow-x-auto">
@@ -292,7 +366,6 @@ const SectionsTab = ({ data }) => {
   );
 };
 
-// ── Leader Analytics ───────────────────────────────────────────────────────
 const LeadersTab = ({ data }) => {
   const leaders = data.leaders || [];
   const headLeaders = data.headLeaders || [];
@@ -378,7 +451,6 @@ const LeadersTab = ({ data }) => {
   );
 };
 
-// ── Department Analytics ───────────────────────────────────────────────────
 const DepartmentsTab = ({ data }) => {
   const depts = data.departments || [];
   return (
@@ -435,7 +507,6 @@ const DepartmentsTab = ({ data }) => {
   );
 };
 
-// ── Member Intelligence ────────────────────────────────────────────────────
 const MembersTab = ({ data }) => {
   const members = data.members || [];
   const risk = data.risk || {};
@@ -489,7 +560,6 @@ const MembersTab = ({ data }) => {
   );
 };
 
-// ── Trends & Patterns ─────────────────────────────────────────────────────
 const TrendsTab = ({ data }) => {
   const trends = data.trends || [];
   const patterns = data.dayPatterns || [];
@@ -551,7 +621,6 @@ const TrendsTab = ({ data }) => {
   );
 };
 
-// ── AI Insights ────────────────────────────────────────────────────────────
 const InsightsTab = ({ data }) => {
   const insights = data.insights || [];
   const icons = { success: CheckCircle2, warning: AlertTriangle, danger: XCircle, info: TrendingUp };
@@ -576,7 +645,6 @@ const InsightsTab = ({ data }) => {
   );
 };
 
-// ── Church Health ──────────────────────────────────────────────────────────
 const HealthTab = ({ data }) => {
   const growth = data.growth || {};
   const gi = growth.growth_index || 0;
@@ -631,7 +699,6 @@ const HealthTab = ({ data }) => {
   );
 };
 
-// ── Risk Analysis ──────────────────────────────────────────────────────────
 const RiskTab = ({ data }) => {
   const risk = data.risk || {};
   const atRisk = risk.at_risk_members || [];
@@ -692,6 +759,76 @@ const RiskTab = ({ data }) => {
               </div>
             ))}
           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DistributionTab = ({ data }) => {
+  const ex = data.executive || {};
+  const rate = Number(ex.attendance_rate) || 0;
+  const distData = [
+    { name: 'Present', value: ex.present_today || 0, color: '#10b981' },
+    { name: 'Absent', value: ex.absent_today || 0, color: '#ef4444' },
+    { name: 'Excused', value: ex.excused_today || 0, color: '#f59e0b' },
+  ].filter(d => d.value > 0);
+  const sectionBar = (data.sectionComparison || []).map(s => ({
+    name: s.name?.length > 12 ? s.name.slice(0, 12) + '...' : s.name,
+    fullName: s.name,
+    present: s.total_present || 0,
+    absent: s.total_absent || 0,
+    excused: s.total_excused || 0,
+  }));
+  return (
+    <div className="space-y-6">
+      {distData.length > 0 && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Attendance Distribution</h3>
+          <div className="flex items-center gap-8">
+            <ResponsiveContainer width="50%" height={250}>
+              <PieChart>
+                <Pie data={distData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
+                  {distData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                </Pie>
+                <Tooltip content={<Tip />} />
+                <Legend wrapperStyle={{ fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex-1 space-y-3">
+              {distData.map(d => (
+                <div key={d.name} className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="text-sm text-slate-600 dark:text-slate-400 flex-1">{d.name}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{d.value}</span>
+                  <span className="text-xs text-slate-500">{distData.reduce((a, b) => a + b.value, 0) > 0 ? Math.round((d.value / distData.reduce((a, b) => a + b.value, 0)) * 100) : 0}%</span>
+                </div>
+              ))}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-900 dark:text-white">Attendance Rate</span>
+                  <span className="text-lg font-bold text-indigo-600">{rate}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {sectionBar.length > 0 && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Section Attendance Distribution</h3>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={sectionBar} margin={{ top: 5, right: 10, left: -10, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.04)" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 9 }} angle={-20} textAnchor="end" height={50} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <Tooltip content={<Tip />} />
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
+              <Bar dataKey="present" name="Present" fill="#10b981" stackId="a" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="excused" name="Excused" fill="#f59e0b" stackId="a" />
+              <Bar dataKey="absent" name="Absent" fill="#ef4444" stackId="a" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
     </div>
