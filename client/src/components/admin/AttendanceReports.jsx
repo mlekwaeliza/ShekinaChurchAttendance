@@ -156,8 +156,13 @@ const InsightCard = ({ insight, index }) => {
     <div className={`flex items-start gap-3 rounded-xl border ${c.border} ${c.bg} p-3`}>
       <div className={`w-7 h-7 rounded-lg ${c.iconBg} flex items-center justify-center shrink-0`}>
         <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
-      </div>
-      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{insight.text}</p>
+        </div>
+      ) : (
+        <div className="text-center py-12 text-slate-400 text-sm">
+          <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+          No section attendance data available for the current period. Ensure sections have members with recorded attendance.
+        </div>
+      )}
     </div>
   );
 };
@@ -260,10 +265,10 @@ const AttendanceReports = ({
     try {
       const res = await analyticsAPI.getComparison(range);
       const d = res.data || {};
-      setComparisonData(d.p1_present != null ? {
-        current: { present: d.p1_present, absent: (d.p1_total || 0) - (d.p1_present || 0), excused: 0, rate: d.p1_rate || 0 },
-        previous: { present: d.p2_present, absent: (d.p2_total || 0) - (d.p2_present || 0), excused: 0, rate: d.p2_rate || 0 },
-      } : {});
+      setComparisonData({
+        current: { present: d.p1_present || 0, absent: (d.p1_total || 0) - (d.p1_present || 0), excused: 0, rate: d.p1_rate || 0 },
+        previous: { present: d.p2_present || 0, absent: (d.p2_total || 0) - (d.p2_present || 0), excused: 0, rate: d.p2_rate || 0 },
+      });
     } catch (e) { setComparisonData({}); }
   };
 
