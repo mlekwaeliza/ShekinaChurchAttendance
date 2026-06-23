@@ -179,6 +179,8 @@ const AttendanceReports = ({
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [comparisonMode, setComparisonMode] = useState('week');
+  const [compType, setCompType] = useState('sections');
+  const [compPeriod, setCompPeriod] = useState('month');
   const [historicalPeriod, setHistoricalPeriod] = useState('monthly');
   const [compTablePeriod, setCompTablePeriod] = useState(30);
   const [customDate1, setCustomDate1] = useState('');
@@ -238,42 +240,101 @@ const AttendanceReports = ({
 
   useEffect(() => { loadDepartments(comparisonMode); }, [comparisonMode]);
 
-  const loadComparisonData = async (mode) => {
-    const range = getDateRangeForMode(mode);
-    if (!range) return;
-    try {
-      const res = await analyticsAPI.getComparison(range);
-      const d = res.data || {};
-      setComparisonData({
-        current: {
-          present: d.p1_present || 0,
-          absent: d.p1_absent || 0,
-          excused: d.p1_excused || 0,
-          total: d.p1_total || 0,
-          records: d.p1_records || 0,
-          rate: d.p1_rate || 0,
-          serviceDays: d.p1_service_days || 0,
-          leadersSubmitted: d.p1_leaders_submitted || 0,
-          activeSections: d.p1_active_sections || 0,
-        },
-        previous: {
-          present: d.p2_present || 0,
-          absent: d.p2_absent || 0,
-          excused: d.p2_excused || 0,
-          total: d.p2_total || 0,
-          records: d.p2_records || 0,
-          rate: d.p2_rate || 0,
-          serviceDays: d.p2_service_days || 0,
-          leadersSubmitted: d.p2_leaders_submitted || 0,
-          activeSections: d.p2_active_sections || 0,
-        },
-        totalLeaders: d.total_leaders || 0,
-        range,
-      });
-    } catch (e) { setComparisonData({}); }
+  const getCompDates = (period) => {
+    const now = new Date();
+    const toStr = (d) => d.toISOString().split('T')[0];
+    let cStart, cEnd, pStart, pEnd;
+    switch (period) {
+      case 'week': {
+        const dow = now.getDay();
+        const mon = new Date(now); mon.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+        const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+        const pMon = new Date(mon); pMon.setDate(mon.getDate() - 7);
+        const pSun = new Date(sun); pSun.setDate(sun.getDate() - 7);
+        cStart = toStr(mon); cEnd = toStr(sun); pStart = toStr(pMon); pEnd = toStr(pSun);
+        break;
+      }
+      case 'month': {
+        const y = now.getFullYear(), m = now.getMonth();
+        cStart = toStr(new Date(y, m, 1)); cEnd = toStr(new Date(y, m + 1, 0));
+        pStart = toStr(new Date(y, m - 1, 1)); pEnd = toStr(new Date(y, m, 0));
+        break;
+      }
+      case 'quarter': {
+        const q = Math.floor(now.getMonth() / 3);
+        cStart = toStr(new Date(now.getFullYear(), q * 3, 1));
+        cEnd = toStr(new Date(now.getFullYear(), q * 3 + 3, 0));
+        pStart = toStr(new Date(now.getFullYear(), q * 3 - 3, 1));
+        pEnd = toStr(new Date(now.getFullYear(), q * 3, 0));
+        break;
+      }
+      case 'year': {
+        cStart = `${now.getFullYear()}-01-01`; cEnd = `${now.getFullYear()}-12-31`;
+        pStart = `${now.getFullYear() - 1}-01-01`; pEnd = `${now.getFullYear() - 1}-12-31`;
+        break;
+      }
+      case 'custom': {
+        if (p1Start && p1End && p2Start && p2End) {
+          cStart = p1Start; cEnd = p1End; pStart = p2Start; pEnd = p2End;
+        } else return null;
+        break;
+      }
+      default: return null;
+    }
+    return { cStart, cEnd, pStart, pEnd };
   };
 
-  useEffect(() => { loadComparisonData(comparisonMode); }, [comparisonMode]);
+  const loadComparisonData = async () => {
+    const dates = getCompDates(compPeriod);
+    if (!dates) return;
+    setAnalyticsLoading(true);
+    try {
+      if (compType === 'overall') {
+        const res = await analyticsAPI.getComparison({
+          period1Start: dates.cStart, period1End: dates.cEnd,
+          period2Start: dates.pStart, period2End: dates.pEnd,
+        });
+        const d = res.data || {};
+        setComparisonData({
+          type: 'overall',
+          current: {
+            present: d.p1_present || 0, absent: d.p1_absent || 0, excused: d.p1_excused || 0,
+            total: d.p1_total || 0, records: d.p1_records || 0, rate: d.p1_rate || 0,
+            serviceDays: d.p1_service_days || 0, leadersSubmitted: d.p1_leaders_submitted || 0,
+            activeSections: d.p1_active_sections || 0,
+          },
+          previous: {
+            present: d.p2_present || 0, absent: d.p2_absent || 0, excused: d.p2_excused || 0,
+            total: d.p2_total || 0, records: d.p2_records || 0, rate: d.p2_rate || 0,
+            serviceDays: d.p2_service_days || 0, leadersSubmitted: d.p2_leaders_submitted || 0,
+            activeSections: d.p2_active_sections || 0,
+          },
+          totalLeaders: d.total_leaders || 0, dates,
+        });
+      } else if (compType === 'sections') {
+        const [curRes, prevRes] = await Promise.all([
+          analyticsAPI.getSectionComparison(365, dates.cStart, dates.cEnd),
+          analyticsAPI.getSectionComparison(365, dates.pStart, dates.pEnd),
+        ]);
+        setComparisonData({ type: 'sections', currentList: curRes.data || [], previousList: prevRes.data || [], dates });
+      } else if (compType === 'leaders') {
+        const [curRes, prevRes] = await Promise.all([
+          analyticsAPI.getLeaderTrends({ start_date: dates.cStart, end_date: dates.cEnd }),
+          analyticsAPI.getLeaderTrends({ start_date: dates.pStart, end_date: dates.pEnd }),
+        ]);
+        setComparisonData({ type: 'leaders', currentList: curRes.data || [], previousList: prevRes.data || [], dates });
+      } else if (compType === 'departments') {
+        const [curRes, prevRes] = await Promise.all([
+          analyticsAPI.getDepartments(365, dates.cStart, dates.cEnd),
+          analyticsAPI.getDepartments(365, dates.pStart, dates.pEnd),
+        ]);
+        setComparisonData({ type: 'departments', currentList: curRes.data || [], previousList: prevRes.data || [], dates });
+      }
+    } catch (e) { console.error('Comparison load error:', e); setComparisonData({}); }
+    finally { setAnalyticsLoading(false); }
+  };
+
+  useEffect(() => { loadComparisonData(); }, [compType, compPeriod, p1Start, p1End, p2Start, p2End]);
 
   const modeToMonths = { daily: 1, weekly: 3, monthly: 12, quarterly: 24, yearly: 60 };
 
@@ -594,28 +655,126 @@ const AttendanceReports = ({
 
   const renderComparisonTab = () => {
     const comp = comparisonData || {};
-    const c = comp.current || {};
-    const p = comp.previous || {};
-    const isCustom = comparisonMode === 'custom';
-    const modeLabel = comparisonMode === 'custom' ? 'Custom Range' : comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1);
-    const diffRate = (c.rate || 0) - (p.rate || 0);
-    const diffPresent = (c.present || 0) - (p.present || 0);
-    const diffAbsent = (p.absent || 0) - (c.absent || 0);
-    const submissionRate = comp.totalLeaders > 0 ? Math.round(((c.leadersSubmitted || 0) / comp.totalLeaders) * 100) : 0;
-    const prevSubmissionRate = comp.totalLeaders > 0 ? Math.round(((p.leadersSubmitted || 0) / comp.totalLeaders) * 100) : 0;
+    const dates = comp.dates;
+    const isCustom = compPeriod === 'custom';
+    const typeTabs = [
+      { key: 'sections', label: 'Sections', icon: Layers },
+      { key: 'leaders', label: 'Section Leaders', icon: Users },
+      { key: 'departments', label: 'Departments', icon: Building2 },
+      { key: 'overall', label: 'Overall', icon: BarChart3 },
+    ];
+    const periodTabs = [
+      { key: 'week', label: 'Weekly' },
+      { key: 'month', label: 'Monthly' },
+      { key: 'quarter', label: 'Quarterly' },
+      { key: 'year', label: 'Yearly' },
+      { key: 'custom', label: 'Custom' },
+    ];
 
-    const fmtRange = (range) => {
-      if (!range) return '';
-      return `${range.period1Start} to ${range.period1End}`;
+    const renderEntityTable = (currentList, previousList, nameKey, metrics) => {
+      const prevMap = {};
+      previousList.forEach(item => { prevMap[item[nameKey]] = item; });
+      const rows = currentList.map(curr => {
+        const prev = prevMap[curr[nameKey]] || {};
+        const enriched = { name: curr[nameKey] || curr.name || 'Unknown' };
+        metrics.forEach(m => {
+          const currVal = Number(curr[m.key]) || 0;
+          const prevVal = Number(prev[m.key]) || 0;
+          const diff = m.invert ? prevVal - currVal : currVal - prevVal;
+          const pct = prevVal > 0 ? ((diff / prevVal) * 100).toFixed(1) : currVal > 0 ? 100 : 0;
+          enriched[`${m.key}_curr`] = currVal;
+          enriched[`${m.key}_prev`] = prevVal;
+          enriched[`${m.key}_diff`] = diff;
+          enriched[`${m.key}_pct`] = pct;
+        });
+        return enriched;
+      });
+      const prevOnly = previousList.filter(prev => !currentList.find(c => c[nameKey] === prev[nameKey])).map(prev => {
+        const enriched = { name: prev[nameKey] || prev.name || 'Unknown', _removed: true };
+        metrics.forEach(m => {
+          enriched[`${m.key}_curr`] = 0;
+          enriched[`${m.key}_prev`] = Number(prev[m.key]) || 0;
+          enriched[`${m.key}_diff`] = m.invert ? enriched[`${m.key}_prev`] : -enriched[`${m.key}_prev`];
+          enriched[`${m.key}_pct`] = '-100';
+        });
+        return enriched;
+      });
+      const allRows = [...rows, ...prevOnly].sort((a, b) => {
+        const aRate = a[`${metrics[0].key}_curr`] || 0;
+        const bRate = b[`${metrics[0].key}_curr`] || 0;
+        return bRate - aRate;
+      });
+
+      return (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <table className="min-w-full text-sm">
+              <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">#</th>
+                  <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Name</th>
+                  {metrics.map(m => (
+                    <React.Fragment key={m.key}>
+                      <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} (Prev)</th>
+                      <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} (Curr)</th>
+                      <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} (Diff)</th>
+                    </React.Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allRows.map((row, i) => (
+                  <tr key={`${row.name}-${i}`} className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${row._removed ? 'opacity-50' : ''}`}>
+                    <td className="py-2 px-3">
+                      <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span>
+                    </td>
+                    <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.name}</td>
+                    {metrics.map(m => {
+                      const curr = row[`${m.key}_curr`];
+                      const prev = row[`${m.key}_prev`];
+                      const diff = row[`${m.key}_diff`];
+                      const pct = row[`${m.key}_pct`];
+                      return (
+                        <React.Fragment key={m.key}>
+                          <td className="py-2 px-3 text-right text-slate-500">{prev}{m.suffix || ''}</td>
+                          <td className="py-2 px-3 text-right font-bold">{curr}{m.suffix || ''}</td>
+                          <td className="py-2 px-3 text-right">
+                            <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{m.suffix || ''}</span>
+                            <span className={`ml-1 text-[10px] ${diff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>({pct}%)</span>
+                          </td>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tr>
+                ))}
+                {allRows.length === 0 && (
+                  <tr><td colSpan={2 + metrics.length * 3} className="py-8 text-center text-slate-400 text-sm">No data available</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
     };
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex items-center gap-2 flex-wrap">
-          {['today', 'week', 'month', 'quarter', 'year', 'custom'].map(m => (
-            <button key={m} onClick={() => setComparisonMode(m)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${comparisonMode === m ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700'}`}>
-              {m === 'custom' ? 'Custom' : m.charAt(0).toUpperCase() + m.slice(1)}
+          <span className="text-[10px] font-semibold uppercase text-slate-400 mr-1">Compare:</span>
+          {typeTabs.map(t => (
+            <button key={t.key} onClick={() => setCompType(t.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${compType === t.key ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700'}`}>
+              <t.icon className="w-3 h-3" />{t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-semibold uppercase text-slate-400 mr-1">Period:</span>
+          {periodTabs.map(pt => (
+            <button key={pt.key} onClick={() => setCompPeriod(pt.key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${compPeriod === pt.key ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700'}`}>
+              {pt.label}
             </button>
           ))}
         </div>
@@ -624,176 +783,144 @@ const AttendanceReports = ({
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Period 1</p>
+                <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Current Period</p>
                 <div className="flex items-center gap-2">
                   <input type="date" value={p1Start} onChange={e => setP1Start(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" placeholder="Start" />
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" />
                   <span className="text-xs text-slate-400">to</span>
                   <input type="date" value={p1End} onChange={e => setP1End(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" placeholder="End" />
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" />
                 </div>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Period 2 (Comparison)</p>
+                <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Previous Period</p>
                 <div className="flex items-center gap-2">
                   <input type="date" value={p2Start} onChange={e => setP2Start(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" placeholder="Start" />
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" />
                   <span className="text-xs text-slate-400">to</span>
                   <input type="date" value={p2End} onChange={e => setP2End(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" placeholder="End" />
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" />
                 </div>
               </div>
             </div>
-            <button onClick={() => loadComparisonData('custom')}
-              className="mt-3 px-4 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-xl hover:bg-indigo-700 transition-all">
-              Compare Periods
-            </button>
           </div>
         )}
 
-        {c.present != null ? (
-          <div className="space-y-5">
-            {comp.range && (
-              <div className="rounded-xl bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-4">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{modeLabel} Comparison</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      Current: <span className="font-medium text-slate-600 dark:text-slate-300">{comp.range.period1Start} to {comp.range.period1End}</span>
-                      {' '} vs Previous: <span className="font-medium text-slate-600 dark:text-slate-300">{comp.range.period2Start} to {comp.range.period2End}</span>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-2xl font-bold ${diffRate >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diffRate >= 0 ? '+' : ''}{diffRate}%</span>
-                    <span className="text-xs text-slate-400">rate change</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {[
-                { label: 'Present', curr: c.present, prev: p.present, icon: CheckCircle2, color: 'emerald', inv: false },
-                { label: 'Absent', curr: c.absent, prev: p.absent, icon: UserX, color: 'rose', inv: true },
-                { label: 'Excused', curr: c.excused, prev: p.excused, icon: AlertTriangle, color: 'amber', inv: true },
-                { label: 'Attendance %', curr: c.rate, prev: p.rate, icon: Activity, color: 'indigo', suffix: '%', inv: false },
-              ].map(kpi => {
-                const diff = kpi.inv ? (kpi.prev || 0) - (kpi.curr || 0) : (kpi.curr || 0) - (kpi.prev || 0);
-                const pct = (kpi.prev || 0) > 0 ? ((diff / (kpi.prev || 1)) * 100).toFixed(1) : 0;
-                return (
-                  <div key={kpi.label} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <kpi.icon className={`w-3.5 h-3.5 text-${kpi.color}-500`} />
-                      <span className="text-[10px] font-semibold uppercase text-slate-400">{kpi.label}</span>
-                    </div>
-                    <p className="text-lg font-bold text-slate-900 dark:text-white">{kpi.curr || 0}{kpi.suffix || ''}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className={`text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{kpi.suffix || ''}</span>
-                      <span className="text-[10px] text-slate-400">vs prev ({pct}%)</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {[
-                { label: 'Total Members', curr: c.total, prev: p.total, icon: Users },
-                { label: 'Service Days', curr: c.serviceDays, prev: p.serviceDays, icon: Calendar },
-                { label: 'Leaders Submitted', curr: c.leadersSubmitted, prev: p.leadersSubmitted, icon: Target, sub: `of ${comp.totalLeaders || 0}` },
-                { label: 'Active Sections', curr: c.activeSections, prev: p.activeSections, icon: Layers },
-              ].map(kpi => {
-                const diff = (kpi.curr || 0) - (kpi.prev || 0);
-                return (
-                  <div key={kpi.label} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
-                    <div className="flex items-center gap-2 mb-1">
-                      <kpi.icon className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-[10px] font-semibold uppercase text-slate-400">{kpi.label}</span>
-                    </div>
-                    <p className="text-lg font-bold text-slate-900 dark:text-white">{kpi.curr || 0}</p>
-                    {kpi.sub && <p className="text-[9px] text-slate-400">{kpi.sub}</p>}
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className={`text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}</span>
-                      <span className="text-[10px] text-slate-400">vs prev</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-              <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Detailed Comparison</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">All metrics side by side with change indicators</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 dark:bg-slate-800">
-                    <tr className="border-b border-slate-200 dark:border-slate-700">
-                      {['Metric', 'Previous', 'Current', 'Difference', 'Change %', 'Status'].map(h => (
-                        <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Metric' ? 'text-left' : 'text-right'}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { label: 'Present', prev: p.present, curr: c.present, inv: false },
-                      { label: 'Absent', prev: p.absent, curr: c.absent, inv: true },
-                      { label: 'Excused', prev: p.excused, curr: c.excused, inv: true },
-                      { label: 'Total Members', prev: p.total, curr: c.total, inv: false },
-                      { label: 'Attendance %', prev: p.rate, curr: c.rate, suffix: '%', inv: false },
-                      { label: 'Service Days', prev: p.serviceDays, curr: c.serviceDays, inv: false },
-                      { label: 'Leaders Submitted', prev: p.leadersSubmitted, curr: c.leadersSubmitted, inv: false },
-                      { label: 'Leader Submission %', prev: prevSubmissionRate, curr: submissionRate, suffix: '%', inv: false },
-                      { label: 'Active Sections', prev: p.activeSections, curr: c.activeSections, inv: false },
-                    ].map(row => {
-                      const curr = row.curr || 0;
-                      const prev = row.prev || 0;
-                      const diff = row.inv ? prev - curr : curr - prev;
-                      const pct = prev > 0 ? ((diff / prev) * 100).toFixed(1) : 0;
-                      const isPositive = diff >= 0;
-                      return (
-                        <tr key={row.label} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                          <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{row.label}</td>
-                          <td className="py-2.5 px-3 text-right text-slate-500">{prev}{row.suffix || ''}</td>
-                          <td className="py-2.5 px-3 text-right font-bold">{curr}{row.suffix || ''}</td>
-                          <td className={`py-2.5 px-3 text-right font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>{isPositive ? '+' : ''}{diff}{row.suffix || ''}</td>
-                          <td className={`py-2.5 px-3 text-right ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>{pct}%</td>
-                          <td className="py-2.5 px-3 text-right">
-                            <Badge variant={isPositive ? 'success' : 'danger'}>{isPositive ? 'Increase' : 'Decrease'}</Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+        {dates && (
+          <div className="rounded-xl bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                  {typeTabs.find(t => t.key === compType)?.label || compType} — {periodTabs.find(p => p.key === compPeriod)?.label || compPeriod}
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  Current: <span className="font-medium text-slate-600 dark:text-slate-300">{dates.cStart} to {dates.cEnd}</span>
+                  {' '}&mdash; Previous: <span className="font-medium text-slate-600 dark:text-slate-300">{dates.pStart} to {dates.pEnd}</span>
+                </p>
               </div>
             </div>
           </div>
+        )}
+
+        {analyticsLoading ? (
+          <div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+        ) : comp.type === 'overall' && comp.current ? (
+          <div className="space-y-5">
+            {(() => {
+              const c = comp.current, p = comp.previous;
+              const diffRate = (c.rate || 0) - (p.rate || 0);
+              const submissionRate = comp.totalLeaders > 0 ? Math.round(((c.leadersSubmitted || 0) / comp.totalLeaders) * 100) : 0;
+              const prevSubmissionRate = comp.totalLeaders > 0 ? Math.round(((p.leadersSubmitted || 0) / comp.totalLeaders) * 100) : 0;
+              return (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {[
+                      { label: 'Present', curr: c.present, prev: p.present, color: 'emerald' },
+                      { label: 'Absent', curr: c.absent, prev: p.absent, color: 'rose', inv: true },
+                      { label: 'Excused', curr: c.excused, prev: p.excused, color: 'amber', inv: true },
+                      { label: 'Attendance %', curr: c.rate, prev: p.rate, color: 'indigo', suffix: '%' },
+                    ].map(kpi => {
+                      const diff = kpi.inv ? (kpi.prev || 0) - (kpi.curr || 0) : (kpi.curr || 0) - (kpi.prev || 0);
+                      return (
+                        <div key={kpi.label} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
+                          <p className="text-[10px] font-semibold uppercase text-slate-400">{kpi.label}</p>
+                          <p className="text-lg font-bold text-slate-900 dark:text-white">{kpi.curr || 0}{kpi.suffix || ''}</p>
+                          <span className={`text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{kpi.suffix || ''} vs prev</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Detailed Comparison</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-slate-50 dark:bg-slate-800">
+                          <tr className="border-b border-slate-200 dark:border-slate-700">
+                            {['Metric', 'Previous', 'Current', 'Difference', 'Change %', 'Status'].map(h => (
+                              <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Metric' ? 'text-left' : 'text-right'}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            { label: 'Present', prev: p.present, curr: c.present },
+                            { label: 'Absent', prev: p.absent, curr: c.absent, inv: true },
+                            { label: 'Excused', prev: p.excused, curr: c.excused, inv: true },
+                            { label: 'Total Members', prev: p.total, curr: c.total },
+                            { label: 'Attendance %', prev: p.rate, curr: c.rate, suffix: '%' },
+                            { label: 'Service Days', prev: p.serviceDays, curr: c.serviceDays },
+                            { label: 'Leaders Submitted', prev: p.leadersSubmitted, curr: c.leadersSubmitted },
+                            { label: 'Leader Submission %', prev: prevSubmissionRate, curr: submissionRate, suffix: '%' },
+                            { label: 'Active Sections', prev: p.activeSections, curr: c.activeSections },
+                          ].map(row => {
+                            const curr = row.curr || 0, prev = row.prev || 0;
+                            const diff = row.inv ? prev - curr : curr - prev;
+                            const pct = prev > 0 ? ((diff / prev) * 100).toFixed(1) : 0;
+                            return (
+                              <tr key={row.label} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{row.label}</td>
+                                <td className="py-2.5 px-3 text-right text-slate-500">{prev}{row.suffix || ''}</td>
+                                <td className="py-2.5 px-3 text-right font-bold">{curr}{row.suffix || ''}</td>
+                                <td className={`py-2.5 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{row.suffix || ''}</td>
+                                <td className={`py-2.5 px-3 text-right ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{pct}%</td>
+                                <td className="py-2.5 px-3 text-right"><Badge variant={diff >= 0 ? 'success' : 'danger'}>{diff >= 0 ? 'Increase' : 'Decrease'}</Badge></td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        ) : comp.type === 'sections' && comp.currentList ? (
+          renderEntityTable(comp.currentList, comp.previousList, 'name', [
+            { key: 'attendance_rate', label: 'Rate', suffix: '%' },
+            { key: 'total_present', label: 'Present' },
+            { key: 'total_absent', label: 'Absent' },
+            { key: 'member_count', label: 'Members' },
+            { key: 'new_members', label: 'New' },
+          ])
+        ) : comp.type === 'leaders' && comp.currentList ? (
+          renderEntityTable(comp.currentList, comp.previousList, 'leader_name', [
+            { key: 'avg_rate', label: 'Rate', suffix: '%' },
+            { key: 'submissions', label: 'Submissions' },
+          ])
+        ) : comp.type === 'departments' && comp.currentList ? (
+          renderEntityTable(comp.currentList, comp.previousList, 'name', [
+            { key: 'attendance_rate', label: 'Rate', suffix: '%' },
+            { key: 'total_present', label: 'Present' },
+            { key: 'total_absent', label: 'Absent' },
+            { key: 'member_count', label: 'Members' },
+          ])
         ) : (
           <div className="text-center py-12 text-slate-400 text-sm">
             <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-            Select a comparison period to view analytics
-          </div>
-        )}
-
-        {departmentsData.length > 0 && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Department Performance Comparison</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">{modeLabel} period</p>
-            </div>
-            <IntelligenceTable
-              columns={[
-                { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span> },
-                { key: 'name', label: 'Department', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
-                { key: 'member_count', label: 'Members', align: 'right' },
-                { key: 'total_present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600 font-medium">{v}</span> },
-                { key: 'total_absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v}</span> },
-                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
-              ]}
-              data={departmentsData}
-            />
+            Select a comparison type and period to view analytics
           </div>
         )}
       </div>
@@ -1370,9 +1497,9 @@ const AttendanceReports = ({
             { label: 'PDF Export', icon: FileText, action: handleExportPDF, color: 'rose' },
             { label: 'CSV Export', icon: Download, action: handleCSVExport, color: 'emerald' },
             { label: 'Print View', icon: Printer, action: handlePrint, color: 'sky' },
-            { label: 'Weekly Report', icon: Calendar, action: () => { setComparisonMode('week'); setActiveTab('comparison'); }, color: 'amber' },
-            { label: 'Monthly Report', icon: Calendar, action: () => { setComparisonMode('month'); setActiveTab('comparison'); }, color: 'indigo' },
-            { label: 'Refresh Data', icon: RefreshCw, action: () => { loadOverview(); loadAnalytics(); loadDepartments(comparisonMode); loadComparisonData(comparisonMode); loadHistoricalData(historicalPeriod); }, color: 'indigo' },
+            { label: 'Weekly Report', icon: Calendar, action: () => { setCompPeriod('week'); setActiveTab('comparison'); }, color: 'amber' },
+            { label: 'Monthly Report', icon: Calendar, action: () => { setCompPeriod('month'); setActiveTab('comparison'); }, color: 'indigo' },
+            { label: 'Refresh Data', icon: RefreshCw, action: () => { loadOverview(); loadAnalytics(); loadDepartments(); loadComparisonData(); loadHistoricalData(historicalPeriod); }, color: 'indigo' },
           ].map(exp => (
             <button key={exp.label} onClick={exp.action}
               className="flex items-center gap-2 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-left">

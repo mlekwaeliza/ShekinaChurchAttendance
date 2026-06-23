@@ -281,12 +281,13 @@ router.get('/dashboard-metrics', async (req, res) => {
   }
 });
 
-// GET /analytics/section-comparison?days=90
+// GET /analytics/section-comparison?days=90&startDate=&endDate=
 // Returns multi-metric comparison across all sections
 router.get('/section-comparison', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
-    const sections = await queries.getSectionComparison(days);
+    const { startDate, endDate } = req.query;
+    const sections = await queries.getSectionComparison(days, startDate || null, endDate || null);
     res.json(sections);
   } catch (error) {
     console.error('Section comparison error:', error);
@@ -480,11 +481,12 @@ router.get('/leader-rankings', async (req, res) => {
   }
 });
 
-// GET /analytics/departments?days=90
+// GET /analytics/departments?days=90&startDate=&endDate=
 router.get('/departments', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
-    const depts = await queries.getDepartmentAnalytics(days);
+    const { startDate, endDate } = req.query;
+    const depts = await queries.getDepartmentAnalytics(days, startDate || null, endDate || null);
     const ranked = depts.map((d, i) => ({
       ...d,
       rank: i + 1,
