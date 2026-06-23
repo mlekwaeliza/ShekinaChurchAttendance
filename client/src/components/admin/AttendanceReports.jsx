@@ -199,6 +199,7 @@ const AttendanceReports = ({
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [departmentsData, setDepartmentsData] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [comparisonData, setComparisonData] = useState({});
   const [selectedLeader, setSelectedLeader] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -208,6 +209,38 @@ const AttendanceReports = ({
   useEffect(() => { loadAnalytics(); }, []);
 
   const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365 };
+
+  const toDateStr = (d) => { const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
+
+  const getDateRangeForMode = (mode) => {
+    const now = new Date();
+    switch (mode) {
+      case 'today': {
+        const yesterday = new Date(now.getTime() - 86400000);
+        return { period1Start: toDateStr(now), period1End: toDateStr(now), period2Start: toDateStr(yesterday), period2End: toDateStr(yesterday) };
+      }
+      case 'week': {
+        const dow = now.getDay();
+        const monOffset = dow === 0 ? 6 : dow - 1;
+        const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - monOffset);
+        const sun = new Date(mon.getTime() + 6 * 86400000);
+        const prevMon = new Date(mon.getTime() - 7 * 86400000);
+        const prevSun = new Date(prevMon.getTime() + 6 * 86400000);
+        return { period1Start: toDateStr(mon), period1End: toDateStr(sun), period2Start: toDateStr(prevMon), period2End: toDateStr(prevSun) };
+      }
+      case 'month': {
+        const y = now.getFullYear(), m = now.getMonth();
+        return { period1Start: toDateStr(new Date(y, m, 1)), period1End: toDateStr(new Date(y, m + 1, 0)), period2Start: toDateStr(new Date(y, m - 1, 1)), period2End: toDateStr(new Date(y, m, 0)) };
+      }
+      case 'quarter': {
+        const q = Math.floor(now.getMonth() / 3);
+        return { period1Start: toDateStr(new Date(now.getFullYear(), q * 3, 1)), period1End: toDateStr(new Date(now.getFullYear(), q * 3 + 3, 0)), period2Start: toDateStr(new Date(now.getFullYear(), q * 3 - 3, 1)), period2End: toDateStr(new Date(now.getFullYear(), q * 3, 0)) };
+      }
+      case 'year':
+        return { period1Start: `${now.getFullYear()}-01-01`, period1End: `${now.getFullYear()}-12-31`, period2Start: `${now.getFullYear() - 1}-01-01`, period2End: `${now.getFullYear() - 1}-12-31` };
+      default: return null;
+    }
+  };
 
   const loadDepartments = async (mode) => {
     setDepartmentsLoading(true);
@@ -220,6 +253,21 @@ const AttendanceReports = ({
   };
 
   useEffect(() => { loadDepartments(comparisonMode); }, [comparisonMode]);
+
+  const loadComparisonData = async (mode) => {
+    const range = getDateRangeForMode(mode);
+    if (!range) return;
+    try {
+      const res = await analyticsAPI.getComparison(range);
+      const d = res.data || {};
+      setComparisonData(d.p1_present != null ? {
+        current: { present: d.p1_present, absent: (d.p1_total || 0) - (d.p1_present || 0), excused: 0, rate: d.p1_rate || 0 },
+        previous: { present: d.p2_present, absent: (d.p2_total || 0) - (d.p2_present || 0), excused: 0, rate: d.p2_rate || 0 },
+      } : {});
+    } catch (e) { setComparisonData({}); }
+  };
+
+  useEffect(() => { loadComparisonData(comparisonMode); }, [comparisonMode]);
 
   const loadAnalytics = async () => {
     setAnalyticsLoading(true);
@@ -243,7 +291,6 @@ const AttendanceReports = ({
         analyticsAPI.getDashboardMetrics(selectedServiceId),
         analyticsAPI.getSectionComparison(90),
         analyticsAPI.getSectionRankings(90),
-        analyticsAPI.getComparison({ period: 'week' }),
         analyticsAPI.getHistorical({ period: 'monthly' }),
         analyticsAPI.getRiskAnalysis(),
         analyticsAPI.getAIInsights(),
@@ -258,9 +305,9 @@ const AttendanceReports = ({
         demographics: ok(6), yearOverYear: ok(7) || [], retention: ok(8) || {},
         prevRetention: ok(9) || {}, engagementScores: ok(10) || [],
         dashboardMetrics: ok(11), sectionComparison: ok(12) || [],
-        sectionRankings: ok(13) || [], comparison: ok(14), historical: ok(15),
-        risk: ok(16), aiInsights: ok(17) || [], growthIndex: ok(18),
-        headLeaders: ok(19) || [],
+        sectionRankings: ok(13) || [], historical: ok(14),
+        risk: ok(15), aiInsights: ok(16) || [], growthIndex: ok(17),
+        headLeaders: ok(18) || [],
       });
     } catch (e) { console.error('Failed to load analytics:', e); }
     finally { setAnalyticsLoading(false); }
@@ -512,7 +559,7 @@ const AttendanceReports = ({
   };
 
   const renderComparisonTab = () => {
-    const comp = analytics.comparison || {};
+    const comp = comparisonData || {};
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
