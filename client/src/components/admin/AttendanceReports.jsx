@@ -286,11 +286,16 @@ const AttendanceReports = ({
       const res = await analyticsAPI.getHistorical({ startDate: toDateStr(start), endDate: toDateStr(end) });
       const d = res.data || {};
       const s = d.stats || {};
+      const daily = (d.daily || []).map(r => ({
+        date: r.date, present_count: r.present || 0,
+        absent_count: r.absent || 0, excused_count: r.excused || 0,
+        total_members: r.total || 0, rate: r.rate || 0,
+      }));
       setHistoricalData({
         highest: s.highest_attendance || 0, lowest: s.lowest_attendance || 0,
         average: s.total_records > 0 ? Math.round((s.highest_attendance + s.lowest_attendance) / 2) : 0,
         total_records: s.total_records || 0, avg_rate: s.avg_rate || 0,
-        daily: d.daily || [],
+        daily,
       });
     } catch (e) { setHistoricalData({}); }
   };
@@ -868,7 +873,7 @@ const AttendanceReports = ({
           <MetricCard label="Attendance Rate" value={`${hist.avg_rate || 0}%`} icon={Target} color="sky" showDiff={false} />
         </div>
 
-        {analytics.trends?.length > 0 && (
+        {historicalData.daily?.length > 0 && (
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
             <div className="p-4 border-b border-slate-100 dark:border-slate-700">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Historical Attendance Records</h3>
@@ -883,16 +888,15 @@ const AttendanceReports = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {analytics.trends.slice(0, 60).map((t, i) => {
-                    const total = (t.present_count || 0) + (t.absent_count || 0) + (t.excused_count || 0);
-                    const rate = t.total_members > 0 ? Math.round(((t.present_count || 0) / t.total_members) * 100) : 0;
+                  {historicalData.daily.slice(0, 60).map((t, i) => {
+                    const rate = t.total_members > 0 ? Math.round((t.present_count / t.total_members) * 100) : 0;
                     return (
                       <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                         <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{t.date}</td>
                         <td className="py-2 px-3 text-right text-emerald-600">{t.present_count}</td>
                         <td className="py-2 px-3 text-right text-rose-500">{t.absent_count}</td>
                         <td className="py-2 px-3 text-right text-amber-500">{t.excused_count}</td>
-                        <td className="py-2 px-3 text-right font-medium">{total}</td>
+                        <td className="py-2 px-3 text-right font-medium">{t.total_members}</td>
                         <td className="py-2 px-3 text-right"><Badge variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}>{rate}%</Badge></td>
                       </tr>
                     );
