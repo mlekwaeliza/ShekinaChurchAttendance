@@ -3294,7 +3294,8 @@ const queries = {
       (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date >= ${daysAgo(60)} AND date < ${daysAgo(30)}) as previous_rate,
       (SELECT COUNT(DISTINCT sub.leader_id) FROM submission_log sub WHERE sub.date >= ${daysAgo(30)}) as active_leaders,
       (SELECT COUNT(*) FROM members WHERE visitor_date >= ${daysAgo(90)}) as new_visitors_90d,
-      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= ${daysAgo(90)}) as souls_won_90d
+      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= ${daysAgo(90)}) as souls_won_90d,
+      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= ${daysAgo(365)}) as souls_won_year
   `),
 
   // ── AI Insights Generation ────────────────────────────────────────────
