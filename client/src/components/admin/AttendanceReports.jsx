@@ -2,14 +2,12 @@ import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, Users, AlertTriangle, Target,
   Calendar, Download, Printer, FileText, Activity, Shield, ChevronRight,
-  X, Zap, Award, Clock, Eye, Layers, CheckCircle2, Flame, Heart,
+  X, Zap, Award, Clock, Eye, Layers, CheckCircle2, Flame, Heart, Brain,
   UserCheck, UserX, Star, Info, ChevronDown, ChevronUp, Search,
-  ArrowUp, ArrowDown, Minus, RefreshCw, Filter
+  ArrowUp, ArrowDown, Minus, RefreshCw
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
 import Badge from '../ui/Badge';
-
-const SECTION_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6'];
 
 const TABS = [
   { id: 'overview', label: 'Executive Summary', icon: Eye },
@@ -204,8 +202,6 @@ const AttendanceReports = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [comparisonMode, setComparisonMode] = useState('week');
   const [historicalPeriod, setHistoricalPeriod] = useState('monthly');
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
-
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, []);
 
