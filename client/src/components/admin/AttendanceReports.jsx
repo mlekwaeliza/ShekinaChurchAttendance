@@ -245,8 +245,30 @@ const AttendanceReports = ({
       const res = await analyticsAPI.getComparison(range);
       const d = res.data || {};
       setComparisonData({
-        current: { present: d.p1_present || 0, absent: (d.p1_total || 0) - (d.p1_present || 0), excused: 0, rate: d.p1_rate || 0 },
-        previous: { present: d.p2_present || 0, absent: (d.p2_total || 0) - (d.p2_present || 0), excused: 0, rate: d.p2_rate || 0 },
+        current: {
+          present: d.p1_present || 0,
+          absent: d.p1_absent || 0,
+          excused: d.p1_excused || 0,
+          total: d.p1_total || 0,
+          records: d.p1_records || 0,
+          rate: d.p1_rate || 0,
+          serviceDays: d.p1_service_days || 0,
+          leadersSubmitted: d.p1_leaders_submitted || 0,
+          activeSections: d.p1_active_sections || 0,
+        },
+        previous: {
+          present: d.p2_present || 0,
+          absent: d.p2_absent || 0,
+          excused: d.p2_excused || 0,
+          total: d.p2_total || 0,
+          records: d.p2_records || 0,
+          rate: d.p2_rate || 0,
+          serviceDays: d.p2_service_days || 0,
+          leadersSubmitted: d.p2_leaders_submitted || 0,
+          activeSections: d.p2_active_sections || 0,
+        },
+        totalLeaders: d.total_leaders || 0,
+        range,
       });
     } catch (e) { setComparisonData({}); }
   };
@@ -574,10 +596,19 @@ const AttendanceReports = ({
     const comp = comparisonData || {};
     const c = comp.current || {};
     const p = comp.previous || {};
-    const diffPresent = (c.present || 0) - (p.present || 0);
-    const pctPresent = p.present > 0 ? ((diffPresent / p.present) * 100).toFixed(1) : 0;
-    const diffRate = (c.rate || 0) - (p.rate || 0);
     const isCustom = comparisonMode === 'custom';
+    const modeLabel = comparisonMode === 'custom' ? 'Custom Range' : comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1);
+    const diffRate = (c.rate || 0) - (p.rate || 0);
+    const diffPresent = (c.present || 0) - (p.present || 0);
+    const diffAbsent = (p.absent || 0) - (c.absent || 0);
+    const submissionRate = comp.totalLeaders > 0 ? Math.round(((c.leadersSubmitted || 0) / comp.totalLeaders) * 100) : 0;
+    const prevSubmissionRate = comp.totalLeaders > 0 ? Math.round(((p.leadersSubmitted || 0) / comp.totalLeaders) * 100) : 0;
+
+    const fmtRange = (range) => {
+      if (!range) return '';
+      return `${range.period1Start} to ${range.period1End}`;
+    };
+
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
@@ -621,11 +652,79 @@ const AttendanceReports = ({
         )}
 
         {c.present != null ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {comp.range && (
+              <div className="rounded-xl bg-gradient-to-r from-indigo-500/5 to-purple-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-4">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{modeLabel} Comparison</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Current: <span className="font-medium text-slate-600 dark:text-slate-300">{comp.range.period1Start} to {comp.range.period1End}</span>
+                      {' '} vs Previous: <span className="font-medium text-slate-600 dark:text-slate-300">{comp.range.period2Start} to {comp.range.period2End}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-2xl font-bold ${diffRate >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diffRate >= 0 ? '+' : ''}{diffRate}%</span>
+                    <span className="text-xs text-slate-400">rate change</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {[
+                { label: 'Present', curr: c.present, prev: p.present, icon: CheckCircle2, color: 'emerald', inv: false },
+                { label: 'Absent', curr: c.absent, prev: p.absent, icon: UserX, color: 'rose', inv: true },
+                { label: 'Excused', curr: c.excused, prev: p.excused, icon: AlertTriangle, color: 'amber', inv: true },
+                { label: 'Attendance %', curr: c.rate, prev: p.rate, icon: Activity, color: 'indigo', suffix: '%', inv: false },
+              ].map(kpi => {
+                const diff = kpi.inv ? (kpi.prev || 0) - (kpi.curr || 0) : (kpi.curr || 0) - (kpi.prev || 0);
+                const pct = (kpi.prev || 0) > 0 ? ((diff / (kpi.prev || 1)) * 100).toFixed(1) : 0;
+                return (
+                  <div key={kpi.label} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <kpi.icon className={`w-3.5 h-3.5 text-${kpi.color}-500`} />
+                      <span className="text-[10px] font-semibold uppercase text-slate-400">{kpi.label}</span>
+                    </div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white">{kpi.curr || 0}{kpi.suffix || ''}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className={`text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{kpi.suffix || ''}</span>
+                      <span className="text-[10px] text-slate-400">vs prev ({pct}%)</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {[
+                { label: 'Total Members', curr: c.total, prev: p.total, icon: Users },
+                { label: 'Service Days', curr: c.serviceDays, prev: p.serviceDays, icon: Calendar },
+                { label: 'Leaders Submitted', curr: c.leadersSubmitted, prev: p.leadersSubmitted, icon: Target, sub: `of ${comp.totalLeaders || 0}` },
+                { label: 'Active Sections', curr: c.activeSections, prev: p.activeSections, icon: Layers },
+              ].map(kpi => {
+                const diff = (kpi.curr || 0) - (kpi.prev || 0);
+                return (
+                  <div key={kpi.label} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
+                    <div className="flex items-center gap-2 mb-1">
+                      <kpi.icon className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-[10px] font-semibold uppercase text-slate-400">{kpi.label}</span>
+                    </div>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white">{kpi.curr || 0}</p>
+                    {kpi.sub && <p className="text-[9px] text-slate-400">{kpi.sub}</p>}
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className={`text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}</span>
+                      <span className="text-[10px] text-slate-400">vs prev</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
               <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Comparison Summary</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">{comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)} vs Previous {comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)}</p>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Detailed Comparison</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">All metrics side by side with change indicators</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
@@ -638,23 +737,30 @@ const AttendanceReports = ({
                   </thead>
                   <tbody>
                     {[
-                      { label: 'Present', prev: p.present, curr: c.present },
+                      { label: 'Present', prev: p.present, curr: c.present, inv: false },
                       { label: 'Absent', prev: p.absent, curr: c.absent, inv: true },
-                      { label: 'Attendance %', prev: p.rate, curr: c.rate, suffix: '%' },
+                      { label: 'Excused', prev: p.excused, curr: c.excused, inv: true },
+                      { label: 'Total Members', prev: p.total, curr: c.total, inv: false },
+                      { label: 'Attendance %', prev: p.rate, curr: c.rate, suffix: '%', inv: false },
+                      { label: 'Service Days', prev: p.serviceDays, curr: c.serviceDays, inv: false },
+                      { label: 'Leaders Submitted', prev: p.leadersSubmitted, curr: c.leadersSubmitted, inv: false },
+                      { label: 'Leader Submission %', prev: prevSubmissionRate, curr: submissionRate, suffix: '%', inv: false },
+                      { label: 'Active Sections', prev: p.activeSections, curr: c.activeSections, inv: false },
                     ].map(row => {
                       const curr = row.curr || 0;
                       const prev = row.prev || 0;
                       const diff = row.inv ? prev - curr : curr - prev;
                       const pct = prev > 0 ? ((diff / prev) * 100).toFixed(1) : 0;
+                      const isPositive = diff >= 0;
                       return (
                         <tr key={row.label} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                           <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{row.label}</td>
                           <td className="py-2.5 px-3 text-right text-slate-500">{prev}{row.suffix || ''}</td>
                           <td className="py-2.5 px-3 text-right font-bold">{curr}{row.suffix || ''}</td>
-                          <td className={`py-2.5 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{row.suffix || ''}</td>
-                          <td className={`py-2.5 px-3 text-right ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{pct}%</td>
+                          <td className={`py-2.5 px-3 text-right font-bold ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>{isPositive ? '+' : ''}{diff}{row.suffix || ''}</td>
+                          <td className={`py-2.5 px-3 text-right ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>{pct}%</td>
                           <td className="py-2.5 px-3 text-right">
-                            <Badge variant={diff >= 0 ? 'success' : 'danger'}>{diff >= 0 ? 'Increase' : 'Decrease'}</Badge>
+                            <Badge variant={isPositive ? 'success' : 'danger'}>{isPositive ? 'Increase' : 'Decrease'}</Badge>
                           </td>
                         </tr>
                       );
@@ -675,7 +781,7 @@ const AttendanceReports = ({
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
             <div className="p-4 border-b border-slate-100 dark:border-slate-700">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Department Performance Comparison</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">{comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)} period</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{modeLabel} period</p>
             </div>
             <IntelligenceTable
               columns={[

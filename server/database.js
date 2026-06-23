@@ -2946,11 +2946,36 @@ const queries = {
     SELECT
       (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'present') as p1_present,
       (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'present') as p2_present,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'absent') as p1_absent,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'absent') as p2_absent,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'excused') as p1_excused,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'excused') as p2_excused,
       (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ?) as p1_total,
       (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ?) as p2_total,
+      (SELECT COUNT(*) FROM attendance WHERE date BETWEEN ? AND ?) as p1_records,
+      (SELECT COUNT(*) FROM attendance WHERE date BETWEEN ? AND ?) as p2_records,
+      (SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?) as p1_service_days,
+      (SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?) as p2_service_days,
+      (SELECT COUNT(DISTINCT leader_id) FROM submission_log WHERE date BETWEEN ? AND ?) as p1_leaders_submitted,
+      (SELECT COUNT(DISTINCT leader_id) FROM submission_log WHERE date BETWEEN ? AND ?) as p2_leaders_submitted,
+      (SELECT COUNT(*) FROM leaders WHERE is_active = 1) as total_leaders,
       (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date BETWEEN ? AND ?) as p1_rate,
-      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date BETWEEN ? AND ?) as p2_rate
+      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date BETWEEN ? AND ?) as p2_rate,
+      (SELECT COUNT(DISTINCT m.section_id) FROM attendance a
+        JOIN members m ON a.member_id = m.id
+        WHERE a.date BETWEEN ? AND ?
+      ) as p1_active_sections,
+      (SELECT COUNT(DISTINCT m.section_id) FROM attendance a
+        JOIN members m ON a.member_id = m.id
+        WHERE a.date BETWEEN ? AND ?
+      ) as p2_active_sections
   `, [period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
       period1Start, period1End, period2Start, period2End,
       period1Start, period1End, period2Start, period2End]),
 
