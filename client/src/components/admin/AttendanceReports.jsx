@@ -242,7 +242,6 @@ const AttendanceReports = ({
 
   const getCompDates = (period) => {
     const now = new Date();
-    const toStr = (d) => d.toISOString().split('T')[0];
     let cStart, cEnd, pStart, pEnd;
     switch (period) {
       case 'week': {
@@ -251,21 +250,21 @@ const AttendanceReports = ({
         const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
         const pMon = new Date(mon); pMon.setDate(mon.getDate() - 7);
         const pSun = new Date(sun); pSun.setDate(sun.getDate() - 7);
-        cStart = toStr(mon); cEnd = toStr(sun); pStart = toStr(pMon); pEnd = toStr(pSun);
+        cStart = toDateStr(mon); cEnd = toDateStr(sun); pStart = toDateStr(pMon); pEnd = toDateStr(pSun);
         break;
       }
       case 'month': {
         const y = now.getFullYear(), m = now.getMonth();
-        cStart = toStr(new Date(y, m, 1)); cEnd = toStr(new Date(y, m + 1, 0));
-        pStart = toStr(new Date(y, m - 1, 1)); pEnd = toStr(new Date(y, m, 0));
+        cStart = toDateStr(new Date(y, m, 1)); cEnd = toDateStr(new Date(y, m + 1, 0));
+        pStart = toDateStr(new Date(y, m - 1, 1)); pEnd = toDateStr(new Date(y, m, 0));
         break;
       }
       case 'quarter': {
         const q = Math.floor(now.getMonth() / 3);
-        cStart = toStr(new Date(now.getFullYear(), q * 3, 1));
-        cEnd = toStr(new Date(now.getFullYear(), q * 3 + 3, 0));
-        pStart = toStr(new Date(now.getFullYear(), q * 3 - 3, 1));
-        pEnd = toStr(new Date(now.getFullYear(), q * 3, 0));
+        cStart = toDateStr(new Date(now.getFullYear(), q * 3, 1));
+        cEnd = toDateStr(new Date(now.getFullYear(), q * 3 + 3, 0));
+        pStart = toDateStr(new Date(now.getFullYear(), q * 3 - 3, 1));
+        pEnd = toDateStr(new Date(now.getFullYear(), q * 3, 0));
         break;
       }
       case 'year': {
@@ -330,7 +329,7 @@ const AttendanceReports = ({
         ]);
         setComparisonData({ type: 'departments', currentList: curRes.data || [], previousList: prevRes.data || [], dates });
       }
-    } catch (e) { console.error('Comparison load error:', e); setComparisonData({}); }
+    } catch (e) { console.error('Comparison load error:', e.message, e); setComparisonData({}); }
     finally { setAnalyticsLoading(false); }
   };
 

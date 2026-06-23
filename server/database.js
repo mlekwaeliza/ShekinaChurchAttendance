@@ -2779,13 +2779,29 @@ const queries = {
   // ── Section Comparison Analytics ─────────────────────────────────────────
   getSectionComparison: (days = 90, startDate, endDate) => {
     const useRange = startDate && endDate;
-    const dateFilter = useRange
-      ? `AND a.date >= '${startDate}' AND a.date <= '${endDate}'`
-      : `AND a.date >= ${daysAgo()}`;
-    const memberFilter = useRange
-      ? `AND created_at >= '${startDate}'`
-      : `AND created_at >= ${daysAgo()}`;
-    const params = useRange ? [] : [days, days];
+    if (useRange) {
+      return all(`
+        SELECT
+          s.id,
+          s.name,
+          COUNT(DISTINCT m.id) as member_count,
+          COUNT(DISTINCT a.date) as submission_days,
+          SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+          SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+          SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+          ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+          (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ?) as new_members,
+          (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as active_members,
+          (SELECT MAX(date) FROM attendance a2
+            JOIN members m2 ON a2.member_id = m2.id
+            WHERE m2.section_id = s.id AND a2.date >= ? AND a2.date <= ?) as last_submission_date
+        FROM sections s
+        LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
+        LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ? AND a.date <= ?
+        GROUP BY s.id, s.name
+        ORDER BY attendance_rate DESC
+      `, [startDate, startDate, endDate, startDate, endDate]);
+    }
     return all(`
       SELECT
         s.id,
@@ -2796,17 +2812,18 @@ const queries = {
         SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
         SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
         ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id ${memberFilter}) as new_members,
+        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo()}) as new_members,
         (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as active_members,
         (SELECT MAX(date) FROM attendance a2
           JOIN members m2 ON a2.member_id = m2.id
-          WHERE m2.section_id = s.id ${dateFilter}) as last_submission_date
+          WHERE m2.section_id = s.id AND a2.date >= ${daysAgo()}) as last_submission_date
       FROM sections s
       LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
-      LEFT JOIN attendance a ON a.member_id = m.id ${dateFilter}
+      LEFT JOIN attendance a ON a.member_id = m.id
+        AND a.date >= ${daysAgo()}
       GROUP BY s.id, s.name
       ORDER BY attendance_rate DESC
-    `, params);
+    `, [days, days]);
   },
 
   // ── Service Type Attendance Breakdown ─────────────────────────────────────
@@ -3096,10 +3113,25 @@ const queries = {
   // ── Department Analytics ───────────────────────────────────────────────
   getDepartmentAnalytics: (days = 90, startDate, endDate) => {
     const useRange = startDate && endDate;
-    const dateFilter = useRange
-      ? `AND a.date >= '${startDate}' AND a.date <= '${endDate}'`
-      : `AND a.date >= ${daysAgo()}`;
-    const params = useRange ? [] : [days];
+    if (useRange) {
+      return all(`
+        SELECT
+          d.id,
+          d.name,
+          COUNT(DISTINCT dm.member_id) as member_count,
+          ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+          SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+          SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent
+        FROM departments d
+        LEFT JOIN department_members dm ON dm.department_id = d.id
+        LEFT JOIN members m ON m.id = dm.member_id AND m.is_active = 1
+        LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ? AND a.date <= ?
+        WHERE d.is_active = 1
+        GROUP BY d.id, d.name
+        HAVING member_count > 0
+        ORDER BY attendance_rate DESC
+      `, [startDate, endDate]);
+    }
     return all(`
       SELECT
         d.id,
@@ -3111,12 +3143,12 @@ const queries = {
       FROM departments d
       LEFT JOIN department_members dm ON dm.department_id = d.id
       LEFT JOIN members m ON m.id = dm.member_id AND m.is_active = 1
-      LEFT JOIN attendance a ON a.member_id = m.id ${dateFilter}
+      LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
       WHERE d.is_active = 1
       GROUP BY d.id, d.name
       HAVING member_count > 0
       ORDER BY attendance_rate DESC
-    `, params);
+    `, [days]);
   },
 
   // ── Member Attendance Intelligence ─────────────────────────────────────
