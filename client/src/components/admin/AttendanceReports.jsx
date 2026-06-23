@@ -206,6 +206,7 @@ const AttendanceReports = ({
   const [departmentsData, setDepartmentsData] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [comparisonData, setComparisonData] = useState({});
+  const [historicalData, setHistoricalData] = useState({});
   const [selectedLeader, setSelectedLeader] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -275,6 +276,27 @@ const AttendanceReports = ({
 
   useEffect(() => { loadComparisonData(comparisonMode); }, [comparisonMode]);
 
+  const modeToMonths = { daily: 1, weekly: 3, monthly: 12, quarterly: 24, yearly: 60 };
+
+  const loadHistoricalData = async (period) => {
+    const months = modeToMonths[period] || 12;
+    const end = new Date();
+    const start = new Date(end.getFullYear(), end.getMonth() - months, 1);
+    try {
+      const res = await analyticsAPI.getHistorical({ startDate: toDateStr(start), endDate: toDateStr(end) });
+      const d = res.data || {};
+      const s = d.stats || {};
+      setHistoricalData({
+        highest: s.highest_attendance || 0, lowest: s.lowest_attendance || 0,
+        average: s.total_records > 0 ? Math.round((s.highest_attendance + s.lowest_attendance) / 2) : 0,
+        total_records: s.total_records || 0, avg_rate: s.avg_rate || 0,
+        daily: d.daily || [],
+      });
+    } catch (e) { setHistoricalData({}); }
+  };
+
+  useEffect(() => { loadHistoricalData(historicalPeriod); }, [historicalPeriod]);
+
   const loadAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
@@ -297,7 +319,6 @@ const AttendanceReports = ({
         analyticsAPI.getDashboardMetrics(selectedServiceId),
         analyticsAPI.getSectionComparison(90),
         analyticsAPI.getSectionRankings(90),
-        analyticsAPI.getHistorical({ period: 'monthly' }),
         analyticsAPI.getRiskAnalysis(),
         analyticsAPI.getAIInsights(),
         analyticsAPI.getChurchGrowthIndex(),
@@ -311,9 +332,9 @@ const AttendanceReports = ({
         demographics: ok(6), yearOverYear: ok(7) || [], retention: ok(8) || {},
         prevRetention: ok(9) || {}, engagementScores: ok(10) || [],
         dashboardMetrics: ok(11), sectionComparison: ok(12) || [],
-        sectionRankings: ok(13) || [], historical: ok(14),
-        risk: ok(15), aiInsights: ok(16) || [], growthIndex: ok(17),
-        headLeaders: ok(18) || [],
+        sectionRankings: ok(13) || [],
+        risk: ok(14), aiInsights: ok(15) || [], growthIndex: ok(16),
+        headLeaders: ok(17) || [],
       });
     } catch (e) { console.error('Failed to load analytics:', e); }
     finally { setAnalyticsLoading(false); }
@@ -827,7 +848,7 @@ const AttendanceReports = ({
   );
 
   const renderHistoricalTab = () => {
-    const hist = analytics.historical || {};
+    const hist = historicalData;
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
@@ -974,7 +995,7 @@ const AttendanceReports = ({
             { label: 'PDF Report', icon: FileText, action: handleExportPDF, color: 'rose' },
             { label: 'CSV Export', icon: Download, action: handleCSVExport, color: 'emerald' },
             { label: 'Print View', icon: Printer, action: handlePrint, color: 'sky' },
-            { label: 'Refresh Data', icon: RefreshCw, action: () => { loadOverview(); loadAnalytics(); loadDepartments(comparisonMode); loadComparisonData(comparisonMode); }, color: 'indigo' },
+            { label: 'Refresh Data', icon: RefreshCw, action: () => { loadOverview(); loadAnalytics(); loadDepartments(comparisonMode); loadComparisonData(comparisonMode); loadHistoricalData(historicalPeriod); }, color: 'indigo' },
           ].map(exp => (
             <button key={exp.label} onClick={exp.action}
               className={`flex items-center gap-2 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 hover:bg-${exp.color}-50 dark:hover:bg-${exp.color}-900/20 transition-all text-left`}>
