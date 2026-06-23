@@ -280,13 +280,16 @@ const AttendanceReports = ({
 
   const sectionSummary = useMemo(() => {
     if (!sectionComparison.length) return null;
-    const totalMembers = sectionComparison.reduce((a, s) => a + (s.member_count || 0), 0);
-    const totalPresent = sectionComparison.reduce((a, s) => a + (s.total_present || 0), 0);
-    const totalAbsent = sectionComparison.reduce((a, s) => a + (s.total_absent || 0), 0);
-    const totalExcused = sectionComparison.reduce((a, s) => a + (s.total_excused || 0), 0);
-    const avgRate = sectionComparison.reduce((a, s) => a + (s.attendance_rate || 0), 0) / sectionComparison.length;
-    return { totalSections: sectionComparison.length, totalMembers, totalPresent, totalAbsent, totalExcused, avgRate: Math.round(avgRate) };
-  }, [sectionComparison]);
+    const totMembers = totalPresent + totalAbsent + totalExcused;
+    return {
+      totalSections: sectionComparison.length,
+      totalMembers: totMembers,
+      totalPresent,
+      totalAbsent,
+      totalExcused,
+      avgRate: totMembers > 0 ? Math.round((totalPresent / totMembers) * 100) : 0,
+    };
+  }, [sectionComparison, totalPresent, totalAbsent, totalExcused]);
 
   const insights = useMemo(() => {
     const list = [];
