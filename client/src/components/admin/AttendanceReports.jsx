@@ -183,11 +183,15 @@ const AttendanceReports = ({
   const [compTablePeriod, setCompTablePeriod] = useState(30);
   const [customDate1, setCustomDate1] = useState('');
   const [customDate2, setCustomDate2] = useState('');
+  const [p1Start, setP1Start] = useState('');
+  const [p1End, setP1End] = useState('');
+  const [p2Start, setP2Start] = useState('');
+  const [p2End, setP2End] = useState('');
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, [selectedServiceId]);
 
-  const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365 };
+  const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365, custom: 30 };
   const toDateStr = (d) => { const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
 
   const getDateRangeForMode = (mode) => {
@@ -216,6 +220,8 @@ const AttendanceReports = ({
       }
       case 'year':
         return { period1Start: `${now.getFullYear()}-01-01`, period1End: `${now.getFullYear()}-12-31`, period2Start: `${now.getFullYear() - 1}-01-01`, period2End: `${now.getFullYear() - 1}-12-31` };
+      case 'custom':
+        return p1Start && p1End && p2Start && p2End ? { period1Start: p1Start, period1End: p1End, period2Start: p2Start, period2End: p2End } : null;
       default: return null;
     }
   };
@@ -571,16 +577,48 @@ const AttendanceReports = ({
     const diffPresent = (c.present || 0) - (p.present || 0);
     const pctPresent = p.present > 0 ? ((diffPresent / p.present) * 100).toFixed(1) : 0;
     const diffRate = (c.rate || 0) - (p.rate || 0);
+    const isCustom = comparisonMode === 'custom';
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
-          {['today', 'week', 'month', 'quarter', 'year'].map(m => (
+          {['today', 'week', 'month', 'quarter', 'year', 'custom'].map(m => (
             <button key={m} onClick={() => setComparisonMode(m)}
               className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${comparisonMode === m ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700'}`}>
-              {m.charAt(0).toUpperCase() + m.slice(1)}
+              {m === 'custom' ? 'Custom' : m.charAt(0).toUpperCase() + m.slice(1)}
             </button>
           ))}
         </div>
+
+        {isCustom && (
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Period 1</p>
+                <div className="flex items-center gap-2">
+                  <input type="date" value={p1Start} onChange={e => setP1Start(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" placeholder="Start" />
+                  <span className="text-xs text-slate-400">to</span>
+                  <input type="date" value={p1End} onChange={e => setP1End(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" placeholder="End" />
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Period 2 (Comparison)</p>
+                <div className="flex items-center gap-2">
+                  <input type="date" value={p2Start} onChange={e => setP2Start(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" placeholder="Start" />
+                  <span className="text-xs text-slate-400">to</span>
+                  <input type="date" value={p2End} onChange={e => setP2End(e.target.value)}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" placeholder="End" />
+                </div>
+              </div>
+            </div>
+            <button onClick={() => loadComparisonData('custom')}
+              className="mt-3 px-4 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-xl hover:bg-indigo-700 transition-all">
+              Compare Periods
+            </button>
+          </div>
+        )}
 
         {c.present != null ? (
           <div className="space-y-4">
