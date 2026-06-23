@@ -1,22 +1,24 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, Users, AlertTriangle, Target,
-  Calendar, Download, Printer, FileText, Activity, Shield, ChevronRight,
+  Calendar, Download, Printer, FileText, Activity, Shield,
   X, Zap, Award, Clock, Eye, Layers, CheckCircle2, Flame, Heart, Brain,
   UserCheck, UserX, Star, Info, ChevronDown, ChevronUp, Search,
-  ArrowUp, ArrowDown, Minus, RefreshCw
+  ArrowUp, ArrowDown, Minus, RefreshCw, Building2, PieChart
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
 import Badge from '../ui/Badge';
 
 const TABS = [
   { id: 'overview', label: 'Executive Summary', icon: Eye },
-  { id: 'comparison', label: 'Comparison', icon: ArrowUp },
-  { id: 'leaders', label: 'Leader Intelligence', icon: Users },
-  { id: 'sections', label: 'Section Intelligence', icon: Layers },
-  { id: 'departments', label: 'Department Intel', icon: BarChart3 },
+  { id: 'comparison', label: 'Comparison Center', icon: ArrowUp },
+  { id: 'sections', label: 'Section Performance', icon: Layers },
+  { id: 'head-leaders', label: 'Head Leaders', icon: Award },
+  { id: 'leaders', label: 'Section Leaders', icon: Users },
+  { id: 'departments', label: 'Department Report', icon: Building2 },
   { id: 'members', label: 'Member Intelligence', icon: UserCheck },
-  { id: 'historical', label: 'Historical', icon: Calendar },
+  { id: 'historical', label: 'Historical Reports', icon: Calendar },
+  { id: 'comparison-table', label: 'Attendance Comparison', icon: BarChart3 },
   { id: 'insights', label: 'AI Insights', icon: Zap },
   { id: 'actions', label: 'Action Center', icon: Target },
 ];
@@ -32,53 +34,31 @@ const formatPeriodLabel = (filterType, filterValue) => {
   return filterValue.replace('-', ' ');
 };
 
-const getStatusColor = (label) => {
-  switch (label) {
-    case 'Excellent': return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', border: 'border-emerald-200 dark:border-emerald-800' };
-    case 'Good': return { bg: 'bg-sky-50 dark:bg-sky-900/20', text: 'text-sky-700 dark:text-sky-400', border: 'border-sky-200 dark:border-sky-800' };
-    case 'Warning': return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-200 dark:border-amber-800' };
-    case 'Needs Attention': return { bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-700 dark:text-rose-400', border: 'border-rose-200 dark:border-rose-800' };
-    default: return { bg: 'bg-slate-50 dark:bg-slate-900/20', text: 'text-slate-700 dark:text-slate-400', border: 'border-slate-200 dark:border-slate-800' };
-  }
-};
-
-const getStatusLabel = (rate) => {
-  if (rate >= 85) return 'Excellent';
-  if (rate >= 70) return 'Good';
-  if (rate >= 50) return 'Warning';
-  return 'Needs Attention';
-};
-
-const MetricCard = ({ label, value, previousValue, icon: Icon, color = 'indigo', showDiff = true }) => {
-  const diff = showDiff && previousValue != null ? value - previousValue : null;
-  const pctDiff = showDiff && previousValue > 0 ? Math.round(((value - previousValue) / previousValue) * 100) : null;
-  const status = typeof value === 'number' && !isNaN(value) ? getStatusLabel(value > 100 ? Math.min(value, 100) : value) : 'Good';
-  const sc = getStatusColor(status);
+const MetricCard = ({ label, value, previousValue, icon: Icon, color = 'indigo', showDiff = true, suffix = '' }) => {
+  const num = typeof value === 'number' ? value : (Number(value) || 0);
+  const prevNum = typeof previousValue === 'number' ? previousValue : (Number(previousValue) || 0);
+  const diff = showDiff && previousValue != null ? num - prevNum : null;
+  const pctDiff = showDiff && prevNum > 0 ? Math.round(((num - prevNum) / prevNum) * 100) : null;
   return (
-    <div className={`rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all`}>
+    <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{label}</span>
-        {Icon && <div className={`w-7 h-7 rounded-lg bg-${color}-50 dark:bg-${color}-900/20 flex items-center justify-center`}><Icon className={`w-3.5 h-3.5 text-${color}-500`} /></div>}
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</span>
+        {Icon && <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-700 flex items-center justify-center"><Icon className="w-3.5 h-3.5 text-slate-500" /></div>}
       </div>
-      <p className="text-xl font-bold text-slate-900 dark:text-white">{typeof value === 'number' ? value.toLocaleString() : value ?? '—'}</p>
+      <p className="text-xl font-bold text-slate-900 dark:text-white">{num.toLocaleString()}{suffix}</p>
       {diff != null && (
         <div className="flex items-center gap-1.5 mt-1">
           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-            {diff >= 0 ? '+' : ''}{diff}
+            {diff >= 0 ? '+' : ''}{diff.toLocaleString()}{suffix}
           </span>
           {pctDiff != null && (
-            <span className={`text-[10px] font-medium ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              ({diff >= 0 ? '+' : ''}{pctDiff}%)
-            </span>
+            <span className={`text-[10px] font-medium ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>({diff >= 0 ? '+' : ''}{pctDiff}%)</span>
           )}
         </div>
       )}
       {previousValue != null && showDiff && (
-        <p className="text-[9px] text-slate-400 mt-0.5">Prev: {typeof previousValue === 'number' ? previousValue.toLocaleString() : previousValue}</p>
+        <p className="text-[9px] text-slate-400 mt-0.5">Prev: {prevNum.toLocaleString()}{suffix}</p>
       )}
-      <div className="mt-2">
-        <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>{status}</span>
-      </div>
     </div>
   );
 };
@@ -86,7 +66,6 @@ const MetricCard = ({ label, value, previousValue, icon: Icon, color = 'indigo',
 const IntelligenceTable = ({ columns, data, onRowClick, emptyMessage = 'No data available' }) => {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
-  const [expandedRow, setExpandedRow] = useState(null);
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -112,7 +91,7 @@ const IntelligenceTable = ({ columns, data, onRowClick, emptyMessage = 'No data 
           <tr className="border-b border-slate-200 dark:border-slate-700">
             {columns.map(col => (
               <th key={col.key} onClick={() => col.sortable !== false && handleSort(col.key)}
-                className={`py-2.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.sortable !== false ? 'cursor-pointer hover:text-slate-600' : ''}`}>
+                className={`py-2.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.sortable !== false ? 'cursor-pointer hover:text-slate-600' : ''}`}>
                 <span className="inline-flex items-center gap-1">
                   {col.label}
                   {sortKey === col.key && (sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
@@ -123,19 +102,14 @@ const IntelligenceTable = ({ columns, data, onRowClick, emptyMessage = 'No data 
         </thead>
         <tbody>
           {sorted.map((row, i) => (
-            <React.Fragment key={row.id || i}>
-              <tr onClick={() => onRowClick ? onRowClick(row) : setExpandedRow(expandedRow === i ? null : i)}
-                className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${onRowClick ? 'cursor-pointer' : ''} ${expandedRow === i ? 'bg-slate-50 dark:bg-slate-700/20' : ''}`}>
-                {columns.map(col => (
-                  <td key={col.key} className={`py-2.5 px-3 ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.className || ''}`}>
-                    {col.render ? col.render(row[col.key], row, i) : (row[col.key] ?? '—')}
-                  </td>
-                ))}
-              </tr>
-              {expandedRow === i && row.expandedContent && (
-                <tr><td colSpan={columns.length} className="px-4 py-3 bg-slate-50 dark:bg-slate-800/50">{row.expandedContent}</td></tr>
-              )}
-            </React.Fragment>
+            <tr key={row.id || i} onClick={() => onRowClick ? onRowClick(row) : null}
+              className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${onRowClick ? 'cursor-pointer' : ''}`}>
+              {columns.map(col => (
+                <td key={col.key} className={`py-2.5 px-3 ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.className || ''}`}>
+                  {col.render ? col.render(row[col.key], row, i) : (row[col.key] ?? '—')}
+                </td>
+              ))}
+            </tr>
           ))}
         </tbody>
       </table>
@@ -156,14 +130,8 @@ const InsightCard = ({ insight, index }) => {
     <div className={`flex items-start gap-3 rounded-xl border ${c.border} ${c.bg} p-3`}>
       <div className={`w-7 h-7 rounded-lg ${c.iconBg} flex items-center justify-center shrink-0`}>
         <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
-        </div>
-      )}
-      {!sectionRankings.length && !sectionComparison.length && (
-        <div className="text-center py-12 text-slate-400 text-sm">
-          <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-          No section attendance data available for the current period. Ensure sections have members with recorded attendance.
-        </div>
-      )}
+      </div>
+      <p className="text-xs text-slate-700 dark:text-slate-300">{typeof insight.text === 'string' ? insight.text : String(insight.text ?? '')}</p>
     </div>
   );
 };
@@ -212,11 +180,14 @@ const AttendanceReports = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [comparisonMode, setComparisonMode] = useState('week');
   const [historicalPeriod, setHistoricalPeriod] = useState('monthly');
+  const [compTablePeriod, setCompTablePeriod] = useState(30);
+  const [customDate1, setCustomDate1] = useState('');
+  const [customDate2, setCustomDate2] = useState('');
+
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, [selectedServiceId]);
 
   const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365 };
-
   const toDateStr = (d) => { const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
 
   const getDateRangeForMode = (mode) => {
@@ -358,6 +329,10 @@ const AttendanceReports = ({
   const attendanceRate = totalMembers > 0 ? Math.round((totalPresent / totalMembers) * 100) : 0;
   const unsubmitted = (stats.total_leaders || 0) - (stats.total_submitted_leaders || 0);
   const leaderSubmissionRate = (stats.total_leaders || 0) > 0 ? Math.round(((stats.total_submitted_leaders || 0) / (stats.total_leaders || 1)) * 100) : 0;
+  const prevAttendanceRate = stats.prev_rate || 0;
+  const weeklyGrowth = stats.weekly_growth != null ? stats.weekly_growth : 0;
+  const monthlyGrowth = stats.monthly_growth != null ? stats.monthly_growth : 0;
+  const yearlyGrowth = stats.yearly_growth != null ? stats.yearly_growth : 0;
 
   const sectionComparison = analytics.sectionComparison || [];
   const sectionRankings = analytics.sectionRankings || [];
@@ -375,54 +350,47 @@ const AttendanceReports = ({
 
   const sectionSummary = useMemo(() => {
     if (!sectionComparison.length) return null;
-    const totMembers = totalPresent + totalAbsent + totalExcused;
+    const totMem = totalPresent + totalAbsent + totalExcused;
     return {
       totalSections: sectionComparison.length,
-      totalMembers: totMembers,
-      totalPresent,
-      totalAbsent,
-      totalExcused,
-      avgRate: totMembers > 0 ? Math.round((totalPresent / totMembers) * 100) : 0,
+      totalMembers: totMem,
+      totalPresent, totalAbsent, totalExcused,
+      avgRate: totMem > 0 ? Math.round((totalPresent / totMem) * 100) : 0,
     };
   }, [sectionComparison, totalPresent, totalAbsent, totalExcused]);
 
   const insights = useMemo(() => {
     const list = [];
-    if (attendanceRate >= 80) list.push({ type: 'success', text: `Strong attendance rate of ${attendanceRate}% this period. The congregation is engaged.`, icon: CheckCircle2 });
+    if (attendanceRate >= 80) list.push({ type: 'success', text: `Attendance rate is ${attendanceRate}% — strong congregation engagement this period.`, icon: CheckCircle2 });
     else if (attendanceRate < 60) list.push({ type: 'danger', text: `Attendance rate dropped to ${attendanceRate}%. Consider outreach to inactive members.`, icon: AlertTriangle });
 
-    if (analytics.prediction?.trend === 'increasing') list.push({ type: 'success', text: `Attendance is trending upward over the last ${analytics.prediction.weeks_analyzed || 0} weeks.`, icon: TrendingUp });
+    if (analytics.prediction?.trend === 'increasing') list.push({ type: 'success', text: `Attendance trending upward over ${analytics.prediction.weeks_analyzed || 0} weeks.`, icon: TrendingUp });
     else if (analytics.prediction?.trend === 'decreasing') list.push({ type: 'warning', text: 'Attendance trend is declining. Review recent changes in scheduling or engagement.', icon: TrendingDown });
 
     if (unsubmitted > 0) list.push({ type: 'info', text: `${unsubmitted} leader(s) have not submitted attendance this period.`, icon: Clock });
-
-    if (leaderRankData.length > 0 && leaderRankData[0].attendance_rate >= 90) {
-      list.push({ type: 'success', text: `${leaderRankData[0].leader_name} leads with ${leaderRankData[0].attendance_rate}% section attendance.`, icon: Award });
-    }
+    if (leaderRankData.length > 0 && leaderRankData[0].attendance_rate >= 90) list.push({ type: 'success', text: `${leaderRankData[0].leader_name} leads with ${leaderRankData[0].attendance_rate}% section attendance.`, icon: Award });
 
     if (sectionComparison.length > 0) {
       const best = sectionComparison[0];
       const worst = sectionComparison[sectionComparison.length - 1];
-      if (best?.attendance_rate >= 80) list.push({ type: 'success', text: `${best.name} is the top-performing section with ${best.attendance_rate}% attendance.`, icon: Star });
-      if (worst?.attendance_rate < 60) list.push({ type: 'danger', text: `${worst.name} needs attention with only ${worst.attendance_rate}% attendance.`, icon: AlertTriangle });
+      if (best?.attendance_rate >= 80) list.push({ type: 'success', text: `${best.name} is top-performing section at ${best.attendance_rate}% attendance.`, icon: Star });
+      if (worst?.attendance_rate < 60) list.push({ type: 'danger', text: `${worst.name} needs attention at ${worst.attendance_rate}% attendance.`, icon: AlertTriangle });
       const lowSections = sectionComparison.filter(s => s.attendance_rate < 60);
-      if (lowSections.length > 1) list.push({ type: 'warning', text: `${lowSections.length} sections have attendance below 60%. Consider targeted outreach.`, icon: Heart });
+      if (lowSections.length > 1) list.push({ type: 'warning', text: `${lowSections.length} sections below 60% attendance. Targeted outreach recommended.`, icon: Heart });
     }
 
     if (analytics.streaks?.length > 0) {
       const atRisk = analytics.streaks.filter(s => s.consecutive_absences >= 3);
-      if (atRisk.length > 0) list.push({ type: 'danger', text: `${atRisk.length} member(s) have missed 3+ consecutive services and require follow-up.`, icon: UserX });
+      if (atRisk.length > 0) list.push({ type: 'danger', text: `${atRisk.length} member(s) missed 3+ consecutive services — follow-up required.`, icon: UserX });
     }
 
     if (retention.retention_rate != null) {
       const rr = retention.retention_rate;
-      if (rr >= 80) list.push({ type: 'success', text: `Member retention rate is strong at ${rr}%.`, icon: Shield });
-      else if (rr < 60) list.push({ type: 'warning', text: `Member retention rate is ${rr}%. Consider re-engagement strategies.`, icon: AlertTriangle });
+      if (rr >= 80) list.push({ type: 'success', text: `Member retention at ${rr}% — strong.`, icon: Shield });
+      else if (rr < 60) list.push({ type: 'warning', text: `Member retention at ${rr}% — re-engagement strategies needed.`, icon: AlertTriangle });
     }
 
-    if (aiInsights.length > 0) {
-      aiInsights.slice(0, 3).forEach(ins => list.push({ type: ins.type || 'info', text: ins.text || ins.message, icon: ins.icon || Info }));
-    }
+    if (aiInsights.length > 0) aiInsights.slice(0, 3).forEach(ins => list.push({ type: ins.type || 'info', text: ins.text || ins.message, icon: ins.icon || Info }));
 
     return list.slice(0, 12);
   }, [attendanceRate, analytics.prediction, unsubmitted, leaderRankData, sectionComparison, analytics.streaks, retention, aiInsights]);
@@ -438,7 +406,7 @@ const AttendanceReports = ({
     topLeaders.slice(0, 3).forEach(l => list.push({ priority: 'low', category: 'Recognition', title: `Congratulate ${l.leader_name}`, description: `Outstanding ${l.attendance_rate}% attendance rate. Consider for recognition.` }));
     if (analytics.streaks?.length > 0) {
       const inactive = analytics.streaks.filter(s => s.consecutive_absences >= 4);
-      if (inactive.length > 0)       list.push({ priority: 'high', category: 'Follow-up', title: `Visit ${inactive.length} Inactive Members`, description: 'Members with 4+ consecutive absences need pastoral visitation.' });
+      if (inactive.length > 0) list.push({ priority: 'high', category: 'Follow-up', title: `Visit ${inactive.length} Inactive Members`, description: 'Members with 4+ consecutive absences need pastoral visitation.' });
     }
     if (leaderSubmissionRate < 80) list.push({ priority: 'medium', category: 'Process', title: 'Improve Leader Submission Rate', description: `Current rate is ${leaderSubmissionRate}%. Set up automated reminders.` });
     if (attendanceRate < 70) list.push({ priority: 'high', category: 'Engagement', title: 'Develop Attendance Improvement Plan', description: `Current rate is ${attendanceRate}%. Organize outreach and engagement activities.` });
@@ -481,11 +449,13 @@ const AttendanceReports = ({
     switch (activeTab) {
       case 'overview': return renderOverviewTab();
       case 'comparison': return renderComparisonTab();
-      case 'leaders': return renderLeadersTab();
       case 'sections': return renderSectionsTab();
+      case 'head-leaders': return renderHeadLeadersTab();
+      case 'leaders': return renderLeadersTab();
       case 'departments': return renderDepartmentsTab();
       case 'members': return renderMembersTab();
       case 'historical': return renderHistoricalTab();
+      case 'comparison-table': return renderComparisonTableTab();
       case 'insights': return renderInsightsTab();
       case 'actions': return renderActionsTab();
       default: return renderOverviewTab();
@@ -494,6 +464,8 @@ const AttendanceReports = ({
 
   const renderOverviewTab = () => {
     const healthScore = growthIndex.growth_index || 0;
+    const retentionRate = retention.retention_rate || 0;
+    const rateDiff = attendanceRate - prevAttendanceRate;
     return (
       <div className="space-y-6">
         <div className="rounded-2xl bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-5">
@@ -520,27 +492,29 @@ const AttendanceReports = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <MetricCard label="Total Members" value={totalMembers} icon={Users} color="indigo" showDiff={false} />
-          <MetricCard label="Total Present" value={totalPresent} icon={CheckCircle2} color="emerald" showDiff={false} />
-          <MetricCard label="Total Absent" value={totalAbsent} icon={UserX} color="rose" showDiff={false} />
-          <MetricCard label="Total Excused" value={totalExcused} icon={AlertTriangle} color="amber" showDiff={false} />
-          <MetricCard label="Attendance Rate" value={attendanceRate} icon={Activity} color="indigo" showDiff={false} />
+          <MetricCard label="Present" value={totalPresent} icon={CheckCircle2} color="emerald" showDiff={false} />
+          <MetricCard label="Absent" value={totalAbsent} icon={UserX} color="rose" showDiff={false} />
+          <MetricCard label="Excused" value={totalExcused} icon={AlertTriangle} color="amber" showDiff={false} />
+          <MetricCard label="Attendance %" value={attendanceRate} previousValue={prevAttendanceRate} suffix="%" icon={Activity} />
+          <MetricCard label="Leader Submission %" value={leaderSubmissionRate} suffix="%" icon={Target} color="sky" showDiff={false} />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <MetricCard label="Leaders Submitted" value={stats.total_submitted_leaders || 0} icon={Users} color="emerald" showDiff={false} />
-          <MetricCard label="Leader Submission Rate" value={leaderSubmissionRate} icon={Target} color="sky" showDiff={false} />
-          <MetricCard label="Unsubmitted Leaders" value={unsubmitted} icon={Clock} color={unsubmitted > 0 ? 'rose' : 'emerald'} showDiff={false} />
-          <MetricCard label="Retention Rate" value={retention.retention_rate || 0} icon={Shield} color="violet" showDiff={false} />
-          <MetricCard label="Health Score" value={healthScore} icon={Heart} color={healthScore >= 75 ? 'emerald' : healthScore >= 50 ? 'amber' : 'rose'} showDiff={false} />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <MetricCard label="Weekly Growth" value={weeklyGrowth >= 0 ? `+${weeklyGrowth}%` : `${weeklyGrowth}%`} icon={TrendingUp} color={weeklyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
+          <MetricCard label="Monthly Growth" value={monthlyGrowth >= 0 ? `+${monthlyGrowth}%` : `${monthlyGrowth}%`} icon={TrendingUp} color={monthlyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
+          <MetricCard label="Yearly Growth" value={yearlyGrowth >= 0 ? `+${yearlyGrowth}%` : `${yearlyGrowth}%`} icon={TrendingUp} color={yearlyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
+          <MetricCard label="Retention %" value={retentionRate} suffix="%" icon={Shield} color={retentionRate >= 80 ? 'emerald' : retentionRate >= 60 ? 'amber' : 'rose'} showDiff={false} />
+          <MetricCard label="Rate Change" value={rateDiff >= 0 ? `+${rateDiff}%` : `${rateDiff}%`} icon={Activity} color={rateDiff >= 0 ? 'emerald' : 'rose'} showDiff={false} />
+          <MetricCard label="Health Score" value={healthScore} suffix="/100" icon={Heart} color={healthScore >= 75 ? 'emerald' : healthScore >= 50 ? 'amber' : 'rose'} showDiff={false} />
         </div>
 
         {insights.length > 0 && (
           <div className="rounded-2xl bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-5">
             <div className="flex items-center gap-2 mb-3"><Zap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /><h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">AI Intelligence Summary</h3></div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {insights.map((insight, i) => <InsightCard key={i} insight={insight} index={i} />)}
+              {insights.slice(0, 4).map((insight, i) => <InsightCard key={i} insight={insight} index={i} />)}
             </div>
           </div>
         )}
@@ -559,7 +533,7 @@ const AttendanceReports = ({
               ].map(s => (
                 <div key={s.label} className="text-center">
                   <p className="text-[10px] font-semibold uppercase text-slate-400">{s.label}</p>
-                  <p className={`text-lg font-bold text-${s.color}-600 dark:text-${s.color}-400`}>{s.value}</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">{s.value}</p>
                 </div>
               ))}
             </div>
@@ -592,6 +566,11 @@ const AttendanceReports = ({
 
   const renderComparisonTab = () => {
     const comp = comparisonData || {};
+    const c = comp.current || {};
+    const p = comp.previous || {};
+    const diffPresent = (c.present || 0) - (p.present || 0);
+    const pctPresent = p.present > 0 ? ((diffPresent / p.present) * 100).toFixed(1) : 0;
+    const diffRate = (c.rate || 0) - (p.rate || 0);
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2 flex-wrap">
@@ -603,28 +582,48 @@ const AttendanceReports = ({
           ))}
         </div>
 
-        {comp.current ? (
+        {c.present != null ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { label: 'Present', current: comp.current.present, previous: comp.previous?.present, color: 'emerald' },
-                { label: 'Absent', current: comp.current.absent, previous: comp.previous?.absent, color: 'rose' },
-                { label: 'Excused', current: comp.current.excused, previous: comp.previous?.excused, color: 'amber' },
-                { label: 'Attendance %', current: comp.current.rate, previous: comp.previous?.rate, color: 'indigo', suffix: '%' },
-              ].map(item => (
-                <div key={item.label} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-                  <p className="text-[10px] font-semibold uppercase text-slate-400 mb-1">{item.label}</p>
-                  <p className={`text-2xl font-bold text-${item.color}-600 dark:text-${item.color}-400`}>{item.current ?? '—'}{item.suffix || ''}</p>
-                  {item.previous != null && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className={`text-[10px] font-semibold ${(item.current - item.previous) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {(item.current - item.previous) >= 0 ? '+' : ''}{item.current - item.previous}{item.suffix || ''}
-                      </span>
-                      <span className="text-[9px] text-slate-400">vs prev</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Comparison Summary</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">{comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)} vs Previous {comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)}</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-slate-50 dark:bg-slate-800">
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                      {['Metric', 'Previous', 'Current', 'Difference', 'Change %', 'Status'].map(h => (
+                        <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Metric' ? 'text-left' : 'text-right'}`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { label: 'Present', prev: p.present, curr: c.present },
+                      { label: 'Absent', prev: p.absent, curr: c.absent, inv: true },
+                      { label: 'Attendance %', prev: p.rate, curr: c.rate, suffix: '%' },
+                    ].map(row => {
+                      const curr = row.curr || 0;
+                      const prev = row.prev || 0;
+                      const diff = row.inv ? prev - curr : curr - prev;
+                      const pct = prev > 0 ? ((diff / prev) * 100).toFixed(1) : 0;
+                      return (
+                        <tr key={row.label} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                          <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{row.label}</td>
+                          <td className="py-2.5 px-3 text-right text-slate-500">{prev}{row.suffix || ''}</td>
+                          <td className="py-2.5 px-3 text-right font-bold">{curr}{row.suffix || ''}</td>
+                          <td className={`py-2.5 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{row.suffix || ''}</td>
+                          <td className={`py-2.5 px-3 text-right ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{pct}%</td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Badge variant={diff >= 0 ? 'success' : 'danger'}>{diff >= 0 ? 'Increase' : 'Decrease'}</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         ) : (
@@ -638,7 +637,7 @@ const AttendanceReports = ({
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
             <div className="p-4 border-b border-slate-100 dark:border-slate-700">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Department Performance Comparison</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">{comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)} period comparison</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">{comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)} period</p>
             </div>
             <IntelligenceTable
               columns={[
@@ -653,6 +652,124 @@ const AttendanceReports = ({
             />
           </div>
         )}
+      </div>
+    );
+  };
+
+  const renderSectionsTab = () => {
+    const best = sectionRankings.length > 0 ? sectionRankings.reduce((a, b) => (a.attendance_rate || 0) > (b.attendance_rate || 0) ? a : b) : null;
+    const worst = sectionRankings.length > 0 ? sectionRankings.reduce((a, b) => (a.attendance_rate || 0) < (b.attendance_rate || 0) ? a : b) : null;
+    return (
+      <div className="space-y-6">
+        {sectionSummary && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <MetricCard label="Sections" value={sectionSummary.totalSections} icon={Layers} color="indigo" showDiff={false} />
+            <MetricCard label="Total Members" value={sectionSummary.totalMembers} icon={Users} color="slate" showDiff={false} />
+            <MetricCard label="Total Present" value={sectionSummary.totalPresent} icon={CheckCircle2} color="emerald" showDiff={false} />
+            <MetricCard label="Total Absent" value={sectionSummary.totalAbsent} icon={UserX} color="rose" showDiff={false} />
+            <MetricCard label="Total Excused" value={sectionSummary.totalExcused} icon={AlertTriangle} color="amber" showDiff={false} />
+            <MetricCard label="Avg Rate" value={`${sectionSummary.avgRate}%`} icon={Activity} color="indigo" showDiff={false} />
+          </div>
+        )}
+
+        {best && worst && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-emerald-200/60 dark:border-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-900/10 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Award className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold uppercase text-emerald-700">Best Section</span>
+              </div>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{best.name}</p>
+              <p className="text-xs text-slate-500">{best.attendance_rate}% rate | {best.member_count} members</p>
+            </div>
+            <div className="rounded-2xl border border-rose-200/60 dark:border-rose-900/30 bg-rose-50/50 dark:bg-rose-900/10 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600" />
+                <span className="text-xs font-bold uppercase text-rose-700">Needs Follow-up</span>
+              </div>
+              <p className="text-lg font-bold text-slate-900 dark:text-white">{worst.name}</p>
+              <p className="text-xs text-slate-500">{worst.attendance_rate}% rate | {worst.member_count} members</p>
+            </div>
+          </div>
+        )}
+
+        {sectionRankings.length > 0 && (
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Section Performance Report</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">All sections ranked by performance metrics</p>
+            </div>
+            <IntelligenceTable
+              columns={[
+                { key: 'rank', label: 'Rank', render: (v, row, i) => (
+                  <div className="flex items-center gap-1">
+                    <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{v || i + 1}</span>
+                    {row.rank_change > 0 && <ArrowUp className="w-3 h-3 text-emerald-500" />}
+                    {row.rank_change < 0 && <ArrowDown className="w-3 h-3 text-rose-500" />}
+                  </div>
+                )},
+                { key: 'name', label: 'Section', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
+                { key: 'member_count', label: 'Members', align: 'right' },
+                { key: 'total_present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600 font-medium">{v?.toLocaleString() || 0}</span> },
+                { key: 'total_absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v?.toLocaleString() || 0}</span> },
+                { key: 'total_excused', label: 'Excused', align: 'right', render: v => <span className="text-amber-500">{v || 0}</span> },
+                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
+                { key: 'prev_rate', label: 'Prev %', align: 'right', render: v => <span className="text-slate-400">{v || '—'}%</span> },
+                { key: 'rate_change', label: 'Diff', align: 'right', render: (v, row) => {
+                  const diff = (row.attendance_rate || 0) - (row.prev_rate || 0);
+                  return <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}%</span>;
+                }},
+                { key: 'new_members', label: 'Growth', align: 'right', render: v => <span className="text-indigo-500">+{v || 0}</span> },
+                { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => v != null ? <span className={`text-xs font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{v}</span> : <span className="text-slate-300">—</span> },
+                { key: 'retention_rate', label: 'Retention', align: 'right', render: v => v != null ? <span className="font-bold">{v}%</span> : <span className="text-slate-300">—</span> },
+                { key: 'performance_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
+              ]}
+              data={sectionRankings.map((s, i) => ({ ...s, rank: i + 1 }))}
+              onRowClick={(row) => setSelectedSection(row)}
+            />
+          </div>
+        )}
+        {!sectionRankings.length && !sectionComparison.length && (
+          <div className="text-center py-12 text-slate-400 text-sm">
+            <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+            No section attendance data available for the current period.
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderHeadLeadersTab = () => {
+    if (!headLeaders.length) return <div className="text-center py-12 text-slate-400 text-sm"><Award className="w-8 h-8 mx-auto mb-2 text-slate-300" />No head leader data available</div>;
+    return (
+      <div className="space-y-6">
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Head Leader Performance Report</h3>
+          </div>
+          <IntelligenceTable
+            columns={[
+              { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span> },
+              { key: 'leader_name', label: 'Head Leader', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
+              { key: 'section_name', label: 'Section' },
+              { key: 'leaders_supervised', label: 'Leaders', align: 'right' },
+              { key: 'members_managed', label: 'Members', align: 'right' },
+              { key: 'overall_attendance', label: 'Attendance %', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
+              { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{v || 0}%</span> },
+              { key: 'growth_rate', label: 'Growth %', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{v >= 0 ? '+' : ''}{v || 0}%</span> },
+              { key: 'submission_rate', label: 'Submission %', align: 'right', render: v => <span className="font-bold">{v || 0}%</span> },
+              { key: 'performance_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
+              { key: 'current_rank', label: 'Rank', align: 'right', render: (v, row) => <span className="font-bold">#{v || 0}</span> },
+              { key: 'prev_rank', label: 'Prev Rank', align: 'right', render: v => <span className="text-slate-400">#{v || '—'}</span> },
+              { key: 'rank_change', label: 'Change', align: 'right', render: (v) => {
+                if (v > 0) return <span className="text-emerald-600 font-bold flex items-center justify-end gap-0.5"><ArrowUp className="w-3 h-3" />{v}</span>;
+                if (v < 0) return <span className="text-rose-600 font-bold flex items-center justify-end gap-0.5"><ArrowDown className="w-3 h-3" />{Math.abs(v)}</span>;
+                return <span className="text-slate-400">—</span>;
+              }},
+            ]}
+            data={headLeaders}
+          />
+        </div>
       </div>
     );
   };
@@ -683,18 +800,28 @@ const AttendanceReports = ({
       {leaderRankData.length > 0 && (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
           <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Leader Performance Intelligence</h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">Ranked by attendance rate with performance scores</p>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Section Leader Performance Report</h3>
+            <p className="text-[10px] text-slate-400 mt-0.5">Detailed performance metrics for all section leaders</p>
           </div>
           <IntelligenceTable
             columns={[
               { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span> },
               { key: 'leader_name', label: 'Leader', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
               { key: 'section_name', label: 'Section' },
-              { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
-              { key: 'submissions_count', label: 'Submissions', align: 'right' },
               { key: 'member_count', label: 'Members', align: 'right' },
-              { key: 'efficiency_score', label: 'Score', align: 'right', render: v => <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${v >= 75 ? 'bg-emerald-100 text-emerald-700' : v >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>{v}</span> },
+              { key: 'total_present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600">{v || 0}</span> },
+              { key: 'total_absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v || 0}</span> },
+              { key: 'total_excused', label: 'Excused', align: 'right', render: v => <span className="text-amber-500">{v || 0}</span> },
+              { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
+              { key: 'prev_rate', label: 'Prev %', align: 'right', render: v => <span className="text-slate-400">{v || '—'}%</span> },
+              { key: 'rate_diff', label: 'Diff', align: 'right', render: (_, row) => {
+                const diff = (row.attendance_rate || 0) - (row.prev_rate || 0);
+                return <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}%</span>;
+              }},
+              { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{v || 0}%</span> },
+              { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => <span className={`font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{v || 0}</span> },
+              { key: 'submissions_count', label: 'Submissions', align: 'right' },
+              { key: 'efficiency_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
             ]}
             data={leaderRankData}
             onRowClick={(row) => setSelectedLeader(row)}
@@ -718,56 +845,6 @@ const AttendanceReports = ({
     </div>
   );
 
-  const renderSectionsTab = () => (
-    <div className="space-y-6">
-      {sectionSummary && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <MetricCard label="Sections" value={sectionSummary.totalSections} icon={Layers} color="indigo" showDiff={false} />
-          <MetricCard label="Total Members" value={sectionSummary.totalMembers} icon={Users} color="slate" showDiff={false} />
-          <MetricCard label="Total Present" value={sectionSummary.totalPresent} icon={CheckCircle2} color="emerald" showDiff={false} />
-          <MetricCard label="Total Absent" value={sectionSummary.totalAbsent} icon={UserX} color="rose" showDiff={false} />
-          <MetricCard label="Total Excused" value={sectionSummary.totalExcused} icon={AlertTriangle} color="amber" showDiff={false} />
-          <MetricCard label="Avg Rate" value={`${sectionSummary.avgRate}%`} icon={Activity} color="indigo" showDiff={false} />
-        </div>
-      )}
-
-      {sectionRankings.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Section Intelligence Report</h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">Ranked by attendance rate with consistency and growth metrics</p>
-          </div>
-          <IntelligenceTable
-            columns={[
-              { key: 'rank', label: 'Rank', render: (v, row, i) => (
-                <div className="flex items-center gap-1">
-                  <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{v || i + 1}</span>
-                  {row.rank_change > 0 && <ArrowUp className="w-3 h-3 text-emerald-500" />}
-                  {row.rank_change < 0 && <ArrowDown className="w-3 h-3 text-rose-500" />}
-                </div>
-              )},
-              { key: 'name', label: 'Section', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
-              { key: 'member_count', label: 'Members', align: 'right' },
-              { key: 'total_present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600 font-medium">{v?.toLocaleString()}</span> },
-              { key: 'total_absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v?.toLocaleString()}</span> },
-              { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
-              { key: 'new_members', label: 'New', align: 'right', render: v => <span className="text-indigo-500">{v}</span> },
-              { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => v != null ? <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${v >= 70 ? 'bg-emerald-100 text-emerald-700' : v >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>{v}</span> : <span className="text-slate-300">—</span> },
-            ]}
-            data={sectionRankings}
-            onRowClick={(row) => setSelectedSection(row)}
-          />
-        </div>
-      )}
-      {!sectionRankings.length && !sectionComparison.length && (
-        <div className="text-center py-12 text-slate-400 text-sm">
-          <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-          No section attendance data available for the current period.
-        </div>
-      )}
-    </div>
-  );
-
   const renderDepartmentsTab = () => {
     const depts = analytics.dashboardMetrics?.departments || [];
     return (
@@ -775,18 +852,25 @@ const AttendanceReports = ({
         {depts.length > 0 ? (
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
             <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Department Attendance Intelligence</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Department Report</h3>
             </div>
             <IntelligenceTable
               columns={[
                 { key: 'rank', label: '#', render: (_, __, i) => <span className="text-xs font-bold text-slate-400">#{i + 1}</span> },
                 { key: 'name', label: 'Department', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
                 { key: 'member_count', label: 'Members', align: 'right' },
-                { key: 'present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600">{v}</span> },
-                { key: 'absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v}</span> },
+                { key: 'present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600">{v || 0}</span> },
+                { key: 'absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v || 0}</span> },
                 { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v}%</Badge> },
+                { key: 'rate_change', label: 'Diff', align: 'right', render: v => {
+                  const d = Number(v) || 0;
+                  return <span className={`font-bold ${d >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{d >= 0 ? '+' : ''}{d}%</span>;
+                }},
+                { key: 'growth_rate', label: 'Growth', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{v >= 0 ? '+' : ''}{v || 0}%</span> },
+                { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => <span className={`font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{v || 0}</span> },
+                { key: 'performance_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
               ]}
-              data={depts}
+              data={depts.map((d, i) => ({ ...d, rank: i + 1 }))}
             />
           </div>
         ) : (
@@ -799,58 +883,82 @@ const AttendanceReports = ({
     );
   };
 
-  const renderMembersTab = () => (
-    <div className="space-y-6">
-      {analytics.demographics && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { label: 'Male', value: analytics.demographics.gender?.male || 0, color: 'sky' },
-            { label: 'Female', value: analytics.demographics.gender?.female || 0, color: 'pink' },
-            { label: 'Youth', value: analytics.demographics.age_groups?.youth || 0, color: 'violet' },
-            { label: 'Adults', value: analytics.demographics.age_groups?.adults || 0, color: 'emerald' },
-          ].map(d => <MetricCard key={d.label} label={d.label} value={d.value} icon={Users} color={d.color} showDiff={false} />)}
+  const renderMembersTab = () => {
+    const streaks = analytics.streaks || [];
+    const membersWithStreaks = streaks.filter(s => s.consecutive_present >= 3);
+    const perfectAttendance = streaks.filter(s => s.attendance_rate >= 100);
+    const inactive = streaks.filter(s => s.consecutive_absences >= 4);
+    const absent1w = streaks.filter(s => s.consecutive_absences === 1);
+    const absent2w = streaks.filter(s => s.consecutive_absences === 2);
+    const absent3w = streaks.filter(s => s.consecutive_absences === 3);
+    const absent1m = streaks.filter(s => s.consecutive_absences >= 4 && s.consecutive_absences < 12);
+    const absent3m = streaks.filter(s => s.consecutive_absences >= 12);
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <MetricCard label="Most Active" value={membersWithStreaks.length} icon={Flame} color="emerald" showDiff={false} />
+          <MetricCard label="Perfect Attendance" value={perfectAttendance.length} icon={Star} color="amber" showDiff={false} />
+          <MetricCard label="Inactive (4+)" value={inactive.length} icon={UserX} color="rose" showDiff={false} />
+          <MetricCard label="Absent 1 Week" value={absent1w.length} icon={Clock} color="sky" showDiff={false} />
+          <MetricCard label="Absent 2 Weeks" value={absent2w.length} icon={Clock} color="amber" showDiff={false} />
+          <MetricCard label="Absent 3+ Weeks" value={absent3w.length} icon={AlertTriangle} color="orange" showDiff={false} />
         </div>
-      )}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <MetricCard label="Absent 1 Month" value={absent1m.length} icon={AlertTriangle} color="orange" showDiff={false} />
+          <MetricCard label="Absent 3 Months" value={absent3m.length} icon={AlertTriangle} color="rose" showDiff={false} />
+          <MetricCard label="Need Visitation" value={inactive.length} icon={Heart} color="rose" showDiff={false} />
+        </div>
 
-      {analytics.streaks?.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Member Attendance Streaks</h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">Members with consecutive attendance or absence patterns</p>
+        {analytics.demographics && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Male', value: analytics.demographics.gender?.male || 0, color: 'sky' },
+              { label: 'Female', value: analytics.demographics.gender?.female || 0, color: 'pink' },
+              { label: 'Youth', value: analytics.demographics.age_groups?.youth || 0, color: 'violet' },
+              { label: 'Adults', value: analytics.demographics.age_groups?.adults || 0, color: 'emerald' },
+            ].map(d => <MetricCard key={d.label} label={d.label} value={d.value} icon={Users} color={d.color} showDiff={false} />)}
           </div>
-          <IntelligenceTable
-            columns={[
-              { key: 'full_name', label: 'Member', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
-              { key: 'section_name', label: 'Section' },
-              { key: 'leader_name', label: 'Leader' },
-              { key: 'consecutive_present', label: 'Streak', align: 'right', render: v => <span className="font-bold text-emerald-600">{v}</span> },
-              { key: 'consecutive_absences', label: 'Absences', align: 'right', render: v => <span className={`font-bold ${v >= 3 ? 'text-rose-600' : 'text-slate-500'}`}>{v}</span> },
-              { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
-            ]}
-            data={analytics.streaks}
-          />
-        </div>
-      )}
+        )}
 
-      {analytics.engagementScores?.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Top Engagement Scores</h3>
+        {streaks.length > 0 && (
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Member Attendance Streaks</h3>
+            </div>
+            <IntelligenceTable
+              columns={[
+                { key: 'full_name', label: 'Member', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
+                { key: 'section_name', label: 'Section' },
+                { key: 'leader_name', label: 'Leader' },
+                { key: 'consecutive_present', label: 'Streak', align: 'right', render: v => <span className="font-bold text-emerald-600">{v}</span> },
+                { key: 'consecutive_absences', label: 'Absences', align: 'right', render: v => <span className={`font-bold ${v >= 3 ? 'text-rose-600' : 'text-slate-500'}`}>{v}</span> },
+                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
+              ]}
+              data={streaks}
+            />
           </div>
-          <IntelligenceTable
-            columns={[
-              { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i < 3 ? 'bg-amber-100 text-amber-700' : 'text-slate-400'}`}>{i + 1}</span> },
-              { key: 'full_name', label: 'Member', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
-              { key: 'section_name', label: 'Section' },
-              { key: 'engagement_score', label: 'Score', align: 'right', render: v => <span className="font-bold text-indigo-600">{v}</span> },
-              { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <span className="font-bold">{v}%</span> },
-            ]}
-            data={analytics.engagementScores}
-          />
-        </div>
-      )}
-    </div>
-  );
+        )}
+
+        {analytics.engagementScores?.length > 0 && (
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Top Engagement Scores</h3>
+            </div>
+            <IntelligenceTable
+              columns={[
+                { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i < 3 ? 'bg-amber-100 text-amber-700' : 'text-slate-400'}`}>{i + 1}</span> },
+                { key: 'full_name', label: 'Member', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
+                { key: 'section_name', label: 'Section' },
+                { key: 'engagement_score', label: 'Score', align: 'right', render: v => <span className="font-bold text-indigo-600">{v}</span> },
+                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <span className="font-bold">{v}%</span> },
+              ]}
+              data={analytics.engagementScores}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderHistoricalTab = () => {
     const hist = historicalData;
@@ -927,6 +1035,121 @@ const AttendanceReports = ({
     );
   };
 
+  const renderComparisonTableTab = () => {
+    const [compData, setCompData] = useState([]);
+    const [compLoading, setCompLoading] = useState(false);
+    const [sortField, setSortField] = useState('date');
+    const [sortAsc, setSortAsc] = useState(false);
+
+    const fetchComparisonData = async (days) => {
+      setCompLoading(true);
+      try {
+        const end = toDateStr(new Date());
+        const start = toDateStr(new Date(Date.now() - days * 86400000));
+        const res = await analyticsAPI.getHistorical({ startDate: start, endDate: end });
+        const daily = (res.data?.daily || []).map(r => ({
+          date: r.date, present: r.present || 0, absent: r.absent || 0,
+          excused: r.excused || 0, total: r.total || 0, rate: r.rate || 0,
+        }));
+        setCompData(daily);
+      } catch (e) { setCompData([]); }
+      finally { setCompLoading(false); }
+    };
+
+    useEffect(() => { fetchComparisonData(compTablePeriod); }, [compTablePeriod]);
+
+    const sortedData = useMemo(() => {
+      return [...compData].sort((a, b) => {
+        const aVal = a[sortField] ?? 0;
+        const bVal = b[sortField] ?? 0;
+        if (typeof aVal === 'string') return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        return sortAsc ? aVal - bVal : bVal - aVal;
+      });
+    }, [compData, sortField, sortAsc]);
+
+    const handleSort = (field) => {
+      if (sortField === field) setSortAsc(!sortAsc);
+      else { setSortField(field); setSortAsc(false); }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-semibold text-slate-400 uppercase">Period:</span>
+          {[
+            { label: '7 Days', value: 7 },
+            { label: '14 Days', value: 14 },
+            { label: '30 Days', value: 30 },
+            { label: '60 Days', value: 60 },
+            { label: '90 Days', value: 90 },
+            { label: '180 Days', value: 180 },
+            { label: '365 Days', value: 365 },
+          ].map(p => (
+            <button key={p.value} onClick={() => setCompTablePeriod(p.value)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${compTablePeriod === p.value ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700'}`}>{p.label}</button>
+          ))}
+        </div>
+
+        {compLoading ? (
+          <div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+        ) : sortedData.length > 0 ? (
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Attendance Comparison Table</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">{compTablePeriod} day period — click column headers to sort</p>
+            </div>
+            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+              <table className="min-w-full text-sm">
+                <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    {[
+                      { key: 'date', label: 'Date' },
+                      { key: 'present', label: 'Present' },
+                      { key: 'absent', label: 'Absent' },
+                      { key: 'excused', label: 'Excused' },
+                      { key: 'total', label: 'Total' },
+                      { key: 'rate', label: 'Rate %' },
+                      { key: 'change', label: 'Change' },
+                    ].map(col => (
+                      <th key={col.key} onClick={() => col.key !== 'change' && handleSort(col.key)}
+                        className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${col.key === 'date' ? 'text-left' : 'text-right'} ${col.key !== 'change' ? 'cursor-pointer hover:text-slate-600' : ''}`}>
+                        {col.label}{sortField === col.key ? (sortAsc ? ' ▲' : ' ▼') : ''}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedData.map((row, i) => {
+                    const prev = i < sortedData.length - 1 ? sortedData[i + 1] : null;
+                    const diff = prev ? row.rate - prev.rate : 0;
+                    return (
+                      <tr key={row.date} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                        <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.date}</td>
+                        <td className="py-2 px-3 text-right text-emerald-600">{row.present}</td>
+                        <td className="py-2 px-3 text-right text-rose-500">{row.absent}</td>
+                        <td className="py-2 px-3 text-right text-amber-500">{row.excused}</td>
+                        <td className="py-2 px-3 text-right font-medium">{row.total}</td>
+                        <td className="py-2 px-3 text-right font-bold">{row.rate}%</td>
+                        <td className={`py-2 px-3 text-right font-bold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                          {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-slate-400 text-sm">
+            <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+            No attendance data available for selected period
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderInsightsTab = () => (
     <div className="space-y-4">
       <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Zap className="w-5 h-5 text-indigo-600" />AI Executive Insights</h3>
@@ -994,16 +1217,22 @@ const AttendanceReports = ({
 
       <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Export Center</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { label: 'PDF Report', icon: FileText, action: handleExportPDF, color: 'rose' },
+            { label: 'Executive Report', icon: Eye, action: () => { setActiveTab('overview'); }, color: 'indigo' },
+            { label: 'Section Report', icon: Layers, action: () => { setActiveTab('sections'); }, color: 'sky' },
+            { label: 'Leader Report', icon: Users, action: () => { setActiveTab('leaders'); }, color: 'emerald' },
+            { label: 'Department Report', icon: Building2, action: () => { setActiveTab('departments'); }, color: 'violet' },
+            { label: 'PDF Export', icon: FileText, action: handleExportPDF, color: 'rose' },
             { label: 'CSV Export', icon: Download, action: handleCSVExport, color: 'emerald' },
             { label: 'Print View', icon: Printer, action: handlePrint, color: 'sky' },
+            { label: 'Weekly Report', icon: Calendar, action: () => { setComparisonMode('week'); setActiveTab('comparison'); }, color: 'amber' },
+            { label: 'Monthly Report', icon: Calendar, action: () => { setComparisonMode('month'); setActiveTab('comparison'); }, color: 'indigo' },
             { label: 'Refresh Data', icon: RefreshCw, action: () => { loadOverview(); loadAnalytics(); loadDepartments(comparisonMode); loadComparisonData(comparisonMode); loadHistoricalData(historicalPeriod); }, color: 'indigo' },
           ].map(exp => (
             <button key={exp.label} onClick={exp.action}
-              className={`flex items-center gap-2 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 hover:bg-${exp.color}-50 dark:hover:bg-${exp.color}-900/20 transition-all text-left`}>
-              <exp.icon className={`w-4 h-4 text-${exp.color}-500`} />
+              className="flex items-center gap-2 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-left">
+              <exp.icon className="w-4 h-4 text-slate-500" />
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{exp.label}</span>
             </button>
           ))}
@@ -1025,20 +1254,28 @@ const AttendanceReports = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-white/60" />
-              <input type="text" placeholder="Search members, leaders, sections..."
-                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                className="bg-white/20 border border-white/30 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-white/50 focus:outline-none focus:bg-white/30 w-48" />
-            </div>
             <select value={filterType} onChange={e => { setFilterType(e.target.value); setFilterValue(''); }}
               className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none">
-              <option value="weekly" className="text-slate-900">Weekly</option>
-              <option value="monthly" className="text-slate-900">Monthly</option>
-              <option value="yearly" className="text-slate-900">Yearly</option>
+              <option value="weekly" className="text-slate-900">This Week</option>
+              <option value="monthly" className="text-slate-900">This Month</option>
+              <option value="yearly" className="text-slate-900">This Year</option>
+              <option value="last7" className="text-slate-900">Last 7 Days</option>
+              <option value="last30" className="text-slate-900">Last 30 Days</option>
+              <option value="last90" className="text-slate-900">Last 90 Days</option>
+              <option value="custom" className="text-slate-900">Custom Date</option>
             </select>
-            <input type="date" value={filterValue || ''} onChange={e => setFilterValue(e.target.value)}
-              className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none" />
+            {filterType !== 'custom' ? (
+              <input type="date" value={filterValue || ''} onChange={e => setFilterValue(e.target.value)}
+                className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none" />
+            ) : (
+              <div className="flex items-center gap-1">
+                <input type="date" value={customDate1} onChange={e => setCustomDate1(e.target.value)}
+                  className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none w-32" />
+                <span className="text-white/60 text-xs">to</span>
+                <input type="date" value={customDate2} onChange={e => setCustomDate2(e.target.value)}
+                  className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none w-32" />
+              </div>
+            )}
           </div>
         </div>
       </div>
