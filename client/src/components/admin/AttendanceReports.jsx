@@ -197,6 +197,8 @@ const AttendanceReports = ({
   const [activeTab, setActiveTab] = useState('overview');
   const [analytics, setAnalytics] = useState({});
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [departmentsData, setDepartmentsData] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [selectedLeader, setSelectedLeader] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -204,6 +206,20 @@ const AttendanceReports = ({
   const [historicalPeriod, setHistoricalPeriod] = useState('monthly');
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, []);
+
+  const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365 };
+
+  const loadDepartments = async (mode) => {
+    setDepartmentsLoading(true);
+    try {
+      const days = modeToDays[mode] || 30;
+      const res = await analyticsAPI.getDepartments(days);
+      setDepartmentsData(res.data || []);
+    } catch (e) { console.error('Failed to load departments:', e); setDepartmentsData([]); }
+    finally { setDepartmentsLoading(false); }
+  };
+
+  useEffect(() => { loadDepartments(comparisonMode); }, [comparisonMode]);
 
   const loadAnalytics = async () => {
     setAnalyticsLoading(true);
@@ -539,22 +555,22 @@ const AttendanceReports = ({
           </div>
         )}
 
-        {leaderRankData.length > 0 && (
+        {departmentsData.length > 0 && (
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
             <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Leader Performance Comparison</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Department Performance Comparison</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">{comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)} period comparison</p>
             </div>
             <IntelligenceTable
               columns={[
                 { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span> },
-                { key: 'leader_name', label: 'Leader' },
-                { key: 'section_name', label: 'Section' },
-                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <span className="font-bold">{v}%</span> },
-                { key: 'submissions_count', label: 'Submissions', align: 'right' },
+                { key: 'name', label: 'Department', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
                 { key: 'member_count', label: 'Members', align: 'right' },
+                { key: 'total_present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600 font-medium">{v}</span> },
+                { key: 'total_absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v}</span> },
+                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
               ]}
-              data={leaderRankData}
-              onRowClick={(row) => setSelectedLeader(row)}
+              data={departmentsData}
             />
           </div>
         )}
