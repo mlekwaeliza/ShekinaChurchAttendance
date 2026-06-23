@@ -157,7 +157,8 @@ const InsightCard = ({ insight, index }) => {
       <div className={`w-7 h-7 rounded-lg ${c.iconBg} flex items-center justify-center shrink-0`}>
         <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
         </div>
-      ) : (
+      )}
+      {!sectionRankings.length && !sectionComparison.length && (
         <div className="text-center py-12 text-slate-400 text-sm">
           <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300" />
           No section attendance data available for the current period. Ensure sections have members with recorded attendance.
@@ -211,7 +212,7 @@ const AttendanceReports = ({
   const [comparisonMode, setComparisonMode] = useState('week');
   const [historicalPeriod, setHistoricalPeriod] = useState('monthly');
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
-  useEffect(() => { loadAnalytics(); }, []);
+  useEffect(() => { loadAnalytics(); }, [selectedServiceId]);
 
   const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365 };
 
@@ -730,6 +731,12 @@ const AttendanceReports = ({
             data={sectionRankings}
             onRowClick={(row) => setSelectedSection(row)}
           />
+        </div>
+      )}
+      {!sectionRankings.length && !sectionComparison.length && (
+        <div className="text-center py-12 text-slate-400 text-sm">
+          <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+          No section attendance data available for the current period.
         </div>
       )}
     </div>
