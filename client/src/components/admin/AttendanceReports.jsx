@@ -1174,7 +1174,7 @@ const AttendanceReports = ({
   );
 
   const renderDepartmentsTab = () => {
-    const depts = analytics.dashboardMetrics?.departments || [];
+    const depts = departmentsData;
     return (
       <div className="space-y-6">
         {depts.length > 0 ? (
@@ -1240,10 +1240,10 @@ const AttendanceReports = ({
         {analytics.demographics && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: 'Male', value: analytics.demographics.gender?.male || 0, color: 'sky' },
-              { label: 'Female', value: analytics.demographics.gender?.female || 0, color: 'pink' },
-              { label: 'Youth', value: analytics.demographics.age_groups?.youth || 0, color: 'violet' },
-              { label: 'Adults', value: analytics.demographics.age_groups?.adults || 0, color: 'emerald' },
+              { label: 'Male', value: analytics.demographics.gender?.find(g => g.category_value === 'Male')?.member_count || 0, color: 'sky' },
+              { label: 'Female', value: analytics.demographics.gender?.find(g => g.category_value === 'Female')?.member_count || 0, color: 'pink' },
+              { label: 'Youth', value: analytics.demographics.age_group?.find(a => a.category_value === 'Youth')?.member_count || 0, color: 'violet' },
+              { label: 'Adults', value: analytics.demographics.age_group?.find(a => a.category_value === 'Adults')?.member_count || 0, color: 'emerald' },
             ].map(d => <MetricCard key={d.label} label={d.label} value={d.value} icon={Users} color={d.color} showDiff={false} />)}
           </div>
         )}

@@ -374,7 +374,7 @@ router.get('/executive-dashboard', async (req, res) => {
     res.json({
       ...dashboard,
       ...growth,
-      attendance_rate: ((present / total) * 100).toFixed(1),
+      attendance_rate: Math.round((present / total) * 100),
     });
   } catch (error) {
     console.error('Executive dashboard error:', error);

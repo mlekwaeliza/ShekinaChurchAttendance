@@ -83,6 +83,7 @@ const AnalyticsView = () => {
         analyticsAPI.getLeaderWorkload(period),
         analyticsAPI.getSectionComparison(period),
         analyticsAPI.getYearOverYear(),
+        analyticsAPI.getAttendancePatterns(period),
       ]);
       const ok = i => r[i].status === 'fulfilled' ? r[i].value.data : null;
       setData({
@@ -92,6 +93,7 @@ const AnalyticsView = () => {
         growth: ok(7), risk: ok(8),
         headLeaders: ok(9) || [], workload: ok(10) || [],
         sectionComparison: ok(11) || [], yearOverYear: ok(12) || [],
+        dayPatterns: ok(13) || [],
       });
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -232,7 +234,7 @@ const ExecutiveTab = ({ data }) => {
 const SectionsTab = ({ data }) => {
   const s = data.sections || [];
   const sc = data.sectionComparison || [];
-  const items = sc.length > sc; sc : s;
+  const items = sc.length > 0 ? sc : s;
   return (
     <div className="space-y-6">
       {s.slice(0, 4).map((sec, i) => (
