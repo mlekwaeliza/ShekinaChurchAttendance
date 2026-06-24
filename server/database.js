@@ -3157,7 +3157,7 @@ const queries = {
       m.id,
       m.full_name,
       s.name as section_name,
-      l.full_name as leader_name,
+      lu.full_name as leader_name,
       m.gender,
       m.age_group,
       COUNT(a.id) as total_records,
@@ -3169,9 +3169,10 @@ const queries = {
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users lu ON l.user_id = lu.id
     LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
     WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
-    GROUP BY m.id, m.full_name, s.name, l.full_name, m.gender, m.age_group
+    GROUP BY m.id, m.full_name, s.name, lu.full_name, m.gender, m.age_group
     ORDER BY attendance_rate DESC
   `, [days]),
 
@@ -3252,7 +3253,7 @@ const queries = {
       m.id,
       m.full_name,
       s.name as section_name,
-      l.full_name as leader_name,
+      lu.full_name as leader_name,
       COALESCE(stats.attendance_rate, 0) as attendance_rate,
       COALESCE(stats.total_present, 0) as total_present,
       COALESCE(stats.total_services, 0) as total_services,
@@ -3267,6 +3268,7 @@ const queries = {
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users lu ON l.user_id = lu.id
     LEFT JOIN (
       SELECT
         member_id,
@@ -3384,22 +3386,23 @@ const queries = {
   `),
 
   getAtRiskMembers: () => all(`
-    SELECT m.id, m.full_name, s.name as section_name, l.full_name as leader_name,
+    SELECT m.id, m.full_name, s.name as section_name, lu.full_name as leader_name,
       l.id as leader_id,
       COUNT(a.id) as total_services,
       SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present_count
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users lu ON l.user_id = lu.id
     LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo(90)}
     WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
-    GROUP BY m.id, m.full_name, s.name, l.full_name, l.id
+    GROUP BY m.id, m.full_name, s.name, lu.full_name, l.id
     HAVING present_count < total_services * 0.2
     ORDER BY present_count ASC
   `),
 
   getConsecutiveAbsentees: () => all(`
-    SELECT m.id, m.full_name, s.name as section_name, l.full_name as leader_name,
+    SELECT m.id, m.full_name, s.name as section_name, lu.full_name as leader_name,
       COUNT(*) as consecutive_absences
     FROM (
       SELECT member_id, date, status,
@@ -3411,8 +3414,9 @@ const queries = {
     JOIN members m ON ranked.member_id = m.id
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users lu ON l.user_id = lu.id
     WHERE ranked.status = 'absent' AND ranked.rn = ranked.grp
-    GROUP BY m.id, m.full_name, s.name, l.full_name
+    GROUP BY m.id, m.full_name, s.name, lu.full_name
     HAVING consecutive_absences >= 3
     ORDER BY consecutive_absences DESC
   `),
