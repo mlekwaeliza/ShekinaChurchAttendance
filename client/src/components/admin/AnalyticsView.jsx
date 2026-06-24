@@ -5,6 +5,8 @@ import {
   ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle, TrendingDown,
   Download, Printer, FileText, Eye, Info, Star, UserX, Clock, Target
 } from 'lucide-react';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { analyticsAPI } from '../../services/api';
 
 const R = v => Math.round(Number(v) || 0);
@@ -40,10 +42,9 @@ const Badge = ({ children, variant = 'default' }) => {
     success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
     warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     danger: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
-    info: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
-    default: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-  }[variant] || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
-  return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${v}`}>{children}</span>;
+    default: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+  }[variant] || 'bg-slate-100 text-slate-600';
+  return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${v}`}>{children}</span>;
 };
 
 const TABS = [
@@ -110,7 +111,7 @@ const AnalyticsView = () => {
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><BarChart3 className="w-5 h-5" /></div>
             <div>
               <h2 className="text-xl font-bold">Executive Analytics</h2>
-              <p className="text-white/80 text-sm">Numerical church intelligence dashboard</p>
+              <p className="text-white/80 text-sm">Church intelligence dashboard with charts</p>
             </div>
           </div>
           <select value={period} onChange={e => setPeriod(Number(e.target.value))}
@@ -150,6 +151,8 @@ const ExecutiveTab = ({ data }) => {
   const rate = Number(ex.attendance_rate) || 0;
   const sc = data.sectionComparison || [];
   const yoy = data.yearOverYear || [];
+  const chartData = sc.slice(0, 10).map(s => ({ name: s.name?.length > 10 ? s.name.slice(0, 10) + '…' : s.name, rate: R(s.attendance_rate), members: s.member_count || 0 }));
+  const yoyData = yoy.map(y => ({ month: y.month_name, current: R(y.current_rate), previous: R(y.previous_rate) }));
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
@@ -166,65 +169,36 @@ const ExecutiveTab = ({ data }) => {
         <KpiCard label="Visitors (Month)" value={ex.visitors_this_month || 0} color="pink" />
         <KpiCard label="Excused" value={ex.excused_today || 0} color="amber" />
       </div>
-      {sc.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Section Overview</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800">
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  {['Section','Members','Present','Absent','Rate','Status'].map(h => (
-                    <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${['Section'].includes(h) ? 'text-left' : 'text-right'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sc.slice(0, 10).map((s, i) => (
-                  <tr key={s.id || i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{s.name}</td>
-                    <td className="py-2 px-3 text-right">{s.member_count || 0}</td>
-                    <td className="py-2 px-3 text-right text-emerald-600">{s.total_present || 0}</td>
-                    <td className="py-2 px-3 text-right text-rose-500">{s.total_absent || 0}</td>
-                    <td className="py-2 px-3 text-right font-bold">{R(s.attendance_rate)}%</td>
-                    <td className="py-2 px-3 text-right"><Badge variant={s.attendance_rate >= 75 ? 'success' : s.attendance_rate >= 50 ? 'warning' : 'danger'}>{s.attendance_rate >= 75 ? 'Strong' : s.attendance_rate >= 50 ? 'Average' : 'Weak'}</Badge></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      {chartData.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Section Attendance Rates</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
+              <Tooltip formatter={(v) => [`${v}%`, 'Rate']} />
+              <Bar dataKey="rate" radius={[6, 6, 0, 0]}>
+                {chartData.map((entry, i) => <Cell key={i} fill={entry.rate >= 75 ? '#10b981' : entry.rate >= 50 ? '#f59e0b' : '#ef4444'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
-      {yoy.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Year-over-Year Comparison</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800">
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  {['Month','Current Rate','Previous Rate','Difference'].map(h => (
-                    <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Month' ? 'text-left' : 'text-right'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {yoy.map((y, i) => {
-                  const diff = (y.current_rate || 0) - (y.previous_rate || 0);
-                  return (
-                    <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{y.month_name}</td>
-                      <td className="py-2 px-3 text-right font-bold text-indigo-600">{R(y.current_rate)}%</td>
-                      <td className="py-2 px-3 text-right text-slate-500">{R(y.previous_rate)}%</td>
-                      <td className={`py-2 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{R(diff)}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      {yoyData.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Year-over-Year Attendance</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={yoyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
+              <Tooltip formatter={(v) => [`${v}%`, '']} />
+              <Legend />
+              <Bar dataKey="current" name="Current Year" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="previous" name="Previous Year" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
     </div>
@@ -235,6 +209,7 @@ const SectionsTab = ({ data }) => {
   const s = data.sections || [];
   const sc = data.sectionComparison || [];
   const items = sc.length > 0 ? sc : s;
+  const chartData = items.slice(0, 10).map(sec => ({ name: sec.name?.length > 12 ? sec.name.slice(0, 12) + '…' : sec.name, rate: R(sec.attendance_rate), members: sec.member_count || 0, present: sec.total_present || 0 }));
   return (
     <div className="space-y-6">
       {s.slice(0, 4).map((sec, i) => (
@@ -252,6 +227,22 @@ const SectionsTab = ({ data }) => {
           </div>
         </div>
       ))}
+      {chartData.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Section Performance Chart</h3>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis type="number" tick={{ fontSize: 11 }} domain={[0, 100]} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+              <Tooltip formatter={(v) => [`${v}%`, 'Rate']} />
+              <Bar dataKey="rate" radius={[0, 6, 6, 0]}>
+                {chartData.map((entry, i) => <Cell key={i} fill={entry.rate >= 75 ? '#10b981' : entry.rate >= 50 ? '#f59e0b' : '#ef4444'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       {items.length > 0 && (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
           <div className="p-4 border-b border-slate-100 dark:border-slate-700">
@@ -295,6 +286,7 @@ const LeadersTab = ({ data }) => {
   const leaders = data.leaders || [];
   const headLeaders = data.headLeaders || [];
   const workload = data.workload || [];
+  const leaderChart = leaders.slice(0, 10).map(l => ({ name: l.leader_name?.length > 12 ? l.leader_name.slice(0, 12) + '…' : l.leader_name, rate: R(l.attendance_rate), score: l.efficiency_score || 0 }));
   return (
     <div className="space-y-6">
       {headLeaders.length > 0 && (
@@ -320,6 +312,22 @@ const LeadersTab = ({ data }) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {leaderChart.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Leader Performance</h3>
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={leaderChart} layout="vertical" margin={{ top: 5, right: 20, left: 90, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis type="number" tick={{ fontSize: 11 }} domain={[0, 100]} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
+              <Tooltip formatter={(v) => [`${v}%`, 'Rate']} />
+              <Bar dataKey="rate" radius={[0, 6, 6, 0]}>
+                {leaderChart.map((entry, i) => <Cell key={i} fill={entry.rate >= 75 ? '#10b981' : entry.rate >= 50 ? '#f59e0b' : '#ef4444'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       )}
       {leaders.length > 0 && (
@@ -393,8 +401,25 @@ const LeadersTab = ({ data }) => {
 
 const DepartmentsTab = ({ data }) => {
   const depts = data.departments || [];
+  const chartData = depts.map(d => ({ name: d.name?.length > 12 ? d.name.slice(0, 12) + '…' : d.name, rate: R(d.attendance_rate), members: d.member_count || 0 }));
   return (
     <div className="space-y-6">
+      {chartData.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Department Attendance Rates</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
+              <Tooltip formatter={(v) => [`${v}%`, 'Rate']} />
+              <Bar dataKey="rate" radius={[6, 6, 0, 0]}>
+                {chartData.map((entry, i) => <Cell key={i} fill={entry.rate >= 75 ? '#10b981' : entry.rate >= 50 ? '#f59e0b' : '#ef4444'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       {depts.length > 0 ? (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
           <div className="p-4 border-b border-slate-100 dark:border-slate-700">
@@ -440,6 +465,13 @@ const MembersTab = ({ data }) => {
   const members = data.members || [];
   const risk = data.risk || {};
   const riskSummary = risk.summary || {};
+  const pieData = [
+    { name: 'Highly Active', value: riskSummary.highly_active || 0, color: '#10b981' },
+    { name: 'Active', value: riskSummary.active || 0, color: '#06b6d4' },
+    { name: 'Moderate', value: riskSummary.moderately_active || 0, color: '#f59e0b' },
+    { name: 'At Risk', value: riskSummary.at_risk || 0, color: '#f97316' },
+    { name: 'Critical', value: riskSummary.critical || 0, color: '#ef4444' },
+  ].filter(d => d.value > 0);
   return (
     <div className="space-y-6">
       {riskSummary && Object.keys(riskSummary).length > 0 && (
@@ -449,6 +481,20 @@ const MembersTab = ({ data }) => {
           <KpiCard label="Moderate" value={riskSummary.moderately_active || 0} color="amber" />
           <KpiCard label="At Risk" value={riskSummary.at_risk || 0} color="orange" />
           <KpiCard label="Critical" value={riskSummary.critical || 0} color="rose" />
+        </div>
+      )}
+      {pieData.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Member Activity Distribution</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={110} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       )}
       {members.length > 0 && (
@@ -488,12 +534,47 @@ const MembersTab = ({ data }) => {
 const TrendsTab = ({ data }) => {
   const trends = data.trends || [];
   const patterns = data.dayPatterns || [];
+  const trendChart = trends.slice(-60).map(t => ({ date: t.date?.slice(5) || t.date, rate: R(t.daily_rate), ma4: R(t.ma_4week), ma8: R(t.ma_8week) }));
+  const patternChart = patterns.map(p => ({ day: p.day_name?.slice(0, 3), rate: R(p.avg_rate), present: p.total_present || 0 }));
   return (
     <div className="space-y-6">
+      {trendChart.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Attendance Trend with Moving Averages</h3>
+          <ResponsiveContainer width="100%" height={350}>
+            <AreaChart data={trendChart} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
+              <Tooltip formatter={(v) => [`${v}%`, '']} />
+              <Legend />
+              <Area type="monotone" dataKey="rate" name="Daily Rate" stroke="#6366f1" fill="#6366f133" strokeWidth={1.5} />
+              <Line type="monotone" dataKey="ma4" name="4-Week MA" stroke="#10b981" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="ma8" name="8-Week MA" stroke="#f59e0b" strokeWidth={2} dot={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      {patternChart.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Day of Week Attendance Patterns</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={patternChart} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
+              <Tooltip formatter={(v) => [`${v}%`, 'Rate']} />
+              <Bar dataKey="rate" name="Avg Rate" radius={[6, 6, 0, 0]}>
+                {patternChart.map((entry, i) => <Cell key={i} fill={C[i % C.length]} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
       {trends.length > 0 && (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
           <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Attendance Trends</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Attendance Trend Data</h3>
           </div>
           <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <table className="min-w-full text-sm">
@@ -526,35 +607,6 @@ const TrendsTab = ({ data }) => {
           </div>
         </div>
       )}
-      {patterns.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Day of Week Patterns</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800">
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  {['Day','Avg Rate','Total Present','Total Absent','Services'].map(h => (
-                    <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Day' ? 'text-left' : 'text-right'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {patterns.map((p, i) => (
-                  <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                    <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{p.day_name}</td>
-                    <td className="py-2.5 px-3 text-right font-bold">{R(p.avg_rate)}%</td>
-                    <td className="py-2.5 px-3 text-right text-emerald-600">{p.total_present || 0}</td>
-                    <td className="py-2.5 px-3 text-right text-rose-500">{p.total_absent || 0}</td>
-                    <td className="py-2.5 px-3 text-right">{p.service_count || 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -562,18 +614,16 @@ const TrendsTab = ({ data }) => {
 const InsightsTab = ({ data }) => {
   const insights = data.insights || [];
   const icons = { success: CheckCircle2, warning: AlertTriangle, danger: XCircle, info: TrendingUp };
-  const colors = { success: 'emerald', warning: 'amber', danger: 'rose', info: 'indigo' };
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Executive Insights</h3>
       {insights.length === 0 && <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-10 text-center text-slate-400">No insights available</div>}
       {insights.map((ins, i) => {
         const Icon = icons[ins.type] || Info;
-        const c = colors[ins.type] || 'slate';
         return (
           <div key={i} className="flex items-start gap-3 rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-            <div className={`w-8 h-8 rounded-lg bg-${c}-100 dark:bg-${c}-900/30 flex items-center justify-center shrink-0`}>
-              <Icon className={`w-4 h-4 text-${c}-600 dark:text-${c}-400`} />
+            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+              <Icon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             </div>
             <p className="text-sm text-slate-700 dark:text-slate-300">{ins.text}</p>
           </div>
@@ -586,6 +636,10 @@ const InsightsTab = ({ data }) => {
 const HealthTab = ({ data }) => {
   const growth = data.growth || {};
   const gi = growth.growth_index || 0;
+  const healthData = [
+    { name: 'Index', value: gi },
+    { name: 'Remaining', value: Math.max(0, 100 - gi) },
+  ];
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -599,6 +653,22 @@ const HealthTab = ({ data }) => {
         <KpiCard label="Souls Won (Year)" value={growth.souls_won_year || 0} color="pink" />
         <KpiCard label="Status" value={gi >= 75 ? 'Healthy' : gi >= 50 ? 'Needs Improvement' : 'Critical'} color={gi >= 75 ? 'emerald' : gi >= 50 ? 'amber' : 'rose'} />
       </div>
+      {gi > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Church Health Index</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie data={healthData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} startAngle={90} endAngle={-270} paddingAngle={0} dataKey="value">
+                <Cell fill={gi >= 75 ? '#10b981' : gi >= 50 ? '#f59e0b' : '#ef4444'} />
+                <Cell fill="#e2e8f0" />
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+          <p className="text-center text-2xl font-bold text-slate-900 dark:text-white mt-2">{gi}/100</p>
+          <p className="text-center text-xs text-slate-400">Overall Growth Index</p>
+        </div>
+      )}
     </div>
   );
 };
@@ -608,6 +678,13 @@ const RiskTab = ({ data }) => {
   const atRisk = risk.at_risk_members || [];
   const consecutive = risk.consecutive_absentees || [];
   const summary = risk.summary || {};
+  const pieData = [
+    { name: 'Highly Active', value: summary.highly_active || 0, color: '#10b981' },
+    { name: 'Active', value: summary.active || 0, color: '#06b6d4' },
+    { name: 'Moderate', value: summary.moderately_active || 0, color: '#f59e0b' },
+    { name: 'At Risk', value: summary.at_risk || 0, color: '#f97316' },
+    { name: 'Critical', value: summary.critical || 0, color: '#ef4444' },
+  ].filter(d => d.value > 0);
   return (
     <div className="space-y-6">
       {Object.keys(summary).length > 0 && (
@@ -617,6 +694,20 @@ const RiskTab = ({ data }) => {
           <KpiCard label="Moderate" value={summary.moderately_active || 0} color="amber" />
           <KpiCard label="At Risk" value={summary.at_risk || 0} color="orange" />
           <KpiCard label="Critical" value={summary.critical || 0} color="rose" />
+        </div>
+      )}
+      {pieData.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Risk Distribution</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={110} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       )}
       {consecutive.length > 0 && (
