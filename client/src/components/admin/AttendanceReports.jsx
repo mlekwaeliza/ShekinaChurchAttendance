@@ -20,7 +20,6 @@ const TABS = [
   { id: 'departments', label: 'Department Report', icon: Building2 },
   { id: 'members', label: 'Member Intelligence', icon: UserCheck },
   { id: 'historical', label: 'Historical Reports', icon: Calendar },
-  { id: 'comparison-table', label: 'Attendance Comparison', icon: BarChart3 },
   { id: 'insights', label: 'AI Insights', icon: Zap },
   { id: 'actions', label: 'Action Center', icon: Target },
 ];
@@ -176,6 +175,7 @@ const AttendanceReports = ({
   const [departmentsData, setDepartmentsData] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
   const [comparisonData, setComparisonData] = useState({});
+  const [compError, setCompError] = useState(null);
   const [historicalData, setHistoricalData] = useState({});
   const [selectedLeader, setSelectedLeader] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -184,7 +184,6 @@ const AttendanceReports = ({
   const [compType, setCompType] = useState('sections');
   const [compPeriod, setCompPeriod] = useState('month');
   const [historicalPeriod, setHistoricalPeriod] = useState('monthly');
-  const [compTablePeriod, setCompTablePeriod] = useState(30);
   const [customDate1, setCustomDate1] = useState('');
   const [customDate2, setCustomDate2] = useState('');
   const [p1Start, setP1Start] = useState('');
@@ -289,6 +288,7 @@ const AttendanceReports = ({
     const dates = getCompDates(compPeriod);
     if (!dates) return;
     setAnalyticsLoading(true);
+    setCompError(null);
     try {
       if (compType === 'overall') {
         const res = await analyticsAPI.getComparison({
@@ -330,8 +330,15 @@ const AttendanceReports = ({
           analyticsAPI.getDepartments(365, dates.pStart, dates.pEnd),
         ]);
         setComparisonData({ type: 'departments', currentList: curRes.data || [], previousList: prevRes.data || [], dates });
+      } else if (compType === 'daily') {
+        const res = await analyticsAPI.getHistorical({ startDate: dates.cStart, endDate: dates.cEnd });
+        const daily = (res.data?.daily || []).map(r => ({
+          date: r.date, present: r.present || 0, absent: r.absent || 0,
+          excused: r.excused || 0, total: r.total || 0, rate: r.rate || 0,
+        }));
+        setComparisonData({ type: 'daily', daily, dates });
       }
-    } catch (e) { console.error('Comparison load error:', e.message, e); setComparisonData({}); }
+    } catch (e) { console.error('Comparison load error:', e.message, e); setCompError(e.message || 'Failed to load comparison data'); setComparisonData({}); }
     finally { setAnalyticsLoading(false); }
   };
 
@@ -545,7 +552,6 @@ const AttendanceReports = ({
       case 'departments': return renderDepartmentsTab();
       case 'members': return renderMembersTab();
       case 'historical': return renderHistoricalTab();
-      case 'comparison-table': return renderComparisonTableTab();
       case 'insights': return renderInsightsTab();
       case 'actions': return renderActionsTab();
       default: return renderOverviewTab();
@@ -663,6 +669,7 @@ const AttendanceReports = ({
       { key: 'leaders', label: 'Section Leaders', icon: Users },
       { key: 'departments', label: 'Departments', icon: Building2 },
       { key: 'overall', label: 'Overall', icon: BarChart3 },
+      { key: 'daily', label: 'Daily Attendance', icon: Calendar },
     ];
     const periodTabs = [
       { key: 'week', label: 'Weekly' },
@@ -825,6 +832,12 @@ const AttendanceReports = ({
 
         {analyticsLoading ? (
           <div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
+        ) : compError ? (
+          <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 p-4 text-center">
+            <AlertTriangle className="w-6 h-6 text-rose-500 mx-auto mb-2" />
+            <p className="text-sm font-medium text-rose-700 dark:text-rose-400">{compError}</p>
+            <button onClick={loadComparisonData} className="mt-2 px-3 py-1 rounded-lg bg-rose-100 dark:bg-rose-900/30 text-xs font-medium text-rose-600 hover:bg-rose-200 transition-colors">Retry</button>
+          </div>
         ) : comp.type === 'overall' && comp.current ? (
           <div className="space-y-5">
             {(() => {
@@ -920,6 +933,47 @@ const AttendanceReports = ({
             { key: 'total_absent', label: 'Absent' },
             { key: 'member_count', label: 'Members' },
           ])
+        ) : comp.type === 'daily' && comp.daily ? (
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Daily Attendance Records</h3>
+              {dates && <p className="text-[10px] text-slate-400 mt-0.5">{dates.cStart} to {dates.cEnd}</p>}
+            </div>
+            {comp.daily.length > 0 ? (
+              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                      {['Date', 'Present', 'Absent', 'Excused', 'Total', 'Rate %', 'Change'].map((h, i) => (
+                        <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comp.daily.map((row, i) => {
+                      const prev = i < comp.daily.length - 1 ? comp.daily[i + 1] : null;
+                      const diff = prev ? row.rate - prev.rate : 0;
+                      return (
+                        <tr key={row.date} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                          <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.date}</td>
+                          <td className="py-2 px-3 text-right text-emerald-600">{row.present}</td>
+                          <td className="py-2 px-3 text-right text-rose-500">{row.absent}</td>
+                          <td className="py-2 px-3 text-right text-amber-500">{row.excused}</td>
+                          <td className="py-2 px-3 text-right font-medium">{row.total}</td>
+                          <td className="py-2 px-3 text-right font-bold">{R(row.rate)}%</td>
+                          <td className={`py-2 px-3 text-right font-bold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                            {diff > 0 ? '+' : ''}{R(diff)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-slate-400 text-sm">No attendance data for this period</div>
+            )}
+          </div>
         ) : (
           <div className="text-center py-12 text-slate-400 text-sm">
             <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300" />
@@ -1303,121 +1357,6 @@ const AttendanceReports = ({
               ]}
               data={analytics.yearOverYear}
             />
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderComparisonTableTab = () => {
-    const [compData, setCompData] = useState([]);
-    const [compLoading, setCompLoading] = useState(false);
-    const [sortField, setSortField] = useState('date');
-    const [sortAsc, setSortAsc] = useState(false);
-
-    const fetchComparisonData = async (days) => {
-      setCompLoading(true);
-      try {
-        const end = toDateStr(new Date());
-        const start = toDateStr(new Date(Date.now() - days * 86400000));
-        const res = await analyticsAPI.getHistorical({ startDate: start, endDate: end });
-        const daily = (res.data?.daily || []).map(r => ({
-          date: r.date, present: r.present || 0, absent: r.absent || 0,
-          excused: r.excused || 0, total: r.total || 0, rate: r.rate || 0,
-        }));
-        setCompData(daily);
-      } catch (e) { setCompData([]); }
-      finally { setCompLoading(false); }
-    };
-
-    useEffect(() => { fetchComparisonData(compTablePeriod); }, [compTablePeriod]);
-
-    const sortedData = useMemo(() => {
-      return [...compData].sort((a, b) => {
-        const aVal = a[sortField] ?? 0;
-        const bVal = b[sortField] ?? 0;
-        if (typeof aVal === 'string') return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        return sortAsc ? aVal - bVal : bVal - aVal;
-      });
-    }, [compData, sortField, sortAsc]);
-
-    const handleSort = (field) => {
-      if (sortField === field) setSortAsc(!sortAsc);
-      else { setSortField(field); setSortAsc(false); }
-    };
-
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-slate-400 uppercase">Period:</span>
-          {[
-            { label: '7 Days', value: 7 },
-            { label: '14 Days', value: 14 },
-            { label: '30 Days', value: 30 },
-            { label: '60 Days', value: 60 },
-            { label: '90 Days', value: 90 },
-            { label: '180 Days', value: 180 },
-            { label: '365 Days', value: 365 },
-          ].map(p => (
-            <button key={p.value} onClick={() => setCompTablePeriod(p.value)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${compTablePeriod === p.value ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700'}`}>{p.label}</button>
-          ))}
-        </div>
-
-        {compLoading ? (
-          <div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
-        ) : sortedData.length > 0 ? (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Attendance Comparison Table</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">{compTablePeriod} day period — click column headers to sort</p>
-            </div>
-            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-              <table className="min-w-full text-sm">
-                <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
-                  <tr className="border-b border-slate-200 dark:border-slate-700">
-                    {[
-                      { key: 'date', label: 'Date' },
-                      { key: 'present', label: 'Present' },
-                      { key: 'absent', label: 'Absent' },
-                      { key: 'excused', label: 'Excused' },
-                      { key: 'total', label: 'Total' },
-                      { key: 'rate', label: 'Rate %' },
-                      { key: 'change', label: 'Change' },
-                    ].map(col => (
-                      <th key={col.key} onClick={() => col.key !== 'change' && handleSort(col.key)}
-                        className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${col.key === 'date' ? 'text-left' : 'text-right'} ${col.key !== 'change' ? 'cursor-pointer hover:text-slate-600' : ''}`}>
-                        {col.label}{sortField === col.key ? (sortAsc ? ' ▲' : ' ▼') : ''}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedData.map((row, i) => {
-                    const prev = i < sortedData.length - 1 ? sortedData[i + 1] : null;
-                    const diff = prev ? row.rate - prev.rate : 0;
-                    return (
-                      <tr key={row.date} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.date}</td>
-                        <td className="py-2 px-3 text-right text-emerald-600">{row.present}</td>
-                        <td className="py-2 px-3 text-right text-rose-500">{row.absent}</td>
-                        <td className="py-2 px-3 text-right text-amber-500">{row.excused}</td>
-                        <td className="py-2 px-3 text-right font-medium">{row.total}</td>
-                        <td className="py-2 px-3 text-right font-bold">{R(row.rate)}%</td>
-                        <td className={`py-2 px-3 text-right font-bold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                          {diff > 0 ? '+' : ''}{R(diff)}%
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-slate-400 text-sm">
-            <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-            No attendance data available for selected period
           </div>
         )}
       </div>

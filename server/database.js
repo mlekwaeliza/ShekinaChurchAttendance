@@ -2823,7 +2823,7 @@ const queries = {
         AND a.date >= ${daysAgo()}
       GROUP BY s.id, s.name
       ORDER BY attendance_rate DESC
-    `, [days, days]);
+    `, [days, days, days]);
   },
 
   // ── Service Type Attendance Breakdown ─────────────────────────────────────
