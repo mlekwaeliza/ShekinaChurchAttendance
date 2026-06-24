@@ -9,6 +9,8 @@ import {
 import { adminAPI, analyticsAPI } from '../../services/api';
 import Badge from '../ui/Badge';
 
+const R = v => Math.round(Number(v) || 0);
+
 const TABS = [
   { id: 'overview', label: 'Executive Summary', icon: Eye },
   { id: 'comparison', label: 'Comparison Center', icon: ArrowUp },
@@ -45,7 +47,7 @@ const MetricCard = ({ label, value, previousValue, icon: Icon, color = 'indigo',
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</span>
         {Icon && <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-700 flex items-center justify-center"><Icon className="w-3.5 h-3.5 text-slate-500" /></div>}
       </div>
-      <p className="text-xl font-bold text-slate-900 dark:text-white">{num.toLocaleString()}{suffix}</p>
+      <p className="text-xl font-bold text-slate-900 dark:text-white">{suffix === '%' ? R(num) : num.toLocaleString()}{suffix}</p>
       {diff != null && (
         <div className="flex items-center gap-1.5 mt-1">
           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
@@ -456,13 +458,13 @@ const AttendanceReports = ({
     else if (analytics.prediction?.trend === 'decreasing') list.push({ type: 'warning', text: 'Attendance trend is declining. Review recent changes in scheduling or engagement.', icon: TrendingDown });
 
     if (unsubmitted > 0) list.push({ type: 'info', text: `${unsubmitted} leader(s) have not submitted attendance this period.`, icon: Clock });
-    if (leaderRankData.length > 0 && leaderRankData[0].attendance_rate >= 90) list.push({ type: 'success', text: `${leaderRankData[0].leader_name} leads with ${leaderRankData[0].attendance_rate}% section attendance.`, icon: Award });
+    if (leaderRankData.length > 0 && leaderRankData[0].attendance_rate >= 90) list.push({ type: 'success', text: `${leaderRankData[0].leader_name} leads with ${R(leaderRankData[0].attendance_rate)}% section attendance.`, icon: Award });
 
     if (sectionComparison.length > 0) {
       const best = sectionComparison[0];
       const worst = sectionComparison[sectionComparison.length - 1];
-      if (best?.attendance_rate >= 80) list.push({ type: 'success', text: `${best.name} is top-performing section at ${best.attendance_rate}% attendance.`, icon: Star });
-      if (worst?.attendance_rate < 60) list.push({ type: 'danger', text: `${worst.name} needs attention at ${worst.attendance_rate}% attendance.`, icon: AlertTriangle });
+      if (best?.attendance_rate >= 80) list.push({ type: 'success', text: `${best.name} is top-performing section at ${R(best.attendance_rate)}% attendance.`, icon: Star });
+      if (worst?.attendance_rate < 60) list.push({ type: 'danger', text: `${worst.name} needs attention at ${R(worst.attendance_rate)}% attendance.`, icon: AlertTriangle });
       const lowSections = sectionComparison.filter(s => s.attendance_rate < 60);
       if (lowSections.length > 1) list.push({ type: 'warning', text: `${lowSections.length} sections below 60% attendance. Targeted outreach recommended.`, icon: Heart });
     }
@@ -473,7 +475,7 @@ const AttendanceReports = ({
     }
 
     if (retention.retention_rate != null) {
-      const rr = retention.retention_rate;
+      const rr = R(retention.retention_rate);
       if (rr >= 80) list.push({ type: 'success', text: `Member retention at ${rr}% — strong.`, icon: Shield });
       else if (rr < 60) list.push({ type: 'warning', text: `Member retention at ${rr}% — re-engagement strategies needed.`, icon: AlertTriangle });
     }
@@ -487,11 +489,11 @@ const AttendanceReports = ({
     const list = [];
     if (unsubmitted > 0) list.push({ priority: 'high', category: 'Submission', title: 'Remind Leaders to Submit', description: `${unsubmitted} leader(s) have not submitted attendance. Send reminders immediately.` });
     const atRiskLeaders = leaderRankData.filter(l => l.attendance_rate < 60);
-    atRiskLeaders.forEach(l => list.push({ priority: 'high', category: 'Performance', title: `Follow up with ${l.leader_name}`, description: `Section attendance at ${l.attendance_rate}%. Requires pastoral intervention.` }));
+    atRiskLeaders.forEach(l => list.push({ priority: 'high', category: 'Performance', title: `Follow up with ${l.leader_name}`, description: `Section attendance at ${R(l.attendance_rate)}%. Requires pastoral intervention.` }));
     const lowSections = sectionComparison.filter(s => s.attendance_rate < 60);
-    lowSections.forEach(s => list.push({ priority: 'medium', category: 'Section', title: `Address ${s.name}`, description: `Only ${s.attendance_rate}% attendance. Review section engagement strategies.` }));
+    lowSections.forEach(s => list.push({ priority: 'medium', category: 'Section', title: `Address ${s.name}`, description: `Only ${R(s.attendance_rate)}% attendance. Review section engagement strategies.` }));
     const topLeaders = leaderRankData.filter(l => l.attendance_rate >= 90);
-    topLeaders.slice(0, 3).forEach(l => list.push({ priority: 'low', category: 'Recognition', title: `Congratulate ${l.leader_name}`, description: `Outstanding ${l.attendance_rate}% attendance rate. Consider for recognition.` }));
+    topLeaders.slice(0, 3).forEach(l => list.push({ priority: 'low', category: 'Recognition', title: `Congratulate ${l.leader_name}`, description: `Outstanding ${R(l.attendance_rate)}% attendance rate. Consider for recognition.` }));
     if (analytics.streaks?.length > 0) {
       const inactive = analytics.streaks.filter(s => s.consecutive_absences >= 4);
       if (inactive.length > 0) list.push({ priority: 'high', category: 'Follow-up', title: `Visit ${inactive.length} Inactive Members`, description: 'Members with 4+ consecutive absences need pastoral visitation.' });
@@ -590,11 +592,11 @@ const AttendanceReports = ({
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <MetricCard label="Weekly Growth" value={weeklyGrowth >= 0 ? `+${weeklyGrowth}%` : `${weeklyGrowth}%`} icon={TrendingUp} color={weeklyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
-          <MetricCard label="Monthly Growth" value={monthlyGrowth >= 0 ? `+${monthlyGrowth}%` : `${monthlyGrowth}%`} icon={TrendingUp} color={monthlyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
-          <MetricCard label="Yearly Growth" value={yearlyGrowth >= 0 ? `+${yearlyGrowth}%` : `${yearlyGrowth}%`} icon={TrendingUp} color={yearlyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
+          <MetricCard label="Weekly Growth" value={weeklyGrowth >= 0 ? `+${R(weeklyGrowth)}%` : `${R(weeklyGrowth)}%`} icon={TrendingUp} color={weeklyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
+          <MetricCard label="Monthly Growth" value={monthlyGrowth >= 0 ? `+${R(monthlyGrowth)}%` : `${R(monthlyGrowth)}%`} icon={TrendingUp} color={monthlyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
+          <MetricCard label="Yearly Growth" value={yearlyGrowth >= 0 ? `+${R(yearlyGrowth)}%` : `${R(yearlyGrowth)}%`} icon={TrendingUp} color={yearlyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
           <MetricCard label="Retention %" value={retentionRate} suffix="%" icon={Shield} color={retentionRate >= 80 ? 'emerald' : retentionRate >= 60 ? 'amber' : 'rose'} showDiff={false} />
-          <MetricCard label="Rate Change" value={rateDiff >= 0 ? `+${rateDiff}%` : `${rateDiff}%`} icon={Activity} color={rateDiff >= 0 ? 'emerald' : 'rose'} showDiff={false} />
+          <MetricCard label="Rate Change" value={rateDiff >= 0 ? `+${R(rateDiff)}%` : `${R(rateDiff)}%`} icon={Activity} color={rateDiff >= 0 ? 'emerald' : 'rose'} showDiff={false} />
           <MetricCard label="Health Score" value={healthScore} suffix="/100" icon={Heart} color={healthScore >= 75 ? 'emerald' : healthScore >= 50 ? 'amber' : 'rose'} showDiff={false} />
         </div>
 
@@ -617,7 +619,7 @@ const AttendanceReports = ({
                 { label: 'Total Present', value: sectionSummary.totalPresent, color: 'emerald' },
                 { label: 'Total Absent', value: sectionSummary.totalAbsent, color: 'rose' },
                 { label: 'Total Excused', value: sectionSummary.totalExcused, color: 'amber' },
-                { label: 'Avg Rate', value: `${sectionSummary.avgRate}%`, color: 'indigo' },
+                { label: 'Avg Rate', value: `${R(sectionSummary.avgRate)}%`, color: 'indigo' },
               ].map(s => (
                 <div key={s.label} className="text-center">
                   <p className="text-[10px] font-semibold uppercase text-slate-400">{s.label}</p>
@@ -640,7 +642,7 @@ const AttendanceReports = ({
                     <p className="text-[10px] text-slate-400">{hl.section_name}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{hl.overall_attendance || 0}%</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{R(hl.overall_attendance)}%</p>
                     <p className="text-[9px] text-slate-400">{hl.leaders_supervised || 0} leaders</p>
                   </div>
                 </div>
@@ -735,10 +737,10 @@ const AttendanceReports = ({
                       const pct = row[`${m.key}_pct`];
                       return (
                         <React.Fragment key={m.key}>
-                          <td className="py-2 px-3 text-right text-slate-500">{prev}{m.suffix || ''}</td>
-                          <td className="py-2 px-3 text-right font-bold">{curr}{m.suffix || ''}</td>
+                          <td className="py-2 px-3 text-right text-slate-500">{m.suffix === '%' ? R(prev) : prev}{m.suffix || ''}</td>
+                          <td className="py-2 px-3 text-right font-bold">{m.suffix === '%' ? R(curr) : curr}{m.suffix || ''}</td>
                           <td className="py-2 px-3 text-right">
-                            <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{m.suffix || ''}</span>
+                            <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{m.suffix === '%' ? R(diff) : diff}{m.suffix || ''}</span>
                             <span className={`ml-1 text-[10px] ${diff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>({pct}%)</span>
                           </td>
                         </React.Fragment>
@@ -843,8 +845,8 @@ const AttendanceReports = ({
                       return (
                         <div key={kpi.label} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
                           <p className="text-[10px] font-semibold uppercase text-slate-400">{kpi.label}</p>
-                          <p className="text-lg font-bold text-slate-900 dark:text-white">{kpi.curr || 0}{kpi.suffix || ''}</p>
-                          <span className={`text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{kpi.suffix || ''} vs prev</span>
+                          <p className="text-lg font-bold text-slate-900 dark:text-white">{kpi.suffix === '%' ? R(kpi.curr || 0) : (kpi.curr || 0)}{kpi.suffix || ''}</p>
+                          <span className={`text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{kpi.suffix === '%' ? R(diff) : diff}{kpi.suffix || ''} vs prev</span>
                         </div>
                       );
                     })}
@@ -874,9 +876,11 @@ const AttendanceReports = ({
                             { label: 'Leader Submission %', prev: prevSubmissionRate, curr: submissionRate, suffix: '%' },
                             { label: 'Active Sections', prev: p.activeSections, curr: c.activeSections },
                           ].map(row => {
-                            const curr = row.curr || 0, prev = row.prev || 0;
+                            const rawCurr = row.curr || 0, rawPrev = row.prev || 0;
+                            const curr = row.suffix === '%' ? R(rawCurr) : rawCurr;
+                            const prev = row.suffix === '%' ? R(rawPrev) : rawPrev;
                             const diff = row.inv ? prev - curr : curr - prev;
-                            const pct = prev > 0 ? ((diff / prev) * 100).toFixed(1) : 0;
+                            const pct = rawPrev > 0 ? ((diff / rawPrev) * 100).toFixed(1) : 0;
                             return (
                               <tr key={row.label} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                                 <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{row.label}</td>
@@ -938,7 +942,7 @@ const AttendanceReports = ({
             <MetricCard label="Total Present" value={sectionSummary.totalPresent} icon={CheckCircle2} color="emerald" showDiff={false} />
             <MetricCard label="Total Absent" value={sectionSummary.totalAbsent} icon={UserX} color="rose" showDiff={false} />
             <MetricCard label="Total Excused" value={sectionSummary.totalExcused} icon={AlertTriangle} color="amber" showDiff={false} />
-            <MetricCard label="Avg Rate" value={`${sectionSummary.avgRate}%`} icon={Activity} color="indigo" showDiff={false} />
+            <MetricCard label="Avg Rate" value={sectionSummary.avgRate} suffix="%" icon={Activity} color="indigo" showDiff={false} />
           </div>
         )}
 
@@ -950,7 +954,7 @@ const AttendanceReports = ({
                 <span className="text-xs font-bold uppercase text-emerald-700">Best Section</span>
               </div>
               <p className="text-lg font-bold text-slate-900 dark:text-white">{best.name}</p>
-              <p className="text-xs text-slate-500">{best.attendance_rate}% rate | {best.member_count} members</p>
+              <p className="text-xs text-slate-500">{R(best.attendance_rate)}% rate | {best.member_count} members</p>
             </div>
             <div className="rounded-2xl border border-rose-200/60 dark:border-rose-900/30 bg-rose-50/50 dark:bg-rose-900/10 p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -958,7 +962,7 @@ const AttendanceReports = ({
                 <span className="text-xs font-bold uppercase text-rose-700">Needs Follow-up</span>
               </div>
               <p className="text-lg font-bold text-slate-900 dark:text-white">{worst.name}</p>
-              <p className="text-xs text-slate-500">{worst.attendance_rate}% rate | {worst.member_count} members</p>
+              <p className="text-xs text-slate-500">{R(worst.attendance_rate)}% rate | {worst.member_count} members</p>
             </div>
           </div>
         )}
@@ -983,15 +987,15 @@ const AttendanceReports = ({
                 { key: 'total_present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600 font-medium">{v?.toLocaleString() || 0}</span> },
                 { key: 'total_absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v?.toLocaleString() || 0}</span> },
                 { key: 'total_excused', label: 'Excused', align: 'right', render: v => <span className="text-amber-500">{v || 0}</span> },
-                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
-                { key: 'prev_rate', label: 'Prev %', align: 'right', render: v => <span className="text-slate-400">{v || '—'}%</span> },
+                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
+                { key: 'prev_rate', label: 'Prev %', align: 'right', render: v => <span className="text-slate-400">{v != null ? R(v) : '—'}%</span> },
                 { key: 'rate_change', label: 'Diff', align: 'right', render: (v, row) => {
                   const diff = (row.attendance_rate || 0) - (row.prev_rate || 0);
-                  return <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}%</span>;
+                  return <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{R(diff)}%</span>;
                 }},
                 { key: 'new_members', label: 'Growth', align: 'right', render: v => <span className="text-indigo-500">+{v || 0}</span> },
                 { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => v != null ? <span className={`text-xs font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{v}</span> : <span className="text-slate-300">—</span> },
-                { key: 'retention_rate', label: 'Retention', align: 'right', render: v => v != null ? <span className="font-bold">{v}%</span> : <span className="text-slate-300">—</span> },
+                { key: 'retention_rate', label: 'Retention', align: 'right', render: v => v != null ? <span className="font-bold">{R(v)}%</span> : <span className="text-slate-300">—</span> },
                 { key: 'performance_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
               ]}
               data={sectionRankings.map((s, i) => ({ ...s, rank: i + 1 }))}
@@ -1024,10 +1028,10 @@ const AttendanceReports = ({
               { key: 'section_name', label: 'Section' },
               { key: 'leaders_supervised', label: 'Leaders', align: 'right' },
               { key: 'members_managed', label: 'Members', align: 'right' },
-              { key: 'overall_attendance', label: 'Attendance %', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
-              { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{v || 0}%</span> },
-              { key: 'growth_rate', label: 'Growth %', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{v >= 0 ? '+' : ''}{v || 0}%</span> },
-              { key: 'submission_rate', label: 'Submission %', align: 'right', render: v => <span className="font-bold">{v || 0}%</span> },
+              { key: 'overall_attendance', label: 'Attendance %', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
+              { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
+              { key: 'growth_rate', label: 'Growth %', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{v >= 0 ? '+' : ''}{R(v)}%</span> },
+              { key: 'submission_rate', label: 'Submission %', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
               { key: 'performance_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
               { key: 'current_rank', label: 'Rank', align: 'right', render: (v, row) => <span className="font-bold">#{v || 0}</span> },
               { key: 'prev_rank', label: 'Prev Rank', align: 'right', render: v => <span className="text-slate-400">#{v || '—'}</span> },
@@ -1059,7 +1063,7 @@ const AttendanceReports = ({
             <button onClick={() => setSelectedLeader(null)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700"><X className="w-4 h-4" /></button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Attendance Rate" value={selectedLeader.attendance_rate || 0} icon={Activity} color="indigo" showDiff={false} />
+            <MetricCard label="Attendance Rate" value={selectedLeader.attendance_rate || 0} suffix="%" icon={Activity} color="indigo" showDiff={false} />
             <MetricCard label="Members" value={selectedLeader.member_count || 0} icon={Users} color="sky" showDiff={false} />
             <MetricCard label="Submissions" value={selectedLeader.submissions_count || 0} icon={FileText} color="emerald" showDiff={false} />
             <MetricCard label="Performance Score" value={selectedLeader.performance_score || 0} icon={Award} color="amber" showDiff={false} />
@@ -1082,13 +1086,13 @@ const AttendanceReports = ({
               { key: 'total_present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600">{v || 0}</span> },
               { key: 'total_absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v || 0}</span> },
               { key: 'total_excused', label: 'Excused', align: 'right', render: v => <span className="text-amber-500">{v || 0}</span> },
-              { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
-              { key: 'prev_rate', label: 'Prev %', align: 'right', render: v => <span className="text-slate-400">{v || '—'}%</span> },
+              { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
+              { key: 'prev_rate', label: 'Prev %', align: 'right', render: v => <span className="text-slate-400">{v != null ? R(v) : '—'}%</span> },
               { key: 'rate_diff', label: 'Diff', align: 'right', render: (_, row) => {
                 const diff = (row.attendance_rate || 0) - (row.prev_rate || 0);
-                return <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}%</span>;
+                return <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{R(diff)}%</span>;
               }},
-              { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{v || 0}%</span> },
+              { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
               { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => <span className={`font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{v || 0}</span> },
               { key: 'submissions_count', label: 'Submissions', align: 'right' },
               { key: 'efficiency_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
@@ -1106,7 +1110,7 @@ const AttendanceReports = ({
             {analytics.anomalies.map((a, i) => (
               <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20">
                 <span className="text-xs font-medium text-slate-900 dark:text-white">{a.section_name}</span>
-                <span className="text-xs font-bold text-rose-600">-{a.drop_amount}%</span>
+                <span className="text-xs font-bold text-rose-600">-{R(a.drop_amount)}%</span>
               </div>
             ))}
           </div>
@@ -1131,12 +1135,12 @@ const AttendanceReports = ({
                 { key: 'member_count', label: 'Members', align: 'right' },
                 { key: 'present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600">{v || 0}</span> },
                 { key: 'absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v || 0}</span> },
-                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v}%</Badge> },
+                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
                 { key: 'rate_change', label: 'Diff', align: 'right', render: v => {
                   const d = Number(v) || 0;
-                  return <span className={`font-bold ${d >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{d >= 0 ? '+' : ''}{d}%</span>;
+                  return <span className={`font-bold ${d >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{d >= 0 ? '+' : ''}{R(d)}%</span>;
                 }},
-                { key: 'growth_rate', label: 'Growth', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{v >= 0 ? '+' : ''}{v || 0}%</span> },
+                { key: 'growth_rate', label: 'Growth', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{v >= 0 ? '+' : ''}{R(v)}%</span> },
                 { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => <span className={`font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{v || 0}</span> },
                 { key: 'performance_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
               ]}
@@ -1202,7 +1206,7 @@ const AttendanceReports = ({
                 { key: 'leader_name', label: 'Leader' },
                 { key: 'consecutive_present', label: 'Streak', align: 'right', render: v => <span className="font-bold text-emerald-600">{v}</span> },
                 { key: 'consecutive_absences', label: 'Absences', align: 'right', render: v => <span className={`font-bold ${v >= 3 ? 'text-rose-600' : 'text-slate-500'}`}>{v}</span> },
-                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{v}%</Badge> },
+                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
               ]}
               data={streaks}
             />
@@ -1220,7 +1224,7 @@ const AttendanceReports = ({
                 { key: 'full_name', label: 'Member', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
                 { key: 'section_name', label: 'Section' },
                 { key: 'engagement_score', label: 'Score', align: 'right', render: v => <span className="font-bold text-indigo-600">{v}</span> },
-                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <span className="font-bold">{v}%</span> },
+                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
               ]}
               data={analytics.engagementScores}
             />
@@ -1248,7 +1252,7 @@ const AttendanceReports = ({
           <MetricCard label="Lowest Attendance" value={hist.lowest || 0} icon={TrendingDown} color="rose" showDiff={false} />
           <MetricCard label="Average Attendance" value={hist.average || 0} icon={Activity} color="indigo" showDiff={false} />
           <MetricCard label="Total Records" value={hist.total_records || 0} icon={FileText} color="slate" showDiff={false} />
-          <MetricCard label="Attendance Rate" value={`${hist.avg_rate || 0}%`} icon={Target} color="sky" showDiff={false} />
+          <MetricCard label="Attendance Rate" value={hist.avg_rate || 0} suffix="%" icon={Target} color="sky" showDiff={false} />
         </div>
 
         {historicalData.daily?.length > 0 && (
@@ -1293,9 +1297,9 @@ const AttendanceReports = ({
             <IntelligenceTable
               columns={[
                 { key: 'month_name', label: 'Month' },
-                { key: 'current_rate', label: 'Current', align: 'right', render: v => <span className="font-bold">{v}%</span> },
-                { key: 'previous_rate', label: 'Previous', align: 'right', render: v => <span className="text-slate-500">{v}%</span> },
-                { key: 'difference', label: 'Difference', align: 'right', render: v => <span className={`font-bold ${v >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{v >= 0 ? '+' : ''}{v}%</span> },
+                { key: 'current_rate', label: 'Current', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
+                { key: 'previous_rate', label: 'Previous', align: 'right', render: v => <span className="text-slate-500">{R(v)}%</span> },
+                { key: 'difference', label: 'Difference', align: 'right', render: v => <span className={`font-bold ${v >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{v >= 0 ? '+' : ''}{R(v)}%</span> },
               ]}
               data={analytics.yearOverYear}
             />
@@ -1399,9 +1403,9 @@ const AttendanceReports = ({
                         <td className="py-2 px-3 text-right text-rose-500">{row.absent}</td>
                         <td className="py-2 px-3 text-right text-amber-500">{row.excused}</td>
                         <td className="py-2 px-3 text-right font-medium">{row.total}</td>
-                        <td className="py-2 px-3 text-right font-bold">{row.rate}%</td>
+                        <td className="py-2 px-3 text-right font-bold">{R(row.rate)}%</td>
                         <td className={`py-2 px-3 text-right font-bold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                          {diff > 0 ? '+' : ''}{diff.toFixed(1)}%
+                          {diff > 0 ? '+' : ''}{R(diff)}%
                         </td>
                       </tr>
                     );
@@ -1438,10 +1442,10 @@ const AttendanceReports = ({
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Predictive Analytics</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Predicted Rate" value={`${analytics.prediction.predicted_rate || 0}%`} icon={TrendingUp} color="indigo" showDiff={false} />
+            <MetricCard label="Predicted Rate" value={analytics.prediction.predicted_rate || 0} suffix="%" icon={TrendingUp} color="indigo" showDiff={false} />
             <MetricCard label="Trend" value={analytics.prediction.trend || 'Stable'} icon={Activity} color={analytics.prediction.trend === 'increasing' ? 'emerald' : 'amber'} showDiff={false} />
             <MetricCard label="Weeks Analyzed" value={analytics.prediction.weeks_analyzed || 0} icon={Calendar} color="sky" showDiff={false} />
-            <MetricCard label="Confidence" value={`${analytics.prediction.confidence || 0}%`} icon={Shield} color="violet" showDiff={false} />
+            <MetricCard label="Confidence" value={analytics.prediction.confidence || 0} suffix="%" icon={Shield} color="violet" showDiff={false} />
           </div>
         </div>
       )}

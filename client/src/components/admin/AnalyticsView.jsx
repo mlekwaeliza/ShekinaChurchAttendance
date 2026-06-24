@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { analyticsAPI } from '../../services/api';
 
+const R = v => Math.round(Number(v) || 0);
 const C = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#84cc16'];
 
 const KpiCard = ({ label, value, prev, color = 'indigo', suffix = '' }) => {
@@ -19,16 +20,16 @@ const KpiCard = ({ label, value, prev, color = 'indigo', suffix = '' }) => {
       <div className="flex items-center justify-between mb-1">
         <span className="text-[10px] font-semibold uppercase text-slate-400">{label}</span>
       </div>
-      <p className="text-xl font-bold text-slate-900 dark:text-white">{num.toLocaleString()}{suffix}</p>
+      <p className="text-xl font-bold text-slate-900 dark:text-white">{suffix === '%' ? R(num) : num.toLocaleString()}{suffix}</p>
       {diff !== null && (
         <div className="flex items-center gap-1 mt-1">
           <span className={`text-[10px] font-semibold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {diff >= 0 ? '+' : ''}{diff.toLocaleString()}{suffix} ({pct}%)
+            {diff >= 0 ? '+' : ''}{suffix === '%' ? R(diff) : diff.toLocaleString()}{suffix} ({pct}%)
           </span>
         </div>
       )}
       {prev !== undefined && (
-        <p className="text-[9px] text-slate-400 mt-0.5">Prev: {prevNum.toLocaleString()}{suffix}</p>
+        <p className="text-[9px] text-slate-400 mt-0.5">Prev: {suffix === '%' ? R(prevNum) : prevNum.toLocaleString()}{suffix}</p>
       )}
     </div>
   );
@@ -184,7 +185,7 @@ const ExecutiveTab = ({ data }) => {
                     <td className="py-2 px-3 text-right">{s.member_count || 0}</td>
                     <td className="py-2 px-3 text-right text-emerald-600">{s.total_present || 0}</td>
                     <td className="py-2 px-3 text-right text-rose-500">{s.total_absent || 0}</td>
-                    <td className="py-2 px-3 text-right font-bold">{s.attendance_rate || 0}%</td>
+                    <td className="py-2 px-3 text-right font-bold">{R(s.attendance_rate)}%</td>
                     <td className="py-2 px-3 text-right"><Badge variant={s.attendance_rate >= 75 ? 'success' : s.attendance_rate >= 50 ? 'warning' : 'danger'}>{s.attendance_rate >= 75 ? 'Strong' : s.attendance_rate >= 50 ? 'Average' : 'Weak'}</Badge></td>
                   </tr>
                 ))}
@@ -213,9 +214,9 @@ const ExecutiveTab = ({ data }) => {
                   return (
                     <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                       <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{y.month_name}</td>
-                      <td className="py-2 px-3 text-right font-bold text-indigo-600">{y.current_rate}%</td>
-                      <td className="py-2 px-3 text-right text-slate-500">{y.previous_rate}%</td>
-                      <td className={`py-2 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}%</td>
+                      <td className="py-2 px-3 text-right font-bold text-indigo-600">{R(y.current_rate)}%</td>
+                      <td className="py-2 px-3 text-right text-slate-500">{R(y.previous_rate)}%</td>
+                      <td className={`py-2 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{R(diff)}%</td>
                     </tr>
                   );
                 })}
@@ -243,7 +244,7 @@ const SectionsTab = ({ data }) => {
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
-            <div><span className="text-slate-400">Rate:</span> <b className="text-slate-900 dark:text-white">{sec.attendance_rate}%</b></div>
+            <div><span className="text-slate-400">Rate:</span> <b className="text-slate-900 dark:text-white">{R(sec.attendance_rate)}%</b></div>
             <div><span className="text-slate-400">Members:</span> <b className="text-slate-900">{sec.member_count}</b></div>
             <div><span className="text-slate-400">New:</span> <b className="text-emerald-600">+{sec.new_members || 0}</b></div>
           </div>
@@ -271,7 +272,7 @@ const SectionsTab = ({ data }) => {
                     <td className="py-2 px-3 text-right text-slate-600">{sec.member_count || 0}</td>
                     <td className="py-2 px-3 text-right text-emerald-600 font-medium">{sec.total_present?.toLocaleString() || 0}</td>
                     <td className="py-2 px-3 text-right text-rose-500">{sec.total_absent?.toLocaleString() || 0}</td>
-                    <td className="py-2 px-3 text-right font-bold">{sec.attendance_rate || 0}%</td>
+                    <td className="py-2 px-3 text-right font-bold">{R(sec.attendance_rate)}%</td>
                     <td className="py-2 px-3 text-right">
                       <Badge variant={sec.attendance_rate >= 75 ? 'success' : sec.attendance_rate >= 50 ? 'warning' : 'danger'}>
                         {sec.attendance_rate >= 75 ? 'Strong' : sec.attendance_rate >= 50 ? 'Average' : 'Weak'}
@@ -306,7 +307,7 @@ const LeadersTab = ({ data }) => {
                 {[
                   { l: 'Members', v: hl.members_managed },
                   { l: 'Leaders Supervised', v: hl.leaders_supervised },
-                  { l: 'Attendance', v: `${hl.overall_attendance}%` },
+                  { l: 'Attendance', v: `${R(hl.overall_attendance)}%` },
                   { l: 'Score', v: `${hl.performance_score}/100` },
                 ].map(x => (
                   <div key={x.l} className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-2">
@@ -342,7 +343,7 @@ const LeadersTab = ({ data }) => {
                     <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{l.leader_name}</td>
                     <td className="py-2.5 px-3 text-slate-500">{l.section_name}</td>
                     <td className="py-2.5 px-3 text-right">{l.assigned_members}</td>
-                    <td className="py-2.5 px-3 text-right font-bold">{l.attendance_rate}%</td>
+                    <td className="py-2.5 px-3 text-right font-bold">{R(l.attendance_rate)}%</td>
                     <td className="py-2.5 px-3 text-right">{l.submission_count}</td>
                     <td className="py-2.5 px-3 text-right">
                       <Badge variant={l.efficiency_score >= 75 ? 'success' : l.efficiency_score >= 50 ? 'warning' : 'danger'}>{l.efficiency_score}</Badge>
@@ -414,7 +415,7 @@ const DepartmentsTab = ({ data }) => {
                     <td className="py-2.5 px-3 text-right">{d.member_count || 0}</td>
                     <td className="py-2.5 px-3 text-right text-emerald-600">{d.total_present?.toLocaleString() || 0}</td>
                     <td className="py-2.5 px-3 text-right text-rose-500">{d.total_absent?.toLocaleString() || 0}</td>
-                    <td className="py-2.5 px-3 text-right font-bold">{d.attendance_rate || 0}%</td>
+                    <td className="py-2.5 px-3 text-right font-bold">{R(d.attendance_rate)}%</td>
                     <td className="py-2.5 px-3 text-right">
                       <Badge variant={d.attendance_rate >= 75 ? 'success' : d.attendance_rate >= 50 ? 'warning' : 'danger'}>
                         {d.attendance_rate >= 75 ? 'Strong' : d.attendance_rate >= 50 ? 'Average' : 'Needs Attention'}
@@ -469,7 +470,7 @@ const MembersTab = ({ data }) => {
                     <td className="py-2.5 px-3 text-slate-500">{m.section_name}</td>
                     <td className="py-2.5 px-3 text-right text-emerald-600">{m.times_present}</td>
                     <td className="py-2.5 px-3 text-right text-rose-500">{m.times_absent}</td>
-                    <td className="py-2.5 px-3 text-right font-bold">{m.attendance_rate}%</td>
+                    <td className="py-2.5 px-3 text-right font-bold">{R(m.attendance_rate)}%</td>
                     <td className="py-2.5 px-3 text-right text-slate-500 text-xs">{m.last_attendance || 'Never'}</td>
                   </tr>
                 ))}
@@ -509,9 +510,9 @@ const TrendsTab = ({ data }) => {
                   return (
                     <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                       <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{t.date}</td>
-                      <td className="py-2 px-3 text-right font-bold">{t.daily_rate}%</td>
-                      <td className="py-2 px-3 text-right text-emerald-600">{ma4}%</td>
-                      <td className="py-2 px-3 text-right text-amber-600">{ma8}%</td>
+                      <td className="py-2 px-3 text-right font-bold">{R(t.daily_rate)}%</td>
+                      <td className="py-2 px-3 text-right text-emerald-600">{R(ma4)}%</td>
+                      <td className="py-2 px-3 text-right text-amber-600">{R(ma8)}%</td>
                       <td className="py-2 px-3 text-right">
                         <Badge variant={trend === 'Improving' ? 'success' : trend === 'Declining' ? 'danger' : 'default'}>{trend}</Badge>
                       </td>
@@ -541,7 +542,7 @@ const TrendsTab = ({ data }) => {
                 {patterns.map((p, i) => (
                   <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{p.day_name}</td>
-                    <td className="py-2.5 px-3 text-right font-bold">{p.avg_rate}%</td>
+                    <td className="py-2.5 px-3 text-right font-bold">{R(p.avg_rate)}%</td>
                     <td className="py-2.5 px-3 text-right text-emerald-600">{p.total_present || 0}</td>
                     <td className="py-2.5 px-3 text-right text-rose-500">{p.total_absent || 0}</td>
                     <td className="py-2.5 px-3 text-right">{p.service_count || 0}</td>
