@@ -342,7 +342,7 @@ const AttendanceReports = ({
     finally { setAnalyticsLoading(false); }
   };
 
-  useEffect(() => { loadComparisonData(); }, [compType, compPeriod, p1Start, p1End, p2Start, p2End]);
+  useEffect(() => { loadComparisonData(); }, [compType, compPeriod]);
 
   const modeToMonths = { daily: 1, weekly: 3, monthly: 12, quarterly: 24, yearly: 60 };
 
@@ -810,6 +810,13 @@ const AttendanceReports = ({
                     className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" />
                 </div>
               </div>
+            </div>
+            <div className="mt-3 flex justify-end">
+              <button onClick={loadComparisonData}
+                disabled={!p1Start || !p1End || !p2Start || !p2End}
+                className="px-4 py-1.5 rounded-xl text-xs font-medium bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                Load Comparison
+              </button>
             </div>
           </div>
         )}
