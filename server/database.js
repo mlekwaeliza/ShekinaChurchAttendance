@@ -2826,6 +2826,46 @@ const queries = {
     `, [days, days, days]);
   },
 
+  getServiceComparison: (days = 90, startDate, endDate) => {
+    const useRange = startDate && endDate;
+    if (useRange) {
+      return all(`
+        SELECT
+          st.id,
+          st.name as name,
+          COUNT(DISTINCT a.member_id) as member_count,
+          COUNT(DISTINCT a.date) as submission_days,
+          SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+          SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+          SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+          ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+          (SELECT MAX(date) FROM attendance a2 WHERE a2.service_type_id = st.id AND a2.date >= ? AND a2.date <= ?) as last_submission_date
+        FROM service_types st
+        LEFT JOIN attendance a ON a.service_type_id = st.id AND a.date >= ? AND a.date <= ?
+        WHERE st.is_active = 1
+        GROUP BY st.id, st.name
+        ORDER BY attendance_rate DESC
+      `, [startDate, endDate, startDate, endDate]);
+    }
+    return all(`
+      SELECT
+        st.id,
+        st.name as name,
+        COUNT(DISTINCT a.member_id) as member_count,
+        COUNT(DISTINCT a.date) as submission_days,
+        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+        SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+        SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+        ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+        (SELECT MAX(date) FROM attendance a2 WHERE a2.service_type_id = st.id AND a2.date >= ${daysAgo()}) as last_submission_date
+      FROM service_types st
+      LEFT JOIN attendance a ON a.service_type_id = st.id AND a.date >= ${daysAgo()}
+      WHERE st.is_active = 1
+      GROUP BY st.id, st.name
+      ORDER BY attendance_rate DESC
+    `, [days, days]);
+  },
+
   // ── Service Type Attendance Breakdown ─────────────────────────────────────
   getServiceTypeBreakdown: (days = 90) => all(`
     SELECT

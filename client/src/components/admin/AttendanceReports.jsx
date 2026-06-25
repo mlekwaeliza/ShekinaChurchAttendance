@@ -192,12 +192,19 @@ const AttendanceReports = ({
   const [customDate1, setCustomDate1] = useState('');
   const [customDate2, setCustomDate2] = useState('');
   const [selectedWeekDate, setSelectedWeekDate] = useState('');
+  const [comparisonWeekDate, setComparisonWeekDate] = useState('');
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, [selectedServiceId]);
 
   const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365, custom: 30 };
   const toDateStr = (d) => { const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
+
+  useEffect(() => {
+    const now = new Date();
+    setSelectedWeekDate(toDateStr(now));
+    setComparisonWeekDate(toDateStr(new Date(now.getTime() - 7 * 86400000)));
+  }, []);
 
   const getDateRangeForMode = (mode) => {
     const now = new Date();
@@ -282,15 +289,19 @@ const AttendanceReports = ({
         break;
       }
       case 'churchWeek': {
-        if (!selectedWeekDate) return null;
-        const d = new Date(selectedWeekDate + 'T12:00:00');
-        const dow = d.getDay();
-        const sun = new Date(d); sun.setDate(d.getDate() - dow);
-        const fri = new Date(sun); fri.setDate(sun.getDate() + 5);
-        const prevSun = new Date(sun); prevSun.setDate(sun.getDate() - 7);
-        const prevFri = new Date(fri); prevFri.setDate(fri.getDate() - 7);
-        cStart = toDateStr(sun); cEnd = toDateStr(fri);
-        pStart = toDateStr(prevSun); pEnd = toDateStr(prevFri);
+        if (!selectedWeekDate || !comparisonWeekDate) return null;
+        const d1 = new Date(selectedWeekDate + 'T12:00:00');
+        const dow1 = d1.getDay();
+        const sun1 = new Date(d1); sun1.setDate(d1.getDate() - dow1);
+        const fri1 = new Date(sun1); fri1.setDate(sun1.getDate() + 5);
+
+        const d2 = new Date(comparisonWeekDate + 'T12:00:00');
+        const dow2 = d2.getDay();
+        const sun2 = new Date(d2); sun2.setDate(d2.getDate() - dow2);
+        const fri2 = new Date(sun2); fri2.setDate(sun2.getDate() + 5);
+
+        cStart = toDateStr(sun1); cEnd = toDateStr(fri1);
+        pStart = toDateStr(sun2); pEnd = toDateStr(fri2);
         break;
       }
       default: return null;
@@ -344,6 +355,12 @@ const AttendanceReports = ({
           analyticsAPI.getDepartments(365, dates.pStart, dates.pEnd),
         ]);
         setComparisonData({ type: 'departments', currentList: curRes.data || [], previousList: prevRes.data || [], dates });
+      } else if (compType === 'services') {
+        const [curRes, prevRes] = await Promise.all([
+          analyticsAPI.getServiceComparison(365, dates.cStart, dates.cEnd),
+          analyticsAPI.getServiceComparison(365, dates.pStart, dates.pEnd),
+        ]);
+        setComparisonData({ type: 'services', currentList: curRes.data || [], previousList: prevRes.data || [], dates });
       } else if (compType === 'daily') {
         const isCW = compPeriod === 'churchWeek';
         if (isCW) {
@@ -700,6 +717,7 @@ const AttendanceReports = ({
       { key: 'sections', label: 'Sections', icon: Layers },
       { key: 'leaders', label: 'Section Leaders', icon: Users },
       { key: 'departments', label: 'Departments', icon: Building2 },
+      { key: 'services', label: 'Services', icon: Activity },
       { key: 'overall', label: 'Overall', icon: BarChart3 },
       { key: 'daily', label: 'Daily Attendance', icon: Calendar },
     ];
@@ -856,33 +874,46 @@ const AttendanceReports = ({
 
         {isChurchWeek && (
           <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-            <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Select Any Day in the Week</p>
-            <div className="flex items-center gap-3">
-              <input type="date" value={selectedWeekDate} onChange={e => setSelectedWeekDate(e.target.value)}
-                className="flex-1 max-w-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Period 1 Week (Current)</p>
+                <input type="date" value={selectedWeekDate} onChange={e => setSelectedWeekDate(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" />
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase text-slate-400 mb-2">Period 2 Week (Comparison)</p>
+                <input type="date" value={comparisonWeekDate} onChange={e => setComparisonWeekDate(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-indigo-300" />
+              </div>
+            </div>
+            <div className="mt-3 flex justify-end">
               <button onClick={loadComparisonData}
-                disabled={!selectedWeekDate}
+                disabled={!selectedWeekDate || !comparisonWeekDate}
                 className="px-4 py-1.5 rounded-xl text-xs font-medium bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                Load Week
+                Load Comparison
               </button>
             </div>
-            {selectedWeekDate && (() => {
-              const d = new Date(selectedWeekDate + 'T12:00:00');
-              const dow = d.getDay();
-              const sun = new Date(d); sun.setDate(d.getDate() - dow);
-              const fri = new Date(sun); fri.setDate(sun.getDate() + 5);
-              const prevSun = new Date(sun); prevSun.setDate(sun.getDate() - 7);
-              const prevFri = new Date(fri); prevFri.setDate(fri.getDate() - 7);
+            {selectedWeekDate && comparisonWeekDate && (() => {
+              const d1 = new Date(selectedWeekDate + 'T12:00:00');
+              const dow1 = d1.getDay();
+              const sun1 = new Date(d1); sun1.setDate(d1.getDate() - dow1);
+              const fri1 = new Date(sun1); fri1.setDate(sun1.getDate() + 5);
+
+              const d2 = new Date(comparisonWeekDate + 'T12:00:00');
+              const dow2 = d2.getDay();
+              const sun2 = new Date(d2); sun2.setDate(d2.getDate() - dow2);
+              const fri2 = new Date(sun2); fri2.setDate(sun2.getDate() + 5);
+
               const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
               return (
                 <div className="mt-3 grid grid-cols-2 gap-4 text-xs">
                   <div className="rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 p-3">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Current Week</p>
-                    <p className="text-slate-500">{toDateStr(sun)} ({dayNames[0]}) — {toDateStr(fri)} ({dayNames[5]})</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Period 1 Week</p>
+                    <p className="text-slate-500">{toDateStr(sun1)} ({dayNames[0]}) — {toDateStr(fri1)} ({dayNames[5]})</p>
                   </div>
                   <div className="rounded-xl bg-slate-50/50 dark:bg-slate-800/50 p-3">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Previous Week</p>
-                    <p className="text-slate-500">{toDateStr(prevSun)} ({dayNames[0]}) — {toDateStr(prevFri)} ({dayNames[5]})</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Period 2 Week</p>
+                    <p className="text-slate-500">{toDateStr(sun2)} ({dayNames[0]}) — {toDateStr(fri2)} ({dayNames[5]})</p>
                   </div>
                 </div>
               );
@@ -1009,6 +1040,13 @@ const AttendanceReports = ({
             { key: 'total_absent', label: 'Absent' },
             { key: 'member_count', label: 'Members' },
           ])
+        ) : comp.type === 'services' && comp.currentList ? (
+          renderEntityTable(comp.currentList, comp.previousList, 'name', [
+            { key: 'attendance_rate', label: 'Rate', suffix: '%' },
+            { key: 'total_present', label: 'Present' },
+            { key: 'total_absent', label: 'Absent' },
+            { key: 'member_count', label: 'Members' },
+          ])
         ) : comp.type === 'daily' && comp.daily ? (
           isChurchWeek && comp.previousDaily ? (
             (() => {
@@ -1020,6 +1058,7 @@ const AttendanceReports = ({
                 { dow: 5, label: 'Friday', service: 'Prayer Service' },
               ];
               const cStartDate = new Date(dates.cStart + 'T12:00:00');
+              const pStartDate = new Date(dates.pStart + 'T12:00:00');
               const dailyMap = {};
               const prevDailyMap = {};
               comp.daily.forEach(r => { dailyMap[r.date] = r; });
@@ -1027,7 +1066,7 @@ const AttendanceReports = ({
               const rows = churchDays.map(d => {
                 const date = new Date(cStartDate); date.setDate(cStartDate.getDate() + d.dow);
                 const dateStr = toDateStr(date);
-                const prevDate = new Date(date); prevDate.setDate(prevDate.getDate() - 7);
+                const prevDate = new Date(pStartDate); prevDate.setDate(pStartDate.getDate() + d.dow);
                 const prevDateStr = toDateStr(prevDate);
                 const curr = dailyMap[dateStr] || { present: 0, absent: 0, excused: 0, total: 0, rate: 0 };
                 const prev = prevDailyMap[prevDateStr] || { present: 0, absent: 0, excused: 0, total: 0, rate: 0 };
@@ -1038,7 +1077,7 @@ const AttendanceReports = ({
                 <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
                   <div className="p-4 border-b border-slate-100 dark:border-slate-700">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Church Week Attendance — Day by Day</h3>
-                    {dates && <p className="text-[10px] text-slate-400 mt-0.5">{dates.cStart} (Sunday) to {dates.cEnd} (Friday)</p>}
+                    {dates && <p className="text-[10px] text-slate-400 mt-0.5">{dates.cStart} (Sunday) to {dates.cEnd} (Friday) vs {dates.pStart} to {dates.pEnd}</p>}
                   </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
@@ -1046,8 +1085,8 @@ const AttendanceReports = ({
                         <tr className="border-b border-slate-200 dark:border-slate-700">
                           <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Day</th>
                           <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Service</th>
-                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right" colSpan={2}>This Week</th>
-                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right" colSpan={2}>Last Week</th>
+                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right" colSpan={2}>Period 1</th>
+                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right" colSpan={2}>Period 2</th>
                           <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">Diff</th>
                         </tr>
                         <tr className="border-b border-slate-200 dark:border-slate-700">

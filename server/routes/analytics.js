@@ -295,6 +295,19 @@ router.get('/section-comparison', async (req, res) => {
   }
 });
 
+// GET /analytics/service-comparison?days=90&startDate=&endDate=
+router.get('/service-comparison', async (req, res) => {
+  try {
+    const days = Math.min(parseInt(req.query.days) || 90, 365);
+    const { startDate, endDate } = req.query;
+    const services = await queries.getServiceComparison(days, startDate || null, endDate || null);
+    res.json(services);
+  } catch (error) {
+    console.error('Service comparison error:', error);
+    res.status(500).json({ error: 'Failed to fetch service comparison' });
+  }
+});
+
 // GET /analytics/service-type-breakdown?days=90
 // Returns attendance breakdown by service type
 router.get('/service-type-breakdown', async (req, res) => {

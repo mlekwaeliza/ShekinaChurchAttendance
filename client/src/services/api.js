@@ -279,6 +279,12 @@ export const analyticsAPI = {
     if (endDate) params.endDate = endDate;
     return api.get('/analytics/section-comparison', { params });
   },
+  getServiceComparison: (days, startDate, endDate) => {
+    const params = { days };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    return api.get('/analytics/service-comparison', { params });
+  },
   getServiceTypeBreakdown: (days) => api.get('/analytics/service-type-breakdown', { params: { days } }),
   getAttendancePatterns: (days) => api.get('/analytics/attendance-patterns', { params: { days } }),
   getMonthlyTrends: (months) => api.get('/analytics/monthly-trends', { params: { months } }),
