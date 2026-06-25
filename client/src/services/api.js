@@ -273,7 +273,12 @@ export const analyticsAPI = {
   getYearOverYear: () => api.get('/analytics/year-over-year'),
   getRetention: (days) => api.get('/analytics/retention', { params: { days } }),
   getDashboardMetrics: (serviceId) => api.get('/analytics/dashboard-metrics', { params: { service_id: serviceId } }),
-  getSectionComparison: (days) => api.get('/analytics/section-comparison', { params: { days } }),
+  getSectionComparison: (days, startDate, endDate) => {
+    const params = { days };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    return api.get('/analytics/section-comparison', { params });
+  },
   getServiceTypeBreakdown: (days) => api.get('/analytics/service-type-breakdown', { params: { days } }),
   getAttendancePatterns: (days) => api.get('/analytics/attendance-patterns', { params: { days } }),
   getMonthlyTrends: (months) => api.get('/analytics/monthly-trends', { params: { months } }),
@@ -285,7 +290,12 @@ export const analyticsAPI = {
   getSectionRankings: (days) => api.get('/analytics/section-rankings', { params: { days } }),
   getHeadLeaderAnalytics: (days) => api.get('/analytics/head-leader-analytics', { params: { days } }),
   getLeaderRankings: (days) => api.get('/analytics/leader-rankings', { params: { days } }),
-  getDepartments: (days) => api.get('/analytics/departments', { params: { days } }),
+  getDepartments: (days, startDate, endDate) => {
+    const params = { days };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    return api.get('/analytics/departments', { params });
+  },
   getMemberIntelligence: (days) => api.get('/analytics/member-intelligence', { params: { days } }),
   getHeatmap: (months) => api.get('/analytics/heatmap', { params: { months } }),
   getTrendsMA: (weeks) => api.get('/analytics/trends-ma', { params: { weeks } }),

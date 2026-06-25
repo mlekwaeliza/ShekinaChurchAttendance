@@ -2777,28 +2777,54 @@ const queries = {
   },
 
   // ── Section Comparison Analytics ─────────────────────────────────────────
-  getSectionComparison: (days = 90) => all(`
-    SELECT
-      s.id,
-      s.name,
-      COUNT(DISTINCT m.id) as member_count,
-      COUNT(DISTINCT a.date) as submission_days,
-      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
-      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
-      SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
-      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
-      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo()}) as new_members,
-      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as active_members,
-      (SELECT MAX(date) FROM attendance a2
-        JOIN members m2 ON a2.member_id = m2.id
-        WHERE m2.section_id = s.id) as last_submission_date
-    FROM sections s
-    LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id
-      AND a.date >= ${daysAgo()}
-    GROUP BY s.id, s.name
-    ORDER BY attendance_rate DESC
-  `, [days, days]),
+  getSectionComparison: (days = 90, startDate, endDate) => {
+    const useRange = startDate && endDate;
+    if (useRange) {
+      return all(`
+        SELECT
+          s.id,
+          s.name,
+          COUNT(DISTINCT m.id) as member_count,
+          COUNT(DISTINCT a.date) as submission_days,
+          SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+          SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+          SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+          ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+          (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ?) as new_members,
+          (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as active_members,
+          (SELECT MAX(date) FROM attendance a2
+            JOIN members m2 ON a2.member_id = m2.id
+            WHERE m2.section_id = s.id AND a2.date >= ? AND a2.date <= ?) as last_submission_date
+        FROM sections s
+        LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
+        LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ? AND a.date <= ?
+        GROUP BY s.id, s.name
+        ORDER BY attendance_rate DESC
+      `, [startDate, startDate, endDate, startDate, endDate]);
+    }
+    return all(`
+      SELECT
+        s.id,
+        s.name,
+        COUNT(DISTINCT m.id) as member_count,
+        COUNT(DISTINCT a.date) as submission_days,
+        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+        SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+        SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+        ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo()}) as new_members,
+        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as active_members,
+        (SELECT MAX(date) FROM attendance a2
+          JOIN members m2 ON a2.member_id = m2.id
+          WHERE m2.section_id = s.id AND a2.date >= ${daysAgo()}) as last_submission_date
+      FROM sections s
+      LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
+      LEFT JOIN attendance a ON a.member_id = m.id
+        AND a.date >= ${daysAgo()}
+      GROUP BY s.id, s.name
+      ORDER BY attendance_rate DESC
+    `, [days, days, days]);
+  },
 
   // ── Service Type Attendance Breakdown ─────────────────────────────────────
   getServiceTypeBreakdown: (days = 90) => all(`
@@ -2946,11 +2972,36 @@ const queries = {
     SELECT
       (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'present') as p1_present,
       (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'present') as p2_present,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'absent') as p1_absent,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'absent') as p2_absent,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'excused') as p1_excused,
+      (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ? AND status = 'excused') as p2_excused,
       (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ?) as p1_total,
       (SELECT COUNT(DISTINCT member_id) FROM attendance WHERE date BETWEEN ? AND ?) as p2_total,
+      (SELECT COUNT(*) FROM attendance WHERE date BETWEEN ? AND ?) as p1_records,
+      (SELECT COUNT(*) FROM attendance WHERE date BETWEEN ? AND ?) as p2_records,
+      (SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?) as p1_service_days,
+      (SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?) as p2_service_days,
+      (SELECT COUNT(DISTINCT leader_id) FROM submission_log WHERE date BETWEEN ? AND ?) as p1_leaders_submitted,
+      (SELECT COUNT(DISTINCT leader_id) FROM submission_log WHERE date BETWEEN ? AND ?) as p2_leaders_submitted,
+      (SELECT COUNT(*) FROM leaders WHERE is_active = 1) as total_leaders,
       (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date BETWEEN ? AND ?) as p1_rate,
-      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date BETWEEN ? AND ?) as p2_rate
+      (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date BETWEEN ? AND ?) as p2_rate,
+      (SELECT COUNT(DISTINCT m.section_id) FROM attendance a
+        JOIN members m ON a.member_id = m.id
+        WHERE a.date BETWEEN ? AND ?
+      ) as p1_active_sections,
+      (SELECT COUNT(DISTINCT m.section_id) FROM attendance a
+        JOIN members m ON a.member_id = m.id
+        WHERE a.date BETWEEN ? AND ?
+      ) as p2_active_sections
   `, [period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
+      period1Start, period1End, period2Start, period2End,
       period1Start, period1End, period2Start, period2End,
       period1Start, period1End, period2Start, period2End]),
 
@@ -3060,23 +3111,45 @@ const queries = {
   `, [days, days, days, days]),
 
   // ── Department Analytics ───────────────────────────────────────────────
-  getDepartmentAnalytics: (days = 90) => all(`
-    SELECT
-      d.id,
-      d.name,
-      COUNT(DISTINCT dm.member_id) as member_count,
-      ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
-      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
-      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent
-    FROM departments d
-    LEFT JOIN department_members dm ON dm.department_id = d.id
-    LEFT JOIN members m ON m.id = dm.member_id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
-    WHERE d.is_active = 1
-    GROUP BY d.id, d.name
-    HAVING member_count > 0
-    ORDER BY attendance_rate DESC
-  `, [days]),
+  getDepartmentAnalytics: (days = 90, startDate, endDate) => {
+    const useRange = startDate && endDate;
+    if (useRange) {
+      return all(`
+        SELECT
+          d.id,
+          d.name,
+          COUNT(DISTINCT dm.member_id) as member_count,
+          ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+          SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+          SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent
+        FROM departments d
+        LEFT JOIN department_members dm ON dm.department_id = d.id
+        LEFT JOIN members m ON m.id = dm.member_id AND m.is_active = 1
+        LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ? AND a.date <= ?
+        WHERE d.is_active = 1
+        GROUP BY d.id, d.name
+        HAVING member_count > 0
+        ORDER BY attendance_rate DESC
+      `, [startDate, endDate]);
+    }
+    return all(`
+      SELECT
+        d.id,
+        d.name,
+        COUNT(DISTINCT dm.member_id) as member_count,
+        ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
+        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+        SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent
+      FROM departments d
+      LEFT JOIN department_members dm ON dm.department_id = d.id
+      LEFT JOIN members m ON m.id = dm.member_id AND m.is_active = 1
+      LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
+      WHERE d.is_active = 1
+      GROUP BY d.id, d.name
+      HAVING member_count > 0
+      ORDER BY attendance_rate DESC
+    `, [days]);
+  },
 
   // ── Member Attendance Intelligence ─────────────────────────────────────
   getMemberIntelligence: (days = 90) => all(`
@@ -3084,7 +3157,7 @@ const queries = {
       m.id,
       m.full_name,
       s.name as section_name,
-      l.full_name as leader_name,
+      lu.full_name as leader_name,
       m.gender,
       m.age_group,
       COUNT(a.id) as total_records,
@@ -3096,9 +3169,10 @@ const queries = {
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users lu ON l.user_id = lu.id
     LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
     WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
-    GROUP BY m.id, m.full_name, s.name, l.full_name, m.gender, m.age_group
+    GROUP BY m.id, m.full_name, s.name, lu.full_name, m.gender, m.age_group
     ORDER BY attendance_rate DESC
   `, [days]),
 
@@ -3179,7 +3253,7 @@ const queries = {
       m.id,
       m.full_name,
       s.name as section_name,
-      l.full_name as leader_name,
+      lu.full_name as leader_name,
       COALESCE(stats.attendance_rate, 0) as attendance_rate,
       COALESCE(stats.total_present, 0) as total_present,
       COALESCE(stats.total_services, 0) as total_services,
@@ -3194,6 +3268,7 @@ const queries = {
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users lu ON l.user_id = lu.id
     LEFT JOIN (
       SELECT
         member_id,
@@ -3294,7 +3369,8 @@ const queries = {
       (SELECT ROUND(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) FROM attendance WHERE date >= ${daysAgo(60)} AND date < ${daysAgo(30)}) as previous_rate,
       (SELECT COUNT(DISTINCT sub.leader_id) FROM submission_log sub WHERE sub.date >= ${daysAgo(30)}) as active_leaders,
       (SELECT COUNT(*) FROM members WHERE visitor_date >= ${daysAgo(90)}) as new_visitors_90d,
-      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= ${daysAgo(90)}) as souls_won_90d
+      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= ${daysAgo(90)}) as souls_won_90d,
+      (SELECT COUNT(*) FROM souls_won WHERE date_saved >= ${daysAgo(365)}) as souls_won_year
   `),
 
   // ── AI Insights Generation ────────────────────────────────────────────
@@ -3310,22 +3386,23 @@ const queries = {
   `),
 
   getAtRiskMembers: () => all(`
-    SELECT m.id, m.full_name, s.name as section_name, l.full_name as leader_name,
+    SELECT m.id, m.full_name, s.name as section_name, lu.full_name as leader_name,
       l.id as leader_id,
       COUNT(a.id) as total_services,
       SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present_count
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users lu ON l.user_id = lu.id
     LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo(90)}
     WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
-    GROUP BY m.id, m.full_name, s.name, l.full_name, l.id
+    GROUP BY m.id, m.full_name, s.name, lu.full_name, l.id
     HAVING present_count < total_services * 0.2
     ORDER BY present_count ASC
   `),
 
   getConsecutiveAbsentees: () => all(`
-    SELECT m.id, m.full_name, s.name as section_name, l.full_name as leader_name,
+    SELECT m.id, m.full_name, s.name as section_name, lu.full_name as leader_name,
       COUNT(*) as consecutive_absences
     FROM (
       SELECT member_id, date, status,
@@ -3337,8 +3414,9 @@ const queries = {
     JOIN members m ON ranked.member_id = m.id
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
+    LEFT JOIN users lu ON l.user_id = lu.id
     WHERE ranked.status = 'absent' AND ranked.rn = ranked.grp
-    GROUP BY m.id, m.full_name, s.name, l.full_name
+    GROUP BY m.id, m.full_name, s.name, lu.full_name
     HAVING consecutive_absences >= 3
     ORDER BY consecutive_absences DESC
   `),
