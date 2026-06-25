@@ -345,12 +345,29 @@ const AttendanceReports = ({
         ]);
         setComparisonData({ type: 'departments', currentList: curRes.data || [], previousList: prevRes.data || [], dates });
       } else if (compType === 'daily') {
-        const res = await analyticsAPI.getHistorical({ startDate: dates.cStart, endDate: dates.cEnd });
-        const daily = (res.data?.daily || []).map(r => ({
-          date: r.date, present: r.present || 0, absent: r.absent || 0,
-          excused: r.excused || 0, total: r.total || 0, rate: r.rate || 0,
-        }));
-        setComparisonData({ type: 'daily', daily, dates });
+        const isCW = compPeriod === 'churchWeek';
+        if (isCW) {
+          const [curRes, prevRes] = await Promise.all([
+            analyticsAPI.getHistorical({ startDate: dates.cStart, endDate: dates.cEnd }),
+            analyticsAPI.getHistorical({ startDate: dates.pStart, endDate: dates.pEnd }),
+          ]);
+          const daily = (curRes.data?.daily || []).map(r => ({
+            date: r.date, present: r.present || 0, absent: r.absent || 0,
+            excused: r.excused || 0, total: r.total || 0, rate: r.rate || 0,
+          }));
+          const previousDaily = (prevRes.data?.daily || []).map(r => ({
+            date: r.date, present: r.present || 0, absent: r.absent || 0,
+            excused: r.excused || 0, total: r.total || 0, rate: r.rate || 0,
+          }));
+          setComparisonData({ type: 'daily', daily, previousDaily, dates });
+        } else {
+          const res = await analyticsAPI.getHistorical({ startDate: dates.cStart, endDate: dates.cEnd });
+          const daily = (res.data?.daily || []).map(r => ({
+            date: r.date, present: r.present || 0, absent: r.absent || 0,
+            excused: r.excused || 0, total: r.total || 0, rate: r.rate || 0,
+          }));
+          setComparisonData({ type: 'daily', daily, dates });
+        }
       }
     } catch (e) { console.error('Comparison load error:', e.message, e); setCompError(e.message || 'Failed to load comparison data'); setComparisonData({}); }
     finally { setAnalyticsLoading(false); }
@@ -993,46 +1010,125 @@ const AttendanceReports = ({
             { key: 'member_count', label: 'Members' },
           ])
         ) : comp.type === 'daily' && comp.daily ? (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Daily Attendance Records</h3>
-              {dates && <p className="text-[10px] text-slate-400 mt-0.5">{dates.cStart} to {dates.cEnd}</p>}
-            </div>
-            {comp.daily.length > 0 ? (
-              <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
-                    <tr className="border-b border-slate-200 dark:border-slate-700">
-                      {['Date', 'Present', 'Absent', 'Excused', 'Total', 'Rate %', 'Change'].map((h, i) => (
-                        <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {comp.daily.map((row, i) => {
-                      const prev = i < comp.daily.length - 1 ? comp.daily[i + 1] : null;
-                      const diff = prev ? row.rate - prev.rate : 0;
-                      return (
-                        <tr key={row.date} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                          <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.date}</td>
-                          <td className="py-2 px-3 text-right text-emerald-600">{row.present}</td>
-                          <td className="py-2 px-3 text-right text-rose-500">{row.absent}</td>
-                          <td className="py-2 px-3 text-right text-amber-500">{row.excused}</td>
-                          <td className="py-2 px-3 text-right font-medium">{row.total}</td>
-                          <td className="py-2 px-3 text-right font-bold">{R(row.rate)}%</td>
-                          <td className={`py-2 px-3 text-right font-bold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                            {diff > 0 ? '+' : ''}{R(diff)}%
-                          </td>
+          isChurchWeek && comp.previousDaily ? (
+            (() => {
+              const churchDays = [
+                { dow: 0, label: 'Sunday', service: 'Main Service' },
+                { dow: 2, label: 'Tuesday', service: 'Leaders Gathering' },
+                { dow: 3, label: 'Wednesday', service: 'Youth Service' },
+                { dow: 4, label: 'Thursday', service: 'Women Service' },
+                { dow: 5, label: 'Friday', service: 'Prayer Service' },
+              ];
+              const cStartDate = new Date(dates.cStart + 'T12:00:00');
+              const dailyMap = {};
+              const prevDailyMap = {};
+              comp.daily.forEach(r => { dailyMap[r.date] = r; });
+              comp.previousDaily.forEach(r => { prevDailyMap[r.date] = r; });
+              const rows = churchDays.map(d => {
+                const date = new Date(cStartDate); date.setDate(cStartDate.getDate() + d.dow);
+                const dateStr = toDateStr(date);
+                const prevDate = new Date(date); prevDate.setDate(prevDate.getDate() - 7);
+                const prevDateStr = toDateStr(prevDate);
+                const curr = dailyMap[dateStr] || { present: 0, absent: 0, excused: 0, total: 0, rate: 0 };
+                const prev = prevDailyMap[prevDateStr] || { present: 0, absent: 0, excused: 0, total: 0, rate: 0 };
+                const diff = curr.rate - prev.rate;
+                return { ...d, dateStr, prevDateStr, curr, prev, diff };
+              });
+              return (
+                <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+                  <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Church Week Attendance — Day by Day</h3>
+                    {dates && <p className="text-[10px] text-slate-400 mt-0.5">{dates.cStart} (Sunday) to {dates.cEnd} (Friday)</p>}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-slate-50 dark:bg-slate-800">
+                        <tr className="border-b border-slate-200 dark:border-slate-700">
+                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Day</th>
+                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Service</th>
+                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right" colSpan={2}>This Week</th>
+                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right" colSpan={2}>Last Week</th>
+                          <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">Diff</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                        <tr className="border-b border-slate-200 dark:border-slate-700">
+                          <th></th><th></th>
+                          <th className="py-1 px-3 text-[9px] text-slate-400 text-right">Present</th>
+                          <th className="py-1 px-3 text-[9px] text-slate-400 text-right">Rate</th>
+                          <th className="py-1 px-3 text-[9px] text-slate-400 text-right">Present</th>
+                          <th className="py-1 px-3 text-[9px] text-slate-400 text-right">Rate</th>
+                          <th className="py-1 px-3 text-[9px] text-slate-400 text-right">Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row, i) => {
+                          const currPct = row.curr.total > 0 ? R((row.curr.present / row.curr.total) * 100) : 0;
+                          const prevPct = row.prev.total > 0 ? R((row.prev.present / row.prev.total) * 100) : 0;
+                          const diff = currPct - prevPct;
+                          return (
+                            <tr key={row.dow} className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${row.curr.total === 0 ? 'opacity-50' : ''}`}>
+                              <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{row.label}</td>
+                              <td className="py-2.5 px-3 text-xs text-slate-500">{row.service}</td>
+                              <td className="py-2.5 px-3 text-right font-bold text-emerald-600">{row.curr.present}</td>
+                              <td className="py-2.5 px-3 text-right font-bold">{currPct}%</td>
+                              <td className="py-2.5 px-3 text-right text-emerald-600">{row.prev.present}</td>
+                              <td className="py-2.5 px-3 text-right">{prevPct}%</td>
+                              <td className={`py-2.5 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {diff >= 0 ? '+' : ''}{diff}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {rows.every(r => r.curr.total === 0 && r.prev.total === 0) && (
+                          <tr><td colSpan={7} className="py-8 text-center text-slate-400 text-sm">No attendance data for this week</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()
+          ) : (
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Daily Attendance Records</h3>
+                {dates && <p className="text-[10px] text-slate-400 mt-0.5">{dates.cStart} to {dates.cEnd}</p>}
               </div>
-            ) : (
-              <div className="text-center py-12 text-slate-400 text-sm">No attendance data for this period</div>
-            )}
-          </div>
+              {comp.daily.length > 0 ? (
+                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                        {['Date', 'Present', 'Absent', 'Excused', 'Total', 'Rate %', 'Change'].map((h, i) => (
+                          <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${i === 0 ? 'text-left' : 'text-right'}`}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {comp.daily.map((row, i) => {
+                        const prev = i < comp.daily.length - 1 ? comp.daily[i + 1] : null;
+                        const diff = prev ? row.rate - prev.rate : 0;
+                        return (
+                          <tr key={row.date} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                            <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.date}</td>
+                            <td className="py-2 px-3 text-right text-emerald-600">{row.present}</td>
+                            <td className="py-2 px-3 text-right text-rose-500">{row.absent}</td>
+                            <td className="py-2 px-3 text-right text-amber-500">{row.excused}</td>
+                            <td className="py-2 px-3 text-right font-medium">{row.total}</td>
+                            <td className="py-2 px-3 text-right font-bold">{R(row.rate)}%</td>
+                            <td className={`py-2 px-3 text-right font-bold ${diff > 0 ? 'text-emerald-600' : diff < 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                              {diff > 0 ? '+' : ''}{R(diff)}%
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-400 text-sm">No attendance data for this period</div>
+              )}
+            </div>
+          )
         ) : (
           <div className="text-center py-12 text-slate-400 text-sm">
             <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300" />
