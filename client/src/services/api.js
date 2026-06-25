@@ -47,8 +47,8 @@ api.interceptors.response.use(
       const path = window.location.pathname;
       if (!path.startsWith('/login')) {
         // Best-effort: clear the user-visible session and reload to /login.
-        try { window.dispatchEvent(new CustomEvent('app:session-expired', { detail: { message } })); } catch (_) {}
-        try { window.location.assign('/login?expired=1'); } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('app:session-expired', { detail: { message } })); } catch (_) { /* ignore */ }
+        try { window.location.assign('/login?expired=1'); } catch (_) { /* ignore */ }
       }
     }
 

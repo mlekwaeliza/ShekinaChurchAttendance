@@ -185,7 +185,7 @@ router.get('/follow-ups/:soulWonId', async (req, res) => {
 
 router.post('/follow-ups', async (req, res) => {
   try {
-    const result = await queries.createFollowUp({
+    const result = await queries.createEvangelismFollowUp({
       ...req.body,
       created_by: req.session.userId
     });
@@ -198,7 +198,7 @@ router.post('/follow-ups', async (req, res) => {
 
 router.put('/follow-ups/:id', async (req, res) => {
   try {
-    await queries.updateFollowUp(req.params.id, req.body);
+    await queries.updateEvangelismFollowUp(req.params.id, req.body);
     res.json({ message: 'Follow-up updated' });
   } catch (err) {
     console.error('Error updating follow-up:', err);

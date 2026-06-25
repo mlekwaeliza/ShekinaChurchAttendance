@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 const { recordSecurityEvent } = require('../utils/securityAudit');
-const { queries } = require('../database');
+const { queries, get } = require('../database');
 
 const router = express.Router();
 

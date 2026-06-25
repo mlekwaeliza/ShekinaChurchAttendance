@@ -2449,7 +2449,7 @@ const queries = {
     GROUP BY l.id
     ORDER BY attendance_rate DESC
   `, [startDate, endDate]),
-  getAtRiskMembers: (startDate = formatLocalDate(addDays(new Date(), -30)), endDate = formatLocalDate()) => all(`
+  getAtRiskMembersByRange: (startDate = formatLocalDate(addDays(new Date(), -30)), endDate = formatLocalDate()) => all(`
     SELECT
       m.membership_id,
       m.full_name,
@@ -2823,12 +2823,12 @@ const queries = {
   getAttendanceDayPatterns: (days = 180) => all(`
     SELECT
       CASE ${dayOfWeek('a.date')}
-        WHEN '0' THEN 'Sunday'
+        WHEN '0' THEN 'Sunday (Main Service)'
         WHEN '1' THEN 'Monday'
-        WHEN '2' THEN 'Tuesday'
-        WHEN '3' THEN 'Wednesday'
-        WHEN '4' THEN 'Thursday'
-        WHEN '5' THEN 'Friday'
+        WHEN '2' THEN 'Tuesday (Leaders Gathering)'
+        WHEN '3' THEN 'Wednesday (Youth Service)'
+        WHEN '4' THEN 'Thursday (Women''s Service)'
+        WHEN '5' THEN 'Friday (Prayer Service)'
         WHEN '6' THEN 'Saturday'
       END as day_name,
       ${dayOfWeek('a.date')} as day_num,
@@ -4110,11 +4110,11 @@ const queries = {
     WHERE fu.soul_won_id = ?
     ORDER BY fu.last_contact_date DESC
   `, [soulWonId]),
-  createFollowUp: (data) => run(`
+  createEvangelismFollowUp: (data) => run(`
     INSERT INTO follow_ups (soul_won_id, first_contact_date, last_contact_date, follow_up_officer, home_visit_status, counseling_status, prayer_needs, notes, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [data.soul_won_id, data.first_contact_date, data.last_contact_date, data.follow_up_officer, data.home_visit_status, data.counseling_status, data.prayer_needs, data.notes, data.created_by]),
-  updateFollowUp: (id, data) => run(`
+  updateEvangelismFollowUp: (id, data) => run(`
     UPDATE follow_ups SET first_contact_date=?, last_contact_date=?, follow_up_officer=?, home_visit_status=?, counseling_status=?, prayer_needs=?, notes=?, updated_at=CURRENT_TIMESTAMP
     WHERE id=?
   `, [data.first_contact_date, data.last_contact_date, data.follow_up_officer, data.home_visit_status, data.counseling_status, data.prayer_needs, data.notes, id]),

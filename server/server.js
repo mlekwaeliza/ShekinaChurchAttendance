@@ -22,9 +22,10 @@ const crypto = require('crypto');
 const onFinished = require('on-finished');
 
 // Optional Sentry init. No-op unless SENTRY_DSN is set.
+let Sentry = null;
 if (process.env.SENTRY_DSN) {
   try {
-    const Sentry = require('@sentry/node');
+    Sentry = require('@sentry/node');
     Sentry.init({
       dsn: process.env.SENTRY_DSN,
       environment: process.env.NODE_ENV || 'development',

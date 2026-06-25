@@ -17,11 +17,6 @@ const Login = () => {
   const expiredFlag = searchParams.get('expired') === '1';
   const navigate = useNavigate();
 
-  if (user && !requires2FA) {
-    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'evangelist' ? '/evangelist' : user.role === 'pastor' ? '/pastor' : '/leader';
-    return <Navigate to={redirectPath} />;
-  }
-
   // Auto-clear the ?expired=1 query param after first render so a
   // refresh of /login doesn't keep showing the banner.
   useEffect(() => {
@@ -35,6 +30,11 @@ const Login = () => {
     }
     return undefined;
   }, [expiredFlag, searchParams, setSearchParams]);
+
+  if (user && !requires2FA) {
+    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'evangelist' ? '/evangelist' : user.role === 'pastor' ? '/pastor' : '/leader';
+    return <Navigate to={redirectPath} />;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, AlertTriangle, Users, Building2, Heart,
   Shield, Brain, Layers, UserCheck, Award, PieChart as PieChartIcon,
-  ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle, TrendingDown
+  ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle, TrendingDown, Info
 } from 'lucide-react';
 import { analyticsAPI } from '../../services/api';
 import {
