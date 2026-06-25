@@ -293,9 +293,22 @@ export const analyticsAPI = {
   getExecutiveDashboard: () => api.get('/analytics/executive-dashboard'),
   getComparison: (params) => api.get('/analytics/comparison', { params }),
   getHistorical: (params) => api.get('/analytics/historical', { params }),
-  getSectionRankings: (days) => api.get('/analytics/section-rankings', { params: { days } }),
-  getHeadLeaderAnalytics: (days) => api.get('/analytics/head-leader-analytics', { params: { days } }),
+  getSectionRankings: (days, startDate, endDate, prevStartDate, prevEndDate) => {
+    const params = { days };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    if (prevStartDate) params.prevStartDate = prevStartDate;
+    if (prevEndDate) params.prevEndDate = prevEndDate;
+    return api.get('/analytics/section-rankings', { params });
+  },
+  getHeadLeaderAnalytics: (days, startDate, endDate) => {
+    const params = { days };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    return api.get('/analytics/head-leader-analytics', { params });
+  },
   getLeaderRankings: (days) => api.get('/analytics/leader-rankings', { params: { days } }),
+  getAbsentStreaks: (limit) => api.get('/analytics/absent-streaks', { params: { limit } }),
   getDepartments: (days, startDate, endDate) => {
     const params = { days };
     if (startDate) params.startDate = startDate;

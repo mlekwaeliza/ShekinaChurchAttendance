@@ -434,7 +434,9 @@ router.get('/historical', async (req, res) => {
 router.get('/section-rankings', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
-    const sections = await queries.getSectionRankings(days);
+    const { startDate, endDate, prevStartDate, prevEndDate } = req.query;
+    const sections = await queries.getSectionRankings(days, startDate || null, endDate || null, prevStartDate || null, prevEndDate || null);
+    
     const sortedByPrev = [...sections]
       .map(s => ({ id: s.id, prev_rate: s.prev_rate || 0 }))
       .sort((a, b) => b.prev_rate - a.prev_rate);
@@ -473,24 +475,41 @@ router.get('/section-rankings', async (req, res) => {
   }
 });
 
-// GET /analytics/head-leader-analytics?days=90
+// GET /analytics/head-leader-analytics?days=90&startDate=&endDate=
 router.get('/head-leader-analytics', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
-    const leaders = await queries.getHeadLeaderAnalytics(days);
-    const enriched = leaders.map(l => ({
-      ...l,
-      performance_score: Math.min(100, Math.round(
-        (Number(l.overall_attendance) || 0) * 0.4 +
-        Math.min(100, ((l.submissions_made || 0) / Math.max(days / 7, 1)) * 100) * 0.3 +
-        Math.min(100, ((l.leaders_supervised || 0) / Math.max(1, l.leaders_supervised)) * 100) * 0.15 +
-        Math.min(100, ((l.new_members || 0) / Math.max(1, l.members_managed)) * 100) * 0.15
-      )),
-    }));
+    const { startDate, endDate } = req.query;
+    const leaders = await queries.getHeadLeaderAnalytics(days, startDate || null, endDate || null);
+    const enriched = leaders.map(l => {
+      const totalServices = l.total_services || Math.max(Math.round(days / 7) * 2, 1);
+      const submissionRate = Math.min(100, Math.round(((l.submissions_made || 0) / Math.max(1, totalServices)) * 100));
+      const leadership_score = Math.min(100, Math.round(
+        (Number(l.overall_attendance) || 0) * 0.6 +
+        submissionRate * 0.4
+      ));
+      return {
+        ...l,
+        submission_rate: submissionRate,
+        performance_score: leadership_score,
+      };
+    });
     res.json(enriched);
   } catch (error) {
     console.error('Head leader analytics error:', error);
     res.status(500).json({ error: 'Failed to fetch head leader analytics' });
+  }
+});
+
+// GET /analytics/absent-streaks?limit=100
+router.get('/absent-streaks', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 1000);
+    const streaks = await queries.getAbsentStreaks(limit);
+    res.json(streaks);
+  } catch (error) {
+    console.error('Absent streaks error:', error);
+    res.status(500).json({ error: 'Failed to fetch absent streaks' });
   }
 });
 
