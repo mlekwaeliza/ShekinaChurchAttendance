@@ -3092,20 +3092,20 @@ const queries = {
         (SELECT COUNT(*) FROM members WHERE section_id = s.id) as registered_members,
         (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as member_count,
         (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 0) as inactive_members,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND (visitor_date IS NOT NULL OR status = 'Visitor')) as visitors,
+        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND (visitor_date IS NOT NULL OR members.status = 'Visitor')) as visitors,
         (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ?) as new_members,
         ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
         SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
         SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
         SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
         (SELECT MAX(daily_rate) FROM (
-          SELECT AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
+          SELECT AVG(CASE WHEN a2.status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
           FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
           WHERE m2.section_id = s.id AND a2.date >= ? AND a2.date <= ?
           GROUP BY a2.date
         )) as best_day_rate,
         (SELECT MIN(daily_rate) FROM (
-          SELECT AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
+          SELECT AVG(CASE WHEN a2.status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
           FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
           WHERE m2.section_id = s.id AND a2.date >= ? AND a2.date <= ?
           GROUP BY a2.date
