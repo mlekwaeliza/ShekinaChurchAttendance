@@ -3084,53 +3084,56 @@ const queries = {
     const end = endDate || now;
     const prevStart = prevStartDate || formatLocalDate(addDays(new Date(), -(days * 2)));
     const prevEnd = prevEndDate || formatLocalDate(addDays(new Date(), -days));
+    const wkAgo = formatLocalDate(addDays(new Date(), -7));
+    const moAgo = formatLocalDate(addDays(new Date(), -30));
+    const yrAgo = formatLocalDate(addDays(new Date(), -365));
 
     return all(`
       SELECT
         s.id,
         s.name,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id) as registered_members,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 1) as member_count,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND is_active = 0) as inactive_members,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND (visitor_date IS NOT NULL OR members.status = 'Visitor')) as visitors,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ?) as new_members,
+        (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id) as registered_members,
+        (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id AND mx.is_active = 1) as member_count,
+        (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id AND mx.is_active = 0) as inactive_members,
+        (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id AND mx.visitor_date IS NOT NULL) as visitors,
+        (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id AND mx.created_at >= ?) as new_members,
         ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
         SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
         SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
         SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
-        (SELECT MAX(daily_rate) FROM (
-          SELECT AVG(CASE WHEN a2.status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
-          FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
+        (SELECT MAX(dr) FROM (
+          SELECT AVG(CASE WHEN a2.status = 'present' THEN 1.0 ELSE 0.0 END) as dr
+          FROM attendance a2
+          JOIN members m2 ON a2.member_id = m2.id
           WHERE m2.section_id = s.id AND a2.date >= ? AND a2.date <= ?
           GROUP BY a2.date
-        )) as best_day_rate,
-        (SELECT MIN(daily_rate) FROM (
-          SELECT AVG(CASE WHEN a2.status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
-          FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
+        ) sub1) as best_day_rate,
+        (SELECT MIN(dr) FROM (
+          SELECT AVG(CASE WHEN a2.status = 'present' THEN 1.0 ELSE 0.0 END) as dr
+          FROM attendance a2
+          JOIN members m2 ON a2.member_id = m2.id
           WHERE m2.section_id = s.id AND a2.date >= ? AND a2.date <= ?
           GROUP BY a2.date
-        )) as worst_day_rate,
+        ) sub2) as worst_day_rate,
         (
           SELECT ROUND(AVG(CASE WHEN a2.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1)
           FROM attendance a2
           JOIN members m2 ON a2.member_id = m2.id
-          WHERE m2.section_id = s.id AND m2.is_active = 1 AND a2.date >= ? AND a2.date <= ?
+          WHERE m2.section_id = s.id AND m2.is_active = 1
+            AND a2.date >= ? AND a2.date <= ?
         ) as prev_rate,
         (
           SELECT ROUND(
-            CAST(SUM(CASE WHEN (
-              SELECT COUNT(*)
-              FROM attendance a3
-              WHERE a3.member_id = m2.id AND a3.status = 'present' AND a3.date >= ? AND a3.date <= ?
-            ) > 0 THEN 1 ELSE 0 END) AS REAL) /
-            NULLIF(COUNT(*), 0) * 100, 1
+            CAST(COUNT(DISTINCT CASE WHEN ap.status = 'present' THEN ap.member_id END) AS REAL) /
+            NULLIF(COUNT(DISTINCT mx2.id), 0) * 100, 1
           )
-          FROM members m2
-          WHERE m2.section_id = s.id AND m2.is_active = 1
+          FROM members mx2
+          LEFT JOIN attendance ap ON ap.member_id = mx2.id AND ap.date >= ? AND ap.date <= ?
+          WHERE mx2.section_id = s.id AND mx2.is_active = 1
         ) as retention_rate,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo(7)}) as weekly_growth,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo(30)}) as monthly_growth,
-        (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo(365)}) as yearly_growth,
+        (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id AND mx.created_at >= ?) as weekly_growth,
+        (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id AND mx.created_at >= ?) as monthly_growth,
+        (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id AND mx.created_at >= ?) as yearly_growth,
         (
           SELECT ROUND(
             CAST(COUNT(DISTINCT f.member_id) AS REAL) /
@@ -3138,8 +3141,10 @@ const queries = {
           )
           FROM attendance a4
           JOIN members m4 ON a4.member_id = m4.id
-          LEFT JOIN absent_followups f ON f.member_id = m4.id AND f.contacted = 1 AND f.absence_date = a4.date
-          WHERE m4.section_id = s.id AND a4.status = 'absent' AND a4.date >= ? AND a4.date <= ?
+          LEFT JOIN absent_followups f ON f.member_id = m4.id AND f.contacted = 1
+            AND f.absence_date = a4.date
+          WHERE m4.section_id = s.id AND a4.status = 'absent'
+            AND a4.date >= ? AND a4.date <= ?
         ) as follow_up_rate
       FROM sections s
       LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
@@ -3147,13 +3152,16 @@ const queries = {
       GROUP BY s.id, s.name
       ORDER BY attendance_rate DESC
     `, [
-      start,
-      start, end,
-      start, end,
-      prevStart, prevEnd,
-      start, end,
-      start, end,
-      start, end
+      start,                // new_members cutoff
+      start, end,           // best_day_rate
+      start, end,           // worst_day_rate
+      prevStart, prevEnd,   // prev_rate
+      start, end,           // retention_rate
+      wkAgo,                // weekly_growth
+      moAgo,                // monthly_growth
+      yrAgo,                // yearly_growth
+      start, end,           // follow_up_rate
+      start, end            // main attendance join
     ]);
   },
 
