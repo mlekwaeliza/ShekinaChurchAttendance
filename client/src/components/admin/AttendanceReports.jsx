@@ -500,15 +500,24 @@ const AttendanceReports = ({
   }, [analytics.leaderMetrics]);
 
   const sectionSummary = useMemo(() => {
-    if (!sectionComparison.length) return null;
-    const totMem = totalPresent + totalAbsent + totalExcused;
+    const list = sectionRankings.length ? sectionRankings : sectionComparison;
+    if (!list.length) return null;
+    let totMem = 0, totPres = 0, totAbs = 0, totExc = 0;
+    list.forEach(s => {
+      totMem += s.member_count || 0;
+      totPres += s.total_present || 0;
+      totAbs += s.total_absent || 0;
+      totExc += s.total_excused || 0;
+    });
     return {
-      totalSections: sectionComparison.length,
+      totalSections: list.length,
       totalMembers: totMem,
-      totalPresent, totalAbsent, totalExcused,
-      avgRate: totMem > 0 ? Math.round((totalPresent / totMem) * 100) : 0,
+      totalPresent: totPres,
+      totalAbsent: totAbs,
+      totalExcused: totExc,
+      avgRate: list.length ? Math.round(list.reduce((acc, curr) => acc + (curr.attendance_rate || 0), 0) / list.length) : 0,
     };
-  }, [sectionComparison, totalPresent, totalAbsent, totalExcused]);
+  }, [sectionRankings, sectionComparison]);
 
   const insights = useMemo(() => {
     const list = [];

@@ -435,15 +435,37 @@ router.get('/section-rankings', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
     const sections = await queries.getSectionRankings(days);
-    const ranked = sections.map((s, i) => ({
-      ...s,
-      rank: i + 1,
-      is_best: i === 0,
-      is_lowest: i === sections.length - 1 && sections.length > 1,
-      consistency_score: s.worst_day_rate != null && s.best_day_rate != null
-        ? Math.round((1 - (s.best_day_rate - s.worst_day_rate) / 100) * 100)
-        : null,
-    }));
+    const sortedByPrev = [...sections]
+      .map(s => ({ id: s.id, prev_rate: s.prev_rate || 0 }))
+      .sort((a, b) => b.prev_rate - a.prev_rate);
+
+    const prevRankMap = {};
+    sortedByPrev.forEach((s, idx) => {
+      prevRankMap[s.id] = idx + 1;
+    });
+
+    const ranked = sections.map((s, i) => {
+      const consistency_score = s.worst_day_rate != null && s.best_day_rate != null
+        ? Math.round((1 - (s.best_day_rate - s.worst_day_rate)) * 100)
+        : 75;
+      const rate = s.attendance_rate || 0;
+      const retention = s.retention_rate || 0;
+      const performance_score = Math.round(rate * 0.5 + consistency_score * 0.25 + retention * 0.25);
+      
+      const currentRank = i + 1;
+      const prevRank = prevRankMap[s.id] || currentRank;
+      const rank_change = prevRank - currentRank;
+
+      return {
+        ...s,
+        rank: currentRank,
+        rank_change,
+        is_best: i === 0,
+        is_lowest: i === sections.length - 1 && sections.length > 1,
+        consistency_score,
+        performance_score,
+      };
+    });
     res.json(ranked);
   } catch (error) {
     console.error('Section rankings error:', error);

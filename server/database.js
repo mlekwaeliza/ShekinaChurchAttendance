@@ -3086,25 +3086,44 @@ const queries = {
       ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as attendance_rate,
       SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
       SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
-      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo()}) as new_members,
+      SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+      (SELECT COUNT(*) FROM members WHERE section_id = s.id AND created_at >= ${daysAgo(days)}) as new_members,
       (SELECT MAX(daily_rate) FROM (
         SELECT AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
         FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
-        WHERE m2.section_id = s.id AND a2.date >= ${daysAgo()}
+        WHERE m2.section_id = s.id AND a2.date >= ${daysAgo(days)}
         GROUP BY a2.date
       )) as best_day_rate,
       (SELECT MIN(daily_rate) FROM (
         SELECT AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) as daily_rate
         FROM attendance a2 JOIN members m2 ON a2.member_id = m2.id
-        WHERE m2.section_id = s.id AND a2.date >= ${daysAgo()}
+        WHERE m2.section_id = s.id AND a2.date >= ${daysAgo(days)}
         GROUP BY a2.date
-      )) as worst_day_rate
+      )) as worst_day_rate,
+      (
+        SELECT ROUND(AVG(CASE WHEN a2.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1)
+        FROM attendance a2
+        JOIN members m2 ON a2.member_id = m2.id
+        WHERE m2.section_id = s.id AND m2.is_active = 1 AND a2.date >= ${daysAgo(days * 2)} AND a2.date < ${daysAgo(days)}
+      ) as prev_rate,
+      (
+        SELECT ROUND(
+          CAST(SUM(CASE WHEN (
+            SELECT COUNT(*)
+            FROM attendance a3
+            WHERE a3.member_id = m2.id AND a3.status = 'present' AND a3.date >= ${daysAgo(30)}
+          ) > 0 THEN 1 ELSE 0 END) AS REAL) /
+          NULLIF(COUNT(*), 0) * 100, 1
+        )
+        FROM members m2
+        WHERE m2.section_id = s.id AND m2.is_active = 1
+      ) as retention_rate
     FROM sections s
     LEFT JOIN members m ON m.section_id = s.id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo(days)}
     GROUP BY s.id, s.name
     ORDER BY attendance_rate DESC
-  `, [days, days, days, days]),
+  `, []),
 
   // ── Head Leader Analytics ──────────────────────────────────────────────
   getHeadLeaderAnalytics: (days = 90) => all(`
