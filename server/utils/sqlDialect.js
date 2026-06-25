@@ -214,6 +214,41 @@ function daysAgoRange(daysParam = '?') {
   };
 }
 
+// ── Aggregate rounding helpers ────────────────────────────────────────────
+//
+// PostgreSQL's ROUND(x, n) requires x to be NUMERIC. AVG() returns
+// double-precision on Postgres, so CAST(... AS NUMERIC) is mandatory on PG
+// but is a safe no-op on SQLite.
+//
+// Use these helpers instead of writing ROUND(AVG(...)) directly to avoid
+// the "function round(double precision, integer) does not exist" error on PG.
+//
+// roundAvg(caseExpr, multiplier, decimals)
+//   For attendance-rate style calculations:
+//   ${roundAvg("CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END", 100, 1)}
+//   -> ROUND(CAST(AVG(CASE WHEN ...) * 100 AS NUMERIC), 1)
+//
+function roundAvg(caseExpr, multiplier = 100, decimals = 1) {
+  return `ROUND(CAST(AVG(${caseExpr}) * ${multiplier} AS NUMERIC), ${decimals})`;
+}
+
+// roundExpr(expr, decimals)
+//   Wraps any expression in a Postgres-safe ROUND.
+//   ${roundExpr('SUM(x) / NULLIF(COUNT(*), 0) * 100', 1)}
+//   -> ROUND(CAST(SUM(x) / NULLIF(COUNT(*), 0) * 100 AS NUMERIC), 1)
+//
+function roundExpr(expr, decimals = 1) {
+  return `ROUND(CAST(${expr} AS NUMERIC), ${decimals})`;
+}
+
+// castToNumeric(expr)
+//   Explicit cast to NUMERIC — safe on both dialects.
+//   ${castToNumeric('SUM(x)')} -> (SUM(x))::numeric  [PG]  or  CAST(SUM(x) AS REAL)  [SQLite]
+//
+function castToNumeric(expr) {
+  return isPostgres() ? `(${expr})::numeric` : `CAST(${expr} AS REAL)`;
+}
+
 module.exports = {
   isPostgres,
   yearEquals,
@@ -241,4 +276,8 @@ module.exports = {
   yearMonthFirst,
   yearOnly,
   monthOnly,
+  // Postgres-safe rounding helpers
+  roundAvg,
+  roundExpr,
+  castToNumeric,
 };
