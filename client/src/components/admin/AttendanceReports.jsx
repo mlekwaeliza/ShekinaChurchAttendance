@@ -199,6 +199,12 @@ const AttendanceReports = ({
 
   const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365, custom: 30 };
   const toDateStr = (d) => { const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
+  const formatDateShort = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length < 3) return dateStr;
+    return `${parts[2]}/${parts[1]}`;
+  };
 
   useEffect(() => {
     const now = new Date();
@@ -774,8 +780,8 @@ const AttendanceReports = ({
                   <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Name</th>
                   {metrics.map(m => (
                     <React.Fragment key={m.key}>
-                      <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} (Prev)</th>
-                      <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} (Curr)</th>
+                      <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} ({dates ? formatDateShort(dates.pStart) : 'Prev'})</th>
+                      <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} ({dates ? formatDateShort(dates.cStart) : 'Curr'})</th>
                       <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} (Diff)</th>
                     </React.Fragment>
                   ))}
@@ -954,22 +960,91 @@ const AttendanceReports = ({
               const prevSubmissionRate = comp.totalLeaders > 0 ? Math.round(((p.leadersSubmitted || 0) / comp.totalLeaders) * 100) : 0;
               return (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {[
-                      { label: 'Present', curr: c.present, prev: p.present, color: 'emerald' },
-                      { label: 'Absent', curr: c.absent, prev: p.absent, color: 'rose', inv: true },
-                      { label: 'Excused', curr: c.excused, prev: p.excused, color: 'amber', inv: true },
-                      { label: 'Attendance %', curr: c.rate, prev: p.rate, color: 'indigo', suffix: '%' },
-                    ].map(kpi => {
-                      const diff = kpi.inv ? (kpi.prev || 0) - (kpi.curr || 0) : (kpi.curr || 0) - (kpi.prev || 0);
-                      return (
-                        <div key={kpi.label} className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
-                          <p className="text-[10px] font-semibold uppercase text-slate-400">{kpi.label}</p>
-                          <p className="text-lg font-bold text-slate-900 dark:text-white">{kpi.suffix === '%' ? R(kpi.curr || 0) : (kpi.curr || 0)}{kpi.suffix || ''}</p>
-                          <span className={`text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{kpi.suffix === '%' ? R(diff) : diff}{kpi.suffix || ''} vs prev</span>
-                        </div>
-                      );
-                    })}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                    {/* Period 1 Specs Card */}
+                    <div className="rounded-2xl border-2 border-indigo-500/20 bg-indigo-50/10 dark:bg-indigo-950/5 p-5 shadow-sm">
+                      <div className="flex items-center justify-between mb-4 pb-2 border-b border-indigo-100 dark:border-indigo-900/50">
+                        <h4 className="text-xs font-bold uppercase text-indigo-700 dark:text-indigo-400">Period 1 (Current)</h4>
+                        <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 px-2 py-0.5 rounded-full font-medium">
+                          {dates ? `${formatDateShort(dates.cStart)} – ${formatDateShort(dates.cEnd)}` : ''}
+                        </span>
+                      </div>
+                      <div className="space-y-4">
+                        {[
+                          { label: 'Attendance Rate', value: `${R(c.rate || 0)}%`, desc: 'Average active rate' },
+                          { label: 'Present Members', value: c.present, desc: 'Count of members marked present' },
+                          { label: 'Absent Members', value: c.absent, desc: 'Count of members marked absent' },
+                          { label: 'Excused Members', value: c.excused, desc: 'Count of members marked excused' },
+                        ].map((spec, i) => (
+                          <div key={i} className="flex justify-between items-center py-1">
+                            <div>
+                              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">{spec.label}</p>
+                              <p className="text-[9px] text-slate-400">{spec.desc}</p>
+                            </div>
+                            <span className="text-base font-bold text-slate-900 dark:text-white">{spec.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Period 2 Specs Card */}
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/10 p-5 shadow-sm">
+                      <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200 dark:border-slate-700/50">
+                        <h4 className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Period 2 (Comparison)</h4>
+                        <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full font-medium">
+                          {dates ? `${formatDateShort(dates.pStart)} – ${formatDateShort(dates.pEnd)}` : ''}
+                        </span>
+                      </div>
+                      <div className="space-y-4">
+                        {[
+                          { label: 'Attendance Rate', value: `${R(p.rate || 0)}%`, desc: 'Average active rate' },
+                          { label: 'Present Members', value: p.present, desc: 'Count of members marked present' },
+                          { label: 'Absent Members', value: p.absent, desc: 'Count of members marked absent' },
+                          { label: 'Excused Members', value: p.excused, desc: 'Count of members marked excused' },
+                        ].map((spec, i) => (
+                          <div key={i} className="flex justify-between items-center py-1">
+                            <div>
+                              <p className="text-xs font-medium text-slate-600 dark:text-slate-400">{spec.label}</p>
+                              <p className="text-[9px] text-slate-400">{spec.desc}</p>
+                            </div>
+                            <span className="text-base font-bold text-slate-700 dark:text-slate-350">{spec.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Variance / Comparison Specs Card */}
+                    <div className={`rounded-2xl border-2 p-5 shadow-sm ${diffRate >= 0 ? 'border-emerald-500/20 bg-emerald-50/10 dark:bg-emerald-950/5' : 'border-rose-500/20 bg-rose-50/10 dark:bg-rose-950/5'}`}>
+                      <div className={`flex items-center justify-between mb-4 pb-2 border-b ${diffRate >= 0 ? 'border-emerald-100 dark:border-emerald-900/50' : 'border-rose-100 dark:border-rose-900/50'}`}>
+                        <h4 className={`text-xs font-bold uppercase ${diffRate >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>Comparison Variance</h4>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${diffRate >= 0 ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-900/50 text-rose-800 dark:text-rose-300'}`}>
+                          {diffRate >= 0 ? 'Improvement' : 'Decline'}
+                        </span>
+                      </div>
+                      <div className="space-y-4">
+                        {[
+                          { label: 'Attendance Rate', val: diffRate, suffix: '%', invert: false },
+                          { label: 'Present Members', val: c.present - p.present, suffix: '', invert: false },
+                          { label: 'Absent Members', val: p.absent - c.absent, suffix: '', invert: true, rawVal: c.absent - p.absent },
+                          { label: 'Excused Members', val: p.excused - c.excused, suffix: '', invert: true, rawVal: c.excused - p.excused },
+                        ].map((v, i) => {
+                          const diff = v.val;
+                          const displayDiff = v.rawVal !== undefined ? v.rawVal : diff;
+                          const isBetter = diff >= 0;
+                          return (
+                            <div key={i} className="flex justify-between items-center py-1">
+                              <div>
+                                <p className="text-xs font-medium text-slate-800 dark:text-slate-200">{v.label} Diff</p>
+                                <p className="text-[9px] text-slate-400">{isBetter ? 'Favorable change' : 'Unfavorable change'}</p>
+                              </div>
+                              <span className={`text-base font-bold ${isBetter ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                {displayDiff >= 0 ? '+' : ''}{v.suffix === '%' ? R(displayDiff) : displayDiff}{v.suffix}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                   <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
                     <div className="p-4 border-b border-slate-100 dark:border-slate-700">
@@ -979,8 +1054,15 @@ const AttendanceReports = ({
                       <table className="min-w-full text-sm">
                         <thead className="bg-slate-50 dark:bg-slate-800">
                           <tr className="border-b border-slate-200 dark:border-slate-700">
-                            {['Metric', 'Previous', 'Current', 'Difference', 'Change %', 'Status'].map(h => (
-                              <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Metric' ? 'text-left' : 'text-right'}`}>{h}</th>
+                            {[
+                              { label: 'Metric', align: 'left' },
+                              { label: dates ? `Period 2 (${formatDateShort(dates.pStart)})` : 'Period 2 (Comparison)', align: 'right' },
+                              { label: dates ? `Period 1 (${formatDateShort(dates.cStart)})` : 'Period 1 (Current)', align: 'right' },
+                              { label: 'Difference', align: 'right' },
+                              { label: 'Change %', align: 'right' },
+                              { label: 'Status', align: 'right' }
+                            ].map(h => (
+                              <th key={h.label} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h.align === 'left' ? 'text-left' : 'text-right'}`}>{h.label}</th>
                             ))}
                           </tr>
                         </thead>
@@ -1001,12 +1083,13 @@ const AttendanceReports = ({
                             const prev = row.suffix === '%' ? R(rawPrev) : rawPrev;
                             const diff = row.inv ? prev - curr : curr - prev;
                             const pct = rawPrev > 0 ? ((diff / rawPrev) * 100).toFixed(1) : 0;
+                            const displayDiff = row.inv ? curr - prev : diff;
                             return (
                               <tr key={row.label} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                                 <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{row.label}</td>
                                 <td className="py-2.5 px-3 text-right text-slate-500">{prev}{row.suffix || ''}</td>
                                 <td className="py-2.5 px-3 text-right font-bold">{curr}{row.suffix || ''}</td>
-                                <td className={`py-2.5 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{diff}{row.suffix || ''}</td>
+                                <td className={`py-2.5 px-3 text-right font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{displayDiff >= 0 ? '+' : ''}{displayDiff}{row.suffix || ''}</td>
                                 <td className={`py-2.5 px-3 text-right ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{pct}%</td>
                                 <td className="py-2.5 px-3 text-right"><Badge variant={diff >= 0 ? 'success' : 'danger'}>{diff >= 0 ? 'Increase' : 'Decrease'}</Badge></td>
                               </tr>
