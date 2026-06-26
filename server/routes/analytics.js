@@ -513,18 +513,21 @@ router.get('/absent-streaks', async (req, res) => {
   }
 });
 
-// GET /analytics/leader-rankings?days=90
+// GET /analytics/leader-rankings?days=90&startDate=&endDate=&prevStartDate=&prevEndDate=
 router.get('/leader-rankings', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
-    const leaders = await queries.getLeaderRankings(days);
+    const { startDate, endDate, prevStartDate, prevEndDate } = req.query;
+    const leaders = await queries.getLeaderRankings(days, startDate || null, endDate || null, prevStartDate || null, prevEndDate || null);
     const ranked = leaders.map((l, i) => ({
       ...l,
       rank: i + 1,
       efficiency_score: Math.min(100, Math.round(
         (Number(l.attendance_rate) || 0) * 0.4 +
-        Math.min(100, ((l.submission_count || 0) / Math.max(days / 7, 1)) * 100) * 0.3 +
-        Math.min(100, ((l.assigned_members > 0 ? l.unique_attendees / l.assigned_members : 0) * 100)) * 0.15 +
+        Math.min(100, Number(l.leader_submission_rate) || 0) * 0.2 +
+        Math.min(100, Number(l.retention_rate) || 0) * 0.2 +
+        Math.min(100, Number(l.follow_up_completion) || 0) * 0.1 +
+        Math.min(100, ((l.assigned_members > 0 ? l.unique_attendees / l.assigned_members : 0) * 100)) * 0.1 +
         Math.min(100, ((l.new_members || 0) / Math.max(1, l.assigned_members)) * 100) * 0.15
       )),
     }));

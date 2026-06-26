@@ -15,8 +15,6 @@ const TABS = [
   { id: 'overview', label: 'Executive Summary', icon: Eye },
   { id: 'comparison', label: 'Comparison Center', icon: ArrowUp },
   { id: 'sections', label: 'Section Performance', icon: Layers },
-  { id: 'head-leaders', label: 'Head Leaders', icon: Award },
-  { id: 'leaders', label: 'Section Leaders', icon: Users },
   { id: 'departments', label: 'Department Report', icon: Building2 },
   { id: 'members', label: 'Member Intelligence', icon: UserCheck },
   { id: 'historical', label: 'Historical Reports', icon: Calendar },
@@ -200,7 +198,9 @@ const AttendanceReports = ({
   const [secP2End, setSecP2End] = useState('');
   const [secRankings, setSecRankings] = useState([]);
   const [secHeadLeaders, setSecHeadLeaders] = useState([]);
+  const [secLeaderRankings, setSecLeaderRankings] = useState([]);
   const [absentStreaks, setAbsentStreaks] = useState([]);
+  const [expandedSections, setExpandedSections] = useState({});
   const [secLoading, setSecLoading] = useState(false);
   const [secError, setSecError] = useState(null);
   const [secSearch, setSecSearch] = useState('');
@@ -488,13 +488,15 @@ const AttendanceReports = ({
     setSecLoading(true);
     setSecError(null);
     try {
-      const [rankingsRes, headLeadersRes, streaksRes] = await Promise.all([
+      const [rankingsRes, headLeadersRes, leaderRankingsRes, streaksRes] = await Promise.all([
         analyticsAPI.getSectionRankings(90, dates.cStart, dates.cEnd, dates.pStart, dates.pEnd),
         analyticsAPI.getHeadLeaderAnalytics(90, dates.cStart, dates.cEnd),
+        analyticsAPI.getLeaderRankings(90, dates.cStart, dates.cEnd, dates.pStart, dates.pEnd),
         analyticsAPI.getAbsentStreaks(100)
       ]);
       setSecRankings(rankingsRes.data || []);
       setSecHeadLeaders(headLeadersRes.data || []);
+      setSecLeaderRankings(leaderRankingsRes.data || []);
       setAbsentStreaks(streaksRes.data || []);
     } catch (e) {
       console.error('Failed to load section intelligence:', e);
@@ -551,6 +553,7 @@ const AttendanceReports = ({
         analyticsAPI.getAIInsights(),
         analyticsAPI.getChurchGrowthIndex(),
         analyticsAPI.getHeadLeaderAnalytics(90),
+        analyticsAPI.getLeaderRankings(90),
       ]);
 
       const ok = i => results[i].status === 'fulfilled' ? results[i].value?.data : null;
@@ -563,6 +566,7 @@ const AttendanceReports = ({
         sectionRankings: ok(13) || [],
         risk: ok(14), aiInsights: ok(15) || [], growthIndex: ok(16),
         headLeaders: ok(17) || [],
+        leaderRankings: ok(18) || [],
       });
     } catch (e) { console.error('Failed to load analytics:', e); }
     finally { setAnalyticsLoading(false); }
@@ -596,9 +600,14 @@ const AttendanceReports = ({
   const headLeaders = analytics.headLeaders || [];
 
   const leaderRankData = useMemo(() => {
-    if (!analytics.leaderMetrics?.length) return [];
-    return [...analytics.leaderMetrics].sort((a, b) => (b.attendance_rate || 0) - (a.attendance_rate || 0)).slice(0, 20);
-  }, [analytics.leaderMetrics]);
+    const source = analytics.leaderRankings?.length ? analytics.leaderRankings : analytics.leaderMetrics;
+    if (!source?.length) return [];
+    return [...source].map(row => ({
+      ...row,
+      attendance_rate: row.attendance_rate ?? row.avg_rate ?? 0,
+      submissions_count: row.submissions_count ?? row.submission_count ?? row.submissions ?? 0,
+    })).sort((a, b) => (b.attendance_rate || 0) - (a.attendance_rate || 0)).slice(0, 20);
+  }, [analytics.leaderRankings, analytics.leaderMetrics]);
 
   const sectionSummary = useMemo(() => {
     const list = sectionRankings.length ? sectionRankings : sectionComparison;
@@ -711,8 +720,6 @@ const AttendanceReports = ({
       case 'overview': return renderOverviewTab();
       case 'comparison': return renderComparisonTab();
       case 'sections': return renderSectionsTab();
-      case 'head-leaders': return renderHeadLeadersTab();
-      case 'leaders': return renderLeadersTab();
       case 'departments': return renderDepartmentsTab();
       case 'members': return renderMembersTab();
       case 'historical': return renderHistoricalTab();
@@ -1938,6 +1945,190 @@ const AttendanceReports = ({
 
     const execInsights = getAIExecutiveInsights();
     const actionRecommendations = getActionCenterRecommendations();
+    const activeLeaderRows = secLeaderRankings.length ? secLeaderRankings : leaderRankData;
+    const normalizeName = value => String(value || '').trim().toLowerCase();
+    const rankMovement = value => {
+      if (value > 0) return { label: `Up ${value}`, className: 'text-emerald-600', icon: ArrowUp };
+      if (value < 0) return { label: `Down ${Math.abs(value)}`, className: 'text-rose-600', icon: ArrowDown };
+      return { label: 'No change', className: 'text-slate-500', icon: Minus };
+    };
+    const sectionStatus = (score, rate, followUpRate) => {
+      if (score >= 80 && rate >= 75) return { label: 'Healthy', variant: 'success' };
+      if (score >= 60 || rate >= 60 || followUpRate >= 60) return { label: 'Watch', variant: 'warning' };
+      return { label: 'Intervention', variant: 'danger' };
+    };
+    const sectionIntelligence = filteredRankings.map(section => {
+      const sectionKey = normalizeName(section.name);
+      const headLeader = secHeadLeaders.find(l => normalizeName(l.section_name) === sectionKey) || null;
+      const sectionLeaders = activeLeaderRows
+        .filter(l => normalizeName(l.section_name) === sectionKey)
+        .map((leader, index) => {
+          const assigned = Number(leader.assigned_members ?? leader.member_count ?? 0) || 0;
+          const active = Number(leader.active_members ?? leader.unique_attendees ?? 0) || 0;
+          const inactive = Number(leader.inactive_members ?? Math.max(0, assigned - active)) || 0;
+          const present = Number(leader.total_present ?? leader.present ?? leader.unique_attendees ?? 0) || 0;
+          const absent = Number(leader.total_absent ?? leader.absent ?? Math.max(0, assigned - active)) || 0;
+          const excused = Number(leader.total_excused ?? leader.excused ?? 0) || 0;
+          const rate = Number(leader.attendance_rate ?? leader.avg_rate ?? 0) || 0;
+          const previousRate = Number(leader.prev_rate ?? 0) || 0;
+          const followUpRequired = Number(leader.follow_up_required ?? absent) || 0;
+          const followUpCompleted = Number(leader.follow_up_completed ?? 0) || 0;
+          const followUpCompletion = followUpRequired > 0
+            ? Math.round((followUpCompleted / followUpRequired) * 100)
+            : Number(leader.follow_up_completion ?? 100) || 0;
+          const retentionPct = Number(leader.retention_rate ?? (assigned > 0 ? (active / assigned) * 100 : 0)) || 0;
+          const consistencyPct = Number(leader.consistency_score ?? Math.max(0, 100 - Math.abs(rate - previousRate))) || 0;
+          const leadershipScore = Number(leader.efficiency_score ?? leader.performance_score ?? Math.round(rate * 0.35 + retentionPct * 0.25 + consistencyPct * 0.2 + followUpCompletion * 0.2)) || 0;
+          const status = sectionStatus(leadershipScore, rate, followUpCompletion);
+          return {
+            ...leader,
+            rank: leader.rank || index + 1,
+            assigned_members: assigned,
+            active_members: active,
+            inactive_members: inactive,
+            total_present: present,
+            total_absent: absent,
+            total_excused: excused,
+            attendance_rate: rate,
+            prev_rate: previousRate,
+            weekly_growth: Number(leader.weekly_growth ?? 0) || 0,
+            monthly_growth: Number(leader.monthly_growth ?? 0) || 0,
+            yearly_growth: Number(leader.yearly_growth ?? 0) || 0,
+            retention_rate: retentionPct,
+            consistency_score: consistencyPct,
+            follow_up_required: followUpRequired,
+            follow_up_completed: followUpCompleted,
+            follow_up_completion: followUpCompletion,
+            visits_completed: Number(leader.visits_completed ?? 0) || 0,
+            counseling_cases: Number(leader.counseling_cases ?? 0) || 0,
+            leadership_score: leadershipScore,
+            status,
+            rank_change: Number(leader.rank_change ?? 0) || 0,
+          };
+        })
+        .sort((a, b) => (b.leadership_score || 0) - (a.leadership_score || 0));
+      const sectionStreaks = absentStreaks.filter(m => normalizeName(m.section_name) === sectionKey);
+      const absent1wCount = sectionStreaks.filter(m => m.current_streak === 1).length;
+      const absent2wCount = sectionStreaks.filter(m => m.current_streak === 2).length;
+      const absent3wCount = sectionStreaks.filter(m => m.current_streak === 3).length;
+      const absent1mCount = sectionStreaks.filter(m => m.current_streak >= 4 && m.current_streak < 12).length;
+      const absent3mCount = sectionStreaks.filter(m => m.current_streak >= 12).length;
+      const totalLeaders = sectionLeaders.length;
+      const avgLeaderScore = totalLeaders
+        ? Math.round(sectionLeaders.reduce((sum, l) => sum + (l.leadership_score || 0), 0) / totalLeaders)
+        : 0;
+      const sectionHealthScore = Number(section.performance_score ?? Math.round(
+        (Number(section.attendance_rate) || 0) * 0.35 +
+        (Number(section.retention_rate) || 0) * 0.25 +
+        (Number(section.consistency_score) || 0) * 0.2 +
+        (Number(section.follow_up_rate) || 0) * 0.2
+      )) || 0;
+      const status = sectionStatus(sectionHealthScore, section.attendance_rate || 0, section.follow_up_rate || 0);
+      const previousRank = Number(section.rank || 0) + Number(section.rank_change || 0);
+      const weakestLeader = sectionLeaders[sectionLeaders.length - 1];
+      const strongestLeader = sectionLeaders[0];
+      const recommendations = [
+        section.attendance_rate < 60 ? `Meet with ${headLeader?.leader_name || `${section.name} head leader`} before the next service to review attendance barriers.` : `Maintain the practices keeping ${section.name} at ${R(section.attendance_rate)}% attendance.`,
+        section.follow_up_rate < 70 && section.total_absent > 0 ? `Close follow-up gaps for ${section.total_absent} absent markings; assign calls and visits today.` : 'Keep follow-up completion visible in leader check-ins.',
+        weakestLeader ? `Coach ${weakestLeader.leader_name} first; current leadership score is ${weakestLeader.leadership_score}/100.` : 'Assign section leaders so member care is not carried by the head leader alone.',
+        absent3wCount + absent1mCount + absent3mCount > 0 ? `Prioritize ${absent3wCount + absent1mCount + absent3mCount} members absent three weeks or longer for pastoral care.` : 'No long-streak absentee pressure detected in this section.'
+      ];
+      return {
+        section,
+        headLeader,
+        sectionLeaders,
+        sectionStreaks,
+        sectionHealthScore,
+        avgLeaderScore,
+        status,
+        previousRank,
+        strongestLeader,
+        weakestLeader,
+        absent1wCount,
+        absent2wCount,
+        absent3wCount,
+        absent1mCount,
+        absent3mCount,
+        recommendations,
+      };
+    });
+    const toggleSection = id => setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
+    const MiniMetric = ({ label, value, suffix = '', tone = 'slate' }) => {
+      const toneMap = {
+        slate: 'text-slate-900 dark:text-white',
+        green: 'text-emerald-600 dark:text-emerald-400',
+        red: 'text-rose-600 dark:text-rose-400',
+        amber: 'text-amber-600 dark:text-amber-400',
+        indigo: 'text-indigo-600 dark:text-indigo-400',
+      };
+      return (
+        <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 p-3">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+          <p className={`text-lg font-black mt-1 ${toneMap[tone] || toneMap.slate}`}>{value ?? 0}{suffix}</p>
+        </div>
+      );
+    };
+    const renderRankMovement = value => {
+      const movement = rankMovement(value);
+      const Icon = movement.icon;
+      return <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${movement.className}`}><Icon className="w-3 h-3" />{movement.label}</span>;
+    };
+    const renderSectionLeaderRows = leaders => (
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-slate-100 dark:border-slate-700">
+              {['Rank', 'Section Leader', 'Assigned', 'Active', 'Inactive', 'New', 'Visitors', 'Present', 'Absent', 'Excused', 'Att %', 'Prev %', 'Weekly', 'Monthly', 'Yearly', 'Retention', 'Consistency', 'Follow-up', 'Visits', 'Counseling', 'Score', 'Movement', 'Status', 'AI Recommendation'].map((h, i) => (
+                <th key={h} className={`py-2 px-2 text-[9px] font-bold uppercase text-slate-400 ${i === 1 || i === 23 ? 'text-left' : 'text-right'} whitespace-nowrap`}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {leaders.map((leader, i) => {
+              const diff = (leader.attendance_rate || 0) - (leader.prev_rate || 0);
+              const aiText = leader.leadership_score < 60
+                ? 'Immediate coaching, follow-up audit, and member contact list review required.'
+                : diff < -5
+                  ? 'Attendance is declining; ask for cause and recovery plan before next service.'
+                  : leader.follow_up_completion < 70
+                    ? 'Improve absentee follow-up completion and confirm visits for long absences.'
+                    : 'Stable leadership pattern; document practices and maintain cadence.';
+              return (
+                <tr key={leader.leader_id || leader.leader_name || i} className="border-b border-slate-50 dark:border-slate-700/50">
+                  <td className="py-2 px-2 text-right font-bold text-slate-500">#{leader.rank || i + 1}</td>
+                  <td className="py-2 px-2 font-bold text-slate-900 dark:text-white whitespace-nowrap">{leader.leader_name}</td>
+                  <td className="py-2 px-2 text-right">{leader.assigned_members}</td>
+                  <td className="py-2 px-2 text-right text-emerald-600">{leader.active_members}</td>
+                  <td className="py-2 px-2 text-right text-rose-500">{leader.inactive_members}</td>
+                  <td className="py-2 px-2 text-right text-indigo-500">+{leader.new_members || 0}</td>
+                  <td className="py-2 px-2 text-right">{leader.visitor_conversions || 0}</td>
+                  <td className="py-2 px-2 text-right text-emerald-600">{leader.total_present}</td>
+                  <td className="py-2 px-2 text-right text-rose-500">{leader.total_absent}</td>
+                  <td className="py-2 px-2 text-right text-amber-500">{leader.total_excused}</td>
+                  <td className="py-2 px-2 text-right"><Badge variant={leader.attendance_rate >= 75 ? 'success' : leader.attendance_rate >= 55 ? 'warning' : 'danger'}>{R(leader.attendance_rate)}%</Badge></td>
+                  <td className="py-2 px-2 text-right text-slate-500">{R(leader.prev_rate)}%</td>
+                  <td className="py-2 px-2 text-right">+{leader.weekly_growth}</td>
+                  <td className="py-2 px-2 text-right">+{leader.monthly_growth}</td>
+                  <td className="py-2 px-2 text-right">+{leader.yearly_growth}</td>
+                  <td className="py-2 px-2 text-right font-bold">{R(leader.retention_rate)}%</td>
+                  <td className="py-2 px-2 text-right font-bold">{R(leader.consistency_score)}%</td>
+                  <td className="py-2 px-2 text-right font-bold text-indigo-600">{R(leader.follow_up_completion)}%</td>
+                  <td className="py-2 px-2 text-right">{leader.visits_completed}</td>
+                  <td className="py-2 px-2 text-right">{leader.counseling_cases}</td>
+                  <td className="py-2 px-2 text-right"><Badge variant={leader.leadership_score >= 75 ? 'success' : leader.leadership_score >= 55 ? 'warning' : 'danger'}>{leader.leadership_score}/100</Badge></td>
+                  <td className="py-2 px-2 text-right">{renderRankMovement(leader.rank_change)}</td>
+                  <td className="py-2 px-2 text-right"><Badge variant={leader.status.variant}>{leader.status.label}</Badge></td>
+                  <td className="py-2 px-2 text-left min-w-[220px] text-slate-500">{aiText}</td>
+                </tr>
+              );
+            })}
+            {leaders.length === 0 && (
+              <tr><td colSpan="24" className="py-6 text-center text-slate-400">No section leaders assigned or no leader attendance data found for this section.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
 
     return (
       <div className="space-y-6">
@@ -2147,6 +2338,198 @@ const AttendanceReports = ({
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* 360-degree Section Performance Dashboard */}
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">360-degree Section Performance Dashboard</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Each section contains head leader, section leaders, member intelligence, retention, follow-up, AI insights, and immediate actions.</p>
+                </div>
+                <Badge variant="info">{sectionIntelligence.length} Sections Analyzed</Badge>
+              </div>
+
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                {sectionIntelligence.map((item, idx) => {
+                  const { section, headLeader, sectionLeaders, sectionStreaks } = item;
+                  const isOpen = expandedSections[section.id] ?? idx === 0;
+                  const diff = (section.attendance_rate || 0) - (section.prev_rate || 0);
+                  const longAbsentees = item.absent3wCount + item.absent1mCount + item.absent3mCount;
+                  const MovementIcon = diff > 0 ? ArrowUp : diff < 0 ? ArrowDown : Minus;
+                  return (
+                    <div key={section.id || section.name} className="bg-white dark:bg-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection(section.id || section.name)}
+                        className="w-full p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-left hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors"
+                      >
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-black shrink-0">
+                            {section.rank || idx + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-sm font-black text-slate-950 dark:text-white truncate">{section.name}</h4>
+                              <Badge variant={item.status.variant}>{item.status.label}</Badge>
+                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                <MovementIcon className="w-3 h-3" />{diff >= 0 ? '+' : ''}{R(diff)}% attendance movement
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-1">
+                              Head Leader: <span className="font-semibold text-slate-700 dark:text-slate-300">{headLeader?.leader_name || 'Not assigned'}</span>
+                              {' '}• {sectionLeaders.length} section leaders • {section.member_count || 0} active members • {longAbsentees} high-risk absentees
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 lg:min-w-[560px]">
+                          <MiniMetric label="Health" value={item.sectionHealthScore} suffix="/100" tone={item.sectionHealthScore >= 75 ? 'green' : item.sectionHealthScore >= 55 ? 'amber' : 'red'} />
+                          <MiniMetric label="Leader Score" value={item.avgLeaderScore} suffix="/100" tone={item.avgLeaderScore >= 75 ? 'green' : item.avgLeaderScore >= 55 ? 'amber' : 'red'} />
+                          <MiniMetric label="Attendance" value={R(section.attendance_rate)} suffix="%" tone={section.attendance_rate >= 75 ? 'green' : section.attendance_rate >= 55 ? 'amber' : 'red'} />
+                          <MiniMetric label="Retention" value={R(section.retention_rate)} suffix="%" tone={section.retention_rate >= 75 ? 'green' : section.retention_rate >= 55 ? 'amber' : 'red'} />
+                          <MiniMetric label="Follow-up" value={R(section.follow_up_rate)} suffix="%" tone={section.follow_up_rate >= 75 ? 'green' : section.follow_up_rate >= 55 ? 'amber' : 'red'} />
+                        </div>
+                        <div className="shrink-0 text-slate-400">
+                          {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        </div>
+                      </button>
+
+                      {isOpen && (
+                        <div className="px-4 pb-5 space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <BarChart3 className="w-4 h-4 text-indigo-500" />
+                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Overall Section Statistics</h5>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <MiniMetric label="Registered" value={section.registered_members || 0} />
+                                <MiniMetric label="Active" value={section.member_count || 0} tone="green" />
+                                <MiniMetric label="Inactive" value={section.inactive_members || 0} tone="red" />
+                                <MiniMetric label="Visitors" value={section.visitors || 0} tone="amber" />
+                                <MiniMetric label="New Members" value={section.new_members || 0} tone="indigo" />
+                                <MiniMetric label="Excused" value={section.total_excused || 0} tone="amber" />
+                              </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Award className="w-4 h-4 text-amber-500" />
+                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Section Rankings</h5>
+                              </div>
+                              <div className="space-y-2 text-xs">
+                                <div className="flex justify-between"><span className="text-slate-500">Current Rank</span><span className="font-black">#{section.rank}</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Previous Rank</span><span className="font-black">#{item.previousRank || section.rank}</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Movement</span>{renderRankMovement(section.rank_change || 0)}</div>
+                                <div className="flex justify-between"><span className="text-slate-500">Strongest Leader</span><span className="font-semibold text-right">{item.strongestLeader?.leader_name || 'Not available'}</span></div>
+                                <div className="flex justify-between"><span className="text-slate-500">Needs Coaching</span><span className="font-semibold text-right">{item.weakestLeader?.leader_name || 'Not available'}</span></div>
+                              </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Shield className="w-4 h-4 text-emerald-500" />
+                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Head Leader Performance</h5>
+                              </div>
+                              {headLeader ? (
+                                <div className="space-y-2 text-xs">
+                                  <p className="font-black text-slate-900 dark:text-white">{headLeader.leader_name}</p>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <MiniMetric label="Members Managed" value={headLeader.members_managed || 0} />
+                                    <MiniMetric label="Leaders" value={headLeader.leaders_supervised || 0} />
+                                    <MiniMetric label="Attendance" value={R(headLeader.overall_attendance)} suffix="%" tone="green" />
+                                    <MiniMetric label="Submission" value={R(headLeader.submission_rate)} suffix="%" tone="indigo" />
+                                  </div>
+                                  <p className="text-[10px] text-slate-500">Leadership effectiveness score: <span className="font-black">{headLeader.performance_score || 0}/100</span>. Team performance score: <span className="font-black">{item.avgLeaderScore}/100</span>.</p>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-slate-400">No active head leader record found for this section.</p>
+                              )}
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <UserX className="w-4 h-4 text-rose-500" />
+                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Absence Intelligence</h5>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <MiniMetric label="1 Week" value={item.absent1wCount} tone="indigo" />
+                                <MiniMetric label="2 Weeks" value={item.absent2wCount} tone="amber" />
+                                <MiniMetric label="3 Weeks" value={item.absent3wCount} tone="red" />
+                                <MiniMetric label="1 Month" value={item.absent1mCount} tone="red" />
+                                <MiniMetric label="3 Months" value={item.absent3mCount} tone="red" />
+                                <MiniMetric label="Follow-up Required" value={sectionStreaks.length} tone="red" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                            <div className="xl:col-span-2 rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
+                              <div className="p-3 border-b border-slate-100 dark:border-slate-700">
+                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Section Leader Performance Intelligence</h5>
+                                <p className="text-[10px] text-slate-400 mt-0.5">Leadership metrics are computed from assigned members, attendance history, submissions, and follow-up records.</p>
+                              </div>
+                              {renderSectionLeaderRows(sectionLeaders)}
+                            </div>
+
+                            <div className="space-y-4">
+                              <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Brain className="w-4 h-4 text-indigo-500" />
+                                  <h5 className="text-xs font-black text-slate-900 dark:text-white">AI Executive Insights</h5>
+                                </div>
+                                <div className="space-y-2 text-[10px] text-slate-600 dark:text-slate-300">
+                                  <p><span className="font-black text-slate-900 dark:text-white">{section.name}</span> is ranked #{section.rank} with a {item.sectionHealthScore}/100 health score and {R(section.attendance_rate)}% attendance.</p>
+                                  <p>{diff >= 0 ? 'Attendance is improving or stable compared with the previous period.' : 'Attendance declined compared with the previous period and requires leadership review.'}</p>
+                                  <p>{longAbsentees > 0 ? `${longAbsentees} members have been absent three weeks or longer; pastoral follow-up should be prioritized.` : 'No long-term absentee cluster is currently visible from attendance history.'}</p>
+                                  <p>{item.weakestLeader ? `${item.weakestLeader.leader_name} is the first coaching priority based on leadership score and attendance movement.` : 'Leader assignment data is incomplete for this section.'}</p>
+                                </div>
+                              </div>
+
+                              <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Target className="w-4 h-4 text-emerald-500" />
+                                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Recommended Actions</h5>
+                                </div>
+                                <div className="space-y-2">
+                                  {item.recommendations.map((rec, recIdx) => (
+                                    <div key={recIdx} className="flex gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-2">
+                                      <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-black shrink-0">{recIdx + 1}</span>
+                                      <p className="text-[10px] text-slate-600 dark:text-slate-300">{rec}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Heart className="w-4 h-4 text-rose-500" />
+                              <h5 className="text-xs font-black text-slate-900 dark:text-white">Member Intelligence & Follow-up Priorities</h5>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                              {sectionStreaks.slice(0, 8).map(member => (
+                                <div key={member.member_id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">{member.full_name}</p>
+                                    <Badge variant={member.current_streak >= 3 ? 'danger' : member.current_streak === 2 ? 'warning' : 'info'}>{member.current_streak}w</Badge>
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 mt-1">Last absent: {member.last_absent_date || 'Not recorded'}</p>
+                                  <p className="text-[10px] text-indigo-600 dark:text-indigo-300 mt-1">{member.current_streak >= 3 ? 'Assign visit or pastoral call immediately.' : 'Leader phone call and prayer request check.'}</p>
+                                </div>
+                              ))}
+                              {sectionStreaks.length === 0 && (
+                                <p className="text-xs text-slate-400">No active absentee streaks found for this section.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

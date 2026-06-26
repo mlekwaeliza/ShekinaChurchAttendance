@@ -3232,28 +3232,117 @@ const queries = {
   },
 
   // ── Enhanced Leader Rankings ───────────────────────────────────────────
-  getLeaderRankings: (days = 90) => all(`
-    SELECT
-      l.id as leader_id,
-      u.full_name as leader_name,
-      s.name as section_name,
-      COUNT(DISTINCT m.id) as assigned_members,
-      ROUND(CAST(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate,
-      (SELECT COUNT(DISTINCT a2.member_id) FROM attendance a2
-        JOIN members m2 ON a2.member_id = m2.id
-        WHERE m2.leader_id = l.id AND a2.date >= ${daysAgo()}) as unique_attendees,
-      (SELECT COUNT(DISTINCT sub.date) FROM submission_log sub
-        WHERE sub.leader_id = l.id AND sub.date >= ${daysAgo()}) as submission_count,
-      (SELECT COUNT(*) FROM members WHERE leader_id = l.id AND created_at >= ${daysAgo()}) as new_members
-    FROM leaders l
-    JOIN users u ON l.user_id = u.id
-    JOIN sections s ON l.section_id = s.id
-    LEFT JOIN members m ON m.leader_id = l.id AND m.is_active = 1
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
-    WHERE l.is_active = 1
-    GROUP BY l.id, u.full_name, s.name
-    ORDER BY attendance_rate DESC
-  `, [days, days, days, days]),
+  getLeaderRankings: (days = 90, startDate, endDate, prevStartDate, prevEndDate) => {
+    const now = formatLocalDate(new Date());
+    const start = startDate || formatLocalDate(addDays(new Date(), -days));
+    const end = endDate || now;
+    const prevStart = prevStartDate || formatLocalDate(addDays(new Date(), -(days * 2)));
+    const prevEnd = prevEndDate || formatLocalDate(addDays(new Date(), -days));
+    const wkAgo = formatLocalDate(addDays(new Date(), -7));
+    const moAgo = formatLocalDate(addDays(new Date(), -30));
+    const yrAgo = formatLocalDate(addDays(new Date(), -365));
+
+    return all(`
+      SELECT
+        l.id as leader_id,
+        u.full_name as leader_name,
+        s.id as section_id,
+        s.name as section_name,
+        COUNT(DISTINCT m.id) as assigned_members,
+        COUNT(DISTINCT CASE WHEN m.is_active = 1 THEN m.id END) as active_members,
+        COUNT(DISTINCT CASE WHEN m.is_active = 0 THEN m.id END) as inactive_members,
+        COUNT(DISTINCT CASE WHEN m.created_at >= ? AND m.created_at <= ? THEN m.id END) as new_members,
+        COUNT(DISTINCT CASE WHEN m.visitor_date IS NOT NULL THEN m.id END) as visitor_conversions,
+        SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as total_present,
+        SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as total_absent,
+        SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) as total_excused,
+        ROUND(CAST(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate,
+        (
+          SELECT ROUND(CAST(AVG(CASE WHEN ap.status = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1)
+          FROM attendance ap
+          JOIN members mp ON ap.member_id = mp.id
+          WHERE mp.leader_id = l.id AND mp.is_active = 1 AND ap.date >= ? AND ap.date <= ?
+        ) as prev_rate,
+        (
+          SELECT COUNT(DISTINCT a2.member_id)
+          FROM attendance a2
+          JOIN members m2 ON a2.member_id = m2.id
+          WHERE m2.leader_id = l.id AND m2.is_active = 1 AND a2.status = 'present' AND a2.date >= ? AND a2.date <= ?
+        ) as unique_attendees,
+        (
+          SELECT ROUND(CAST(COUNT(DISTINCT CASE WHEN ar.status = 'present' THEN ar.member_id END) AS NUMERIC) /
+            NULLIF(COUNT(DISTINCT mr.id), 0) * 100, 1)
+          FROM members mr
+          LEFT JOIN attendance ar ON ar.member_id = mr.id AND ar.date >= ? AND ar.date <= ?
+          WHERE mr.leader_id = l.id AND mr.is_active = 1
+        ) as retention_rate,
+        (
+          SELECT COUNT(DISTINCT sub.date)
+          FROM submission_log sub
+          WHERE sub.leader_id = l.id AND sub.date >= ? AND sub.date <= ?
+        ) as submissions_count,
+        (
+          SELECT ROUND(
+            CAST((SELECT COUNT(DISTINCT sub.date) FROM submission_log sub WHERE sub.leader_id = l.id AND sub.date >= ? AND sub.date <= ?) AS NUMERIC) /
+            NULLIF((SELECT COUNT(DISTINCT ad.date) FROM attendance ad WHERE ad.date >= ? AND ad.date <= ?), 0) * 100,
+            1
+          )
+        ) as leader_submission_rate,
+        (
+          SELECT COUNT(*)
+          FROM absent_followups af
+          WHERE af.leader_id = l.id AND af.absence_date >= ? AND af.absence_date <= ?
+        ) as follow_up_required,
+        (
+          SELECT COUNT(*)
+          FROM absent_followups af
+          WHERE af.leader_id = l.id AND af.contacted = 1 AND af.absence_date >= ? AND af.absence_date <= ?
+        ) as follow_up_completed,
+        (
+          SELECT ROUND(CAST(COUNT(CASE WHEN af.contacted = 1 THEN 1 END) AS NUMERIC) /
+            NULLIF(COUNT(*), 0) * 100, 1)
+          FROM absent_followups af
+          WHERE af.leader_id = l.id AND af.absence_date >= ? AND af.absence_date <= ?
+        ) as follow_up_completion,
+        (
+          SELECT COUNT(*)
+          FROM absent_followups af
+          WHERE af.leader_id = l.id AND af.contacted = 1 AND LOWER(COALESCE(af.contact_method, '')) LIKE '%visit%'
+            AND af.absence_date >= ? AND af.absence_date <= ?
+        ) as visits_completed,
+        (
+          SELECT COUNT(*)
+          FROM absent_followups af
+          WHERE af.leader_id = l.id AND LOWER(COALESCE(af.notes, '')) LIKE '%counsel%'
+            AND af.absence_date >= ? AND af.absence_date <= ?
+        ) as counseling_cases,
+        (SELECT COUNT(*) FROM members mw WHERE mw.leader_id = l.id AND mw.created_at >= ?) as weekly_growth,
+        (SELECT COUNT(*) FROM members mm WHERE mm.leader_id = l.id AND mm.created_at >= ?) as monthly_growth,
+        (SELECT COUNT(*) FROM members my WHERE my.leader_id = l.id AND my.created_at >= ?) as yearly_growth
+      FROM leaders l
+      JOIN users u ON l.user_id = u.id
+      JOIN sections s ON l.section_id = s.id
+      LEFT JOIN members m ON m.leader_id = l.id
+      LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ? AND a.date <= ?
+      WHERE l.is_active = 1 AND COALESCE(l.is_head, 0) = 0
+      GROUP BY l.id, u.full_name, s.id, s.name
+      ORDER BY attendance_rate DESC
+    `, [
+      start, end,
+      prevStart, prevEnd,
+      start, end,
+      start, end,
+      start, end,
+      start, end, start, end,
+      start, end,
+      start, end,
+      start, end,
+      start, end,
+      start, end,
+      wkAgo, moAgo, yrAgo,
+      start, end
+    ]);
+  },
 
   // ── Department Analytics ───────────────────────────────────────────────
   getDepartmentAnalytics: (days = 90, startDate, endDate) => {

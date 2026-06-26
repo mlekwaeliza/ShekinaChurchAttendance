@@ -308,7 +308,14 @@ export const analyticsAPI = {
     if (endDate) params.endDate = endDate;
     return api.get('/analytics/head-leader-analytics', { params });
   },
-  getLeaderRankings: (days) => api.get('/analytics/leader-rankings', { params: { days } }),
+  getLeaderRankings: (days, startDate, endDate, prevStartDate, prevEndDate) => {
+    const params = { days };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    if (prevStartDate) params.prevStartDate = prevStartDate;
+    if (prevEndDate) params.prevEndDate = prevEndDate;
+    return api.get('/analytics/leader-rankings', { params });
+  },
   getAbsentStreaks: (limit) => api.get('/analytics/absent-streaks', { params: { limit } }),
   getDepartments: (days, startDate, endDate) => {
     const params = { days };
