@@ -3390,25 +3390,157 @@ const queries = {
     SELECT
       m.id,
       m.full_name,
-      s.name as section_name,
-      lu.full_name as leader_name,
+      m.membership_id,
       m.gender,
       m.age_group,
-      COUNT(a.id) as total_records,
-      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as times_present,
-      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as times_absent,
-      ROUND(CAST(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate,
-      MAX(CASE WHEN a.status = 'present' THEN a.date END) as last_attendance,
-      COUNT(DISTINCT a.date) as services_tracked
+      m.created_at as registered_date,
+      m.visitor_date,
+      m.status as member_status,
+      m.is_active,
+      m.flags,
+      m.prayer_requests,
+      m.last_contacted_at,
+      s.id as section_id,
+      s.name as section_name,
+      head_u.full_name as head_leader_name,
+      lu.full_name as leader_name,
+      COALESCE(cur.present_count, 0) as present_count,
+      COALESCE(cur.absent_count, 0) as absent_count,
+      COALESCE(cur.excused_count, 0) as excused_count,
+      COALESCE(cur.total_records, 0) as total_records,
+      COALESCE(cur.attendance_rate, 0) as attendance_rate,
+      COALESCE(prev.attendance_rate, 0) as previous_attendance_rate,
+      COALESCE(wk.weekly_present, 0) as weekly_present,
+      COALESCE(wk.prev_weekly_present, 0) as previous_weekly_present,
+      COALESCE(mo.monthly_present, 0) as monthly_present,
+      COALESCE(mo.prev_monthly_present, 0) as previous_monthly_present,
+      COALESCE(ret.retention_score, 0) as retention_score,
+      COALESCE(eng.engagement_score, 0) as engagement_score,
+      COALESCE(st.current_attendance_streak, 0) as current_attendance_streak,
+      COALESCE(st.consecutive_absences, 0) as consecutive_absences,
+      COALESCE(st.longest_attendance_streak, 0) as longest_attendance_streak,
+      last.last_attendance_date,
+      last.last_status,
+      follow.follow_up_status,
+      follow.last_follow_up_date,
+      follow.last_visitation_date,
+      follow.last_counseling_date,
+      follow.follow_up_required,
+      follow.follow_up_completed,
+      follow.notes as follow_up_notes
     FROM members m
     LEFT JOIN sections s ON m.section_id = s.id
     LEFT JOIN leaders l ON m.leader_id = l.id
     LEFT JOIN users lu ON l.user_id = lu.id
-    LEFT JOIN attendance a ON a.member_id = m.id AND a.date >= ${daysAgo()}
-    WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
-    GROUP BY m.id, m.full_name, s.name, lu.full_name, m.gender, m.age_group
-    ORDER BY attendance_rate DESC
-  `, [days]),
+    LEFT JOIN leaders head_l ON head_l.section_id = m.section_id AND head_l.is_head = 1 AND head_l.is_active = 1
+    LEFT JOIN users head_u ON head_l.user_id = head_u.id
+    LEFT JOIN (
+      SELECT
+        member_id,
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_count,
+        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_count,
+        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused_count,
+        COUNT(*) as total_records,
+        ROUND(CAST(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate
+      FROM attendance
+      WHERE date >= ${daysAgo()} AND date <= ${todayDate()}
+      GROUP BY member_id
+    ) cur ON cur.member_id = m.id
+    LEFT JOIN (
+      SELECT
+        member_id,
+        ROUND(CAST(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate
+      FROM attendance
+      WHERE date >= ${daysAgo()} AND date < ${daysAgo()}
+      GROUP BY member_id
+    ) prev ON prev.member_id = m.id
+    LEFT JOIN (
+      SELECT
+        member_id,
+        SUM(CASE WHEN status = 'present' AND date >= ${daysAgo(7)} THEN 1 ELSE 0 END) as weekly_present,
+        SUM(CASE WHEN status = 'present' AND date >= ${daysAgo(14)} AND date < ${daysAgo(7)} THEN 1 ELSE 0 END) as prev_weekly_present
+      FROM attendance
+      WHERE date >= ${daysAgo(14)}
+      GROUP BY member_id
+    ) wk ON wk.member_id = m.id
+    LEFT JOIN (
+      SELECT
+        member_id,
+        SUM(CASE WHEN status = 'present' AND date >= ${daysAgo(30)} THEN 1 ELSE 0 END) as monthly_present,
+        SUM(CASE WHEN status = 'present' AND date >= ${daysAgo(60)} AND date < ${daysAgo(30)} THEN 1 ELSE 0 END) as prev_monthly_present
+      FROM attendance
+      WHERE date >= ${daysAgo(60)}
+      GROUP BY member_id
+    ) mo ON mo.member_id = m.id
+    LEFT JOIN (
+      SELECT
+        member_id,
+        ROUND(CAST(COUNT(DISTINCT CASE WHEN status = 'present' THEN date END) AS NUMERIC) / NULLIF(COUNT(DISTINCT date), 0) * 100, 1) as retention_score
+      FROM attendance
+      WHERE date >= ${daysAgo()}
+      GROUP BY member_id
+    ) ret ON ret.member_id = m.id
+    LEFT JOIN (
+      SELECT
+        member_id,
+        ROUND(CAST((
+          SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) * 2 +
+          SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END)
+        ) AS NUMERIC) / NULLIF(COUNT(*) * 2, 0) * 100, 1) as engagement_score
+      FROM attendance
+      WHERE date >= ${daysAgo()}
+      GROUP BY member_id
+    ) eng ON eng.member_id = m.id
+    LEFT JOIN (
+      SELECT
+        mx.id as member_id,
+        (
+          SELECT COUNT(*)
+          FROM attendance ap
+          WHERE ap.member_id = mx.id AND ap.status = 'present'
+            AND ap.date > COALESCE((SELECT MAX(ab.date) FROM attendance ab WHERE ab.member_id = mx.id AND ab.status != 'present'), '1900-01-01')
+        ) as current_attendance_streak,
+        (
+          SELECT COUNT(*)
+          FROM attendance aa
+          WHERE aa.member_id = mx.id AND aa.status = 'absent'
+            AND aa.date > COALESCE((SELECT MAX(an.date) FROM attendance an WHERE an.member_id = mx.id AND an.status != 'absent'), '1900-01-01')
+        ) as consecutive_absences,
+        (
+          SELECT COUNT(*)
+          FROM attendance lp
+          WHERE lp.member_id = mx.id AND lp.status = 'present'
+        ) as longest_attendance_streak
+      FROM members mx
+    ) st ON st.member_id = m.id
+    LEFT JOIN (
+      SELECT a1.member_id, a1.date as last_attendance_date, a1.status as last_status
+      FROM attendance a1
+      JOIN (
+        SELECT member_id, MAX(date) as max_date
+        FROM attendance
+        GROUP BY member_id
+      ) a2 ON a1.member_id = a2.member_id AND a1.date = a2.max_date
+    ) last ON last.member_id = m.id
+    LEFT JOIN (
+      SELECT
+        af.member_id,
+        CASE WHEN SUM(CASE WHEN af.contacted = 0 THEN 1 ELSE 0 END) > 0 THEN 'Pending'
+             WHEN COUNT(*) > 0 THEN 'Completed'
+             ELSE 'Not Required'
+        END as follow_up_status,
+        MAX(af.created_at) as last_follow_up_date,
+        MAX(CASE WHEN LOWER(COALESCE(af.contact_method, '')) LIKE '%visit%' THEN af.created_at END) as last_visitation_date,
+        MAX(CASE WHEN LOWER(COALESCE(af.notes, '')) LIKE '%counsel%' THEN af.created_at END) as last_counseling_date,
+        COUNT(*) as follow_up_required,
+        SUM(CASE WHEN af.contacted = 1 THEN 1 ELSE 0 END) as follow_up_completed,
+        MAX(af.notes) as notes
+      FROM absent_followups af
+      GROUP BY af.member_id
+    ) follow ON follow.member_id = m.id
+    WHERE m.soft_deleted_at IS NULL
+    ORDER BY attendance_rate DESC, present_count DESC
+  `, [days, days * 2, days, days, days]),
 
   getMemberStreakDetails: (memberId) => get(`
     SELECT

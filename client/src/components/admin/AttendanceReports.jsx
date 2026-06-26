@@ -208,6 +208,9 @@ const AttendanceReports = ({
   const [secSortOrder, setSecSortOrder] = useState('desc');
   const [leadSortField, setLeadSortField] = useState('performance_score');
   const [leadSortOrder, setLeadSortOrder] = useState('desc');
+  const [memberSearch, setMemberSearch] = useState('');
+  const [memberCategory, setMemberCategory] = useState('all');
+  const [memberRiskFilter, setMemberRiskFilter] = useState('all');
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, [selectedServiceId]);
@@ -554,6 +557,7 @@ const AttendanceReports = ({
         analyticsAPI.getChurchGrowthIndex(),
         analyticsAPI.getHeadLeaderAnalytics(90),
         analyticsAPI.getLeaderRankings(90),
+        analyticsAPI.getMemberIntelligence(180),
       ]);
 
       const ok = i => results[i].status === 'fulfilled' ? results[i].value?.data : null;
@@ -567,6 +571,7 @@ const AttendanceReports = ({
         risk: ok(14), aiInsights: ok(15) || [], growthIndex: ok(16),
         headLeaders: ok(17) || [],
         leaderRankings: ok(18) || [],
+        memberIntelligence: ok(19) || [],
       });
     } catch (e) { console.error('Failed to load analytics:', e); }
     finally { setAnalyticsLoading(false); }
@@ -2997,78 +3002,357 @@ const AttendanceReports = ({
   };
 
   const renderMembersTab = () => {
-    const streaks = analytics.streaks || [];
-    const membersWithStreaks = streaks.filter(s => s.consecutive_present >= 3);
-    const perfectAttendance = streaks.filter(s => s.attendance_rate >= 100);
-    const inactive = streaks.filter(s => s.consecutive_absences >= 4);
-    const absent1w = streaks.filter(s => s.consecutive_absences === 1);
-    const absent2w = streaks.filter(s => s.consecutive_absences === 2);
-    const absent3w = streaks.filter(s => s.consecutive_absences === 3);
-    const absent1m = streaks.filter(s => s.consecutive_absences >= 4 && s.consecutive_absences < 12);
-    const absent3m = streaks.filter(s => s.consecutive_absences >= 12);
+    const rawMembers = analytics.memberIntelligence || [];
+    const daysBetween = (dateStr) => {
+      if (!dateStr) return null;
+      const d = new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return null;
+      return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+    };
+    const durationLabel = (dateStr) => {
+      const days = daysBetween(dateStr);
+      if (days == null) return 'Unknown';
+      if (days < 30) return `${days} days`;
+      if (days < 365) return `${Math.floor(days / 30)} months`;
+      return `${Math.floor(days / 365)} years`;
+    };
+    const riskInfo = (member) => {
+      const absences = Number(member.consecutive_absences || 0);
+      const rate = Number(member.attendance_rate || 0);
+      const daysSince = Number(member.days_since_last_attendance || 9999);
+      if (absences >= 12 || daysSince >= 180 || (rate < 20 && member.total_records > 0)) return { label: 'Critical', variant: 'danger', score: 4 };
+      if (absences >= 4 || daysSince >= 60 || rate < 40) return { label: 'High', variant: 'danger', score: 3 };
+      if (absences >= 2 || daysSince >= 21 || rate < 60) return { label: 'Medium', variant: 'warning', score: 2 };
+      return { label: 'Low', variant: 'success', score: 1 };
+    };
+    const members = rawMembers.map((m, index) => {
+      const attendanceRate = Number(m.attendance_rate || 0);
+      const previousRate = Number(m.previous_attendance_rate || 0);
+      const presentCount = Number(m.present_count || 0);
+      const absentCount = Number(m.absent_count || 0);
+      const excusedCount = Number(m.excused_count || 0);
+      const totalRecords = Number(m.total_records || 0);
+      const weeklyGrowthValue = Number(m.weekly_present || 0) - Number(m.previous_weekly_present || 0);
+      const monthlyGrowthValue = Number(m.monthly_present || 0) - Number(m.previous_monthly_present || 0);
+      const daysSince = daysBetween(m.last_attendance_date);
+      const retentionScore = Number(m.retention_score || attendanceRate || 0);
+      const engagementScore = Number(m.engagement_score || Math.round(attendanceRate * 0.8 + Math.min(20, presentCount)) || 0);
+      const healthScore = Math.max(0, Math.min(100, Math.round(
+        attendanceRate * 0.35 +
+        retentionScore * 0.25 +
+        engagementScore * 0.25 +
+        Math.max(0, 15 - Number(m.consecutive_absences || 0) * 3)
+      )));
+      const enriched = {
+        ...m,
+        current_rank: index + 1,
+        previous_rank: index + 1,
+        rank_movement: 0,
+        membership_duration: durationLabel(m.registered_date),
+        attendance_rate: attendanceRate,
+        present_count: presentCount,
+        absent_count: absentCount,
+        excused_count: excusedCount,
+        previous_attendance_rate: previousRate,
+        attendance_difference: attendanceRate - previousRate,
+        weekly_growth: weeklyGrowthValue,
+        monthly_growth: monthlyGrowthValue,
+        longest_attendance_streak: Number(m.longest_attendance_streak || m.current_attendance_streak || 0),
+        current_attendance_streak: Number(m.current_attendance_streak || 0),
+        consecutive_absences: Number(m.consecutive_absences || 0),
+        days_since_last_attendance: daysSince == null ? 9999 : daysSince,
+        active_status: Number(m.is_active) === 0 ? 'Inactive' : 'Active',
+        follow_up_status: m.follow_up_status || (Number(m.consecutive_absences || 0) > 0 ? 'Pending' : 'Not Required'),
+        prayer_request_status: m.prayer_requests && m.prayer_requests !== '[]' ? 'Has Prayer Request' : 'None',
+        notes: m.follow_up_notes || '',
+        retention_score: retentionScore,
+        engagement_score: engagementScore,
+        overall_member_health_score: healthScore,
+        visitor_conversion: Boolean(m.visitor_date),
+        no_attendance_history: totalRecords === 0,
+      };
+      const risk = riskInfo(enriched);
+      const aiObservation = risk.label === 'Critical'
+        ? 'Critical pastoral intervention required; prioritize visitation, counseling, and leader review.'
+        : risk.label === 'High'
+          ? 'High-risk attendance pattern; assign follow-up and confirm next-service contact.'
+          : enriched.attendance_difference > 10
+            ? 'Attendance is improving; encourage the member and reinforce the positive rhythm.'
+            : enriched.attendance_rate >= 90
+              ? 'Strong attendance health; consider recognition or leadership encouragement.'
+              : 'Stable member profile; continue routine pastoral care and monitoring.';
+      return { ...enriched, risk_level: risk.label, risk_variant: risk.variant, risk_score: risk.score, ai_observations: aiObservation };
+    }).sort((a, b) => b.overall_member_health_score - a.overall_member_health_score);
+
+    members.forEach((member, index) => {
+      member.current_rank = index + 1;
+      member.previous_rank = index + 1 + (member.attendance_difference < -5 ? -1 : member.attendance_difference > 5 ? 1 : 0);
+      member.rank_movement = member.previous_rank - member.current_rank;
+    });
+
+    const categoryDefinitions = [
+      { id: 'all', label: 'All Members', test: () => true },
+      { id: 'most-active', label: 'Most Active Members', test: m => m.attendance_rate >= 80 },
+      { id: 'perfect', label: 'Perfect Attendance Members', test: m => m.attendance_rate >= 100 && m.total_records > 0 },
+      { id: 'consistent', label: 'Consistent Members', test: m => m.current_attendance_streak >= 3 || m.engagement_score >= 75 },
+      { id: 'improving', label: 'Improving Members', test: m => m.attendance_difference >= 10 },
+      { id: 'declining', label: 'Declining Members', test: m => m.attendance_difference <= -10 },
+      { id: 'new', label: 'New Members', test: m => daysBetween(m.registered_date) != null && daysBetween(m.registered_date) <= 30 },
+      { id: 'returning', label: 'Returning Members', test: m => m.previous_attendance_rate < 30 && m.attendance_rate >= 50 },
+      { id: 'visitors', label: 'Visitors', test: m => m.visitor_conversion },
+      { id: 'recently-baptized', label: 'Recently Baptized Members', test: m => String(m.flags || '').toLowerCase().includes('bapt') },
+      { id: 'youth', label: 'Youth Members', test: m => String(m.age_group || '').toLowerCase().includes('youth') },
+      { id: 'adult', label: 'Adult Members', test: m => String(m.age_group || '').toLowerCase().includes('adult') },
+      { id: 'senior', label: 'Senior Members', test: m => String(m.age_group || '').toLowerCase().includes('senior') },
+      { id: 'men', label: 'Men', test: m => String(m.gender || '').toLowerCase().startsWith('m') },
+      { id: 'women', label: 'Women', test: m => String(m.gender || '').toLowerCase().startsWith('f') || String(m.gender || '').toLowerCase().startsWith('w') },
+      { id: 'missing-1', label: 'Members Missing One Service', test: m => m.consecutive_absences === 1 },
+      { id: 'missing-2', label: 'Members Missing Two Consecutive Services', test: m => m.consecutive_absences === 2 },
+      { id: 'missing-3', label: 'Members Missing Three Consecutive Services', test: m => m.consecutive_absences === 3 },
+      { id: 'missing-1m', label: 'Members Missing One Month', test: m => m.consecutive_absences >= 4 && m.consecutive_absences < 12 },
+      { id: 'missing-3m', label: 'Members Missing Three Months', test: m => m.consecutive_absences >= 12 },
+      { id: 'visitation', label: 'Members Requiring Visitation', test: m => m.consecutive_absences >= 3 || m.days_since_last_attendance >= 30 },
+      { id: 'counseling', label: 'Members Requiring Counseling', test: m => m.consecutive_absences >= 4 || String(m.notes || '').toLowerCase().includes('counsel') },
+      { id: 'prayer', label: 'Members Requiring Prayer Support', test: m => m.prayer_request_status !== 'None' || m.risk_level !== 'Low' },
+      { id: 'leaving-risk', label: 'Members at Risk of Leaving Church', test: m => ['High', 'Critical'].includes(m.risk_level) },
+      { id: 'no-history', label: 'Members with No Attendance History', test: m => m.no_attendance_history },
+    ];
+    const categories = categoryDefinitions.map(cat => ({ ...cat, members: members.filter(cat.test) }));
+    const activeCategory = categories.find(c => c.id === memberCategory) || categories[0];
+    const byRisk = memberRiskFilter === 'all' ? activeCategory.members : activeCategory.members.filter(m => m.risk_level === memberRiskFilter);
+    const filteredMembers = byRisk.filter(m => {
+      if (!memberSearch) return true;
+      const haystack = [m.full_name, m.gender, m.age_group, m.section_name, m.head_leader_name, m.leader_name, m.risk_level, m.follow_up_status].join(' ').toLowerCase();
+      return haystack.includes(memberSearch.toLowerCase());
+    });
+
+    const avg = list => list.length ? Math.round(list.reduce((sum, m) => sum + (Number(m.attendance_rate) || 0), 0) / list.length) : 0;
+    const activeMembers = members.filter(m => m.active_status === 'Active');
+    const newMembers = categories.find(c => c.id === 'new')?.members || [];
+    const returningMembers = categories.find(c => c.id === 'returning')?.members || [];
+    const visitorConversions = categories.find(c => c.id === 'visitors')?.members || [];
+    const perfectMembers = categories.find(c => c.id === 'perfect')?.members || [];
+    const consistentMembers = categories.find(c => c.id === 'consistent')?.members || [];
+    const atRiskMembers = categories.find(c => c.id === 'leaving-risk')?.members || [];
+    const inactiveMembers = members.filter(m => m.active_status === 'Inactive' || m.days_since_last_attendance >= 90 || m.attendance_rate < 20);
+    const immediateFollowUp = members.filter(m => m.risk_level === 'Critical' || m.consecutive_absences >= 3);
+    const visitationMembers = categories.find(c => c.id === 'visitation')?.members || [];
+    const counselingMembers = categories.find(c => c.id === 'counseling')?.members || [];
+    const longestStreak = members.reduce((max, m) => Math.max(max, m.longest_attendance_streak || 0), 0);
+    const weeklyRetention = activeMembers.length ? Math.round((activeMembers.filter(m => m.weekly_present > 0).length / activeMembers.length) * 100) : 0;
+    const monthlyRetention = activeMembers.length ? Math.round((activeMembers.filter(m => m.monthly_present > 0).length / activeMembers.length) * 100) : 0;
+    const overallHealth = members.length ? Math.round(members.reduce((sum, m) => sum + m.overall_member_health_score, 0) / members.length) : 0;
+    const retainedMembers = members.filter(m => m.retention_score >= 60);
+    const lostMembers = members.filter(m => m.risk_level === 'Critical');
+    const recoveredMembers = returningMembers;
+    const recoveryPct = lostMembers.length ? Math.round((recoveredMembers.length / lostMembers.length) * 100) : 0;
+    const topRiskSection = sectionRankings.length
+      ? sectionRankings.map(s => ({ name: s.name, count: atRiskMembers.filter(m => m.section_name === s.name).length })).sort((a, b) => b.count - a.count)[0]
+      : null;
+    const topRetentionSection = sectionRankings.length
+      ? sectionRankings.map(s => ({ name: s.name, rate: avg(members.filter(m => m.section_name === s.name)) })).sort((a, b) => b.rate - a.rate)[0]
+      : null;
+
+    const kpis = [
+      { label: 'Total Active Members', value: activeMembers.length, category: 'all', icon: Users },
+      { label: 'New Members This Period', value: newMembers.length, category: 'new', icon: UserCheck },
+      { label: 'Returning Members', value: returningMembers.length, category: 'returning', icon: RefreshCw },
+      { label: 'Visitor Conversions', value: visitorConversions.length, category: 'visitors', icon: Star },
+      { label: 'Perfect Attendance', value: perfectMembers.length, category: 'perfect', icon: Award },
+      { label: 'Most Consistent Members', value: consistentMembers.length, category: 'consistent', icon: CheckCircle2 },
+      { label: 'Members at Risk', value: atRiskMembers.length, category: 'leaving-risk', icon: AlertTriangle },
+      { label: 'Inactive Members', value: inactiveMembers.length, category: 'leaving-risk', icon: UserX },
+      { label: 'Immediate Follow-up', value: immediateFollowUp.length, category: 'missing-3', icon: Target },
+      { label: 'Require Visitation', value: visitationMembers.length, category: 'visitation', icon: Heart },
+      { label: 'Require Counseling', value: counselingMembers.length, category: 'counseling', icon: Brain },
+      { label: 'Longest Streak', value: longestStreak, category: 'most-active', icon: Flame },
+      { label: 'Average Attendance Rate', value: `${avg(members)}%`, category: 'all', icon: Activity },
+      { label: 'Weekly Retention Rate', value: `${weeklyRetention}%`, category: 'all', icon: Calendar },
+      { label: 'Monthly Retention Rate', value: `${monthlyRetention}%`, category: 'all', icon: Shield },
+      { label: 'Member Health Score', value: `${overallHealth}/100`, category: 'all', icon: Heart },
+    ];
+
+    const insights = [
+      members.length ? `Average member attendance is ${avg(members)}% across ${members.length} tracked member records.` : 'No member attendance history is available for this period.',
+      returningMembers.length ? `${returningMembers.length} members have returned after weak previous attendance.` : 'No returning-member recovery pattern detected yet.',
+      perfectMembers.length ? `${perfectMembers.length} members maintained perfect attendance in the selected period.` : 'No perfect-attendance members detected for this period.',
+      topRiskSection?.count > 0 ? `${topRiskSection.name} has the highest number of at-risk members (${topRiskSection.count}).` : 'No section currently dominates at-risk member pressure.',
+      topRetentionSection ? `${topRetentionSection.name} has the strongest member retention profile at ${topRetentionSection.rate}%.` : 'Section retention cannot be ranked until member data is available.',
+      immediateFollowUp.length ? `${immediateFollowUp.length} members require immediate pastoral follow-up or visitation.` : 'No immediate critical follow-up queue detected.',
+      categories.find(c => c.id === 'women')?.members.length && categories.find(c => c.id === 'youth')?.members.length
+        ? `Women's attendance averages ${avg(categories.find(c => c.id === 'women').members)}% while youth attendance averages ${avg(categories.find(c => c.id === 'youth').members)}%.`
+        : 'Gender and age-group attendance comparisons need more member profile data.',
+    ];
+    const actions = [
+      { title: 'Visit Members', category: 'visitation', members: visitationMembers, priority: visitationMembers.length ? 'high' : 'low' },
+      { title: 'Make Follow-up Calls', category: 'missing-2', members: members.filter(m => m.consecutive_absences >= 2), priority: 'high' },
+      { title: 'Assign Prayer Support', category: 'prayer', members: categories.find(c => c.id === 'prayer')?.members || [], priority: 'medium' },
+      { title: 'Schedule Counseling', category: 'counseling', members: counselingMembers, priority: 'high' },
+      { title: 'Recognize Perfect Attendance Members', category: 'perfect', members: perfectMembers, priority: 'low' },
+      { title: 'Welcome New Members', category: 'new', members: newMembers, priority: 'medium' },
+      { title: 'Encourage Returning Members', category: 'returning', members: returningMembers, priority: 'medium' },
+      { title: 'Review At-Risk Members with Section Leaders', category: 'leaving-risk', members: atRiskMembers, priority: 'high' },
+      { title: 'Meet with Sections Showing Declining Engagement', category: 'declining', members: categories.find(c => c.id === 'declining')?.members || [], priority: 'medium' },
+    ];
+    const openCategory = (id) => setMemberCategory(id);
+    const renderPriorityBadge = p => <Badge variant={p === 'high' ? 'danger' : p === 'medium' ? 'warning' : 'success'}>{p}</Badge>;
+
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          <MetricCard label="Most Active" value={membersWithStreaks.length} icon={Flame} color="emerald" showDiff={false} />
-          <MetricCard label="Perfect Attendance" value={perfectAttendance.length} icon={Star} color="amber" showDiff={false} />
-          <MetricCard label="Inactive (4+)" value={inactive.length} icon={UserX} color="rose" showDiff={false} />
-          <MetricCard label="Absent 1 Week" value={absent1w.length} icon={Clock} color="sky" showDiff={false} />
-          <MetricCard label="Absent 2 Weeks" value={absent2w.length} icon={Clock} color="amber" showDiff={false} />
-          <MetricCard label="Absent 3+ Weeks" value={absent3w.length} icon={AlertTriangle} color="orange" showDiff={false} />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <MetricCard label="Absent 1 Month" value={absent1m.length} icon={AlertTriangle} color="orange" showDiff={false} />
-          <MetricCard label="Absent 3 Months" value={absent3m.length} icon={AlertTriangle} color="rose" showDiff={false} />
-          <MetricCard label="Need Visitation" value={inactive.length} icon={Heart} color="rose" showDiff={false} />
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center"><UserCheck className="w-6 h-6 text-indigo-600" /></div>
+            <div>
+              <h3 className="text-lg font-black text-slate-950 dark:text-white">Member Intelligence & Pastoral Care Center</h3>
+              <p className="text-xs text-slate-500">Executive member health, retention, engagement, attendance behavior, and pastoral care priorities.</p>
+            </div>
+          </div>
         </div>
 
-        {analytics.demographics && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { label: 'Male', value: analytics.demographics.gender?.find(g => g.category_value === 'Male')?.member_count || 0, color: 'sky' },
-              { label: 'Female', value: analytics.demographics.gender?.find(g => g.category_value === 'Female')?.member_count || 0, color: 'pink' },
-              { label: 'Youth', value: analytics.demographics.age_group?.find(a => a.category_value === 'Youth')?.member_count || 0, color: 'violet' },
-              { label: 'Adults', value: analytics.demographics.age_group?.find(a => a.category_value === 'Adults')?.member_count || 0, color: 'emerald' },
-            ].map(d => <MetricCard key={d.label} label={d.label} value={d.value} icon={Users} color={d.color} showDiff={false} />)}
-          </div>
-        )}
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+          {kpis.map(({ label, value, category, icon: Icon }) => (
+            <button key={label} type="button" onClick={() => openCategory(category)}
+              className={`rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${memberCategory === category ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/20' : 'border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">{label}</span>
+                <Icon className="w-4 h-4 text-indigo-500" />
+              </div>
+              <p className="text-xl font-black text-slate-950 dark:text-white mt-2">{value}</p>
+            </button>
+          ))}
+        </div>
 
-        {streaks.length > 0 && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Member Attendance Streaks</h3>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Attendance Behavior Analysis</h3>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Average Attendance</p><p className="text-lg font-black">{avg(members)}%</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Improving</p><p className="text-lg font-black text-emerald-600">{categories.find(c => c.id === 'improving')?.members.length || 0}</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Declining</p><p className="text-lg font-black text-rose-600">{categories.find(c => c.id === 'declining')?.members.length || 0}</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Consistency</p><p className="text-lg font-black">{consistentMembers.length}</p></div>
             </div>
-            <IntelligenceTable
-              columns={[
-                { key: 'full_name', label: 'Member', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
-                { key: 'section_name', label: 'Section' },
-                { key: 'leader_name', label: 'Leader' },
-                { key: 'consecutive_present', label: 'Streak', align: 'right', render: v => <span className="font-bold text-emerald-600">{v}</span> },
-                { key: 'consecutive_absences', label: 'Absences', align: 'right', render: v => <span className={`font-bold ${v >= 3 ? 'text-rose-600' : 'text-slate-500'}`}>{v}</span> },
-                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
-              ]}
-              data={streaks}
-            />
           </div>
-        )}
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Member Retention Intelligence</h3>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Retained</p><p className="text-lg font-black text-emerald-600">{retainedMembers.length}</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Lost/Critical</p><p className="text-lg font-black text-rose-600">{lostMembers.length}</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Recovered</p><p className="text-lg font-black text-indigo-600">{recoveredMembers.length}</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Recovery %</p><p className="text-lg font-black">{recoveryPct}%</p></div>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Member Movement Analysis</h3>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">New Registrations</p><p className="text-lg font-black">{newMembers.length}</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Conversions</p><p className="text-lg font-black">{visitorConversions.length}</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Returning</p><p className="text-lg font-black">{returningMembers.length}</p></div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3"><p className="text-slate-400">Removed/Inactive</p><p className="text-lg font-black">{inactiveMembers.length}</p></div>
+            </div>
+          </div>
+        </div>
 
-        {analytics.engagementScores?.length > 0 && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Top Engagement Scores</h3>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Pastoral Care Intelligence</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {['missing-1', 'missing-2', 'missing-3', 'missing-1m', 'missing-3m', 'visitation', 'counseling', 'prayer'].map(id => {
+                const cat = categories.find(c => c.id === id);
+                return <button key={id} onClick={() => openCategory(id)} className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 p-3 text-left"><p className="text-[9px] font-bold text-slate-400 uppercase">{cat?.label}</p><p className="text-lg font-black mt-1">{cat?.members.length || 0}</p></button>;
+              })}
             </div>
-            <IntelligenceTable
-              columns={[
-                { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i < 3 ? 'bg-amber-100 text-amber-700' : 'text-slate-400'}`}>{i + 1}</span> },
-                { key: 'full_name', label: 'Member', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
-                { key: 'section_name', label: 'Section' },
-                { key: 'engagement_score', label: 'Score', align: 'right', render: v => <span className="font-bold text-indigo-600">{v}</span> },
-                { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
-              ]}
-              data={analytics.engagementScores}
-            />
           </div>
-        )}
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Executive Insights</h3>
+            <div className="space-y-2">
+              {insights.map((text, i) => <div key={i} className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3 text-xs text-slate-600 dark:text-slate-300">{text}</div>)}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Action Center</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {actions.map(action => (
+              <button key={action.title} type="button" onClick={() => openCategory(action.category)} className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 p-3 text-left hover:border-indigo-300 transition-colors">
+                <div className="flex items-center justify-between gap-2">{renderPriorityBadge(action.priority)}<span className="text-xs font-black text-slate-900 dark:text-white">{action.members.length} members</span></div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white mt-2">{action.title}</p>
+                <p className="text-[10px] text-slate-500 mt-1">Open drill-down list for affected members.</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-700 space-y-3">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Member Intelligence Drill-down</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">{activeCategory.label}: {filteredMembers.length} member(s)</p>
+              </div>
+              <div className="flex flex-col md:flex-row gap-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                  <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} placeholder="Search member, leader, section..." className="pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-w-[260px]" />
+                </div>
+                <select value={memberCategory} onChange={e => setMemberCategory(e.target.value)} className="px-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.label} ({c.members.length})</option>)}
+                </select>
+                <select value={memberRiskFilter} onChange={e => setMemberRiskFilter(e.target.value)} className="px-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                  {['all', 'Low', 'Medium', 'High', 'Critical'].map(r => <option key={r} value={r}>{r === 'all' ? 'All Risk Levels' : r}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {categories.map(cat => (
+                <button key={cat.id} onClick={() => setMemberCategory(cat.id)} className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${memberCategory === cat.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500'}`}>
+                  {cat.label} · {cat.members.length}
+                </button>
+              ))}
+            </div>
+          </div>
+          <IntelligenceTable
+            columns={[
+              { key: 'full_name', label: 'Member Name', render: v => <span className="font-bold text-slate-900 dark:text-white">{v}</span> },
+              { key: 'gender', label: 'Gender' },
+              { key: 'age_group', label: 'Age Group' },
+              { key: 'section_name', label: 'Section' },
+              { key: 'head_leader_name', label: 'Head Leader' },
+              { key: 'leader_name', label: 'Section Leader' },
+              { key: 'registered_date', label: 'Registered Date' },
+              { key: 'membership_duration', label: 'Membership Duration' },
+              { key: 'attendance_rate', label: 'Attendance Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 55 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
+              { key: 'present_count', label: 'Present Count', align: 'right' },
+              { key: 'absent_count', label: 'Absent Count', align: 'right' },
+              { key: 'excused_count', label: 'Excused Count', align: 'right' },
+              { key: 'previous_attendance_rate', label: 'Previous Attendance %', align: 'right', render: v => `${R(v)}%` },
+              { key: 'attendance_difference', label: 'Attendance Difference', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{v >= 0 ? '+' : ''}{R(v)}%</span> },
+              { key: 'weekly_growth', label: 'Weekly Growth', align: 'right' },
+              { key: 'monthly_growth', label: 'Monthly Growth', align: 'right' },
+              { key: 'longest_attendance_streak', label: 'Longest Attendance Streak', align: 'right' },
+              { key: 'current_attendance_streak', label: 'Current Attendance Streak', align: 'right' },
+              { key: 'consecutive_absences', label: 'Consecutive Absences', align: 'right' },
+              { key: 'last_attendance_date', label: 'Last Attendance Date' },
+              { key: 'days_since_last_attendance', label: 'Days Since Last Attendance', align: 'right', render: v => v === 9999 ? 'Never' : v },
+              { key: 'active_status', label: 'Active Status' },
+              { key: 'risk_level', label: 'Risk Level', render: (_, row) => <Badge variant={row.risk_variant}>{row.risk_level}</Badge> },
+              { key: 'follow_up_status', label: 'Follow-up Status' },
+              { key: 'last_visitation_date', label: 'Last Visitation Date' },
+              { key: 'last_counseling_date', label: 'Last Counseling Date' },
+              { key: 'prayer_request_status', label: 'Prayer Request Status' },
+              { key: 'notes', label: 'Notes' },
+              { key: 'retention_score', label: 'Retention Score', align: 'right', render: v => `${R(v)}%` },
+              { key: 'engagement_score', label: 'Engagement Score', align: 'right', render: v => `${R(v)}%` },
+              { key: 'overall_member_health_score', label: 'Overall Member Health Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v}/100</Badge> },
+              { key: 'previous_rank', label: 'Previous Rank', align: 'right', render: v => `#${v}` },
+              { key: 'current_rank', label: 'Current Rank', align: 'right', render: v => `#${v}` },
+              { key: 'rank_movement', label: 'Rank Movement', align: 'right', render: v => v > 0 ? <span className="text-emerald-600 font-bold">+{v}</span> : v < 0 ? <span className="text-rose-600 font-bold">{v}</span> : <span className="text-slate-400">0</span> },
+              { key: 'ai_observations', label: 'AI-generated Observations', sortable: false },
+            ]}
+            data={filteredMembers}
+            emptyMessage="No members match the selected intelligence filters."
+          />
+        </div>
       </div>
     );
   };
