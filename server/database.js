@@ -2991,19 +2991,19 @@ const queries = {
   getGrowthPercentages: () => get(`
     SELECT
       (SELECT ROUND(
-        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(7)} THEN a.member_id END) AS REAL) -
-         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(14)} AND a.date < ${daysAgo(7)} THEN a.member_id END) AS REAL))
-        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(14)} AND a.date < ${daysAgo(7)} THEN a.member_id END) AS REAL)) * 100, 1)
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(7)} THEN a.member_id END) AS NUMERIC) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(14)} AND a.date < ${daysAgo(7)} THEN a.member_id END) AS NUMERIC))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(14)} AND a.date < ${daysAgo(7)} THEN a.member_id END) AS NUMERIC)) * 100, 1)
       FROM attendance a) as weekly_growth,
       (SELECT ROUND(
-        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(30)} THEN a.member_id END) AS REAL) -
-         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(60)} AND a.date < ${daysAgo(30)} THEN a.member_id END) AS REAL))
-        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(60)} AND a.date < ${daysAgo(30)} THEN a.member_id END) AS REAL)) * 100, 1)
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(30)} THEN a.member_id END) AS NUMERIC) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(60)} AND a.date < ${daysAgo(30)} THEN a.member_id END) AS NUMERIC))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(60)} AND a.date < ${daysAgo(30)} THEN a.member_id END) AS NUMERIC)) * 100, 1)
       FROM attendance a) as monthly_growth,
       (SELECT ROUND(
-        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(365)} THEN a.member_id END) AS REAL) -
-         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(730)} AND a.date < ${daysAgo(365)} THEN a.member_id END) AS REAL))
-        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(730)} AND a.date < ${daysAgo(365)} THEN a.member_id END) AS REAL)) * 100, 1)
+        (CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(365)} THEN a.member_id END) AS NUMERIC) -
+         CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(730)} AND a.date < ${daysAgo(365)} THEN a.member_id END) AS NUMERIC))
+        / MAX(1, CAST(COUNT(DISTINCT CASE WHEN a.date >= ${daysAgo(730)} AND a.date < ${daysAgo(365)} THEN a.member_id END) AS NUMERIC)) * 100, 1)
       FROM attendance a) as annual_growth
   `),
 
@@ -3124,7 +3124,7 @@ const queries = {
         ) as prev_rate,
         (
           SELECT ROUND(
-            CAST(COUNT(DISTINCT CASE WHEN ap.status = 'present' THEN ap.member_id END) AS REAL) /
+            CAST(COUNT(DISTINCT CASE WHEN ap.status = 'present' THEN ap.member_id END) AS NUMERIC) /
             NULLIF(COUNT(DISTINCT mx2.id), 0) * 100, 1
           )
           FROM members mx2
@@ -3136,7 +3136,7 @@ const queries = {
         (SELECT COUNT(*) FROM members mx WHERE mx.section_id = s.id AND mx.created_at >= ?) as yearly_growth,
         (
           SELECT ROUND(
-            CAST(COUNT(DISTINCT f.member_id) AS REAL) /
+            CAST(COUNT(DISTINCT f.member_id) AS NUMERIC) /
             NULLIF(COUNT(DISTINCT a4.member_id), 0) * 100, 1
           )
           FROM attendance a4
