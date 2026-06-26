@@ -846,6 +846,258 @@ const AttendanceReports = ({
       { key: 'custom', label: 'Custom' },
     ];
 
+    const getEntityRate = (item = {}) => Number(item.attendance_rate ?? item.avg_rate ?? item.rate ?? 0) || 0;
+    const getEntityPresent = (item = {}) => Number(item.total_present ?? item.present ?? item.present_count ?? 0) || 0;
+    const getEntityAbsent = (item = {}) => Number(item.total_absent ?? item.absent ?? item.absent_count ?? 0) || 0;
+    const getEntityMembers = (item = {}) => Number(item.member_count ?? item.total_members ?? item.total ?? 0) || 0;
+    const getEntitySubmissions = (item = {}) => Number(item.submissions ?? item.leadersSubmitted ?? item.leaders_submitted ?? 0) || 0;
+    const getSeverity = (rateDiff = 0, absentDiff = 0) => {
+      if (rateDiff <= -15 || absentDiff >= 15) return { label: 'Critical', score: 4, className: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' };
+      if (rateDiff <= -8 || absentDiff >= 8) return { label: 'High', score: 3, className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' };
+      if (rateDiff <= -3 || absentDiff >= 3) return { label: 'Watch', score: 2, className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' };
+      if (rateDiff >= 5 && absentDiff <= 0) return { label: 'Healthy Gain', score: 0, className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' };
+      return { label: 'Stable', score: 1, className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' };
+    };
+    const buildEntityRows = (currentList = [], previousList = [], nameKey = 'name') => {
+      const prevMap = {};
+      previousList.forEach(item => { prevMap[item[nameKey] || item.name || 'Unknown'] = item; });
+      const currentRows = currentList.map(curr => {
+        const name = curr[nameKey] || curr.name || 'Unknown';
+        const prev = prevMap[name] || {};
+        const rateDiff = getEntityRate(curr) - getEntityRate(prev);
+        const presentDiff = getEntityPresent(curr) - getEntityPresent(prev);
+        const absentDiff = getEntityAbsent(curr) - getEntityAbsent(prev);
+        const memberDiff = getEntityMembers(curr) - getEntityMembers(prev);
+        const submissionDiff = getEntitySubmissions(curr) - getEntitySubmissions(prev);
+        return {
+          ...curr,
+          name,
+          previous: prev,
+          rateDiff,
+          presentDiff,
+          absentDiff,
+          memberDiff,
+          submissionDiff,
+          severity: getSeverity(rateDiff, absentDiff),
+          rootCause: absentDiff > 0 && rateDiff < 0
+            ? 'Absences increased while attendance rate dropped'
+            : submissionDiff < 0 && comp.type === 'leaders'
+              ? 'Leader submissions reduced compared with the prior period'
+              : presentDiff > 0 && rateDiff >= 0
+                ? 'More members were present and participation held steady'
+                : memberDiff < 0
+                  ? 'Roster participation or member count contracted'
+                  : 'Movement is mainly rate/volume mix rather than one clear driver',
+          recommendedAction: rateDiff <= -8 || absentDiff >= 8
+            ? 'Assign immediate follow-up, review leader reporting, and contact repeat absentees.'
+            : rateDiff < 0
+              ? 'Monitor next service and ask the responsible leader for a brief recovery plan.'
+              : rateDiff >= 5
+                ? 'Recognize the leader/team and copy their attendance practice to weaker areas.'
+                : 'Maintain current follow-up rhythm and watch for early absence patterns.'
+        };
+      });
+      const removedRows = previousList
+        .filter(prev => !currentList.find(curr => (curr[nameKey] || curr.name) === (prev[nameKey] || prev.name)))
+        .map(prev => ({
+          name: prev[nameKey] || prev.name || 'Unknown',
+          previous: prev,
+          rateDiff: -getEntityRate(prev),
+          presentDiff: -getEntityPresent(prev),
+          absentDiff: -getEntityAbsent(prev),
+          memberDiff: -getEntityMembers(prev),
+          submissionDiff: -getEntitySubmissions(prev),
+          severity: getSeverity(-getEntityRate(prev), getEntityAbsent(prev)),
+          rootCause: 'This area had previous-period activity but no matching current-period activity.',
+          recommendedAction: 'Confirm whether this area stopped reporting, changed name, or needs leader support.',
+          _removed: true
+        }));
+      return [...currentRows, ...removedRows].sort((a, b) => b.severity.score - a.severity.score || a.rateDiff - b.rateDiff);
+    };
+
+    const buildDecisionIntel = () => {
+      if (comp.type === 'overall' && comp.current) {
+        const c = comp.current;
+        const p = comp.previous || {};
+        const rateDiff = (c.rate || 0) - (p.rate || 0);
+        const presentDiff = (c.present || 0) - (p.present || 0);
+        const absentDiff = (c.absent || 0) - (p.absent || 0);
+        const submissionDiff = (c.leadersSubmitted || 0) - (p.leadersSubmitted || 0);
+        const serviceDiff = (c.serviceDays || 0) - (p.serviceDays || 0);
+        const severity = getSeverity(rateDiff, absentDiff);
+        const healthScore = Math.max(0, Math.min(100, Math.round((c.rate || 0) - Math.max(0, absentDiff * 0.8) + Math.max(0, submissionDiff * 2))));
+        return {
+          healthScore,
+          severity,
+          headline: rateDiff >= 0 ? `Attendance improved by ${R(rateDiff)} percentage points.` : `Attendance declined by ${Math.abs(R(rateDiff))} percentage points.`,
+          causes: [
+            absentDiff > 0 ? `${absentDiff} more absences than the comparison period` : `${Math.abs(absentDiff)} fewer absences than the comparison period`,
+            presentDiff < 0 ? `${Math.abs(presentDiff)} fewer present members` : `${presentDiff} additional present members`,
+            submissionDiff < 0 ? `${Math.abs(submissionDiff)} fewer leaders submitted reports` : `${submissionDiff} more leader submissions`,
+            serviceDiff !== 0 ? `${Math.abs(serviceDiff)} ${serviceDiff > 0 ? 'more' : 'fewer'} service day(s) recorded` : 'same number of service days recorded'
+          ],
+          actions: [
+            rateDiff < -5 ? 'Hold a leadership review before the next service to identify missed follow-ups.' : 'Document what kept attendance stable or improving and repeat it next service.',
+            absentDiff > 0 ? 'Assign leaders to contact high-risk absentees within 48 hours.' : 'Recognize teams that reduced absences and ask them to share their follow-up rhythm.',
+            submissionDiff < 0 ? 'Ask non-submitting leaders to update attendance immediately so reports stay complete.' : 'Keep the submission rhythm visible in the leader group.'
+          ],
+          affected: [],
+          absentRisk: absentDiff,
+          movement: { rateDiff, presentDiff, absentDiff, submissionDiff }
+        };
+      }
+
+      if (['sections', 'departments', 'services', 'leaders'].includes(comp.type) && comp.currentList) {
+        const nameKey = comp.type === 'leaders' ? 'leader_name' : 'name';
+        const rows = buildEntityRows(comp.currentList, comp.previousList || [], nameKey);
+        const declines = rows.filter(r => r.rateDiff < 0 || r.absentDiff > 0);
+        const improvements = rows.filter(r => r.rateDiff > 0).sort((a, b) => b.rateDiff - a.rateDiff);
+        const critical = rows.filter(r => r.severity.score >= 3);
+        const avgRate = rows.length ? rows.reduce((sum, r) => sum + getEntityRate(r), 0) / rows.length : 0;
+        const avgDiff = rows.length ? rows.reduce((sum, r) => sum + r.rateDiff, 0) / rows.length : 0;
+        const absentRisk = rows.reduce((sum, r) => sum + Math.max(0, r.absentDiff), 0);
+        const severity = getSeverity(avgDiff, absentRisk);
+        const healthScore = Math.max(0, Math.min(100, Math.round(avgRate + avgDiff - critical.length * 7 - Math.min(absentRisk, 30))));
+        const topDriver = declines[0] || rows[0];
+        return {
+          healthScore,
+          severity,
+          headline: `${rows.length} ${comp.type} compared; ${critical.length} need urgent review.`,
+          causes: [
+            topDriver ? `${topDriver.name} is the strongest negative driver: ${R(topDriver.rateDiff)} rate points, ${topDriver.absentDiff >= 0 ? '+' : ''}${topDriver.absentDiff} absences.` : 'No major negative driver detected.',
+            improvements[0] ? `${improvements[0].name} contributed the strongest recovery at +${R(improvements[0].rateDiff)} rate points.` : 'No clear positive recovery leader detected.',
+            critical.length ? `${critical.length} area(s) are at high or critical severity.` : 'No area is currently at high severity.',
+            absentRisk > 0 ? `${absentRisk} net additional absences require follow-up review.` : 'Absence pressure reduced or stayed flat.'
+          ],
+          actions: [
+            critical[0] ? `Meet with ${critical[0].name} leadership and review absence names before the next service.` : 'Keep monitoring all areas and maintain standard reporting cadence.',
+            declines.length ? `Create a recovery list for the weakest area(s): ${declines.slice(0, 3).map(r => r.name).join(', ')}.` : 'Capture best practices from improving areas for wider use.',
+            improvements[0] ? `Recognize ${improvements[0].name} and ask what changed operationally.` : 'Ask leaders to submit one reason attendance stayed flat.'
+          ],
+          affected: rows.slice(0, 6),
+          absentRisk,
+          movement: { rateDiff: avgDiff, presentDiff: rows.reduce((s, r) => s + r.presentDiff, 0), absentDiff: absentRisk }
+        };
+      }
+
+      if (comp.type === 'daily' && comp.daily) {
+        const currPresent = comp.daily.reduce((sum, row) => sum + (Number(row.present) || 0), 0);
+        const currAbsent = comp.daily.reduce((sum, row) => sum + (Number(row.absent) || 0), 0);
+        const prevPresent = (comp.previousDaily || []).reduce((sum, row) => sum + (Number(row.present) || 0), 0);
+        const prevAbsent = (comp.previousDaily || []).reduce((sum, row) => sum + (Number(row.absent) || 0), 0);
+        const presentDiff = currPresent - prevPresent;
+        const absentDiff = currAbsent - prevAbsent;
+        const avgRate = comp.daily.length ? comp.daily.reduce((sum, row) => sum + (Number(row.rate) || 0), 0) / comp.daily.length : 0;
+        const weakDays = comp.daily.filter(row => (Number(row.rate) || 0) < 60).sort((a, b) => (a.rate || 0) - (b.rate || 0));
+        return {
+          healthScore: Math.max(0, Math.min(100, Math.round(avgRate - Math.max(0, absentDiff)))),
+          severity: getSeverity(presentDiff >= 0 ? 3 : -5, absentDiff),
+          headline: presentDiff >= 0 ? `Daily movement gained ${presentDiff} present markings.` : `Daily movement lost ${Math.abs(presentDiff)} present markings.`,
+          causes: [
+            absentDiff > 0 ? `${absentDiff} more absences appeared in the selected days.` : `${Math.abs(absentDiff)} fewer absences appeared in the selected days.`,
+            weakDays[0] ? `${weakDays[0].date} is the weakest attendance day at ${R(weakDays[0].rate)}%.` : 'No weak day below 60% was detected.',
+            comp.previousDaily ? 'Church-week comparison is using matched day-to-day movement.' : 'Single-period daily view is comparing movement inside the selected period.'
+          ],
+          actions: [
+            weakDays[0] ? `Ask leaders why ${weakDays[0].date} underperformed and prepare targeted reminders before the matching service.` : 'Use the strongest day as the operating benchmark.',
+            absentDiff > 0 ? 'Prioritize follow-up for members absent on weak days.' : 'Maintain reminder and follow-up routines that reduced absence pressure.'
+          ],
+          affected: weakDays.slice(0, 5).map(day => ({
+            name: day.date,
+            rateDiff: day.rate,
+            absentDiff: day.absent,
+            severity: getSeverity(day.rate - 70, day.absent),
+            rootCause: 'Low daily rate or high absences',
+            recommendedAction: 'Ask assigned leaders for same-day follow-up.'
+          })),
+          absentRisk: absentDiff,
+          movement: { presentDiff, absentDiff, rateDiff: 0 }
+        };
+      }
+      return null;
+    };
+    const decisionIntel = buildDecisionIntel();
+
+    const renderDecisionCenter = () => {
+      if (!decisionIntel) return null;
+      const panelTitle = comp.type === 'leaders'
+        ? 'Leader Impact Analysis'
+        : comp.type === 'departments'
+          ? 'Department Comparison Breakdown'
+          : comp.type === 'sections'
+            ? 'Section Comparison Breakdown'
+            : comp.type === 'daily'
+              ? 'Attendance Movement Analysis'
+              : 'Impact Analysis';
+      return (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Church Health</span><Shield className="w-4 h-4 text-indigo-500" /></div>
+              <p className="text-2xl font-black text-slate-950 dark:text-white mt-2">{decisionIntel.healthScore}<span className="text-xs font-semibold text-slate-400">/100</span></p>
+              <span className={`inline-flex mt-2 text-[10px] font-bold px-2 py-0.5 rounded-full ${decisionIntel.severity.className}`}>{decisionIntel.severity.label}</span>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Attendance Movement</span>
+              <p className={`text-xl font-black mt-2 ${(decisionIntel.movement?.rateDiff || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{(decisionIntel.movement?.rateDiff || 0) >= 0 ? '+' : ''}{R(decisionIntel.movement?.rateDiff || 0)} pts</p>
+              <p className="text-[10px] text-slate-500 mt-1">{decisionIntel.movement?.presentDiff >= 0 ? '+' : ''}{decisionIntel.movement?.presentDiff || 0} present movement</p>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Absence Intelligence</span>
+              <p className={`text-xl font-black mt-2 ${decisionIntel.absentRisk > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{decisionIntel.absentRisk > 0 ? '+' : ''}{decisionIntel.absentRisk}</p>
+              <p className="text-[10px] text-slate-500 mt-1">{decisionIntel.absentRisk > 0 ? 'net additional absence pressure' : 'absence pressure controlled'}</p>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Immediate Attention</span>
+              <p className="text-xl font-black text-slate-950 dark:text-white mt-2">{decisionIntel.affected?.filter(a => a.severity?.score >= 2).length || 0}</p>
+              <p className="text-[10px] text-slate-500 mt-1">areas requiring leadership review</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <div className="flex items-center gap-2 mb-3"><Brain className="w-4 h-4 text-indigo-500" /><h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Comparison Insights</h3></div>
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 mb-3">{decisionIntel.headline}</p>
+              <div className="space-y-2">
+                {decisionIntel.causes.map((cause, i) => (
+                  <div key={i} className="rounded-xl bg-slate-50 dark:bg-slate-900/40 p-3 text-xs text-slate-600 dark:text-slate-300">
+                    <span className="font-bold text-slate-900 dark:text-white">Root cause {i + 1}: </span>{cause}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <div className="flex items-center gap-2 mb-3"><Target className="w-4 h-4 text-emerald-500" /><h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Recommended Actions</h3></div>
+              <div className="space-y-2">
+                {decisionIntel.actions.map((action, i) => (
+                  <div key={i} className="flex gap-2 rounded-xl border border-slate-100 dark:border-slate-700 p-3">
+                    <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-bold shrink-0">{i + 1}</span>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{action}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <div className="flex items-center gap-2 mb-3"><AlertTriangle className="w-4 h-4 text-amber-500" /><h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{panelTitle}</h3></div>
+              <div className="space-y-2">
+                {(decisionIntel.affected || []).slice(0, 5).map((area, i) => (
+                  <div key={`${area.name}-${i}`} className="rounded-xl bg-slate-50 dark:bg-slate-900/40 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{area.name}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${area.severity?.className}`}>{area.severity?.label}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">{area.rootCause}</p>
+                    <p className="text-[10px] text-indigo-600 dark:text-indigo-300 mt-1">{area.recommendedAction}</p>
+                  </div>
+                ))}
+                {(!decisionIntel.affected || decisionIntel.affected.length === 0) && <p className="text-xs text-slate-400">No specific affected area detected for this comparison.</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     const renderEntityTable = (currentList, previousList, nameKey, metrics) => {
       const prevMap = {};
       previousList.forEach(item => { prevMap[item[nameKey]] = item; });
@@ -879,6 +1131,9 @@ const AttendanceReports = ({
         const bRate = b[`${metrics[0].key}_curr`] || 0;
         return bRate - aRate;
       });
+      const intelligenceRows = buildEntityRows(currentList, previousList, nameKey);
+      const intelligenceByName = {};
+      intelligenceRows.forEach(row => { intelligenceByName[row.name] = row; });
 
       return (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
@@ -888,6 +1143,7 @@ const AttendanceReports = ({
                 <tr className="border-b border-slate-200 dark:border-slate-700">
                   <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">#</th>
                   <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Name</th>
+                  <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Severity</th>
                   {metrics.map(m => (
                     <React.Fragment key={m.key}>
                       <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} ({dates ? formatDateShort(dates.pStart) : 'Prev'})</th>
@@ -895,35 +1151,45 @@ const AttendanceReports = ({
                       <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-right">{m.label} (Diff)</th>
                     </React.Fragment>
                   ))}
+                  <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Why It Changed</th>
+                  <th className="py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 text-left">Leadership Action</th>
                 </tr>
               </thead>
               <tbody>
-                {allRows.map((row, i) => (
-                  <tr key={`${row.name}-${i}`} className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${row._removed ? 'opacity-50' : ''}`}>
-                    <td className="py-2 px-3">
-                      <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span>
-                    </td>
-                    <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.name}</td>
-                    {metrics.map(m => {
-                      const curr = row[`${m.key}_curr`];
-                      const prev = row[`${m.key}_prev`];
-                      const diff = row[`${m.key}_diff`];
-                      const pct = row[`${m.key}_pct`];
-                      return (
-                        <React.Fragment key={m.key}>
-                          <td className="py-2 px-3 text-right text-slate-500">{m.suffix === '%' ? R(prev) : prev}{m.suffix || ''}</td>
-                          <td className="py-2 px-3 text-right font-bold">{m.suffix === '%' ? R(curr) : curr}{m.suffix || ''}</td>
-                          <td className="py-2 px-3 text-right">
-                            <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{m.suffix === '%' ? R(diff) : diff}{m.suffix || ''}</span>
-                            <span className={`ml-1 text-[10px] ${diff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>({pct}%)</span>
-                          </td>
-                        </React.Fragment>
-                      );
-                    })}
-                  </tr>
-                ))}
+                {allRows.map((row, i) => {
+                  const intel = intelligenceByName[row.name] || {};
+                  return (
+                    <tr key={`${row.name}-${i}`} className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${row._removed ? 'opacity-50' : ''}`}>
+                      <td className="py-2 px-3">
+                        <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span>
+                      </td>
+                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.name}</td>
+                      <td className="py-2 px-3">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${intel.severity?.className || 'bg-slate-100 text-slate-500'}`}>{intel.severity?.label || 'Stable'}</span>
+                      </td>
+                      {metrics.map(m => {
+                        const curr = row[`${m.key}_curr`];
+                        const prev = row[`${m.key}_prev`];
+                        const diff = row[`${m.key}_diff`];
+                        const pct = row[`${m.key}_pct`];
+                        return (
+                          <React.Fragment key={m.key}>
+                            <td className="py-2 px-3 text-right text-slate-500">{m.suffix === '%' ? R(prev) : prev}{m.suffix || ''}</td>
+                            <td className="py-2 px-3 text-right font-bold">{m.suffix === '%' ? R(curr) : curr}{m.suffix || ''}</td>
+                            <td className="py-2 px-3 text-right">
+                              <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{m.suffix === '%' ? R(diff) : diff}{m.suffix || ''}</span>
+                              <span className={`ml-1 text-[10px] ${diff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>({pct}%)</span>
+                            </td>
+                          </React.Fragment>
+                        );
+                      })}
+                      <td className="py-2 px-3 text-xs text-slate-500 max-w-[220px]">{intel.rootCause || 'No major movement detected'}</td>
+                      <td className="py-2 px-3 text-xs text-indigo-600 dark:text-indigo-300 max-w-[260px]">{intel.recommendedAction || 'Maintain current follow-up rhythm.'}</td>
+                    </tr>
+                  );
+                })}
                 {allRows.length === 0 && (
-                  <tr><td colSpan={2 + metrics.length * 3} className="py-8 text-center text-slate-400 text-sm">No data available</td></tr>
+                  <tr><td colSpan={5 + metrics.length * 3} className="py-8 text-center text-slate-400 text-sm">No data available</td></tr>
                 )}
               </tbody>
             </table>
@@ -1052,6 +1318,8 @@ const AttendanceReports = ({
             </div>
           </div>
         )}
+
+        {!analyticsLoading && !compError && renderDecisionCenter()}
 
         {analyticsLoading ? (
           <div className="flex items-center justify-center py-12"><div className="w-6 h-6 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>
