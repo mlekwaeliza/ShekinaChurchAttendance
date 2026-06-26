@@ -114,6 +114,7 @@ export const adminAPI = {
   deleteLeader: (id) => api.delete(`/admin/leaders/${id}`),
   resetLeaderPassword: (leaderId) => api.post(`/admin/leaders/${leaderId}/reset-password`),
   createMember: (data) => api.post('/admin/members', data),
+  getSuggestAssignment: () => api.get('/admin/members/suggest-assignment'),
   bulkSoftDelete: (memberIds) => api.post('/admin/members/bulk-soft-delete', { member_ids: memberIds }),
   getPendingDeletion: () => api.get('/admin/members/pending-deletion'),
   confirmDeletion: (memberIds) => api.post('/admin/members/confirm-deletion', { member_ids: memberIds, confirm: true }),

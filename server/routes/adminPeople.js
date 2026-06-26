@@ -871,7 +871,70 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
   }
 });
 
+// GET suggest best section + leader for a new member (least members first)
+router.get('/members/suggest-assignment', async (req, res) => {
+  try {
+    const sections = await all(`
+      SELECT
+        s.id   AS section_id,
+        s.name AS section_name,
+        COUNT(DISTINCT m.id) AS member_count
+      FROM sections s
+      LEFT JOIN members m
+        ON m.section_id = s.id AND m.is_active = 1 AND m.soft_deleted_at IS NULL
+      GROUP BY s.id, s.name
+      ORDER BY member_count ASC, s.name ASC
+    `);
+
+    const leaders = await all(`
+      SELECT
+        l.id         AS leader_id,
+        l.section_id,
+        u.full_name  AS leader_name,
+        s.name       AS section_name,
+        COUNT(DISTINCT m.id) AS member_count
+      FROM leaders l
+      JOIN users u    ON l.user_id = u.id
+      JOIN sections s ON l.section_id = s.id
+      LEFT JOIN members m
+        ON m.leader_id = l.id AND m.is_active = 1 AND m.soft_deleted_at IS NULL
+      WHERE l.is_active = 1
+      GROUP BY l.id, l.section_id, u.full_name, s.name
+      ORDER BY member_count ASC, u.full_name ASC
+    `);
+
+    // Best section = fewest members
+    const bestSection = sections[0] || null;
+
+    // Best leader = fewest members within best section, otherwise global minimum
+    let bestLeader = null;
+    if (bestSection) {
+      const inBest = leaders.filter(l => Number(l.section_id) === Number(bestSection.section_id));
+      bestLeader = inBest[0] || leaders[0] || null;
+    } else {
+      bestLeader = leaders[0] || null;
+    }
+
+    res.json({
+      suggestion: bestSection && bestLeader ? {
+        section_id:           bestSection.section_id,
+        section_name:         bestSection.section_name,
+        section_member_count: bestSection.member_count,
+        leader_id:            bestLeader.leader_id,
+        leader_name:          bestLeader.leader_name,
+        leader_member_count:  bestLeader.member_count,
+      } : null,
+      sections,
+      leaders,
+    });
+  } catch (error) {
+    console.error('Suggest assignment error:', error);
+    res.status(500).json({ error: 'Failed to fetch assignment suggestion' });
+  }
+});
+
 // POST create a member (Admin override)
+
 router.post('/members', async (req, res) => {
   try {
     const { 
