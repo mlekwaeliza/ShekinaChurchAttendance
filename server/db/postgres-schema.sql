@@ -377,7 +377,7 @@ ON CONFLICT (name) DO NOTHING;
 CREATE OR REPLACE FUNCTION audit_log_block_mutation()
 RETURNS trigger AS $$
 BEGIN
-  RAISE EXCEPTION 'audit_log is append-only (operation %% rejected)', TG_OP
+  RAISE EXCEPTION 'audit_log is append-only (operation % rejected)', TG_OP
     USING ERRCODE = 'insufficient_privilege';
 END;
 $$ LANGUAGE plpgsql;
