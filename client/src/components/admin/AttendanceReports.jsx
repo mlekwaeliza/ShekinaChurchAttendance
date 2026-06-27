@@ -211,6 +211,9 @@ const AttendanceReports = ({
   const [memberSearch, setMemberSearch] = useState('');
   const [memberCategory, setMemberCategory] = useState('all');
   const [memberRiskFilter, setMemberRiskFilter] = useState('all');
+  const [selectedMemberDetails, setSelectedMemberDetails] = useState(null);
+  const [memberDetailsLoading, setMemberDetailsLoading] = useState(false);
+  const [memberDetailsError, setMemberDetailsError] = useState(null);
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, [selectedServiceId, filterType, filterValue, overviewData?.filterValue, overviewData?.requestedFilterValue, overviewData?.service_id]);
@@ -599,6 +602,21 @@ const AttendanceReports = ({
   const weeklyGrowth = stats.weekly_growth != null ? stats.weekly_growth : 0;
   const monthlyGrowth = stats.monthly_growth != null ? stats.monthly_growth : 0;
   const yearlyGrowth = stats.yearly_growth != null ? stats.yearly_growth : 0;
+
+  const openMemberAttendanceDetails = async (member) => {
+    setSelectedMemberDetails({ member, records: [], stats: null, date_range: null });
+    setMemberDetailsLoading(true);
+    setMemberDetailsError(null);
+    try {
+      const res = await analyticsAPI.getMemberAttendanceDetails(member.id, 180, selectedServiceId);
+      setSelectedMemberDetails(res.data);
+    } catch (error) {
+      setMemberDetailsError(error.response?.data?.error || 'Failed to load member attendance details');
+      setSelectedMemberDetails({ member, records: [], stats: null, date_range: null });
+    } finally {
+      setMemberDetailsLoading(false);
+    }
+  };
 
   const sectionComparison = analytics.sectionComparison || [];
   const sectionRankings = analytics.sectionRankings || [];
@@ -3323,7 +3341,7 @@ const AttendanceReports = ({
               <div className="flex flex-col md:flex-row gap-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                  <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} placeholder="Search member, leader, section..." className="pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-w-[260px]" />
+                  <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} placeholder="Search member name, leader, section..." className="pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-w-[260px]" />
                 </div>
                 <select value={memberCategory} onChange={e => setMemberCategory(e.target.value)} className="px-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                   {categories.map(c => <option key={c.id} value={c.id}>{c.label} ({c.members.length})</option>)}
@@ -3379,9 +3397,102 @@ const AttendanceReports = ({
               { key: 'rank_movement', label: 'Rank Movement', align: 'right', render: v => v > 0 ? <span className="text-emerald-600 font-bold">+{v}</span> : v < 0 ? <span className="text-rose-600 font-bold">{v}</span> : <span className="text-slate-400">0</span> },
             ]}
             data={filteredMembers}
+            onRowClick={openMemberAttendanceDetails}
             emptyMessage="No members match the selected intelligence filters."
           />
         </div>
+
+        {selectedMemberDetails && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+            <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl">
+              <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-black text-slate-950 dark:text-white">{selectedMemberDetails.member?.full_name}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    {selectedMemberDetails.member?.section_name || 'No section'} · {selectedMemberDetails.member?.leader_name || 'No leader'} · {selectedMemberDetails.member?.membership_id || 'No membership ID'}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setSelectedMemberDetails(null)} className="w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-white">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 overflow-y-auto max-h-[calc(90vh-90px)] space-y-4">
+                {memberDetailsError && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-4 py-3 text-sm dark:bg-rose-950/20 dark:border-rose-900/40 dark:text-rose-300">
+                    {memberDetailsError}
+                  </div>
+                )}
+
+                {memberDetailsLoading ? (
+                  <div className="py-12 text-center text-sm text-slate-500">Loading member attendance information...</div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                        <p className="text-[9px] font-bold uppercase text-slate-400">Records</p>
+                        <p className="text-xl font-black text-slate-950 dark:text-white">{selectedMemberDetails.stats?.total || 0}</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                        <p className="text-[9px] font-bold uppercase text-slate-400">Present</p>
+                        <p className="text-xl font-black text-emerald-600">{selectedMemberDetails.stats?.present || 0}</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                        <p className="text-[9px] font-bold uppercase text-slate-400">Absent</p>
+                        <p className="text-xl font-black text-rose-600">{selectedMemberDetails.stats?.absent || 0}</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                        <p className="text-[9px] font-bold uppercase text-slate-400">Excused</p>
+                        <p className="text-xl font-black text-amber-600">{selectedMemberDetails.stats?.excused || 0}</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                        <p className="text-[9px] font-bold uppercase text-slate-400">Rate</p>
+                        <p className="text-xl font-black text-indigo-600">{selectedMemberDetails.stats?.attendance_rate || 0}%</p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">Attendance Records</h4>
+                        <p className="text-[10px] text-slate-400">
+                          {selectedMemberDetails.date_range?.start} to {selectedMemberDetails.date_range?.end} · {serviceLabel}
+                        </p>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-slate-50 dark:bg-slate-800">
+                            <tr className="border-b border-slate-200 dark:border-slate-700">
+                              {['Date', 'Status', 'Service', 'Submitted By', 'Submitted At'].map(h => (
+                                <th key={h} className="py-2.5 px-3 text-left text-[10px] font-bold uppercase text-slate-400">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(selectedMemberDetails.records || []).length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="py-10 text-center text-sm text-slate-400">No attendance records found for this member in the selected window.</td>
+                              </tr>
+                            ) : selectedMemberDetails.records.map(record => (
+                              <tr key={record.id} className="border-b border-slate-50 dark:border-slate-800">
+                                <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{record.date}</td>
+                                <td className="py-2.5 px-3">
+                                  <Badge variant={record.status === 'present' ? 'success' : record.status === 'excused' ? 'warning' : 'danger'}>{record.status}</Badge>
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{record.service_name}</td>
+                                <td className="py-2.5 px-3 text-slate-500">{record.submitted_by_name || 'Unknown'}</td>
+                                <td className="py-2.5 px-3 text-slate-500">{record.submitted_at || '-'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };

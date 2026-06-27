@@ -333,6 +333,9 @@ export const analyticsAPI = {
     params.fallback_latest = 'true';
     return api.get('/analytics/member-intelligence', { params });
   },
+  getMemberAttendanceDetails: (memberId, days = 180, serviceId = 'all') => api.get(`/analytics/member-intelligence/${memberId}/attendance`, {
+    params: { days, service_id: serviceId }
+  }),
   getHeatmap: (months) => api.get('/analytics/heatmap', { params: { months } }),
   getTrendsMA: (weeks) => api.get('/analytics/trends-ma', { params: { weeks } }),
   getRiskAnalysis: () => api.get('/analytics/risk-analysis'),

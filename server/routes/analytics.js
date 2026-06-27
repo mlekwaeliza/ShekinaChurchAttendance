@@ -1,5 +1,5 @@
 const express = require('express');
-const { queries, get } = require('../database');
+const { queries, get, all } = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString, parseDateInput } = require('../utils/date');
 
@@ -611,6 +611,88 @@ router.get('/member-intelligence', async (req, res) => {
   } catch (error) {
     console.error('Member intelligence error:', error);
     res.status(500).json({ error: 'Failed to fetch member intelligence' });
+  }
+});
+
+// GET /analytics/member-intelligence/:id/attendance?days=180&service_id=all
+router.get('/member-intelligence/:id/attendance', async (req, res) => {
+  try {
+    const memberId = Number(req.params.id);
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      return res.status(400).json({ error: 'Invalid member id' });
+    }
+
+    const days = Math.min(parseInt(req.query.days, 10) || 180, 365);
+    const { service_id = 'all' } = req.query;
+    const endDate = formatLocalDate(new Date());
+    const startDate = formatLocalDate(addDays(endDate, -days));
+    const serviceCondition = service_id === 'all' ? '' : ' AND a.service_type_id = ?';
+    const serviceParams = service_id === 'all' ? [] : [service_id];
+
+    const member = await get(`
+      SELECT
+        m.id,
+        m.full_name,
+        m.membership_id,
+        m.gender,
+        m.age_group,
+        m.created_at as registered_date,
+        s.name as section_name,
+        head_u.full_name as head_leader_name,
+        leader_u.full_name as leader_name
+      FROM members m
+      LEFT JOIN sections s ON m.section_id = s.id
+      LEFT JOIN leaders leader_l ON m.leader_id = leader_l.id
+      LEFT JOIN users leader_u ON leader_l.user_id = leader_u.id
+      LEFT JOIN leaders head_l ON head_l.section_id = m.section_id AND head_l.is_head = 1 AND head_l.is_active = 1
+      LEFT JOIN users head_u ON head_l.user_id = head_u.id
+      WHERE m.id = ? AND m.soft_deleted_at IS NULL
+    `, [memberId]);
+
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    const records = await all(`
+      SELECT
+        a.id,
+        a.date,
+        a.status,
+        a.service_type_id,
+        COALESCE(st.name, 'Service') as service_name,
+        a.submitted_at,
+        submitted_by.full_name as submitted_by_name
+      FROM attendance a
+      LEFT JOIN service_types st ON a.service_type_id = st.id
+      LEFT JOIN users submitted_by ON a.submitted_by = submitted_by.id
+      WHERE a.member_id = ?
+        AND a.date BETWEEN ? AND ?
+        ${serviceCondition}
+      ORDER BY a.date DESC, a.submitted_at DESC
+      LIMIT 200
+    `, [memberId, startDate, endDate, ...serviceParams]);
+
+    const stats = records.reduce((acc, record) => {
+      const status = String(record.status || '').trim().toLowerCase();
+      if (status === 'present') acc.present += 1;
+      if (status === 'absent') acc.absent += 1;
+      if (status === 'excused') acc.excused += 1;
+      acc.total += 1;
+      return acc;
+    }, { present: 0, absent: 0, excused: 0, total: 0 });
+
+    stats.attendance_rate = stats.total ? Math.round((stats.present / stats.total) * 100) : 0;
+
+    res.json({
+      member,
+      records,
+      stats,
+      date_range: { start: startDate, end: endDate },
+      service_id
+    });
+  } catch (error) {
+    console.error('Member attendance details error:', error);
+    res.status(500).json({ error: 'Failed to fetch member attendance details' });
   }
 });
 
