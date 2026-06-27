@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BarChart3, TrendingUp, TrendingDown, Users, AlertTriangle, Target,
   Calendar, Download, Printer, FileText, Activity, Shield,
@@ -102,7 +103,8 @@ const IntelligenceTable = ({ columns, data, onRowClick, emptyMessage = 'No data 
         <tbody>
           {sorted.map((row, i) => (
             <tr key={row.id || i} onClick={() => onRowClick ? onRowClick(row) : null}
-              className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${onRowClick ? 'cursor-pointer' : ''}`}>
+              title={onRowClick ? 'Click to view attendance details' : undefined}
+              className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${onRowClick ? 'cursor-pointer hover:ring-1 hover:ring-indigo-300 dark:hover:ring-indigo-700' : ''}`}>
               {columns.map(col => (
                 <td key={col.key} className={`py-2.5 px-3 ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.className || ''}`}>
                   {col.render ? col.render(row[col.key], row, i) : (row[col.key] ?? '—')}
@@ -3402,9 +3404,9 @@ const AttendanceReports = ({
           />
         </div>
 
-        {selectedMemberDetails && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-            <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl">
+        {selectedMemberDetails && createPortal((
+          <div className="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto bg-slate-950/70 p-4 pt-8 backdrop-blur-sm" onClick={() => setSelectedMemberDetails(null)}>
+            <div className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl" onClick={e => e.stopPropagation()}>
               <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-black text-slate-950 dark:text-white">{selectedMemberDetails.member?.full_name}</h3>
@@ -3492,7 +3494,7 @@ const AttendanceReports = ({
               </div>
             </div>
           </div>
-        )}
+        ), document.body)}
       </div>
     );
   };
