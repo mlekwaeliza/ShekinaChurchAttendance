@@ -330,6 +330,7 @@ export const analyticsAPI = {
     if (serviceId) params.service_id = serviceId;
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
+    params.fallback_latest = 'true';
     return api.get('/analytics/member-intelligence', { params });
   },
   getHeatmap: (months) => api.get('/analytics/heatmap', { params: { months } }),

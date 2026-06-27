@@ -213,7 +213,7 @@ const AttendanceReports = ({
   const [memberRiskFilter, setMemberRiskFilter] = useState('all');
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
-  useEffect(() => { loadAnalytics(); }, [selectedServiceId, filterType, filterValue]);
+  useEffect(() => { loadAnalytics(); }, [selectedServiceId, filterType, filterValue, overviewData?.filterValue, overviewData?.requestedFilterValue, overviewData?.service_id]);
 
   const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365, custom: 30 };
   const toDateStr = (d) => { const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
@@ -533,6 +533,11 @@ const AttendanceReports = ({
   const loadAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
+      const overviewServiceMatches = String(overviewData?.service_id ?? selectedServiceId) === String(selectedServiceId);
+      const overviewFilterMatches = !overviewData?.requestedFilterValue || overviewData.requestedFilterValue === filterValue;
+      const memberFilterValue = overviewServiceMatches && overviewFilterMatches && overviewData?.filterValue
+        ? overviewData.filterValue
+        : filterValue;
       const endDate = new Date().toISOString().split('T')[0];
       const startDate90 = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
       const startDatePrev90 = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0];
@@ -557,7 +562,7 @@ const AttendanceReports = ({
         analyticsAPI.getChurchGrowthIndex(),
         analyticsAPI.getHeadLeaderAnalytics(90),
         analyticsAPI.getLeaderRankings(90),
-        analyticsAPI.getMemberIntelligence(180, filterType, filterValue, selectedServiceId),
+        analyticsAPI.getMemberIntelligence(180, filterType, memberFilterValue, selectedServiceId),
       ]);
 
       const ok = i => results[i].status === 'fulfilled' ? results[i].value?.data : null;
@@ -581,7 +586,12 @@ const AttendanceReports = ({
   const leaders = overviewData?.subleaders || [];
   const currentService = serviceTypes.find(s => s.id === selectedServiceId);
   const serviceLabel = selectedServiceId === 'all' ? 'All Services' : (currentService?.name || 'Service');
-  const periodLabel = formatPeriodLabel(filterType, filterValue);
+  const overviewServiceMatches = String(overviewData?.service_id ?? selectedServiceId) === String(selectedServiceId);
+  const overviewFilterMatches = !overviewData?.requestedFilterValue || overviewData.requestedFilterValue === filterValue;
+  const effectiveFilterValue = overviewServiceMatches && overviewFilterMatches && overviewData?.filterValue
+    ? overviewData.filterValue
+    : filterValue;
+  const periodLabel = formatPeriodLabel(filterType, effectiveFilterValue);
 
   const totalPresent = stats.present || 0;
   const totalAbsent = stats.absent || 0;

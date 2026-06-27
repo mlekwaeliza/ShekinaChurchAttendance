@@ -1,7 +1,7 @@
 const express = require('express');
-const { queries } = require('../database');
+const { queries, get } = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
-const { addDays, formatLocalDate, getISOWeekRange, parseDateInput } = require('../utils/date');
+const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString, parseDateInput } = require('../utils/date');
 
 const router = express.Router();
 
@@ -560,7 +560,7 @@ router.get('/departments', async (req, res) => {
 router.get('/member-intelligence', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
-    const { filterType, filterValue, service_id = 'all' } = req.query;
+    const { filterType, filterValue, service_id = 'all', fallback_latest } = req.query;
     let { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
@@ -580,6 +580,29 @@ router.get('/member-intelligence', async (req, res) => {
       } else if (filterType === 'yearly' && filterValue) {
         startDate = `${filterValue}-01-01`;
         endDate = `${filterValue}-12-31`;
+      }
+    }
+
+    if (filterType === 'weekly' && fallback_latest !== 'false' && startDate && endDate) {
+      const serviceCondition = service_id === 'all' ? '' : ' AND service_type_id = ?';
+      const serviceParams = service_id === 'all' ? [] : [service_id];
+      const currentRange = await get(
+        `SELECT COUNT(*) as total FROM attendance WHERE date BETWEEN ? AND ?${serviceCondition}`,
+        [startDate, endDate, ...serviceParams]
+      );
+
+      if (!Number(currentRange?.total || 0)) {
+        const latest = await get(
+          `SELECT MAX(date) AS latest_date FROM attendance WHERE 1=1${serviceCondition}`,
+          serviceParams
+        );
+
+        if (latest?.latest_date) {
+          const latestWeek = getISOWeekString(latest.latest_date);
+          const latestRange = getISOWeekRange(latestWeek);
+          startDate = latestRange.start;
+          endDate = latestRange.end;
+        }
       }
     }
 
