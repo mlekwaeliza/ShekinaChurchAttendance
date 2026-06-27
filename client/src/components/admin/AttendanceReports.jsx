@@ -533,11 +533,6 @@ const AttendanceReports = ({
   const loadAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
-      const overviewServiceMatches = String(overviewData?.service_id ?? selectedServiceId) === String(selectedServiceId);
-      const overviewFilterMatches = !overviewData?.requestedFilterValue || overviewData.requestedFilterValue === filterValue;
-      const memberFilterValue = overviewServiceMatches && overviewFilterMatches && overviewData?.filterValue
-        ? overviewData.filterValue
-        : filterValue;
       const endDate = new Date().toISOString().split('T')[0];
       const startDate90 = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
       const startDatePrev90 = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0];
@@ -562,7 +557,7 @@ const AttendanceReports = ({
         analyticsAPI.getChurchGrowthIndex(),
         analyticsAPI.getHeadLeaderAnalytics(90),
         analyticsAPI.getLeaderRankings(90),
-        analyticsAPI.getMemberIntelligence(180, filterType, memberFilterValue, selectedServiceId),
+        analyticsAPI.getMemberIntelligence(180, null, null, selectedServiceId),
       ]);
 
       const ok = i => results[i].status === 'fulfilled' ? results[i].value?.data : null;
@@ -3152,14 +3147,7 @@ const AttendanceReports = ({
       absent: members.reduce((sum, m) => sum + (Number(m.absent_count) || 0), 0),
       excused: members.reduce((sum, m) => sum + (Number(m.excused_count) || 0), 0),
     };
-    const reportRecordTotals = {
-      present: Number(stats.present || 0),
-      absent: Number(stats.absent || 0),
-      excused: Number(stats.excused || 0),
-    };
-    const recordTotalsMatch = memberRecordTotals.present === reportRecordTotals.present
-      && memberRecordTotals.absent === reportRecordTotals.absent
-      && memberRecordTotals.excused === reportRecordTotals.excused;
+    const memberRecordTotal = memberRecordTotals.present + memberRecordTotals.absent + memberRecordTotals.excused;
     const retainedMembers = members.filter(m => m.retention_score >= 60);
     const lostMembers = members.filter(m => m.risk_level === 'Critical');
     const recoveredMembers = returningMembers;
@@ -3240,38 +3228,26 @@ const AttendanceReports = ({
           ))}
         </div>
 
-        <div className={`rounded-2xl border p-4 shadow-sm ${recordTotalsMatch ? 'border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/10 dark:border-emerald-900/30' : 'border-amber-200 bg-amber-50/70 dark:bg-amber-950/10 dark:border-amber-900/30'}`}>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-black text-slate-950 dark:text-white">Attendance Record Reconciliation</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Member Intelligence is using the selected report period and service: {periodLabel} - {serviceLabel}</p>
+              <h3 className="text-sm font-black text-slate-950 dark:text-white">Member Intelligence Record Window</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Counts below are calculated from member attendance history for the last 180 days - {serviceLabel}.</p>
             </div>
-            <Badge variant={recordTotalsMatch ? 'success' : 'warning'}>{recordTotalsMatch ? 'Matches report totals' : 'Different from report totals'}</Badge>
+            <Badge variant="info">{memberRecordTotal.toLocaleString()} tracked records</Badge>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Member Present</p>
+              <p className="text-[9px] font-bold uppercase text-slate-400">Historical Present</p>
               <p className="text-xl font-black text-emerald-600">{memberRecordTotals.present}</p>
             </div>
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Report Present</p>
-              <p className="text-xl font-black text-emerald-600">{reportRecordTotals.present}</p>
-            </div>
-            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Member Absent</p>
+              <p className="text-[9px] font-bold uppercase text-slate-400">Historical Absent</p>
               <p className="text-xl font-black text-rose-600">{memberRecordTotals.absent}</p>
             </div>
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Report Absent</p>
-              <p className="text-xl font-black text-rose-600">{reportRecordTotals.absent}</p>
-            </div>
-            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Member Excused</p>
+              <p className="text-[9px] font-bold uppercase text-slate-400">Historical Excused</p>
               <p className="text-xl font-black text-amber-600">{memberRecordTotals.excused}</p>
-            </div>
-            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-              <p className="text-[9px] font-bold uppercase text-slate-400">Report Excused</p>
-              <p className="text-xl font-black text-amber-600">{reportRecordTotals.excused}</p>
             </div>
           </div>
         </div>
