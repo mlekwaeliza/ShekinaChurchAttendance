@@ -3437,11 +3437,11 @@ const queries = {
     LEFT JOIN (
       SELECT
         member_id,
-        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_count,
-        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_count,
-        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused_count,
+        SUM(CASE WHEN LOWER(TRIM(status)) = 'present' THEN 1 ELSE 0 END) as present_count,
+        SUM(CASE WHEN LOWER(TRIM(status)) = 'absent' THEN 1 ELSE 0 END) as absent_count,
+        SUM(CASE WHEN LOWER(TRIM(status)) = 'excused' THEN 1 ELSE 0 END) as excused_count,
         COUNT(*) as total_records,
-        ROUND(CAST(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate
+        ROUND(CAST(AVG(CASE WHEN LOWER(TRIM(status)) = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate
       FROM attendance
       WHERE date >= ${daysAgo()} AND date <= ${todayDate()}
       GROUP BY member_id
@@ -3449,7 +3449,7 @@ const queries = {
     LEFT JOIN (
       SELECT
         member_id,
-        ROUND(CAST(AVG(CASE WHEN status = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate
+        ROUND(CAST(AVG(CASE WHEN LOWER(TRIM(status)) = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate
       FROM attendance
       WHERE date >= ${daysAgo()} AND date < ${daysAgo()}
       GROUP BY member_id
@@ -3457,8 +3457,8 @@ const queries = {
     LEFT JOIN (
       SELECT
         member_id,
-        SUM(CASE WHEN status = 'present' AND date >= ${daysAgo(7)} THEN 1 ELSE 0 END) as weekly_present,
-        SUM(CASE WHEN status = 'present' AND date >= ${daysAgo(14)} AND date < ${daysAgo(7)} THEN 1 ELSE 0 END) as prev_weekly_present
+        SUM(CASE WHEN LOWER(TRIM(status)) = 'present' AND date >= ${daysAgo(7)} THEN 1 ELSE 0 END) as weekly_present,
+        SUM(CASE WHEN LOWER(TRIM(status)) = 'present' AND date >= ${daysAgo(14)} AND date < ${daysAgo(7)} THEN 1 ELSE 0 END) as prev_weekly_present
       FROM attendance
       WHERE date >= ${daysAgo(14)}
       GROUP BY member_id
@@ -3466,8 +3466,8 @@ const queries = {
     LEFT JOIN (
       SELECT
         member_id,
-        SUM(CASE WHEN status = 'present' AND date >= ${daysAgo(30)} THEN 1 ELSE 0 END) as monthly_present,
-        SUM(CASE WHEN status = 'present' AND date >= ${daysAgo(60)} AND date < ${daysAgo(30)} THEN 1 ELSE 0 END) as prev_monthly_present
+        SUM(CASE WHEN LOWER(TRIM(status)) = 'present' AND date >= ${daysAgo(30)} THEN 1 ELSE 0 END) as monthly_present,
+        SUM(CASE WHEN LOWER(TRIM(status)) = 'present' AND date >= ${daysAgo(60)} AND date < ${daysAgo(30)} THEN 1 ELSE 0 END) as prev_monthly_present
       FROM attendance
       WHERE date >= ${daysAgo(60)}
       GROUP BY member_id
@@ -3475,7 +3475,7 @@ const queries = {
     LEFT JOIN (
       SELECT
         member_id,
-        ROUND(CAST(COUNT(DISTINCT CASE WHEN status = 'present' THEN date END) AS NUMERIC) / NULLIF(COUNT(DISTINCT date), 0) * 100, 1) as retention_score
+        ROUND(CAST(COUNT(DISTINCT CASE WHEN LOWER(TRIM(status)) = 'present' THEN date END) AS NUMERIC) / NULLIF(COUNT(DISTINCT date), 0) * 100, 1) as retention_score
       FROM attendance
       WHERE date >= ${daysAgo()}
       GROUP BY member_id
@@ -3484,8 +3484,8 @@ const queries = {
       SELECT
         member_id,
         ROUND(CAST((
-          SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) * 2 +
-          SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END)
+          SUM(CASE WHEN LOWER(TRIM(status)) = 'present' THEN 1 ELSE 0 END) * 2 +
+          SUM(CASE WHEN LOWER(TRIM(status)) = 'excused' THEN 1 ELSE 0 END)
         ) AS NUMERIC) / NULLIF(COUNT(*) * 2, 0) * 100, 1) as engagement_score
       FROM attendance
       WHERE date >= ${daysAgo()}
@@ -3497,19 +3497,19 @@ const queries = {
         (
           SELECT COUNT(*)
           FROM attendance ap
-          WHERE ap.member_id = mx.id AND ap.status = 'present'
-            AND ap.date > COALESCE((SELECT MAX(ab.date) FROM attendance ab WHERE ab.member_id = mx.id AND ab.status != 'present'), '1900-01-01')
+          WHERE ap.member_id = mx.id AND LOWER(TRIM(ap.status)) = 'present'
+            AND ap.date > COALESCE((SELECT MAX(ab.date) FROM attendance ab WHERE ab.member_id = mx.id AND LOWER(TRIM(ab.status)) != 'present'), '1900-01-01')
         ) as current_attendance_streak,
         (
           SELECT COUNT(*)
           FROM attendance aa
-          WHERE aa.member_id = mx.id AND aa.status = 'absent'
-            AND aa.date > COALESCE((SELECT MAX(an.date) FROM attendance an WHERE an.member_id = mx.id AND an.status != 'absent'), '1900-01-01')
+          WHERE aa.member_id = mx.id AND LOWER(TRIM(aa.status)) = 'absent'
+            AND aa.date > COALESCE((SELECT MAX(an.date) FROM attendance an WHERE an.member_id = mx.id AND LOWER(TRIM(an.status)) != 'absent'), '1900-01-01')
         ) as consecutive_absences,
         (
           SELECT COUNT(*)
           FROM attendance lp
-          WHERE lp.member_id = mx.id AND lp.status = 'present'
+          WHERE lp.member_id = mx.id AND LOWER(TRIM(lp.status)) = 'present'
         ) as longest_attendance_streak
       FROM members mx
     ) st ON st.member_id = m.id
