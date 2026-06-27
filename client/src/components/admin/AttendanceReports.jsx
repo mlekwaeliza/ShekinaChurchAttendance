@@ -3072,16 +3072,7 @@ const AttendanceReports = ({
         no_attendance_history: totalRecords === 0,
       };
       const risk = riskInfo(enriched);
-      const aiObservation = risk.label === 'Critical'
-        ? 'Critical pastoral intervention required; prioritize visitation, counseling, and leader review.'
-        : risk.label === 'High'
-          ? 'High-risk attendance pattern; assign follow-up and confirm next-service contact.'
-          : enriched.attendance_difference > 10
-            ? 'Attendance is improving; encourage the member and reinforce the positive rhythm.'
-            : enriched.attendance_rate >= 90
-              ? 'Strong attendance health; consider recognition or leadership encouragement.'
-              : 'Stable member profile; continue routine pastoral care and monitoring.';
-      return { ...enriched, risk_level: risk.label, risk_variant: risk.variant, risk_score: risk.score, ai_observations: aiObservation };
+      return { ...enriched, risk_level: risk.label, risk_variant: risk.variant, risk_score: risk.score };
     }).sort((a, b) => b.overall_member_health_score - a.overall_member_health_score);
 
     members.forEach((member, index) => {
@@ -3347,7 +3338,6 @@ const AttendanceReports = ({
               { key: 'previous_rank', label: 'Previous Rank', align: 'right', render: v => `#${v}` },
               { key: 'current_rank', label: 'Current Rank', align: 'right', render: v => `#${v}` },
               { key: 'rank_movement', label: 'Rank Movement', align: 'right', render: v => v > 0 ? <span className="text-emerald-600 font-bold">+{v}</span> : v < 0 ? <span className="text-rose-600 font-bold">{v}</span> : <span className="text-slate-400">0</span> },
-              { key: 'ai_observations', label: 'AI-generated Observations', sortable: false },
             ]}
             data={filteredMembers}
             emptyMessage="No members match the selected intelligence filters."
