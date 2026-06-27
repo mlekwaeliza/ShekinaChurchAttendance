@@ -213,7 +213,7 @@ const AttendanceReports = ({
   const [memberRiskFilter, setMemberRiskFilter] = useState('all');
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
-  useEffect(() => { loadAnalytics(); }, [selectedServiceId]);
+  useEffect(() => { loadAnalytics(); }, [selectedServiceId, filterType, filterValue]);
 
   const modeToDays = { today: 1, week: 7, month: 30, quarter: 90, year: 365, custom: 30 };
   const toDateStr = (d) => { const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; };
@@ -557,7 +557,7 @@ const AttendanceReports = ({
         analyticsAPI.getChurchGrowthIndex(),
         analyticsAPI.getHeadLeaderAnalytics(90),
         analyticsAPI.getLeaderRankings(90),
-        analyticsAPI.getMemberIntelligence(180),
+        analyticsAPI.getMemberIntelligence(180, filterType, filterValue, selectedServiceId),
       ]);
 
       const ok = i => results[i].status === 'fulfilled' ? results[i].value?.data : null;

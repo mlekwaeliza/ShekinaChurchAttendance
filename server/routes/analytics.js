@@ -1,7 +1,7 @@
 const express = require('express');
 const { queries } = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
-const { addDays, formatLocalDate, parseDateInput } = require('../utils/date');
+const { addDays, formatLocalDate, getISOWeekRange, parseDateInput } = require('../utils/date');
 
 const router = express.Router();
 
@@ -560,7 +560,30 @@ router.get('/departments', async (req, res) => {
 router.get('/member-intelligence', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
-    const members = await queries.getMemberIntelligence(days);
+    const { filterType, filterValue, service_id = 'all' } = req.query;
+    let { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      if (filterType === 'daily' && filterValue) {
+        startDate = filterValue;
+        endDate = filterValue;
+      } else if (filterType === 'weekly' && filterValue) {
+        const range = getISOWeekRange(filterValue);
+        startDate = range.start;
+        endDate = range.end;
+      } else if (filterType === 'monthly' && filterValue) {
+        const [year, month] = String(filterValue).split('-').map(Number);
+        if (year && month) {
+          startDate = formatLocalDate(new Date(year, month - 1, 1));
+          endDate = formatLocalDate(new Date(year, month, 0));
+        }
+      } else if (filterType === 'yearly' && filterValue) {
+        startDate = `${filterValue}-01-01`;
+        endDate = `${filterValue}-12-31`;
+      }
+    }
+
+    const members = await queries.getMemberIntelligence(days, startDate || null, endDate || null, service_id);
     res.json(members);
   } catch (error) {
     console.error('Member intelligence error:', error);

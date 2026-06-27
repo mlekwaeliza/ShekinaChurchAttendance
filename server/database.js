@@ -3386,7 +3386,24 @@ const queries = {
   },
 
   // ── Member Attendance Intelligence ─────────────────────────────────────
-  getMemberIntelligence: (days = 90) => all(`
+  getMemberIntelligence: (days = 90, startDate, endDate, serviceId = 'all') => {
+    const end = endDate || formatLocalDate(new Date());
+    const start = startDate || formatLocalDate(addDays(end, -days));
+    const rangeDays = Math.max(1, Math.floor((new Date(`${end}T12:00:00`) - new Date(`${start}T12:00:00`)) / 86400000) + 1);
+    const previousEnd = formatLocalDate(addDays(start, -1));
+    const previousStart = formatLocalDate(addDays(start, -rangeDays));
+    const serviceFilter = serviceId && serviceId !== 'all' ? ' AND service_type_id = ?' : '';
+    const addRangeParams = (params, from, to) => {
+      params.push(from, to);
+      if (serviceFilter) params.push(serviceId);
+    };
+    const params = [];
+    addRangeParams(params, start, end);
+    addRangeParams(params, previousStart, previousEnd);
+    addRangeParams(params, start, end);
+    addRangeParams(params, start, end);
+
+    return all(`
     SELECT
       m.id,
       m.full_name,
@@ -3443,7 +3460,7 @@ const queries = {
         COUNT(*) as total_records,
         ROUND(CAST(AVG(CASE WHEN LOWER(TRIM(status)) = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate
       FROM attendance
-      WHERE date >= ${daysAgo()} AND date <= ${todayDate()}
+      WHERE date BETWEEN ? AND ?${serviceFilter}
       GROUP BY member_id
     ) cur ON cur.member_id = m.id
     LEFT JOIN (
@@ -3451,7 +3468,7 @@ const queries = {
         member_id,
         ROUND(CAST(AVG(CASE WHEN LOWER(TRIM(status)) = 'present' THEN 1.0 ELSE 0.0 END) * 100 AS NUMERIC), 1) as attendance_rate
       FROM attendance
-      WHERE date >= ${daysAgo()} AND date < ${daysAgo()}
+      WHERE date BETWEEN ? AND ?${serviceFilter}
       GROUP BY member_id
     ) prev ON prev.member_id = m.id
     LEFT JOIN (
@@ -3477,7 +3494,7 @@ const queries = {
         member_id,
         ROUND(CAST(COUNT(DISTINCT CASE WHEN LOWER(TRIM(status)) = 'present' THEN date END) AS NUMERIC) / NULLIF(COUNT(DISTINCT date), 0) * 100, 1) as retention_score
       FROM attendance
-      WHERE date >= ${daysAgo()}
+      WHERE date BETWEEN ? AND ?${serviceFilter}
       GROUP BY member_id
     ) ret ON ret.member_id = m.id
     LEFT JOIN (
@@ -3488,7 +3505,7 @@ const queries = {
           SUM(CASE WHEN LOWER(TRIM(status)) = 'excused' THEN 1 ELSE 0 END)
         ) AS NUMERIC) / NULLIF(COUNT(*) * 2, 0) * 100, 1) as engagement_score
       FROM attendance
-      WHERE date >= ${daysAgo()}
+      WHERE date BETWEEN ? AND ?${serviceFilter}
       GROUP BY member_id
     ) eng ON eng.member_id = m.id
     LEFT JOIN (
@@ -3540,7 +3557,8 @@ const queries = {
     ) follow ON follow.member_id = m.id
     WHERE m.soft_deleted_at IS NULL
     ORDER BY attendance_rate DESC, present_count DESC
-  `, [days, days * 2, days, days, days]),
+  `, params);
+  },
 
   getMemberStreakDetails: (memberId) => get(`
     SELECT

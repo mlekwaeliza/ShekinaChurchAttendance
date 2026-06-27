@@ -323,7 +323,15 @@ export const analyticsAPI = {
     if (endDate) params.endDate = endDate;
     return api.get('/analytics/departments', { params });
   },
-  getMemberIntelligence: (days) => api.get('/analytics/member-intelligence', { params: { days } }),
+  getMemberIntelligence: (days, filterType, filterValue, serviceId, startDate, endDate) => {
+    const params = { days };
+    if (filterType) params.filterType = filterType;
+    if (filterValue) params.filterValue = filterValue;
+    if (serviceId) params.service_id = serviceId;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    return api.get('/analytics/member-intelligence', { params });
+  },
   getHeatmap: (months) => api.get('/analytics/heatmap', { params: { months } }),
   getTrendsMA: (weeks) => api.get('/analytics/trends-ma', { params: { weeks } }),
   getRiskAnalysis: () => api.get('/analytics/risk-analysis'),
