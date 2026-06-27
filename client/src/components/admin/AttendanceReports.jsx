@@ -3073,7 +3073,11 @@ const AttendanceReports = ({
       };
       const risk = riskInfo(enriched);
       return { ...enriched, risk_level: risk.label, risk_variant: risk.variant, risk_score: risk.score };
-    }).sort((a, b) => b.overall_member_health_score - a.overall_member_health_score);
+    }).sort((a, b) => {
+      const issueDiff = (b.absent_count + b.excused_count + b.risk_score) - (a.absent_count + a.excused_count + a.risk_score);
+      if (issueDiff !== 0) return issueDiff;
+      return a.attendance_rate - b.attendance_rate;
+    });
 
     members.forEach((member, index) => {
       member.current_rank = index + 1;
@@ -3133,6 +3137,19 @@ const AttendanceReports = ({
     const weeklyRetention = activeMembers.length ? Math.round((activeMembers.filter(m => m.weekly_present > 0).length / activeMembers.length) * 100) : 0;
     const monthlyRetention = activeMembers.length ? Math.round((activeMembers.filter(m => m.monthly_present > 0).length / activeMembers.length) * 100) : 0;
     const overallHealth = members.length ? Math.round(members.reduce((sum, m) => sum + m.overall_member_health_score, 0) / members.length) : 0;
+    const memberRecordTotals = {
+      present: members.reduce((sum, m) => sum + (Number(m.present_count) || 0), 0),
+      absent: members.reduce((sum, m) => sum + (Number(m.absent_count) || 0), 0),
+      excused: members.reduce((sum, m) => sum + (Number(m.excused_count) || 0), 0),
+    };
+    const reportRecordTotals = {
+      present: Number(stats.present || 0),
+      absent: Number(stats.absent || 0),
+      excused: Number(stats.excused || 0),
+    };
+    const recordTotalsMatch = memberRecordTotals.present === reportRecordTotals.present
+      && memberRecordTotals.absent === reportRecordTotals.absent
+      && memberRecordTotals.excused === reportRecordTotals.excused;
     const retainedMembers = members.filter(m => m.retention_score >= 60);
     const lostMembers = members.filter(m => m.risk_level === 'Critical');
     const recoveredMembers = returningMembers;
@@ -3211,6 +3228,42 @@ const AttendanceReports = ({
               <p className="text-xl font-black text-slate-950 dark:text-white mt-2">{value}</p>
             </button>
           ))}
+        </div>
+
+        <div className={`rounded-2xl border p-4 shadow-sm ${recordTotalsMatch ? 'border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/10 dark:border-emerald-900/30' : 'border-amber-200 bg-amber-50/70 dark:bg-amber-950/10 dark:border-amber-900/30'}`}>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-black text-slate-950 dark:text-white">Attendance Record Reconciliation</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Member Intelligence is using the selected report period and service: {periodLabel} - {serviceLabel}</p>
+            </div>
+            <Badge variant={recordTotalsMatch ? 'success' : 'warning'}>{recordTotalsMatch ? 'Matches report totals' : 'Different from report totals'}</Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4">
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+              <p className="text-[9px] font-bold uppercase text-slate-400">Member Present</p>
+              <p className="text-xl font-black text-emerald-600">{memberRecordTotals.present}</p>
+            </div>
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+              <p className="text-[9px] font-bold uppercase text-slate-400">Report Present</p>
+              <p className="text-xl font-black text-emerald-600">{reportRecordTotals.present}</p>
+            </div>
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+              <p className="text-[9px] font-bold uppercase text-slate-400">Member Absent</p>
+              <p className="text-xl font-black text-rose-600">{memberRecordTotals.absent}</p>
+            </div>
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+              <p className="text-[9px] font-bold uppercase text-slate-400">Report Absent</p>
+              <p className="text-xl font-black text-rose-600">{reportRecordTotals.absent}</p>
+            </div>
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+              <p className="text-[9px] font-bold uppercase text-slate-400">Member Excused</p>
+              <p className="text-xl font-black text-amber-600">{memberRecordTotals.excused}</p>
+            </div>
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+              <p className="text-[9px] font-bold uppercase text-slate-400">Report Excused</p>
+              <p className="text-xl font-black text-amber-600">{reportRecordTotals.excused}</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
