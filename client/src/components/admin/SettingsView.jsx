@@ -3,6 +3,7 @@ import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import TwoFactorSetup from '../TwoFactorSetup';
+import { fdate } from '../../utils/date';
 import Modal from '../ui/Modal';
 
 const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showMessage }) => {
@@ -863,7 +864,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 </select>
               </div>
               <div className="text-xs text-slate-400 dark:text-slate-500">
-                User: @{editingUser.username} | Section: {editingUser.section_name || 'N/A'} | Created: {new Date(editingUser.created_at).toLocaleDateString()}
+                User: @{editingUser.username} | Section: {editingUser.section_name || 'N/A'} | Created: {fdate(editingUser.created_at)}
               </div>
             </div>
             <div className="modal-footer">

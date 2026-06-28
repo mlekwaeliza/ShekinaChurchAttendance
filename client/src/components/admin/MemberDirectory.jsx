@@ -3,6 +3,7 @@ import { useToast } from '../../context/ToastContext';
 import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock, Award, Plus, X as XIcon } from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
+import { fdatetime } from '../../utils/date';
 import BulkDeleteModal from './BulkDeleteModal';
 import PendingDeletionModal from './PendingDeletionModal';
 import { adminAPI } from '../../services/api';
@@ -976,7 +977,7 @@ const MemberDirectory = ({
                           <Badge variant={variantMap[h.action] || 'neutral'} className="text-[10px] px-2 py-0.5 uppercase tracking-wider">
                             {h.action.replace('_', ' ')}
                           </Badge>
-                          <span className="text-[10px] text-slate-400 font-medium">{new Date(h.created_at).toLocaleString()}</span>
+                          <span className="text-[10px] text-slate-400 font-medium">{fdatetime(h.created_at)}</span>
                         </div>
                         {h.old_status && h.new_status && (
                           <p className="text-xs text-slate-600 dark:text-slate-400">

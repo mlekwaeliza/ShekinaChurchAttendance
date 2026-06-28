@@ -7,6 +7,7 @@ import {
   Building2, Users, PiggyBank, ArrowRight, Banknote, HandCoins,
   Sparkles, Activity, AlertCircle, Send, CheckCheck
 } from 'lucide-react';
+import { fdate, fdatetime } from '../../utils/date';
 
 const YEAR = new Date().getFullYear();
 const EXPENSE_CATEGORIES = ['Food', 'Water', 'Fruits', 'Sugar', 'Media', 'Visitors', 'Transport', 'Other'];
@@ -392,8 +393,8 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                 {/* Status Timeline */}
                 <div className="text-xs text-slate-400 space-y-1">
                   {selectedRecord.created_by_name && <p>Created by: {selectedRecord.created_by_name}</p>}
-                  {selectedRecord.submitted_by_name && <p>Submitted by: {selectedRecord.submitted_by_name} {selectedRecord.submitted_at ? `at ${new Date(selectedRecord.submitted_at).toLocaleString()}` : ''}</p>}
-                  {selectedRecord.approved_by_name && <p>Approved/Rejected by: {selectedRecord.approved_by_name} {selectedRecord.approved_at ? `at ${new Date(selectedRecord.approved_at).toLocaleString()}` : ''}</p>}
+                  {selectedRecord.submitted_by_name && <p>Submitted by: {selectedRecord.submitted_by_name} {selectedRecord.submitted_at ? `at ${fdatetime(selectedRecord.submitted_at)}` : ''}</p>}
+                  {selectedRecord.approved_by_name && <p>Approved/Rejected by: {selectedRecord.approved_by_name} {selectedRecord.approved_at ? `at ${fdatetime(selectedRecord.approved_at)}` : ''}</p>}
                 </div>
               </div>
             </div>
@@ -625,7 +626,7 @@ const MemberTithes = ({ showMessage }) => {
                       <tr key={r.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                         <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{r.contribution_type_name || 'N/A'}</span></td>
                         <td className="py-3 px-4 font-medium text-slate-900 dark:text-white">{r.full_name || 'Unknown'}</td>
-                        <td className="py-3 px-4 text-slate-600">{r.payment_date ? new Date(r.payment_date).toLocaleDateString() : '-'}</td>
+                        <td className="py-3 px-4 text-slate-600">{r.payment_date ? fdate(r.payment_date) : '-'}</td>
                         <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600">{r.payment_method}</span></td>
                         <td className="py-3 px-4 text-right font-semibold text-emerald-600">TZS {Number(r.amount).toLocaleString()}</td>
                       </tr>
@@ -816,8 +817,8 @@ const ReviewView = ({ showMessage }) => {
 
             <div className="text-xs text-slate-400 space-y-1">
               {selected.created_by_name && <p>Created by: {selected.created_by_name}</p>}
-              {selected.submitted_by_name && <p>Submitted by: {selected.submitted_by_name} {selected.submitted_at ? `at ${new Date(selected.submitted_at).toLocaleString()}` : ''}</p>}
-              {selected.approved_by_name && <p>Reviewed by: {selected.approved_by_name} {selected.approved_at ? `at ${new Date(selected.approved_at).toLocaleString()}` : ''}</p>}
+              {selected.submitted_by_name && <p>Submitted by: {selected.submitted_by_name} {selected.submitted_at ? `at ${fdatetime(selected.submitted_at)}` : ''}</p>}
+              {selected.approved_by_name && <p>Reviewed by: {selected.approved_by_name} {selected.approved_at ? `at ${fdatetime(selected.approved_at)}` : ''}</p>}
             </div>
           </div>
         </div>

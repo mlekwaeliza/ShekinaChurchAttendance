@@ -7,6 +7,7 @@ import {
 import { adminAPI } from '../../services/api';
 import Modal from '../ui/Modal';
 import Badge from '../ui/Badge';
+import { fdate, fdatetime } from '../../utils/date';
 
 const cardGradients = [
   { bg: 'from-blue-500 to-indigo-600', light: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-700/50', text: 'text-blue-600 dark:text-blue-400', shadow: 'shadow-blue-500/10' },
@@ -1049,7 +1050,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                             <div>
                               <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{member.member_name}</h5>
                               <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                                {member.member_section || 'No Section'} · Joined {new Date(member.joined_at).toLocaleDateString()}
+                                {member.member_section || 'No Section'} · Joined {fdate(member.joined_at)}
                               </p>
                             </div>
                           </div>
@@ -1096,7 +1097,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                               {log.entity_type.replace('_', ' ')} {log.action}
                             </span>
                             <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                              {new Date(log.created_at).toLocaleString()}
+                              {fdatetime(log.created_at)}
                             </span>
                           </div>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{log.details}</p>

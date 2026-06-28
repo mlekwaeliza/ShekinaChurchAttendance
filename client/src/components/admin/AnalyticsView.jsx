@@ -8,6 +8,7 @@ import {
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { analyticsAPI } from '../../services/api';
+import { fdate } from '../../utils/date';
 
 const R = v => Math.round(Number(v) || 0);
 const C = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#84cc16'];
@@ -592,7 +593,7 @@ const TrendsTab = ({ data }) => {
                   const trend = ma4 > ma8 ? 'Improving' : ma4 < ma8 ? 'Declining' : 'Stable';
                   return (
                     <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                      <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{t.date}</td>
+                      <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{fdate(t.date)}</td>
                       <td className="py-2 px-3 text-right font-bold">{R(t.daily_rate)}%</td>
                       <td className="py-2 px-3 text-right text-emerald-600">{R(ma4)}%</td>
                       <td className="py-2 px-3 text-right text-amber-600">{R(ma8)}%</td>

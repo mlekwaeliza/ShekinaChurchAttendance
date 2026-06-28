@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Plus, Edit3, Trash2, Filter, X, DollarSign, ChevronDown, ChevronUp, FileText, PieChart, List, Calendar, Download, RotateCw, TrendingUp, Receipt } from 'lucide-react';
 import { contributionAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { fdate } from '../../utils/date';
 
 const PAYMENT_METHODS = ['Cash', 'Mobile Money', 'Bank Transfer', 'Other'];
 const CURRENCY = 'TZS';

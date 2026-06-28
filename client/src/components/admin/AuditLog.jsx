@@ -3,6 +3,7 @@ import { adminAPI } from '../../services/api';
 import { Shield, Filter, Calendar, Search, User, FileText, Users, UserCog, Key, RefreshCw } from 'lucide-react';
 import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
+import { fdatetime } from '../../utils/date';
 
 const AuditLog = () => {
   const [entries, setEntries] = useState([]);
@@ -68,8 +69,7 @@ const AuditLog = () => {
   };
 
   const formatDateTime = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleString();
+    return fdatetime(dateStr);
   };
 
   const parseValue = (val) => {

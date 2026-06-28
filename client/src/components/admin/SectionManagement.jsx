@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Layers, Plus, Pencil, Trash2, Users, UserCog, Search, Layout, ChevronRight, Building2 } from 'lucide-react';
 import Modal from '../ui/Modal';
+import { fdate } from '../../utils/date';
 
 const sectionGradients = [
   { bg: 'from-violet-500 to-purple-600', light: 'bg-violet-50 dark:bg-violet-900/20', border: 'border-violet-200 dark:border-violet-700/50', text: 'text-violet-600 dark:text-violet-400', ring: 'ring-violet-100 dark:ring-violet-800/50', shadow: 'shadow-violet-500/10' },
@@ -151,7 +152,7 @@ const SectionManagement = ({
                           {section.name}
                         </h3>
                         <p className="text-xs text-slate-400 dark:text-slate-500">
-                          {new Date(section.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {fdate(section.created_at)}
                         </p>
                       </div>
                     </div>
