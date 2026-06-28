@@ -517,11 +517,11 @@ const MembersTab = ({ data }) => {
                   <tr key={m.id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{m.full_name}</td>
                     <td className="py-2.5 px-3 text-slate-500">{m.section_name}</td>
-                    <td className="py-2.5 px-3 text-slate-500 text-xs">{fdate(m.registered_date)}</td>
-                    <td className="py-2.5 px-3 text-right text-emerald-600">{m.times_present}</td>
-                    <td className="py-2.5 px-3 text-right text-rose-500">{m.times_absent}</td>
+                    <td className="py-2.5 px-3 text-slate-500 text-xs">{m.registered_date ? fdate(m.registered_date) : '—'}</td>
+                    <td className="py-2.5 px-3 text-right text-emerald-600">{m.present_count ?? m.times_present}</td>
+                    <td className="py-2.5 px-3 text-right text-rose-500">{m.absent_count ?? m.times_absent}</td>
                     <td className="py-2.5 px-3 text-right font-bold">{R(m.attendance_rate)}%</td>
-                    <td className="py-2.5 px-3 text-right text-slate-500 text-xs">{m.last_attendance ? fdate(m.last_attendance) : 'Never'}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-500 text-xs">{m.last_attendance_date ? fdate(m.last_attendance_date) : 'Never'}</td>
                   </tr>
                 ))}
               </tbody>
