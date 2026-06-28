@@ -10,6 +10,7 @@ import {
 import { adminAPI, analyticsAPI } from '../../services/api';
 import { formatEATDate, formatEATDateTimeParts } from '../../utils/date';
 import Badge from '../ui/Badge';
+import { fdate, fdatetime } from '../../utils/date';
 
 const R = v => Math.round(Number(v) || 0);
 
@@ -30,7 +31,7 @@ const formatPeriodLabel = (filterType, filterValue) => {
   if (filterType === 'monthly') {
     const [year, month] = filterValue.split('-');
     const date = new Date(year, parseInt(month, 10) - 1);
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return fdate(date);
   }
   return filterValue.replace('-', ' ');
 };
@@ -721,7 +722,7 @@ const AttendanceReports = ({
       const autoTable = autoTableModule.default;
       doc.setFontSize(18); doc.text('Church Attendance Intelligence Report', 14, 22);
       doc.setFontSize(11); doc.text(`${serviceLabel} - ${periodLabel}`, 14, 30);
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 36);
+      doc.text(`Generated: ${fdatetime(new Date())}`, 14, 36);
       autoTable(doc, { startY: 44, head: [['Metric', 'Value']], body: [
         ['Attendance Rate', `${attendanceRate}%`], ['Present', String(totalPresent)], ['Absent', String(totalAbsent)],
         ['Excused', String(totalExcused)], ['Total Members', String(totalMembers)],
@@ -1329,11 +1330,11 @@ const AttendanceReports = ({
                 <div className="mt-3 grid grid-cols-2 gap-4 text-xs">
                   <div className="rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 p-3">
                     <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Period 1 Week</p>
-                    <p className="text-slate-500">{toDateStr(sun1)} ({dayNames[0]}) — {toDateStr(fri1)} ({dayNames[5]})</p>
+                    <p className="text-slate-500">{fdate(sun1)} ({dayNames[0]}) — {fdate(fri1)} ({dayNames[5]})</p>
                   </div>
                   <div className="rounded-xl bg-slate-50/50 dark:bg-slate-800/50 p-3">
                     <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Period 2 Week</p>
-                    <p className="text-slate-500">{toDateStr(sun2)} ({dayNames[0]}) — {toDateStr(fri2)} ({dayNames[5]})</p>
+                    <p className="text-slate-500">{fdate(sun2)} ({dayNames[0]}) — {fdate(fri2)} ({dayNames[5]})</p>
                   </div>
                 </div>
               );
@@ -1349,8 +1350,8 @@ const AttendanceReports = ({
                   {typeTabs.find(t => t.key === compType)?.label || compType} — {periodTabs.find(p => p.key === compPeriod)?.label || compPeriod}
                 </p>
                 <p className="text-[10px] text-slate-400">
-                  Current: <span className="font-medium text-slate-600 dark:text-slate-300">{dates.cStart} to {dates.cEnd}</span>
-                  {' '}&mdash; Previous: <span className="font-medium text-slate-600 dark:text-slate-300">{dates.pStart} to {dates.pEnd}</span>
+                  Current: <span className="font-medium text-slate-600 dark:text-slate-300">{fdate(dates.cStart)} to {fdate(dates.cEnd)}</span>
+                  {' '}&mdash; Previous: <span className="font-medium text-slate-600 dark:text-slate-300">{fdate(dates.pStart)} to {fdate(dates.pEnd)}</span>
                 </p>
               </div>
             </div>
@@ -1576,7 +1577,7 @@ const AttendanceReports = ({
                 <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
                   <div className="p-4 border-b border-slate-100 dark:border-slate-700">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Church Week Attendance — Day by Day</h3>
-                    {dates && <p className="text-[10px] text-slate-400 mt-0.5">{dates.cStart} (Sunday) to {dates.cEnd} (Friday) vs {dates.pStart} to {dates.pEnd}</p>}
+                    {dates && <p className="text-[10px] text-slate-400 mt-0.5">{fdate(dates.cStart)} (Sunday) to {fdate(dates.cEnd)} (Friday) vs {fdate(dates.pStart)} to {fdate(dates.pEnd)}</p>}
                   </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
@@ -1647,7 +1648,7 @@ const AttendanceReports = ({
                         const diff = prev ? row.rate - prev.rate : 0;
                         return (
                           <tr key={row.date} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                            <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{row.date}</td>
+                            <td className="py-2 px-3 font-medium text-slate-900 dark:text-white">{fdate(row.date)}</td>
                             <td className="py-2 px-3 text-right text-emerald-600">{row.present}</td>
                             <td className="py-2 px-3 text-right text-rose-500">{row.absent}</td>
                             <td className="py-2 px-3 text-right text-amber-500">{row.excused}</td>
@@ -3370,7 +3371,7 @@ const AttendanceReports = ({
               { key: 'section_name', label: 'Section' },
               { key: 'head_leader_name', label: 'Head Leader' },
               { key: 'leader_name', label: 'Section Leader' },
-              { key: 'registered_date', label: 'Registered Date' },
+              { key: 'registered_date', label: 'Registered Date', render: v => fdate(v) },
               { key: 'membership_duration', label: 'Membership Duration' },
               { key: 'attendance_rate', label: 'Attendance Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 55 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
               { key: 'present_count', label: 'Present Count', align: 'right' },
@@ -3479,15 +3480,14 @@ const AttendanceReports = ({
                               const submittedAt = formatEastAfricaDateTime(record.submitted_at);
                               return (
                                 <tr key={record.id} className="border-b border-slate-50 dark:border-slate-800">
-                                  <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{record.date}</td>
+                                  <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{fdate(record.date)}</td>
                                   <td className="py-2.5 px-3">
                                     <Badge variant={record.status === 'present' ? 'success' : record.status === 'excused' ? 'warning' : 'danger'}>{record.status}</Badge>
                                   </td>
                                   <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{record.service_name}</td>
                                   <td className="py-2.5 px-3 text-slate-500">{record.submitted_by_name || 'Unknown'}</td>
                                   <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
-                                    <div className="font-medium text-slate-700 dark:text-slate-200">{submittedAt.date}</div>
-                                    {submittedAt.time && <div className="text-[10px] text-slate-400">{submittedAt.time}</div>}
+                                    <div className="font-medium text-slate-700 dark:text-slate-200">{fdatetime(record.submitted_at)}</div>
                                   </td>
                                 </tr>
                               );
@@ -3546,7 +3546,7 @@ const AttendanceReports = ({
                     const rate = t.total_members > 0 ? Math.round((t.present_count / t.total_members) * 100) : 0;
                     return (
                       <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{t.date}</td>
+                        <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{fdate(t.date)}</td>
                         <td className="py-2 px-3 text-right text-emerald-600">{t.present_count}</td>
                         <td className="py-2 px-3 text-right text-rose-500">{t.absent_count}</td>
                         <td className="py-2 px-3 text-right text-amber-500">{t.excused_count}</td>

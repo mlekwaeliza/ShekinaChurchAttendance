@@ -4,7 +4,7 @@ import StatCard from '../ui/StatCard';
 import Badge from '../ui/Badge';
 import EmptyState from '../ui/EmptyState';
 import { Calendar, Cake, Mail, MessageSquare, Download, ChevronRight, ChevronDown, Filter, Plus } from 'lucide-react';
-import { addDays, formatDisplayDate, formatLocalDate, parseLocalDate } from '../../utils/date';
+import { addDays, formatDisplayDate, formatLocalDate, parseLocalDate, fdate } from '../../utils/date';
 
 const BirthdayModule = () => {
   const [data, setData] = useState({ members: [], stats: {} });
@@ -180,7 +180,7 @@ const BirthdayModule = () => {
               ) : (
                 <div className="flex items-center gap-3">
                   <h3 className={`text-sm font-bold uppercase tracking-wider ${groupKey === today ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
-                    {formatDisplayDate(groupKey, { weekday: 'short', month: 'long', day: 'numeric' })}
+                    {fdate(groupKey)}
                     {groupKey === today && <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 rounded-full text-[10px]">Today</span>}
                   </h3>
                   <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>

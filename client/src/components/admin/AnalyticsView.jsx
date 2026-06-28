@@ -594,7 +594,7 @@ const TrendsTab = ({ data }) => {
                   const trend = ma4 > ma8 ? 'Improving' : ma4 < ma8 ? 'Declining' : 'Stable';
                   return (
                     <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                      <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{t.date}</td>
+                      <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{fdate(t.date)}</td>
                       <td className="py-2 px-3 text-right font-bold">{R(t.daily_rate)}%</td>
                       <td className="py-2 px-3 text-right text-emerald-600">{R(ma4)}%</td>
                       <td className="py-2 px-3 text-right text-amber-600">{R(ma8)}%</td>

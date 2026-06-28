@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Cake, UserX, UserPlus, MessageSquare, ChevronRight, Bell } from 'lucide-react';
+import { fdate } from '../../utils/date';
 
 const NeedsAttentionWidget = ({ birthdays = [], absentees = [], visitors = [], onSendMessage, onAssignFollowUp, onAddVisitorToFollowUp }) => {
   const [activeTab, setActiveTab] = useState('birthdays');
@@ -99,7 +100,7 @@ const NeedsAttentionWidget = ({ birthdays = [], absentees = [], visitors = [], o
                       <div className="flex flex-wrap gap-1 mt-1">
                         {a.missed_dates.map((d, i) => (
                           <span key={i} className="px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-900/20 text-[9px] font-bold text-rose-600 dark:text-rose-400">
-                            {new Date(d + 'T00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {fdate(d)}
                           </span>
                         ))}
                       </div>
@@ -136,7 +137,7 @@ const NeedsAttentionWidget = ({ birthdays = [], absentees = [], visitors = [], o
                   </div>
                   <div>
                     <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{v.full_name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Visited: {v.date}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Visited: {fdate(v.date)}</p>
                   </div>
                 </div>
                 <button

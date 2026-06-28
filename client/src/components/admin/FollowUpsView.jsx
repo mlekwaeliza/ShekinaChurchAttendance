@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ClipboardCheck, Search, UserX, CalendarCheck, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
+import { fdate } from '../../utils/date';
 
 const FollowUpsView = ({ dashboardMetrics, leaders = [], showMessage }) => {
   const [tasks, setTasks] = useState([]);
@@ -128,7 +129,7 @@ const FollowUpsView = ({ dashboardMetrics, leaders = [], showMessage }) => {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-bold text-slate-900 dark:text-slate-100">{person.full_name}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{person.section_name || person.date || 'Unassigned'} - {person.reason}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{person.section_name || (person.date ? fdate(person.date) : '') || 'Unassigned'} - {person.reason}</p>
                     </div>
                     <button
                       type="button"

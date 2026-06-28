@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Clock, CalendarDays, FileText, Users, Search, ChevronDown, ChevronUp } from 'lucide-react';
-import { addDays, formatDisplayDate, formatLocalDate, parseLocalDate } from '../../utils/date';
+import { addDays, formatDisplayDate, formatLocalDate, parseLocalDate, fdate, fdatetime } from '../../utils/date';
 
 const SubmissionHistory = ({ 
   history, 
@@ -248,17 +248,7 @@ const SubmissionHistory = ({
                             {/* Time */}
                             <div className="text-right">
                               <p className="text-sm font-medium text-slate-600 dark:text-slate-400 tabular-nums">
-                                {new Date(log.submitted_at).toLocaleTimeString([], {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true
-                                })}
-                              </p>
-                              <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase">
-                                {new Date(log.submitted_at).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
+                                {fdatetime(log.submitted_at)}
                               </p>
                             </div>
                           </div>

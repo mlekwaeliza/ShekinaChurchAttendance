@@ -53,54 +53,20 @@ export function formatDisplayDate(value, options = {}) {
   }).format(date);
 }
 
-export function formatEATDate(value, options = {}) {
-  if (!value) return '-';
-  const date = parseLocalDate(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Africa/Dar_es_Salaam',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    ...options,
-  }).format(date);
+export function fdate(value) {
+  if (!value) return '—';
+  const d = parseLocalDate(value);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-export function formatEATTime(value, options = {}) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return `${new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Africa/Dar_es_Salaam',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    ...options,
-  }).format(date)} EAT`;
-}
-
-export function formatEATDateTime(value, options = {}) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Africa/Dar_es_Salaam',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    ...options,
-  }).format(date).replace(',', '') + ' EAT';
-}
-
-export function formatEATDateTimeParts(value) {
-  if (!value) return { date: '-', time: '' };
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return { date: String(value), time: '' };
-  return {
-    date: formatEATDate(value),
-    time: formatEATTime(value),
-  };
+export function fdatetime(value) {
+  if (!value) return '—';
+  const d = parseLocalDate(value);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${h}:${m} ${ampm}`;
 }

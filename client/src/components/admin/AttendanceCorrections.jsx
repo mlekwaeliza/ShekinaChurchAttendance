@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { adminAPI } from '../../services/api';
-import { formatLocalDate, addDays } from '../../utils/date';
+import { formatLocalDate, addDays, fdate, fdatetime } from '../../utils/date';
 import {
   Edit3,
   Search,
@@ -104,7 +104,7 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
                 Edit Attendance
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {record.member_name} &middot; {record.date}
+                {record.member_name} &middot; {fdate(record.date)}
               </p>
             </div>
           </div>
@@ -209,7 +209,7 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
                         <span className="font-semibold text-slate-700 dark:text-slate-200">
                           {entry.editor_name || `User #${entry.editor_id || 'system'}`}
                         </span>
-                        <span className="text-[10px] text-slate-400">{new Date(entry.created_at).toLocaleString()}</span>
+                        <span className="text-[10px] text-slate-400">{fdatetime(entry.created_at)}</span>
                       </div>
                       <div className="mt-1 grid grid-cols-2 gap-2 text-slate-500 dark:text-slate-400">
                         <div><span className="text-[10px] uppercase">From:</span> {oldVal?.status || '—'}</div>
@@ -381,7 +381,7 @@ const AttendanceCorrections = ({ showMessage }) => {
       header: 'Date',
       sortable: true,
       render: (row) => (
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-200 tabular-nums">{row.date}</span>
+        <span className="text-sm font-medium text-slate-700 dark:text-slate-200 tabular-nums">{fdate(row.date)}</span>
       ),
     },
     {
@@ -418,7 +418,7 @@ const AttendanceCorrections = ({ showMessage }) => {
     {
       accessor: 'submitted_at',
       header: 'When',
-      render: (row) => <span className="text-xs text-slate-400">{row.submitted_at ? new Date(row.submitted_at).toLocaleString() : '—'}</span>,
+      render: (row) => <span className="text-xs text-slate-400">{row.submitted_at ? fdatetime(row.submitted_at) : '—'}</span>,
     },
     {
       accessor: 'actions',

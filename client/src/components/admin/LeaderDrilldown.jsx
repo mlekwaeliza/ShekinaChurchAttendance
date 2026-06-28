@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useBreadcrumbs } from '../../context/BreadcrumbContext';
 import { X, FolderOpen, Phone, Mail, Users, FileText, TrendingUp } from 'lucide-react';
+import { fdate, fdatetime } from '../../utils/date';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -221,13 +222,13 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
                       history.map((log, i) => (
                         <tr key={i}>
                           <td>
-                            <span className="font-semibold text-slate-900 dark:text-slate-100">{log.date}</span>
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">{fdate(log.date)}</span>
                           </td>
                           <td className="text-center">
                             <span className="badge-info font-mono">{log.records_count}</span>
                           </td>
                           <td className="text-center text-slate-500 dark:text-slate-400 text-xs tabular-nums">
-                            {new Date(log.submitted_at).toLocaleString()}
+                            {fdatetime(log.submitted_at)}
                           </td>
                         </tr>
                       ))

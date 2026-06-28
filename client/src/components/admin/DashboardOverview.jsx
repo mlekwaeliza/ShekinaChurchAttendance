@@ -20,7 +20,7 @@ import NeedsAttentionWidget from './NeedsAttentionWidget';
 import HallOfFamePreview from './HallOfFamePreview';
 import LeadershipWidget from './LeadershipWidget';
 import StatCard from '../ui/StatCard';
-import { formatLocalDate } from '../../utils/date';
+import { formatLocalDate, fdate, fdatetime } from '../../utils/date';
 
 const DashboardOverview = ({
   allMembers = [],
@@ -37,20 +37,13 @@ const DashboardOverview = ({
 }) => {
   const navigate = useNavigate();
 
-  const lastUpdatedStr = lastUpdated.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  const lastUpdatedStr = fdatetime(lastUpdated);
 
   const currentService = serviceTypes.find((service) => service.id === selectedServiceId);
   const attendanceContext = dashboardMetrics?.attendanceContext || { mode: 'today' };
   const isLatestAttendance = attendanceContext.mode === 'latest';
   const attendanceDateLabel = attendanceContext.date
-    ? new Date(attendanceContext.date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      })
+    ? fdate(attendanceContext.date)
     : '';
   const serviceLabel = selectedServiceId === 'all'
     ? (isLatestAttendance ? 'All Services' : 'All Services Today')
@@ -359,10 +352,7 @@ const DashboardOverview = ({
                   <div className="flex items-center gap-3.5">
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-700">
                       <span className="text-xs font-bold text-slate-900 dark:text-white">
-                        {new Date(member.date_of_birth).toLocaleDateString('en-US', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}
+                        {fdate(member.date_of_birth)}
                       </span>
                     </div>
                     <div>
