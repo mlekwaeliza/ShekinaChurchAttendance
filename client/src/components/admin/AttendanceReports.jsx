@@ -34,6 +34,26 @@ const formatPeriodLabel = (filterType, filterValue) => {
   return filterValue.replace('-', ' ');
 };
 
+const formatEastAfricaDateTime = (value) => {
+  if (!value) return { date: '-', time: '' };
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return { date: value, time: '' };
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Dar_es_Salaam',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type) => parts.find(part => part.type === type)?.value || '';
+  return {
+    date: `${get('day')} ${get('month')} ${get('year')}`,
+    time: `${get('hour')}:${get('minute')} EAT`,
+  };
+};
+
 const MetricCard = ({ label, value, previousValue, icon: Icon, color = 'indigo', showDiff = true, suffix = '' }) => {
   const num = typeof value === 'number' ? value : (Number(value) || 0);
   const prevNum = typeof previousValue === 'number' ? previousValue : (Number(previousValue) || 0);
@@ -3474,17 +3494,23 @@ const AttendanceReports = ({
                               <tr>
                                 <td colSpan={5} className="py-10 text-center text-sm text-slate-400">No attendance records found for this member in the selected window.</td>
                               </tr>
-                            ) : selectedMemberDetails.records.map(record => (
-                              <tr key={record.id} className="border-b border-slate-50 dark:border-slate-800">
-                                <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{record.date}</td>
-                                <td className="py-2.5 px-3">
-                                  <Badge variant={record.status === 'present' ? 'success' : record.status === 'excused' ? 'warning' : 'danger'}>{record.status}</Badge>
-                                </td>
-                                <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{record.service_name}</td>
-                                <td className="py-2.5 px-3 text-slate-500">{record.submitted_by_name || 'Unknown'}</td>
-                                <td className="py-2.5 px-3 text-slate-500">{record.submitted_at || '-'}</td>
-                              </tr>
-                            ))}
+                            ) : selectedMemberDetails.records.map(record => {
+                              const submittedAt = formatEastAfricaDateTime(record.submitted_at);
+                              return (
+                                <tr key={record.id} className="border-b border-slate-50 dark:border-slate-800">
+                                  <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{record.date}</td>
+                                  <td className="py-2.5 px-3">
+                                    <Badge variant={record.status === 'present' ? 'success' : record.status === 'excused' ? 'warning' : 'danger'}>{record.status}</Badge>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{record.service_name}</td>
+                                  <td className="py-2.5 px-3 text-slate-500">{record.submitted_by_name || 'Unknown'}</td>
+                                  <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
+                                    <div className="font-medium text-slate-700 dark:text-slate-200">{submittedAt.date}</div>
+                                    {submittedAt.time && <div className="text-[10px] text-slate-400">{submittedAt.time}</div>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
