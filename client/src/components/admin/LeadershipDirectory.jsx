@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Award, Search, Users, X, ChevronLeft, ChevronRight, Download, Plus } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import DataTable from '../ui/DataTable';
+import { fdate, fdatetime } from '../../utils/date';
 import Badge from '../ui/Badge';
 import Modal from '../ui/Modal';
 
@@ -82,7 +83,7 @@ const LeadershipDirectory = () => {
       d.section_name || '—',
       d.title_name,
       d.title_status || 'active',
-      d.appointment_date ? new Date(d.appointment_date).toLocaleDateString() : '—',
+      d.appointment_date ? fdatetime(d.appointment_date) : '—',
       d.phone || '—',
       d.email || '—',
       d.assigned_by_name || '—',
@@ -197,7 +198,7 @@ const LeadershipDirectory = () => {
         </Badge>
       ),
     },
-    { accessor: 'appointment_date', header: 'Appointed', sortable: true, render: (row) => row.appointment_date ? new Date(row.appointment_date).toLocaleDateString() : '—' },
+    { accessor: 'appointment_date', header: 'Appointed', sortable: true, render: (row) => row.appointment_date ? fdatetime(row.appointment_date) : '—' },
     { accessor: 'phone', header: 'Phone' },
     { accessor: 'email', header: 'Email' },
     { accessor: 'assigned_by_name', header: 'Assigned By', sortable: true },

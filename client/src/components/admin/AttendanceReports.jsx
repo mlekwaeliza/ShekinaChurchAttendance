@@ -8,6 +8,7 @@ import {
   ArrowUp, ArrowDown, Minus, RefreshCw, Building2, PieChart
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
+import { formatEATDate, formatEATDateTimeParts } from '../../utils/date';
 import Badge from '../ui/Badge';
 
 const R = v => Math.round(Number(v) || 0);
@@ -32,26 +33,6 @@ const formatPeriodLabel = (filterType, filterValue) => {
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
   return filterValue.replace('-', ' ');
-};
-
-const formatEastAfricaDateTime = (value) => {
-  if (!value) return { date: '-', time: '' };
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return { date: value, time: '' };
-  const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Africa/Dar_es_Salaam',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(date);
-  const get = (type) => parts.find(part => part.type === type)?.value || '';
-  return {
-    date: `${get('day')} ${get('month')} ${get('year')}`,
-    time: `${get('hour')}:${get('minute')} EAT`,
-  };
 };
 
 const MetricCard = ({ label, value, previousValue, icon: Icon, color = 'indigo', showDiff = true, suffix = '' }) => {

@@ -8,6 +8,7 @@ import {
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { analyticsAPI } from '../../services/api';
+import { fdate } from '../../utils/date';
 
 const R = v => Math.round(Number(v) || 0);
 const C = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#84cc16'];
@@ -506,8 +507,8 @@ const MembersTab = ({ data }) => {
             <table className="min-w-full text-sm">
               <thead className="sticky top-0 bg-white dark:bg-slate-800">
                 <tr className="border-b border-slate-200 dark:border-slate-700">
-                  {['Member','Section','Present','Absent','Rate','Last Seen'].map(h => (
-                    <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${['Member','Section'].includes(h) ? 'text-left' : 'text-right'}`}>{h}</th>
+                  {['Member','Section','Registered','Present','Absent','Rate','Last Seen'].map(h => (
+                    <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${['Member','Section','Registered'].includes(h) ? 'text-left' : 'text-right'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -516,10 +517,11 @@ const MembersTab = ({ data }) => {
                   <tr key={m.id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                     <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{m.full_name}</td>
                     <td className="py-2.5 px-3 text-slate-500">{m.section_name}</td>
+                    <td className="py-2.5 px-3 text-slate-500 text-xs">{fdate(m.registered_date)}</td>
                     <td className="py-2.5 px-3 text-right text-emerald-600">{m.times_present}</td>
                     <td className="py-2.5 px-3 text-right text-rose-500">{m.times_absent}</td>
                     <td className="py-2.5 px-3 text-right font-bold">{R(m.attendance_rate)}%</td>
-                    <td className="py-2.5 px-3 text-right text-slate-500 text-xs">{m.last_attendance || 'Never'}</td>
+                    <td className="py-2.5 px-3 text-right text-slate-500 text-xs">{m.last_attendance ? fdate(m.last_attendance) : 'Never'}</td>
                   </tr>
                 ))}
               </tbody>

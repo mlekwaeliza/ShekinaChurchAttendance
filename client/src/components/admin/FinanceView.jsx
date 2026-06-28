@@ -1,933 +1,613 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { financeAPI, contributionAPI, adminAPI } from '../../services/api';
+import { financeAPI, contributionAPI } from '../../services/api';
 import {
   DollarSign, TrendingUp, Calendar, CheckCircle2, XCircle, Clock,
-  Loader2, Plus, Search, Filter, ChevronDown, ChevronUp, Edit3, Trash2,
-  Upload, FileText, Download, Eye, ArrowUpCircle, Ban, Receipt,
-  Building2, Users, PiggyBank, ArrowRight, Banknote, HandCoins,
-  Sparkles, Activity, AlertCircle, Send, CheckCheck
+  Loader2, Search, ChevronDown, Eye, ArrowUpCircle, Ban, Receipt,
+  HandCoins, Sparkles, AlertCircle, Send, CheckCheck, BarChart3,
+  PieChart, RefreshCw, X, Shield, Download, FileText, TrendingDown,
+  ArrowRight, PiggyBank, Banknote, Activity
 } from 'lucide-react';
+import { fdate, fdatetime } from '../../utils/date';
 
 const YEAR = new Date().getFullYear();
-const EXPENSE_CATEGORIES = ['Food', 'Water', 'Fruits', 'Sugar', 'Media', 'Visitors', 'Transport', 'Other'];
 const STATUS_COLORS = {
-  draft: 'bg-slate-100 text-slate-600',
-  submitted: 'bg-amber-100 text-amber-700',
-  approved: 'bg-emerald-100 text-emerald-700',
-  rejected: 'bg-rose-100 text-rose-700',
+  draft: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  submitted: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  rejected: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+};
+const STATUS_ICONS = { draft: Clock, submitted: Send, approved: CheckCircle2, rejected: XCircle };
+
+const TABS = [
+  { key: 'overview', label: 'Overview', icon: BarChart3 },
+  { key: 'approvals', label: 'Pending Approvals', icon: AlertCircle },
+  { key: 'records', label: 'All Records', icon: FileText },
+  { key: 'reports', label: 'Reports', icon: PieChart },
+  { key: 'trends', label: 'Trends', icon: TrendingUp },
+];
+
+const fmt = (v) => `TZS ${Number(v || 0).toLocaleString()}`;
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+
+const calcFinance = (morning, afternoon, tithes) => {
+  const m = Number(morning) || 0, a = Number(afternoon) || 0, t = Number(tithes) || 0;
+  const total = m + a + t;
+  const mission = Math.round(total * 0.1 * 100) / 100;
+  const remaining = Math.round((total - mission) * 100) / 100;
+  const bishop = Math.round(remaining * 0.1 * 100) / 100;
+  const usable = Math.round((remaining - bishop) * 100) / 100;
+  return { morning: m, afternoon: a, tithes: t, total, mission, remaining, bishop, usable };
 };
 
-function today() { return new Date().toISOString().split('T')[0]; }
+const StatusBadge = ({ status }) => {
+  const Icon = STATUS_ICONS[status] || Clock;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[status] || ''}`}>
+      <Icon className="w-3 h-3" />
+      {status?.charAt(0).toUpperCase() + status?.slice(1)}
+    </span>
+  );
+};
+
+const MetricCard = ({ label, value, icon: Icon, color = 'slate', trend, className = '' }) => (
+  <div className={`rounded-xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 ${className}`}>
+    <div className="flex items-center justify-between mb-2">
+      <span className="text-[10px] font-semibold uppercase text-slate-400">{label}</span>
+      {Icon && <Icon className={`w-4 h-4 text-${color}-500`} />}
+    </div>
+    <p className="text-xl font-bold text-slate-900 dark:text-white">{value}</p>
+    {trend !== undefined && (
+      <div className={`flex items-center gap-1 mt-1 text-[10px] font-medium ${trend >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+        {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+        {Math.abs(trend)}% vs last month
+      </div>
+    )}
+  </div>
+);
 
 const FinanceView = ({ showMessage, userRole = 'admin' }) => {
-  const [tab, setTab] = useState('entry');
+  const [activeTab, setActiveTab] = useState('overview');
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRecord, setSelectedRecord] = useState(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState({ record_date: today(), morning_offering: '', afternoon_offering: '', total_tithes: '', notes: '' });
-  const [editing, setEditing] = useState(null);
-  const [expenseForm, setExpenseForm] = useState({ category: 'Food', amount: '', description: '' });
-  const [expenseOpen, setExpenseOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  const [rejectOpen, setRejectOpen] = useState(null);
+  const [selected, setSelected] = useState(null);
   const [filterStatus, setFilterStatus] = useState('');
+  const [searchDate, setSearchDate] = useState('');
+  const [summary, setSummary] = useState(null);
+  const [trend, setTrend] = useState([]);
+  const [rptFrom, setRptFrom] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; });
+  const [rptTo, setRptTo] = useState(today());
+  const [rejectOpen, setRejectOpen] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [detailOpen, setDetailOpen] = useState(null);
+  const [detailData, setDetailData] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   const loadRecords = useCallback(async () => {
-    setLoading(true);
     try {
-      const params = {};
-      if (filterStatus) params.status = filterStatus;
-      const res = await financeAPI.getRecords(params);
-      setRecords(res.data);
-    } catch (err) { console.error(err); }
+      const res = await financeAPI.getRecords(filterStatus ? { status: filterStatus } : {});
+      setRecords(res.data || []);
+    } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [filterStatus]);
 
-  useEffect(() => { loadRecords(); }, [loadRecords]);
-
-  const calcFinance = (morning, afternoon, tithes) => {
-    const m = Number(morning) || 0;
-    const a = Number(afternoon) || 0;
-    const t = Number(tithes) || 0;
-    const total = m + a + t;
-    const mission = Math.round(total * 0.1 * 100) / 100;
-    const remaining = Math.round((total - mission) * 100) / 100;
-    const bishop = Math.round(remaining * 0.1 * 100) / 100;
-    const usable = Math.round((remaining - bishop) * 100) / 100;
-    return { total, mission, remaining, bishop, usable };
-  };
-
-  const handleSaveRecord = async (e) => {
-    e.preventDefault();
-    try {
-      const data = {
-        record_date: form.record_date,
-        morning_offering: Number(form.morning_offering) || 0,
-        afternoon_offering: Number(form.afternoon_offering) || 0,
-        total_tithes: Number(form.total_tithes) || 0,
-        notes: form.notes,
-      };
-      if (editing) {
-        await financeAPI.updateRecord(editing.id, data);
-        showMessage('Record updated');
-      } else {
-        await financeAPI.createRecord(data);
-        showMessage('Record created');
-      }
-      setFormOpen(false); setEditing(null);
-      setForm({ record_date: today(), morning_offering: '', afternoon_offering: '', total_tithes: '', notes: '' });
-      loadRecords();
-    } catch (err) {
-      const msg = err.response?.data?.error || 'Failed to save record';
-      alert(msg);
-    }
-  };
-
-  const handleEdit = (r) => {
-    setEditing(r);
-    setForm({ record_date: r.record_date, morning_offering: String(r.morning_offering), afternoon_offering: String(r.afternoon_offering), total_tithes: String(r.total_tithes), notes: r.notes || '' });
-    setFormOpen(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Delete this record?')) return;
-    try { await financeAPI.deleteRecord(id); showMessage('Record deleted'); loadRecords(); }
-    catch (err) { alert('Failed to delete'); }
-  };
-
-  const handleSubmit = async (id) => {
-    try { await financeAPI.submitRecord(id); showMessage('Submitted for approval'); loadRecords(); }
-    catch (err) { alert('Failed to submit'); }
-  };
-
-  const handleApprove = async (id) => {
-    try { await financeAPI.approveRecord(id); showMessage('Record approved'); loadRecords(); setSelectedRecord(null); }
-    catch (err) { alert('Failed to approve'); }
-  };
-
-  const handleReject = async (id) => {
-    if (!rejectReason.trim()) return;
-    try { await financeAPI.rejectRecord(id, rejectReason); showMessage('Record rejected'); setRejectOpen(null); setRejectReason(''); loadRecords(); setSelectedRecord(null); }
-    catch (err) { alert('Failed to reject'); }
-  };
-
-  const handleAddExpense = async (e) => {
-    e.preventDefault();
-    if (!selectedRecord) return;
-    try {
-      await financeAPI.addExpense(selectedRecord.id, expenseForm);
-      setExpenseOpen(false);
-      setExpenseForm({ category: 'Food', amount: '', description: '' });
-      const res = await financeAPI.getRecord(selectedRecord.id);
-      setSelectedRecord(res.data);
-      showMessage('Expense added');
-    } catch (err) { alert('Failed to add expense'); }
-  };
-
-  const handleDeleteExpense = async (expenseId) => {
-    if (!window.confirm('Delete this expense?')) return;
-    try {
-      await financeAPI.deleteExpense(expenseId);
-      const res = await financeAPI.getRecord(selectedRecord.id);
-      setSelectedRecord(res.data);
-      showMessage('Expense deleted');
-    } catch (err) { alert('Failed to delete expense'); }
-  };
-
-  const handleUploadReceipt = async (expenseId, file) => {
-    try {
-      await financeAPI.uploadReceipt(expenseId, file);
-      const res = await financeAPI.getRecord(selectedRecord.id);
-      setSelectedRecord(res.data);
-      showMessage('Receipt uploaded');
-    } catch (err) { alert('Failed to upload receipt'); }
-  };
-
-  const openRecord = async (id) => {
-    try {
-      const res = await financeAPI.getRecord(id);
-      setSelectedRecord(res.data);
-    } catch (err) { alert('Failed to load record'); }
-  };
-
-  const totalExpenses = selectedRecord?.expenses?.reduce((s, e) => s + Number(e.amount), 0) || 0;
-  const netBalance = selectedRecord ? Number(selectedRecord.usable_church_funds) - totalExpenses : 0;
-
-  const tabs = [
-    { key: 'entry', label: '📝 Entry', icon: DollarSign },
-    { key: 'tithes', label: '🙏 Member Tithes', icon: HandCoins },
-    ...(userRole === 'admin' ? [
-      { key: 'review', label: '✅ Review', icon: CheckCircle2 },
-      { key: 'reports', label: '📊 Reports', icon: TrendingUp },
-    ] : []),
-  ];
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 w-fit">
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${tab === t.key ? 'bg-white dark:bg-slate-700 text-primary-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-            <t.icon className="w-4 h-4" /> {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'entry' && (
-        <>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Daily Finance Entry</h2>
-            <button onClick={() => { setEditing(null); setForm({ record_date: today(), morning_offering: '', afternoon_offering: '', total_tithes: '', notes: '' }); setFormOpen(true); }}
-              className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> New Record</button>
-          </div>
-
-          {/* Filters */}
-          <div className="flex gap-3">
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input max-w-xs">
-              <option value="">All Statuses</option>
-              <option value="draft">Draft</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
-
-          {/* Entry Form Modal */}
-          {formOpen && (
-            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setFormOpen(false)}>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-5" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold">{editing ? 'Edit Record' : 'New Finance Record'}</h3>
-                <form onSubmit={handleSaveRecord} className="space-y-4">
-                  <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date *</label>
-                    <input type="date" value={form.record_date} onChange={e => setForm({...form, record_date: e.target.value})} className="input w-full" required /></div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div><label className="block text-xs font-medium text-slate-600 mb-1">Morning Offering</label>
-                      <input type="number" step="0.01" value={form.morning_offering} onChange={e => setForm({...form, morning_offering: e.target.value})} className="input w-full" /></div>
-                    <div><label className="block text-xs font-medium text-slate-600 mb-1">Afternoon Offering</label>
-                      <input type="number" step="0.01" value={form.afternoon_offering} onChange={e => setForm({...form, afternoon_offering: e.target.value})} className="input w-full" /></div>
-                    <div><label className="block text-xs font-medium text-slate-600 mb-1">Total Tithes</label>
-                      <input type="number" step="0.01" value={form.total_tithes} onChange={e => setForm({...form, total_tithes: e.target.value})} className="input w-full" /></div>
-                  </div>
-                  <div><label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notes</label>
-                    <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="input w-full" rows={2} /></div>
-
-                  {/* Live preview */}
-                  {(() => {
-                    const c = calcFinance(form.morning_offering, form.afternoon_offering, form.total_tithes);
-                    return (
-                      <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-2 text-sm">
-                        <div className="flex justify-between"><span>Total Income</span><span className="font-bold text-slate-900 dark:text-white">TZS {c.total.toLocaleString()}</span></div>
-                        <div className="flex justify-between text-amber-600"><span>Mission Fund (10%)</span><span className="font-bold">- TZS {c.mission.toLocaleString()}</span></div>
-                        <div className="flex justify-between"><span>Remaining</span><span className="font-medium">{c.remaining.toLocaleString()}</span></div>
-                        <div className="flex justify-between text-rose-500"><span>Bishop Fund (10%)</span><span className="font-bold">- TZS {c.bishop.toLocaleString()}</span></div>
-                        <div className="border-t border-slate-200 dark:border-slate-600 pt-2 flex justify-between text-emerald-600 font-bold">
-                          <span>Usable Church Funds</span><span>TZS {c.usable.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <div className="flex gap-3">
-                    <button type="submit" className="btn-primary">{editing ? 'Update' : 'Create'} Record</button>
-                    <button type="button" onClick={() => setFormOpen(false)} className="btn-secondary">Cancel</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Records List */}
-          {loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
-          ) : records.length === 0 ? (
-            <p className="text-center py-12 text-slate-400">No records found</p>
-          ) : (
-            <div className="space-y-3">
-              {records.map(r => (
-                <div key={r.id} className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                        <Calendar className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900 dark:text-white">{r.record_date}</h3>
-                        <p className="text-xs text-slate-500">By {r.created_by_name || 'Unknown'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[r.status] || ''}`}>{r.status}</span>
-                      <button onClick={() => openRecord(r.id)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary-600" title="View details"><Eye className="w-4 h-4" /></button>
-                      {['draft', 'rejected'].includes(r.status) && (
-                        <>
-                          <button onClick={() => handleEdit(r)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary-600"><Edit3 className="w-4 h-4" /></button>
-                          <button onClick={() => handleSubmit(r.id)} className="p-1.5 rounded-lg hover:bg-amber-50 text-slate-400 hover:text-amber-600" title="Submit for approval"><Send className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                    <div><span className="text-slate-500">Morning</span><p className="font-semibold">TZS {Number(r.morning_offering).toLocaleString()}</p></div>
-                    <div><span className="text-slate-500">Afternoon</span><p className="font-semibold">TZS {Number(r.afternoon_offering).toLocaleString()}</p></div>
-                    <div><span className="text-slate-500">Tithes</span><p className="font-semibold">TZS {Number(r.total_tithes).toLocaleString()}</p></div>
-                    <div><span className="text-slate-500">Total</span><p className="font-bold text-emerald-600">TZS {Number(r.total_income).toLocaleString()}</p></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Record Detail Modal */}
-          {selectedRecord && (
-            <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 pt-12 overflow-y-auto" onClick={() => setSelectedRecord(null)}>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-5" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-bold">Record: {selectedRecord.record_date}</h3>
-                  <button onClick={() => setSelectedRecord(null)} className="text-slate-400 hover:text-slate-600"><XCircle className="w-5 h-5" /></button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4">
-                    <p className="text-slate-500 text-xs mb-1">Income Breakdown</p>
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between"><span>Morning Offering</span><span className="font-semibold">TZS {Number(selectedRecord.morning_offering).toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span>Afternoon Offering</span><span className="font-semibold">TZS {Number(selectedRecord.afternoon_offering).toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span>Total Tithes</span><span className="font-semibold">TZS {Number(selectedRecord.total_tithes).toLocaleString()}</span></div>
-                      <div className="border-t pt-1.5 flex justify-between font-bold text-emerald-600"><span>Total Income</span><span>TZS {Number(selectedRecord.total_income).toLocaleString()}</span></div>
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4">
-                    <p className="text-slate-500 text-xs mb-1">Auto Calculations</p>
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between"><span>Mission Fund (10%)</span><span className="font-semibold text-amber-600">TZS {Number(selectedRecord.mission_fund).toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span>Remaining</span><span className="font-semibold">TZS {Number(selectedRecord.remaining_after_mission).toLocaleString()}</span></div>
-                      <div className="flex justify-between"><span>Bishop Fund (10%)</span><span className="font-semibold text-rose-500">TZS {Number(selectedRecord.bishop_fund).toLocaleString()}</span></div>
-                      <div className="border-t pt-1.5 flex justify-between font-bold text-emerald-600">
-                        <span>Usable Church Funds</span><span>TZS {Number(selectedRecord.usable_church_funds).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedRecord.notes && (
-                  <div className="text-sm"><span className="text-slate-500">Notes:</span><p className="mt-1">{selectedRecord.notes}</p></div>
-                )}
-
-                {/* Expenses */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold">Expenses</h4>
-                    {selectedRecord.status === 'draft' && (
-                      <button onClick={() => setExpenseOpen(true)} className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1"><Plus className="w-3 h-3" /> Add Expense</button>
-                    )}
-                  </div>
-                  {(!selectedRecord.expenses || selectedRecord.expenses.length === 0) ? (
-                    <p className="text-sm text-slate-400 py-3 text-center">No expenses recorded</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {selectedRecord.expenses.map(ex => (
-                        <div key={ex.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-sm">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">{ex.category}</span>
-                            <span className="text-slate-600">{ex.description || '-'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-rose-600">TZS {Number(ex.amount).toLocaleString()}</span>
-                            <label className="cursor-pointer p-1 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-primary-600">
-                              <Upload className="w-3.5 h-3.5" />
-                              <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => { if (e.target.files[0]) handleUploadReceipt(ex.id, e.target.files[0]); }} />
-                            </label>
-                            {ex.receipt_path && (
-                              <a href={ex.receipt_path} target="_blank" rel="noopener noreferrer" className="p-1 rounded-lg hover:bg-slate-200 text-emerald-500"><FileText className="w-3.5 h-3.5" /></a>
-                            )}
-                            {selectedRecord.status === 'draft' && (
-                              <button onClick={() => handleDeleteExpense(ex.id)} className="p-1 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Totals */}
-                <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4 space-y-1.5 text-sm">
-                  <div className="flex justify-between"><span>Usable Church Funds</span><span className="font-semibold">TZS {Number(selectedRecord.usable_church_funds).toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span>Total Expenses</span><span className="font-semibold text-rose-600">- TZS {totalExpenses.toLocaleString()}</span></div>
-                  <div className="border-t pt-1.5 flex justify-between font-bold text-lg">
-                    <span>Net Balance</span>
-                    <span className={netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                      TZS {netBalance.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                {selectedRecord.status === 'submitted' && (
-                  <div className="flex gap-3">
-                    <button onClick={() => handleApprove(selectedRecord.id)} className="btn-primary flex items-center gap-2"><CheckCheck className="w-4 h-4" /> Approve</button>
-                    <button onClick={() => setRejectOpen(selectedRecord.id)} className="btn-secondary text-rose-600 border-rose-200 hover:bg-rose-50 flex items-center gap-2"><Ban className="w-4 h-4" /> Reject</button>
-                  </div>
-                )}
-
-                {rejectOpen === selectedRecord.id && (
-                  <div className="space-y-3 p-4 rounded-xl bg-rose-50">
-                    <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="input w-full" placeholder="Reason for rejection..." rows={2} />
-                    <div className="flex gap-2">
-                      <button onClick={() => handleReject(selectedRecord.id)} className="btn-primary bg-rose-600 hover:bg-rose-700">Confirm Reject</button>
-                      <button onClick={() => { setRejectOpen(null); setRejectReason(''); }} className="btn-secondary">Cancel</button>
-                    </div>
-                  </div>
-                )}
-
-                {selectedRecord.rejection_reason && (
-                  <div className="p-4 rounded-xl bg-rose-50 text-sm">
-                    <span className="font-semibold text-rose-700">Rejection Reason:</span>
-                    <p className="mt-1 text-rose-600">{selectedRecord.rejection_reason}</p>
-                  </div>
-                )}
-
-                {/* Status Timeline */}
-                <div className="text-xs text-slate-400 space-y-1">
-                  {selectedRecord.created_by_name && <p>Created by: {selectedRecord.created_by_name}</p>}
-                  {selectedRecord.submitted_by_name && <p>Submitted by: {selectedRecord.submitted_by_name} {selectedRecord.submitted_at ? `at ${new Date(selectedRecord.submitted_at).toLocaleString()}` : ''}</p>}
-                  {selectedRecord.approved_by_name && <p>Approved/Rejected by: {selectedRecord.approved_by_name} {selectedRecord.approved_at ? `at ${new Date(selectedRecord.approved_at).toLocaleString()}` : ''}</p>}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Add Expense Modal */}
-          {expenseOpen && (
-            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setExpenseOpen(false)}>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold">Add Expense</h3>
-                <form onSubmit={handleAddExpense} className="space-y-3">
-                  <div><label className="block text-sm font-medium mb-1">Category</label>
-                    <select value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})} className="input w-full">
-                      {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div><label className="block text-sm font-medium mb-1">Amount *</label>
-                    <input type="number" step="0.01" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} className="input w-full" required /></div>
-                  <div><label className="block text-sm font-medium mb-1">Description</label>
-                    <input type="text" value={expenseForm.description} onChange={e => setExpenseForm({...expenseForm, description: e.target.value})} className="input w-full" /></div>
-                  <div className="flex gap-3">
-                    <button type="submit" className="btn-primary">Add Expense</button>
-                    <button type="button" onClick={() => setExpenseOpen(false)} className="btn-secondary">Cancel</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {tab === 'tithes' && (
-        <MemberTithes showMessage={showMessage} />
-      )}
-
-      {tab === 'review' && (
-        <ReviewView showMessage={showMessage} />
-      )}
-
-      {tab === 'reports' && (
-        <ReportsView />
-      )}
-    </div>
-  );
-};
-
-// ── Member Tithes ─────────────────────────────────────────────────────
-const MemberTithes = ({ showMessage }) => {
-  const [members, setMembers] = useState([]);
-  const [contributionTypes, setContributionTypes] = useState([]);
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ member_id: '', contribution_type_id: '', amount: '', payment_date: today(), payment_method: 'Cash', notes: '' });
-  const [saving, setSaving] = useState(false);
-  const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
-  const [dateTo, setDateTo] = useState(today());
-  const [typeFilter, setTypeFilter] = useState('');
-
-  const loadTypes = useCallback(async () => {
-    try {
-      const res = await contributionAPI.getTypes();
-      const titheTypes = (res.data || []).filter(t =>
-        ['Tithes', 'Evangelism Offering'].includes(t.name)
-      );
-      setContributionTypes(titheTypes);
-      return titheTypes;
-    } catch (err) { console.error(err); return []; }
-  }, []);
-
-  const loadRecords = useCallback(async (types) => {
-    if (!types || types.length === 0) return [];
-    const typeIds = types.map(t => t.id).join(',');
-    try {
-      const res = await contributionAPI.getContributions({ contribution_type_id: typeIds, date_from: dateFrom, date_to: dateTo });
-      return res.data || [];
-    } catch (err) { console.error(err); return []; }
-  }, [dateFrom, dateTo]);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const types = await loadTypes();
-      setContributionTypes(types);
-      const allRecords = await loadRecords(types);
-      setRecords(allRecords);
-      if (!form.contribution_type_id && types.length > 0) {
-        setForm(f => ({ ...f, contribution_type_id: types[0].id }));
-      }
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }, [loadTypes, loadRecords, form.contribution_type_id]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.member_id || !form.amount || !form.contribution_type_id) return;
-    setSaving(true);
-    try {
-      await contributionAPI.createContribution({
-        member_id: form.member_id,
-        contribution_type_id: Number(form.contribution_type_id),
-        amount: Number(form.amount),
-        payment_date: form.payment_date,
-        payment_method: form.payment_method,
-        notes: form.notes,
-      });
-      const typeName = contributionTypes.find(t => t.id === Number(form.contribution_type_id))?.name || 'Contribution';
-      showMessage(`${typeName} recorded`);
-      setForm({ ...form, member_id: '', amount: '', notes: '' });
-      load();
-    } catch (err) { alert(err.response?.data?.error || 'Failed to record'); }
-    finally { setSaving(false); }
-  };
-
-  const filteredRecords = typeFilter
-    ? records.filter(r => r.contribution_type_id === Number(typeFilter))
-    : records;
-
-  const totalsByType = {};
-  const grandTotal = records.reduce((s, r) => {
-    const typeName = r.contribution_type_name || 'Other';
-    totalsByType[typeName] = (totalsByType[typeName] || 0) + Number(r.amount);
-    return s + Number(r.amount);
-  }, 0);
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Member Contributions</h2>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {contributionTypes.map(t => (
-          <div key={t.id} className="rounded-xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-3 shadow-sm">
-            <p className="text-xs font-medium text-slate-500 mb-1">{t.name}</p>
-            <p className="text-lg font-bold text-emerald-600">TZS {(totalsByType[t.name] || 0).toLocaleString()}</p>
-          </div>
-        ))}
-        <div className="rounded-xl border border-primary-200/70 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-700 p-3 shadow-sm">
-          <p className="text-xs font-medium text-primary-600 mb-1">Total</p>
-          <p className="text-lg font-bold text-primary-700 dark:text-primary-300">TZS {grandTotal.toLocaleString()}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Entry Form */}
-        <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm lg:col-span-1">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Record Contribution</h3>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type *</label>
-              <select value={form.contribution_type_id} onChange={e => setForm({...form, contribution_type_id: e.target.value})} className="input w-full" required>
-                <option value="">Select type...</option>
-                {contributionTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Member *</label>
-              <select value={form.member_id} onChange={e => setForm({...form, member_id: e.target.value})} className="input w-full" required>
-                <option value="">Select member...</option>
-                {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Amount (TZS) *</label>
-              <input type="number" step="0.01" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} className="input w-full" required />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Date</label>
-              <input type="date" value={form.payment_date} onChange={e => setForm({...form, payment_date: e.target.value})} className="input w-full" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Payment Method</label>
-              <select value={form.payment_method} onChange={e => setForm({...form, payment_method: e.target.value})} className="input w-full">
-                <option value="Cash">Cash</option>
-                <option value="Mobile Money">Mobile Money</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Notes</label>
-              <input type="text" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} className="input w-full" placeholder="Optional" />
-            </div>
-            <button type="submit" disabled={saving} className="btn-primary w-full flex items-center justify-center gap-2">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <HandCoins className="w-4 h-4" />}
-              Record
-            </button>
-          </form>
-        </div>
-
-        {/* Records List */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Filters */}
-          <div className="flex flex-wrap gap-3">
-            <div><label className="block text-xs font-medium text-slate-500 mb-1">From</label><input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input" /></div>
-            <div><label className="block text-xs font-medium text-slate-500 mb-1">To</label><input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input" /></div>
-            <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Type</label>
-              <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="input">
-                <option value="">All Types</option>
-                {contributionTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-slate-400" /></div>
-          ) : (
-            <>
-              {/* Records Table */}
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600">Type</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600">Member</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600">Date</th>
-                      <th className="text-left py-3 px-4 font-semibold text-slate-600">Method</th>
-                      <th className="text-right py-3 px-4 font-semibold text-slate-600">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRecords.length === 0 ? (
-                      <tr><td colSpan={5} className="text-center py-12 text-slate-400">No contributions recorded</td></tr>
-                    ) : filteredRecords.map(r => (
-                      <tr key={r.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                        <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{r.contribution_type_name || 'N/A'}</span></td>
-                        <td className="py-3 px-4 font-medium text-slate-900 dark:text-white">{r.full_name || 'Unknown'}</td>
-                        <td className="py-3 px-4 text-slate-600">{r.payment_date ? new Date(r.payment_date).toLocaleDateString() : '-'}</td>
-                        <td className="py-3 px-4"><span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600">{r.payment_method}</span></td>
-                        <td className="py-3 px-4 text-right font-semibold text-emerald-600">TZS {Number(r.amount).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ── Review View ──────────────────────────────────────────────────────
-const ReviewView = ({ showMessage }) => {
-  const [submissions, setSubmissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('submitted');
-  const [selected, setSelected] = useState(null);
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try { const res = await financeAPI.getSubmissions(statusFilter || null); setSubmissions(res.data); }
-    catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }, [statusFilter]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const handleApprove = async (id) => {
-    try { await financeAPI.approveRecord(id); showMessage('Record approved'); load(); setSelected(null); }
-    catch (err) { alert('Failed to approve'); }
-  };
-
-  const handleReject = async (id) => {
-    if (!rejectReason.trim()) return;
-    try { await financeAPI.rejectRecord(id, rejectReason); showMessage('Record rejected'); setRejectOpen(false); setRejectReason(''); load(); setSelected(null); }
-    catch (err) { alert('Failed to reject'); }
-  };
-
-  const openDetail = async (id) => {
-    try { const res = await financeAPI.getRecord(id); setSelected(res.data); }
-    catch (err) { alert('Failed to load'); }
-  };
-
-  const STATUS_OPTIONS = [
-    { value: '', label: 'All', color: 'bg-slate-100 text-slate-600' },
-    { value: 'submitted', label: 'Pending', color: 'bg-amber-100 text-amber-700' },
-    { value: 'approved', label: 'Approved', color: 'bg-emerald-100 text-emerald-700' },
-    { value: 'rejected', label: 'Rejected', color: 'bg-rose-100 text-rose-700' },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Review Submissions</h2>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input max-w-xs">
-          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
-      ) : submissions.length === 0 ? (
-        <p className="text-center py-12 text-slate-400">No submissions found</p>
-      ) : (
-        <div className="space-y-3">
-          {submissions.map(r => (
-            <div key={r.id} className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${r.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : r.status === 'rejected' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
-                    {r.status === 'approved' ? <CheckCircle2 className="w-5 h-5" /> : r.status === 'rejected' ? <XCircle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{r.record_date}</h3>
-                    <p className="text-xs text-slate-500">By {r.created_by_name}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_OPTIONS.find(o => o.value === r.status)?.color || ''}`}>
-                    {STATUS_OPTIONS.find(o => o.value === r.status)?.label || r.status}
-                  </span>
-                  <button onClick={() => openDetail(r.id)} className="btn-primary text-xs py-1.5 px-3">Review</button>
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                <div><span className="text-slate-500">Total Income</span><p className="font-semibold text-emerald-600">TZS {Number(r.total_income).toLocaleString()}</p></div>
-                <div><span className="text-slate-500">Expenses</span><p className="font-semibold text-rose-600">TZS {Number(r.total_expenses || 0).toLocaleString()}</p></div>
-                <div><span className="text-slate-500">Usable Funds</span><p className="font-semibold">TZS {Number(r.usable_church_funds).toLocaleString()}</p></div>
-                <div><span className="text-slate-500">Expenses ({r.expense_count || 0})</span><p className="font-semibold">{r.expense_count || 0} items</p></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {selected && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 pt-12 overflow-y-auto" onClick={() => setSelected(null)}>
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-5" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold">Record: {selected.record_date}</h3>
-              <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-600"><XCircle className="w-5 h-5" /></button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4">
-                <p className="text-slate-500 text-xs mb-1">Income</p>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between"><span>Morning</span><span className="font-semibold">TZS {Number(selected.morning_offering).toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span>Afternoon</span><span className="font-semibold">TZS {Number(selected.afternoon_offering).toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span>Tithes</span><span className="font-semibold">TZS {Number(selected.total_tithes).toLocaleString()}</span></div>
-                  <div className="border-t pt-1.5 flex justify-between font-bold text-emerald-600"><span>Total Income</span><span>TZS {Number(selected.total_income).toLocaleString()}</span></div>
-                </div>
-              </div>
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4">
-                <p className="text-slate-500 text-xs mb-1">Deductions</p>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between"><span>Mission (10%)</span><span className="font-semibold text-amber-600">TZS {Number(selected.mission_fund).toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span>Bishop (10%)</span><span className="font-semibold text-rose-500">TZS {Number(selected.bishop_fund).toLocaleString()}</span></div>
-                  <div className="border-t pt-1.5 flex justify-between font-bold"><span>Usable</span><span className="text-emerald-600">TZS {Number(selected.usable_church_funds).toLocaleString()}</span></div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-2">Expenses ({selected.expenses?.length || 0})</h4>
-              {(!selected.expenses || selected.expenses.length === 0) ? (
-                <p className="text-sm text-slate-400 py-2">No expenses</p>
-              ) : (
-                <div className="space-y-2">
-                  {selected.expenses.map(ex => (
-                    <div key={ex.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-sm">
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary-100 text-primary-700">{ex.category}</span>
-                        <span className="text-slate-600">{ex.description || '-'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-rose-600">TZS {Number(ex.amount).toLocaleString()}</span>
-                        {ex.receipt_path && (
-                          <a href={ex.receipt_path} target="_blank" rel="noopener noreferrer" className="p-1 rounded-lg hover:bg-slate-200 text-emerald-500"><FileText className="w-4 h-4" /></a>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4 space-y-1.5 text-sm">
-              <div className="flex justify-between"><span>Usable Funds</span><span className="font-semibold">TZS {Number(selected.usable_church_funds).toLocaleString()}</span></div>
-              <div className="flex justify-between"><span>Total Expenses</span><span className="font-semibold text-rose-600">- TZS {Number(selected.expenses?.reduce((s, e) => s + Number(e.amount), 0) || 0).toLocaleString()}</span></div>
-              <div className="border-t pt-1.5 flex justify-between font-bold text-lg">
-                <span>Net Balance</span>
-                <span className={(Number(selected.usable_church_funds) - Number(selected.expenses?.reduce((s, e) => s + Number(e.amount), 0) || 0)) >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                  TZS {(Number(selected.usable_church_funds) - Number(selected.expenses?.reduce((s, e) => s + Number(e.amount), 0) || 0)).toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            {selected.status === 'submitted' && (
-              <div className="flex gap-3">
-                <button onClick={() => handleApprove(selected.id)} className="btn-primary flex items-center gap-2"><CheckCheck className="w-4 h-4" /> Approve</button>
-                <button onClick={() => setRejectOpen(true)} className="btn-secondary text-rose-600 border-rose-200 hover:bg-rose-50 flex items-center gap-2"><Ban className="w-4 h-4" /> Reject</button>
-              </div>
-            )}
-
-            {selected.status === 'rejected' && selected.rejection_reason && (
-              <div className="p-4 rounded-xl bg-rose-50 text-sm">
-                <span className="font-semibold text-rose-700">Rejection Reason:</span>
-                <p className="mt-1 text-rose-600">{selected.rejection_reason}</p>
-              </div>
-            )}
-
-            {rejectOpen && (
-              <div className="space-y-3 p-4 rounded-xl bg-rose-50">
-                <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} className="input w-full" placeholder="Reason for rejection..." rows={2} />
-                <div className="flex gap-2">
-                  <button onClick={() => handleReject(selected.id)} className="btn-primary bg-rose-600 hover:bg-rose-700">Confirm Reject</button>
-                  <button onClick={() => { setRejectOpen(false); setRejectReason(''); }} className="btn-secondary">Cancel</button>
-                </div>
-              </div>
-            )}
-
-            <div className="text-xs text-slate-400 space-y-1">
-              {selected.created_by_name && <p>Created by: {selected.created_by_name}</p>}
-              {selected.submitted_by_name && <p>Submitted by: {selected.submitted_by_name} {selected.submitted_at ? `at ${new Date(selected.submitted_at).toLocaleString()}` : ''}</p>}
-              {selected.approved_by_name && <p>Reviewed by: {selected.approved_by_name} {selected.approved_at ? `at ${new Date(selected.approved_at).toLocaleString()}` : ''}</p>}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// ── Reports View ─────────────────────────────────────────────────────
-const ReportsView = () => {
-  const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); d.setDate(1); return d.toISOString().split('T')[0]; });
-  const [dateTo, setDateTo] = useState(today);
-  const [summary, setSummary] = useState(null);
-  const [trend, setTrend] = useState([]);
-  const [year, setYear] = useState(YEAR);
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
+  const loadReport = useCallback(async () => {
     try {
       const [sumRes, trendRes] = await Promise.all([
-        financeAPI.getSummary(dateFrom, dateTo),
-        financeAPI.getTrend(year)
+        financeAPI.getSummary(rptFrom, rptTo),
+        financeAPI.getTrend(YEAR)
       ]);
-      setSummary(sumRes.data);
-      setTrend(trendRes.data);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }, [dateFrom, dateTo, year]);
+      setSummary(sumRes.data || null);
+      setTrend(trendRes.data || []);
+    } catch (e) { console.error(e); }
+  }, [rptFrom, rptTo]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadRecords(); }, [loadRecords]);
+  useEffect(() => { if (activeTab === 'reports' || activeTab === 'overview' || activeTab === 'trends') loadReport(); }, [activeTab, loadReport]);
 
-  const handleExport = async () => {
+  const openDetail = async (id) => {
+    setDetailLoading(true);
+    setDetailOpen(id);
     try {
-      const res = await financeAPI.getExport(dateFrom, dateTo);
-      const data = res.data;
-      const csv = [
-        ['Date', 'Morning', 'Afternoon', 'Tithes', 'Total Income', 'Mission 10%', 'Bishop 10%', 'Usable Funds', 'Status'].join(','),
-        ...data.map(r => [r.record_date, r.morning_offering, r.afternoon_offering, r.total_tithes, r.total_income, r.mission_fund, r.bishop_fund, r.usable_church_funds, r.status].join(','))
-      ].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `finance-report-${dateFrom}-to-${dateTo}.csv`; a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) { alert('Failed to export'); }
+      const res = await financeAPI.getRecord(id);
+      setDetailData(res.data);
+    } catch (e) { showMessage?.('Failed to load record'); }
+    finally { setDetailLoading(false); }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Finance Reports</h2>
-        <button onClick={handleExport} className="btn-primary flex items-center gap-2"><Download className="w-4 h-4" /> Export CSV</button>
-      </div>
+  const handleApprove = async (id) => {
+    try {
+      await financeAPI.approveRecord(id);
+      showMessage?.('Record approved');
+      loadRecords();
+      if (detailOpen === id) openDetail(id);
+    } catch (e) { showMessage?.(e.response?.data?.error || 'Failed to approve'); }
+  };
 
-      <div className="flex flex-wrap gap-3">
-        <div><label className="block text-xs font-medium text-slate-500 mb-1">From</label><input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="input" /></div>
-        <div><label className="block text-xs font-medium text-slate-500 mb-1">To</label><input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="input" /></div>
-        <div><label className="block text-xs font-medium text-slate-500 mb-1">Year</label>
-          <select value={year} onChange={e => setYear(Number(e.target.value))} className="input">
-            {[YEAR, YEAR - 1, YEAR - 2, YEAR - 3].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+  const handleReject = async () => {
+    if (!rejectReason.trim()) return;
+    try {
+      await financeAPI.rejectRecord(rejectOpen, rejectReason);
+      showMessage?.('Record rejected');
+      setRejectOpen(null);
+      setRejectReason('');
+      loadRecords();
+      if (detailOpen === rejectOpen) openDetail(rejectOpen);
+    } catch (e) { showMessage?.(e.response?.data?.error || 'Failed to reject'); }
+  };
+
+  const handleRecalculate = async (id) => {
+    try {
+      const res = await financeAPI.recalculateRecord(id);
+      showMessage?.(`Tithes recalculated: ${fmt(res.data.total_tithes)}`);
+      loadRecords();
+      if (detailOpen === id) openDetail(id);
+    } catch (e) { showMessage?.('Failed to recalculate'); }
+  };
+
+  const pendingRecords = records.filter(r => r.status === 'submitted');
+  const todayRecord = records.find(r => r.record_date === today());
+  const monthRecords = records.filter(r => r.record_date?.startsWith(today().slice(0, 7)));
+  const approvedMonth = monthRecords.filter(r => r.status === 'approved');
+  const rejectedCount = records.filter(r => r.status === 'rejected').length;
+
+  const exportCSV = () => {
+    if (!summary) return;
+    const rows = [['Metric', 'Value'], ['Days', summary.day_count], ['Morning', summary.total_morning], ['Afternoon', summary.total_afternoon], ['Tithes', summary.total_tithes], ['Total Income', summary.total_income], ['Mission 10%', summary.total_mission], ['Bishop 10%', summary.total_bishop], ['Usable Funds', summary.total_usable], ['Expenses', summary.total_expenses]];
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `finance-report-${rptFrom}-to-${rptTo}.csv`; a.click();
+  };
+
+  const filteredRecords = records.filter(r => {
+    if (filterStatus && r.status !== filterStatus) return false;
+    if (searchDate && r.record_date !== searchDate) return false;
+    return true;
+  });
+
+  const c = detailData ? calcFinance(detailData.morning_offering, detailData.afternoon_offering, detailData.auto_tithes || detailData.total_tithes) : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Header with Tabs */}
+      <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700">
+        <div className="flex items-center justify-between px-4 pt-4 pb-0">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-emerald-500" /> Finance Overview
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">Admin reporting and oversight</p>
+          </div>
+          {pendingRecords.length > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <AlertCircle className="w-4 h-4 text-amber-500" />
+              <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">{pendingRecords.length} pending</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Horizontal Tabs */}
+        <div className="flex gap-1 px-4 pt-3 overflow-x-auto">
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setActiveTab(t.key)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-medium transition-all whitespace-nowrap ${
+                activeTab === t.key 
+                  ? 'bg-slate-50 dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 border border-b-0 border-slate-200/60 dark:border-slate-700' 
+                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}>
+              <t.icon className="w-3.5 h-3.5" />
+              {t.label}
+              {t.key === 'approvals' && pendingRecords.length > 0 && (
+                <span className="ml-1 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{pendingRecords.length}</span>
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
-      ) : (
-        <>
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <MetricCard label="This Month" value={monthRecords.length} icon={Calendar} color="slate" />
+            <MetricCard label="Approved" value={approvedMonth.length} icon={CheckCircle2} color="emerald" />
+            <MetricCard label="Pending Review" value={pendingRecords.length} icon={Send} color="amber" />
+            <MetricCard label="Rejected" value={rejectedCount} icon={XCircle} color="rose" />
+          </div>
+
           {summary && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {[
-                { label: 'Days', value: summary.day_count, color: 'text-slate-600 bg-slate-100' },
-                { label: 'Morning', value: summary.total_morning, color: 'text-blue-600 bg-blue-100' },
-                { label: 'Afternoon', value: summary.total_afternoon, color: 'text-indigo-600 bg-indigo-100' },
-                { label: 'Tithes', value: summary.total_tithes, color: 'text-violet-600 bg-violet-100' },
-                { label: 'Total Income', value: summary.total_income, color: 'text-emerald-600 bg-emerald-100' },
-                { label: 'Mission 10%', value: summary.total_mission, color: 'text-amber-600 bg-amber-100' },
-                { label: 'Bishop 10%', value: summary.total_bishop, color: 'text-rose-600 bg-rose-100' },
-                { label: 'Usable Funds', value: summary.total_usable, color: 'text-emerald-600 bg-emerald-100' },
-                { label: 'Expenses', value: summary.total_expenses, color: 'text-rose-600 bg-rose-100' },
-              ].map((card, i) => (
-                <div key={i} className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-4 shadow-sm">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{card.label}</p>
-                  <p className={`text-lg font-bold mt-1 ${card.color.split(' ')[0]}`}>TZS {Number(card.value).toLocaleString()}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <MetricCard label="Total Income" value={fmt(summary.total_income)} icon={DollarSign} color="indigo" />
+              <MetricCard label="Mission Fund" value={fmt(summary.total_mission)} icon={Sparkles} color="amber" />
+              <MetricCard label="Bishop Fund" value={fmt(summary.total_bishop)} icon={Shield} color="rose" />
+              <MetricCard label="Net Balance" value={fmt(summary.total_usable - summary.total_expenses)} icon={PiggyBank} color="emerald" />
             </div>
           )}
 
-          {/* Trend */}
-          {trend.length > 0 && (
-            <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-primary-500" /> Monthly Trend ({year})
-              </h3>
+          {/* Today's Record */}
+          <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Today's Record</h3>
+            {todayRecord ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <StatusBadge status={todayRecord.status} />
+                  <div className="text-xs text-slate-500">
+                    Submitted by <span className="font-medium text-slate-700 dark:text-slate-300">{todayRecord.submitted_by_name || 'Unknown'}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-xs text-slate-400">Total Income</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{fmt(todayRecord.total_income)}</p>
+                  </div>
+                  <button onClick={() => openDetail(todayRecord.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                    <Eye className="w-3 h-3" /> View
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-xs text-slate-400">No record for today yet</div>
+            )}
+          </div>
+
+          {/* Pending Approvals Quick View */}
+          {pendingRecords.length > 0 && (
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Pending Approvals</h3>
+                <button onClick={() => setActiveTab('approvals')} className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+                  View all →
+                </button>
+              </div>
               <div className="space-y-2">
-                {trend.map(t => (
-                  <div key={t.month} className="flex items-center gap-3">
-                    <span className="text-xs font-medium text-slate-500 w-8">{t.month}</span>
-                    <div className="flex-1 h-5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-                      <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all"
-                        style={{ width: `${Math.min((t.total_income / Math.max(...trend.map(x => x.total_income))) * 100, 100)}%` }} />
+                {pendingRecords.slice(0, 3).map(r => (
+                  <div key={r.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                    <div className="flex items-center gap-3">
+                      <Send className="w-4 h-4 text-amber-500" />
+                      <div>
+                        <p className="text-xs font-medium text-slate-900 dark:text-white">{fdate(r.record_date)}</p>
+                        <p className="text-[10px] text-slate-400">by {r.submitted_by_name || 'Unknown'}</p>
+                      </div>
                     </div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-24 text-right">TZS {Number(t.total_income).toLocaleString()}</span>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white">{fmt(r.total_income)}</p>
+                      <button onClick={() => openDetail(r.id)}
+                        className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-500">
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
-        </>
+        </div>
+      )}
+
+      {/* Pending Approvals Tab */}
+      {activeTab === 'approvals' && (
+        <div className="space-y-3">
+          {loading ? (
+            <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+          ) : pendingRecords.length === 0 ? (
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-12 text-center">
+              <CheckCheck className="w-10 h-10 mx-auto mb-3 text-emerald-400" />
+              <p className="text-sm font-medium text-slate-900 dark:text-white">All caught up!</p>
+              <p className="text-xs text-slate-400 mt-1">No records pending approval</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {pendingRecords.map(r => {
+                const tc = calcFinance(r.morning_offering, r.afternoon_offering, r.auto_tithes || r.total_tithes);
+                return (
+                  <div key={r.id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                          <Send className="w-5 h-5 text-amber-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{fdate(r.record_date)}</p>
+                          <p className="text-[10px] text-slate-400">Submitted by {r.submitted_by_name || 'Unknown'} · {r.submitted_at ? fdatetime(r.submitted_at) : ''}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-400">Income</p>
+                          <p className="text-sm font-bold text-emerald-600">{fmt(r.total_income)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-400">Expenses</p>
+                          <p className="text-sm font-bold text-rose-500">{fmt(r.total_expenses || 0)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-slate-400">Usable</p>
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">{fmt(tc.usable)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => openDetail(r.id)}
+                            className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title="View details">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleApprove(r.id)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
+                            <CheckCheck className="w-3 h-3 inline mr-1" />Approve
+                          </button>
+                          <button onClick={() => setRejectOpen(r.id)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 transition-colors">
+                            <Ban className="w-3 h-3 inline mr-1" />Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* All Records Tab */}
+      {activeTab === 'records' && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs">
+              <option value="">All Status</option>
+              <option value="draft">Draft</option>
+              <option value="submitted">Submitted</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <input type="date" value={searchDate} onChange={e => setSearchDate(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs" />
+            {(filterStatus || searchDate) && (
+              <button onClick={() => { setFilterStatus(''); setSearchDate(''); }}
+                className="flex items-center gap-1 px-2 py-1.5 rounded-xl text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
+
+          <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 dark:bg-slate-800">
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    {['Date', 'Status', 'Morning', 'Afternoon', 'Tithes', 'Income', 'Expenses', 'Usable', ''].map(h => (
+                      <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === '' ? 'text-right' : h === 'Date' ? 'text-left' : 'text-right'}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={9} className="py-12 text-center"><Loader2 className="w-5 h-5 animate-spin text-indigo-500 mx-auto" /></td></tr>
+                  ) : filteredRecords.length === 0 ? (
+                    <tr><td colSpan={9} className="py-12 text-center text-slate-400 text-sm">No records found</td></tr>
+                  ) : filteredRecords.map(r => (
+                    <tr key={r.id} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                      <td className="py-2.5 px-3 text-left font-medium text-slate-900 dark:text-white">{fdate(r.record_date)}</td>
+                      <td className="py-2.5 px-3 text-right"><StatusBadge status={r.status} /></td>
+                      <td className="py-2.5 px-3 text-right text-emerald-600">{fmt(r.morning_offering)}</td>
+                      <td className="py-2.5 px-3 text-right text-sky-600">{fmt(r.afternoon_offering)}</td>
+                      <td className="py-2.5 px-3 text-right text-violet-600">{fmt(r.auto_tithes ?? r.total_tithes)}</td>
+                      <td className="py-2.5 px-3 text-right font-bold">{fmt(r.total_income)}</td>
+                      <td className="py-2.5 px-3 text-right text-rose-500">{fmt(r.total_expenses || 0)}</td>
+                      <td className="py-2.5 px-3 text-right font-bold text-emerald-600">{fmt(r.usable_church_funds)}</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => openDetail(r.id)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title="View">
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          {r.status === 'submitted' && (
+                            <>
+                              <button onClick={() => handleApprove(r.id)} className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500" title="Approve">
+                                <CheckCheck className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setRejectOpen(r.id)} className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-400" title="Reject">
+                                <Ban className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <input type="date" value={rptFrom} onChange={e => setRptFrom(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs" />
+            <span className="text-xs text-slate-400">to</span>
+            <input type="date" value={rptTo} onChange={e => setRptTo(e.target.value)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs" />
+            <button onClick={exportCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+              <Download className="w-3 h-3" /> Export CSV
+            </button>
+          </div>
+
+          {summary ? (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <MetricCard label="Days Recorded" value={summary.day_count} icon={Calendar} color="slate" />
+                <MetricCard label="Morning Total" value={fmt(summary.total_morning)} icon={ArrowUpCircle} color="emerald" />
+                <MetricCard label="Afternoon Total" value={fmt(summary.total_afternoon)} icon={ArrowUpCircle} color="sky" />
+                <MetricCard label="Tithes Total" value={fmt(summary.total_tithes)} icon={HandCoins} color="violet" />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <MetricCard label="Total Income" value={fmt(summary.total_income)} icon={DollarSign} color="indigo" />
+                <MetricCard label="Mission Fund (10%)" value={fmt(summary.total_mission)} icon={Sparkles} color="amber" />
+                <MetricCard label="Bishop Fund (10%)" value={fmt(summary.total_bishop)} icon={Shield} color="rose" />
+                <MetricCard label="Total Expenses" value={fmt(summary.total_expenses)} icon={Receipt} color="rose" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <MetricCard label="Usable Church Funds" value={fmt(summary.total_usable)} icon={PiggyBank} color="emerald" />
+                <MetricCard label="Net Balance" value={fmt(summary.total_usable - summary.total_expenses)} icon={Banknote} color="emerald" />
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /></div>
+          )}
+        </div>
+      )}
+
+      {/* Trends Tab */}
+      {activeTab === 'trends' && (
+        <div className="space-y-4">
+          {trend.length > 0 ? (
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Monthly Trend — {YEAR}</h3>
+              <div className="space-y-3">
+                {trend.map(t => {
+                  const max = Math.max(...trend.map(x => Number(x.total_income) || 1));
+                  return (
+                    <div key={t.month} className="flex items-center gap-4">
+                      <span className="text-xs font-medium text-slate-500 w-10">{['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][t.month - 1]}</span>
+                      <div className="flex-1 h-6 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all"
+                          style={{ width: `${(Number(t.total_income) / max) * 100}%` }} />
+                      </div>
+                      <div className="w-28 text-right">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{fmt(t.total_income)}</span>
+                      </div>
+                      <div className="w-20 text-right">
+                        <span className="text-[10px] text-slate-400">{t.day_count || 0} days</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /></div>
+          )}
+        </div>
+      )}
+
+      {/* Record Detail Modal */}
+      {detailOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => { setDetailOpen(null); setDetailData(null); }}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Record Details</h3>
+              <button onClick={() => { setDetailOpen(null); setDetailData(null); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {detailLoading ? (
+              <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+            ) : detailData && c ? (
+              <div className="p-4 space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{fdate(detailData.record_date)}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <StatusBadge status={detailData.status} />
+                      {detailData.submitted_by_name && <span className="text-[10px] text-slate-400">by {detailData.submitted_by_name}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {detailData.status === 'submitted' && (
+                      <>
+                        <button onClick={() => handleApprove(detailData.id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
+                          <CheckCheck className="w-3 h-3 inline mr-1" />Approve
+                        </button>
+                        <button onClick={() => setRejectOpen(detailData.id)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 transition-colors">
+                          <Ban className="w-3 h-3 inline mr-1" />Reject
+                        </button>
+                      </>
+                    )}
+                    <button onClick={() => handleRecalculate(detailData.id)}
+                      className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500" title="Recalculate tithes">
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {detailData.status === 'rejected' && detailData.rejection_reason && (
+                  <div className="rounded-xl bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 p-3">
+                    <p className="text-xs font-semibold text-rose-700 dark:text-rose-400 mb-0.5">Rejection Reason</p>
+                    <p className="text-xs text-rose-600 dark:text-rose-300">{detailData.rejection_reason}</p>
+                  </div>
+                )}
+
+                {/* Income Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <MetricCard label="Morning Offering" value={fmt(c.morning)} icon={ArrowUpCircle} color="emerald" />
+                  <MetricCard label="Afternoon Offering" value={fmt(c.afternoon)} icon={ArrowUpCircle} color="sky" />
+                  <MetricCard label="Tithes" value={fmt(c.tithes)} icon={HandCoins} color="violet" />
+                  <MetricCard label="Total Income" value={fmt(c.total)} icon={DollarSign} color="indigo" />
+                </div>
+
+                {/* Fund Allocation */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <MetricCard label="Mission (10%)" value={fmt(c.mission)} icon={Sparkles} color="amber" />
+                  <MetricCard label="Bishop (10%)" value={fmt(c.bishop)} icon={Shield} color="rose" />
+                  <MetricCard label="Expenses" value={fmt(detailData.total_expenses || 0)} icon={Receipt} color="rose" />
+                  <MetricCard label="Usable Funds" value={fmt(c.usable)} icon={PiggyBank} color="emerald" />
+                </div>
+
+                {/* Expenses */}
+                {detailData.expenses?.length > 0 && (
+                  <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200/60 dark:border-slate-700 p-3">
+                    <h5 className="text-xs font-semibold text-slate-900 dark:text-white mb-2">Expenses</h5>
+                    <div className="space-y-1.5">
+                      {detailData.expenses.map(ex => (
+                        <div key={ex.id} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-600 text-[10px] font-medium">{ex.category}</span>
+                            <span className="text-slate-600 dark:text-slate-300">{ex.description || '—'}</span>
+                          </div>
+                          <span className="font-bold text-rose-600">{fmt(ex.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Activity Log */}
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200/60 dark:border-slate-700 p-3">
+                  <h5 className="text-xs font-semibold text-slate-900 dark:text-white mb-2">Activity</h5>
+                  <div className="space-y-1.5 text-[10px]">
+                    <div className="flex items-center gap-2 text-slate-500"><Clock className="w-3 h-3" /> Created {fdatetime(detailData.created_at)}</div>
+                    {detailData.submitted_at && <div className="flex items-center gap-2 text-amber-600"><Send className="w-3 h-3" /> Submitted {fdatetime(detailData.submitted_at)}</div>}
+                    {detailData.approved_at && <div className="flex items-center gap-2 text-emerald-600"><CheckCircle2 className="w-3 h-3" /> Approved {fdatetime(detailData.approved_at)}</div>}
+                    {detailData.status === 'rejected' && <div className="flex items-center gap-2 text-rose-600"><XCircle className="w-3 h-3" /> Rejected</div>}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {rejectOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setRejectOpen(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Reject Record</h3>
+            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs mb-3" rows={3} placeholder="Reason for rejection..." />
+            <div className="flex gap-2">
+              <button onClick={() => setRejectOpen(null)} className="flex-1 py-2 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">Cancel</button>
+              <button onClick={handleReject} disabled={!rejectReason.trim()} className="flex-1 py-2 rounded-xl text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40">Reject</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

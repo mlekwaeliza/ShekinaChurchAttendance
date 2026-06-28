@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { newMemberLeaderAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import VisitorIntake from './VisitorIntake';
+import { fdate, fdatetime } from '../../utils/date';
 import {
   Users, UserPlus, GraduationCap, BarChart3, Calendar, CheckCircle2, X, AlertTriangle, Loader2,
   ChevronDown, ChevronUp, Search, Phone, Mail, MapPin, FileText, Clock, BookOpen
@@ -324,7 +325,7 @@ const NewMemberLeaderView = () => {
                       <div>
                         <h3 className="font-semibold text-slate-900">{member.full_name}</h3>
                         <p className="text-xs text-slate-500">
-                          Joined: {new Date(member.date_joined).toLocaleDateString()}
+                          Joined: {fdatetime(member.date_joined)}
                           {member.decision_type ? ` \u00B7 ${member.decision_type}` : ''}
                         </p>
                       </div>
@@ -372,7 +373,7 @@ const NewMemberLeaderView = () => {
                       )}
                       {member.date_of_birth && (
                         <div className="flex items-center gap-2 text-slate-600">
-                          <span className="font-semibold text-slate-400 text-xs">DOB:</span> {new Date(member.date_of_birth).toLocaleDateString()}
+                          <span className="font-semibold text-slate-400 text-xs">DOB:</span> {fdate(member.date_of_birth)}
                         </div>
                       )}
                       {member.occupation && (
@@ -406,7 +407,7 @@ const NewMemberLeaderView = () => {
                                 className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                                   att ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
                                 }`}>
-                                {new Date(week).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                {fdate(week)}
                                 {att ? ' \u2713' : ''}
                               </button>
                             );
@@ -497,7 +498,7 @@ const ReportsView = () => {
               {data.map(row => (
                 <tr key={row.month} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="py-3 px-4 text-slate-800">
-                    {new Date(row.month + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {fdate(row.month + '-01')}
                   </td>
                   <td className="py-3 px-4 text-right text-slate-600">{row.probation || 0}</td>
                   <td className="py-3 px-4 text-right text-emerald-600 font-medium">{row.graduated || 0}</td>
