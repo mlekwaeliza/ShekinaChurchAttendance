@@ -38,12 +38,14 @@ function calcFinance(morning, afternoon, tithes) {
 
 router.post('/finance/records', async (req, res) => {
   try {
-    const { record_date, morning_offering, afternoon_offering, total_tithes, notes } = req.body;
+    const { record_date, morning_offering, afternoon_offering, notes } = req.body;
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
-    const c = calcFinance(morning_offering, afternoon_offering, total_tithes);
+    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [record_date]);
+    const auto_tithes = tithesResult?.total || 0;
+    const c = calcFinance(morning_offering, afternoon_offering, auto_tithes);
     await queries.createFinanceRecord({
-      record_date, morning_offering: c.morning, afternoon_offering: c.afternoon,
-      total_tithes: c.tithes, total_income: c.total, mission_fund: c.mission,
+      record_date, morning_offering: Number(morning_offering) || 0, afternoon_offering: Number(afternoon_offering) || 0,
+      total_tithes: auto_tithes, total_income: c.total, mission_fund: c.mission,
       remaining_after_mission: c.remaining, bishop_fund: c.bishop,
       usable_church_funds: c.usable, notes, created_by: req.session.userId
     });
@@ -58,6 +60,10 @@ router.post('/finance/records', async (req, res) => {
 router.get('/finance/records', async (req, res) => {
   try {
     const records = await queries.getFinanceRecords(req.query);
+    for (const r of records) {
+      const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [r.record_date]);
+      r.auto_tithes = tithes?.total || 0;
+    }
     res.json(records);
   } catch (err) {
     console.error('Error fetching finance records:', err);
@@ -70,6 +76,8 @@ router.get('/finance/records/:id', async (req, res) => {
     const record = await queries.getFinanceRecordById(req.params.id);
     if (!record) return res.status(404).json({ error: 'Record not found' });
     const expenses = await queries.getFinanceExpenses(req.params.id);
+    const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [record.record_date]);
+    record.auto_tithes = tithes?.total || 0;
     res.json({ ...record, expenses });
   } catch (err) {
     console.error('Error fetching finance record:', err);
@@ -82,25 +90,25 @@ router.put('/finance/records/:id', async (req, res) => {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
     if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
-    const { morning_offering, afternoon_offering, total_tithes, notes } = req.body;
+    const { morning_offering, afternoon_offering, notes } = req.body;
     const data = {};
     if (existing.status === 'rejected') { data.status = 'draft'; data.rejection_reason = null; }
     if (morning_offering !== undefined) data.morning_offering = Number(morning_offering);
     if (afternoon_offering !== undefined) data.afternoon_offering = Number(afternoon_offering);
-    if (total_tithes !== undefined) data.total_tithes = Number(total_tithes);
     if (notes !== undefined) data.notes = notes;
+    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [existing.record_date]);
+    const auto_tithes = tithesResult?.total || 0;
+    data.total_tithes = auto_tithes;
     const c = calcFinance(
       data.morning_offering ?? existing.morning_offering,
       data.afternoon_offering ?? existing.afternoon_offering,
-      data.total_tithes ?? existing.total_tithes
+      auto_tithes
     );
-    if (data.morning_offering !== undefined || data.afternoon_offering !== undefined || data.total_tithes !== undefined) {
-      Object.assign(data, {
-        total_income: c.total, mission_fund: c.mission,
-        remaining_after_mission: c.remaining, bishop_fund: c.bishop,
-        usable_church_funds: c.usable
-      });
-    }
+    Object.assign(data, {
+      total_income: c.total, mission_fund: c.mission,
+      remaining_after_mission: c.remaining, bishop_fund: c.bishop,
+      usable_church_funds: c.usable
+    });
     await queries.updateFinanceRecord(req.params.id, data);
     res.json({ message: 'Record updated' });
   } catch (err) {
@@ -222,6 +230,24 @@ router.put('/finance/records/:id/send-back', async (req, res) => {
   } catch (err) {
     console.error('Error sending back record:', err);
     res.status(500).json({ error: 'Failed to send back record' });
+  }
+});
+
+router.put('/finance/records/:id/recalculate', async (req, res) => {
+  try {
+    const existing = await queries.getFinanceRecordById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Record not found' });
+    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [existing.record_date]);
+    const auto_tithes = tithesResult?.total || 0;
+    const c = calcFinance(existing.morning_offering, existing.afternoon_offering, auto_tithes);
+    await queries.updateFinanceRecord(req.params.id, {
+      total_tithes: auto_tithes, total_income: c.total, mission_fund: c.mission,
+      remaining_after_mission: c.remaining, bishop_fund: c.bishop, usable_church_funds: c.usable
+    });
+    res.json({ message: 'Tithes recalculated', total_tithes: auto_tithes, ...c });
+  } catch (err) {
+    console.error('Error recalculating tithes:', err);
+    res.status(500).json({ error: 'Failed to recalculate tithes' });
   }
 });
 
