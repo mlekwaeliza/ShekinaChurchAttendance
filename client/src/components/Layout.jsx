@@ -207,6 +207,7 @@ const Layout = ({ children, showNav = true }) => {
       { section: 'INSIGHTS', items: [
         { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
         { path: '/admin/reports', label: 'Reports', icon: FileText },
+        { path: '/admin/attendance-corrections', label: 'Edit Attendance', icon: Edit3 },
         { path: '/admin/history', label: 'History', icon: Clock },
         { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
         { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
