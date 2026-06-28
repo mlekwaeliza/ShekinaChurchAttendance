@@ -6,7 +6,7 @@ import {
   Upload, FileText, Download, Eye, ArrowUpCircle, Ban, Receipt,
   Building2, Users, PiggyBank, ArrowRight, Banknote, HandCoins,
   Sparkles, Activity, AlertCircle, Send, CheckCheck, BarChart3,
-  ClipboardList, History, PieChart, RefreshCw, X
+  ClipboardList, History, PieChart, RefreshCw, X, Shield
 } from 'lucide-react';
 import { fdate, fdatetime } from '../../utils/date';
 
