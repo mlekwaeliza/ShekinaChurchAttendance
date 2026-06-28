@@ -1348,21 +1348,12 @@ const AttendanceReports = ({
               return (
                 <div className="mt-3 grid grid-cols-2 gap-4 text-xs">
                   <div className="rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 p-3">
-<<<<<<< HEAD
                     <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Period 1 Week</p>
-                    <p className="text-slate-500">{toDateStr(sun1)} ({dayNames[0]}) — {toDateStr(fri1)} ({dayNames[5]})</p>
+                    <p className="text-slate-500">{fdate(sun1)} ({dayNames[0]}) — {fdate(fri1)} ({dayNames[5]})</p>
                   </div>
                   <div className="rounded-xl bg-slate-50/50 dark:bg-slate-800/50 p-3">
                     <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Period 2 Week</p>
-                    <p className="text-slate-500">{toDateStr(sun2)} ({dayNames[0]}) — {toDateStr(fri2)} ({dayNames[5]})</p>
-=======
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Current Week</p>
-                    <p className="text-slate-500">{fdate(sun)} ({dayNames[0]}) — {fdate(fri)} ({dayNames[5]})</p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50/50 dark:bg-slate-800/50 p-3">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100 mb-1">Previous Week</p>
-                    <p className="text-slate-500">{fdate(prevSun)} ({dayNames[0]}) — {fdate(prevFri)} ({dayNames[5]})</p>
->>>>>>> f512414 (feat: standardize all dates to '25 Jun 2026, 2:30 PM' format (fdate/fdatetime) across all admin components)
+                    <p className="text-slate-500">{fdate(sun2)} ({dayNames[0]}) — {fdate(fri2)} ({dayNames[5]})</p>
                   </div>
                 </div>
               );
@@ -1605,11 +1596,7 @@ const AttendanceReports = ({
                 <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
                   <div className="p-4 border-b border-slate-100 dark:border-slate-700">
                     <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Church Week Attendance — Day by Day</h3>
-<<<<<<< HEAD
-                    {dates && <p className="text-[10px] text-slate-400 mt-0.5">{dates.cStart} (Sunday) to {dates.cEnd} (Friday) vs {dates.pStart} to {dates.pEnd}</p>}
-=======
-                    {dates && <p className="text-[10px] text-slate-400 mt-0.5">{fdate(dates.cStart)} (Sunday) to {fdate(dates.cEnd)} (Friday)</p>}
->>>>>>> f512414 (feat: standardize all dates to '25 Jun 2026, 2:30 PM' format (fdate/fdatetime) across all admin components)
+                    {dates && <p className="text-[10px] text-slate-400 mt-0.5">{fdate(dates.cStart)} (Sunday) to {fdate(dates.cEnd)} (Friday) vs {fdate(dates.pStart)} to {fdate(dates.pEnd)}</p>}
                   </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
