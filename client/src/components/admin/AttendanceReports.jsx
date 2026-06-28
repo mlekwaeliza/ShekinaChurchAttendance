@@ -3390,7 +3390,7 @@ const AttendanceReports = ({
               { key: 'section_name', label: 'Section' },
               { key: 'head_leader_name', label: 'Head Leader' },
               { key: 'leader_name', label: 'Section Leader' },
-              { key: 'registered_date', label: 'Registered Date' },
+              { key: 'registered_date', label: 'Registered Date', render: v => fdate(v) },
               { key: 'membership_duration', label: 'Membership Duration' },
               { key: 'attendance_rate', label: 'Attendance Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 55 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
               { key: 'present_count', label: 'Present Count', align: 'right' },
@@ -3499,15 +3499,14 @@ const AttendanceReports = ({
                               const submittedAt = formatEastAfricaDateTime(record.submitted_at);
                               return (
                                 <tr key={record.id} className="border-b border-slate-50 dark:border-slate-800">
-                                  <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{record.date}</td>
+                                  <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{fdate(record.date)}</td>
                                   <td className="py-2.5 px-3">
                                     <Badge variant={record.status === 'present' ? 'success' : record.status === 'excused' ? 'warning' : 'danger'}>{record.status}</Badge>
                                   </td>
                                   <td className="py-2.5 px-3 text-slate-600 dark:text-slate-300">{record.service_name}</td>
                                   <td className="py-2.5 px-3 text-slate-500">{record.submitted_by_name || 'Unknown'}</td>
                                   <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
-                                    <div className="font-medium text-slate-700 dark:text-slate-200">{submittedAt.date}</div>
-                                    {submittedAt.time && <div className="text-[10px] text-slate-400">{submittedAt.time}</div>}
+                                    <div className="font-medium text-slate-700 dark:text-slate-200">{fdatetime(record.submitted_at)}</div>
                                   </td>
                                 </tr>
                               );
