@@ -3,6 +3,7 @@ import { newMemberLeaderAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import VisitorIntake from './VisitorIntake';
 import { fdate, fdatetime } from '../../utils/date';
+import { handlePhoneChange } from '../../utils/phone';
 import {
   Users, UserPlus, GraduationCap, BarChart3, Calendar, CheckCircle2, X, AlertTriangle, Loader2,
   ChevronDown, ChevronUp, Search, Phone, Mail, MapPin, FileText, Clock, BookOpen
@@ -200,13 +201,13 @@ const NewMemberLeaderView = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
-              <input type="text" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })}
+              <input type="text" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value.replace(/\b\w/g, c => c.toUpperCase()) })}
                 className="input w-full" required placeholder="e.g. John Smith" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-              <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                className="input w-full" placeholder="e.g. +254 7XX XXX XXX" />
+              <input type="text" value={form.phone} onChange={e => setForm({ ...form, phone: handlePhoneChange(e.target.value) })}
+                className="input w-full" placeholder="+255 XXX XXX XXX" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>

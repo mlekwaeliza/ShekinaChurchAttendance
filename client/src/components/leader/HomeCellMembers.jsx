@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Home, Plus, Trash2, UserPlus } from 'lucide-react';
 import { leaderAPI } from '../../services/api';
+import { handlePhoneChange } from '../../utils/phone';
 
 const emptyForm = { cell_id: '', membership_id: '', full_name: '', phone: '', email: '', address: '' };
 
@@ -36,7 +37,11 @@ const HomeCellMembers = () => {
     members: members.filter((member) => Number(member.cell_id) === Number(cell.id)),
   })), [cells, members]);
 
-  const updateField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const updateField = (key, value) => {
+    if (key === 'full_name') value = value.replace(/\b\w/g, c => c.toUpperCase());
+    if (key === 'phone') value = handlePhoneChange(value);
+    setForm((current) => ({ ...current, [key]: value }));
+  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import TwoFactorSetup from '../TwoFactorSetup';
 import { fdate, fdatetime } from '../../utils/date';
+import { handlePhoneChange } from '../../utils/phone';
 import Modal from '../ui/Modal';
 
 const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showMessage }) => {
@@ -814,7 +815,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                   </div>
                   <div>
                     <label className="input-label">Phone</label>
-                    <input type="text" value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })} className="input w-full" placeholder="Optional" />
+                    <input type="text" value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: handlePhoneChange(e.target.value) })} className="input w-full" placeholder="+255 XXX XXX XXX" />
                   </div>
                 </div>
               )}

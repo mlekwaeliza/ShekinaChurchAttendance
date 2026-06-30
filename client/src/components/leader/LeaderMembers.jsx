@@ -3,6 +3,7 @@ import { Users, Plus, Pencil, Trash2, AlertTriangle, Phone, MessageSquare } from
 import DataTable from '../ui/DataTable';
 import Modal from '../ui/Modal';
 import Badge from '../ui/Badge';
+import { handlePhoneChange } from '../../utils/phone';
 
 const LeaderMembers = ({
   members,
@@ -236,6 +237,7 @@ const LeaderMembers = ({
                 required
                 name="full_name"
                 defaultValue={editingMember?.full_name}
+                onChange={e => { e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase()); }}
                 className="input"
                 disabled={!isHead}
               />
@@ -247,6 +249,7 @@ const LeaderMembers = ({
               <input
                 name="phone"
                 defaultValue={editingMember?.phone}
+                onChange={e => { e.target.value = handlePhoneChange(e.target.value); }}
                 className="input"
                 disabled={!isHead}
               />

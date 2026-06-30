@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { UserPlus, Save, Phone, Mail, MapPin } from 'lucide-react';
 import { adminAPI } from '../../services/api';
+import { handlePhoneChange } from '../../utils/phone';
 
 const VisitorIntake = ({ showMessage }) => {
   const [visitors, setVisitors] = useState([]);
@@ -33,6 +34,8 @@ const VisitorIntake = ({ showMessage }) => {
   }, []);
 
   const updateField = (key, value) => {
+    if (key === 'full_name') value = value.replace(/\b\w/g, c => c.toUpperCase());
+    if (key === 'phone') value = handlePhoneChange(value);
     setForm((current) => ({ ...current, [key]: value }));
   };
 

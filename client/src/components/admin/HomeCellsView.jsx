@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Home, Plus, Save, Search, Trash2, UserPlus, Users } from 'lucide-react';
 import { adminAPI } from '../../services/api';
+import { handlePhoneChange } from '../../utils/phone';
 
 const emptyCellMember = { cell_id: '', membership_id: '', full_name: '', phone: '', email: '', address: '' };
 
@@ -99,6 +100,8 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
   };
 
   const updateCellMemberForm = (key, value) => {
+    if (key === 'full_name') value = value.replace(/\b\w/g, c => c.toUpperCase());
+    if (key === 'phone') value = handlePhoneChange(value);
     setCellMemberForm((current) => {
       const next = { ...current, [key]: value };
       if (key === 'membership_id') {

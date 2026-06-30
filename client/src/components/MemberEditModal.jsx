@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { adminAPI } from '../services/api';
 import { History, User, Calendar, Sparkles, ChevronDown, RotateCcw, Users } from 'lucide-react';
 import { useModalA11y } from '../hooks/useModalA11y';
+import { handlePhoneChange, capitalizeName } from '../utils/phone';
 
 const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
@@ -168,9 +169,12 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let finalValue = type === 'checkbox' ? checked : value;
+    if (name === 'full_name') finalValue = capitalizeName(finalValue);
+    if (name === 'phone') finalValue = handlePhoneChange(finalValue);
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: finalValue
     }));
     // If admin manually changes section/leader, mark as no longer auto
     if (name === 'section_id' || name === 'leader_id') {
@@ -549,9 +553,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                 <input
                   type="tel"
                   name="phone"
-                  placeholder="+255..."
+                  placeholder="+255 XXX XXX XXX"
                   value={formData.phone}
-                  onChange={handleChange}
+                  onChange={e => setFormData(p => ({ ...p, phone: handlePhoneChange(e.target.value) }))}
                   className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                 />
               </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserCog, AtSign, Phone, Mail, Layout, X, Shield } from 'lucide-react';
 import Modal from '../ui/Modal';
+import { handlePhoneChange, capitalizeName } from '../../utils/phone';
 
 const LeaderEditModal = ({ isOpen, onClose, onSave, leader, sections, loading }) => {
   const [formData, setFormData] = useState({
@@ -45,9 +46,12 @@ const LeaderEditModal = ({ isOpen, onClose, onSave, leader, sections, loading })
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let finalValue = type === 'checkbox' ? checked : value;
+    if (name === 'full_name') finalValue = capitalizeName(finalValue);
+    if (name === 'phone') finalValue = handlePhoneChange(finalValue);
     setFormData(prev => ({ 
       ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
+      [name]: finalValue 
     }));
   };
 
@@ -125,8 +129,8 @@ const LeaderEditModal = ({ isOpen, onClose, onSave, leader, sections, loading })
                 type="tel"
                 name="phone"
                 value={formData.phone}
-                onChange={handleChange}
-                placeholder="e.g. +123 456 7890"
+                onChange={e => setFormData(p => ({ ...p, phone: handlePhoneChange(e.target.value) }))}
+                placeholder="+255 XXX XXX XXX"
                 className="input pl-10"
               />
             </div>
