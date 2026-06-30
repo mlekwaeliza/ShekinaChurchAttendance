@@ -874,7 +874,7 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
 // GET next membership number
 router.get('/members/next-id', async (req, res) => {
   try {
-    const row = await get(`SELECT membership_id FROM members ORDER BY CAST(membership_id AS INTEGER) DESC LIMIT 1`);
+    const row = await get(`SELECT membership_id FROM members WHERE membership_id NOT LIKE '%MEM-%' AND membership_id GLOB '[0-9]*' ORDER BY CAST(membership_id AS INTEGER) DESC LIMIT 1`);
     const maxNum = row ? (parseInt(row.membership_id, 10) || 0) : 0;
     res.json({ next_id: String(maxNum + 1) });
   } catch (error) {

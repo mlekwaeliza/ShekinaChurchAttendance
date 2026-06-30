@@ -72,27 +72,29 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
       setAutoSuggestion(null);
       isAutoAssigned.current = false;
 
-      let genId = '';
-      try {
-        const res = await adminAPI.getNextMembershipId();
-        genId = res.data.next_id;
-      } catch {
-        genId = String(Date.now()).slice(-6);
-      }
+      (async () => {
+        let genId = '';
+        try {
+          const res = await adminAPI.getNextMembershipId();
+          genId = res.data.next_id;
+        } catch {
+          genId = String(Date.now()).slice(-6);
+        }
 
-      setFormData({
-        membership_id: genId,
-        full_name: '', phone: '', email: '', gender: '', marital_status: '',
-        occupation: '', age_group: '', section_id: '', leader_id: '',
-        home_cell_id: '', date_of_birth: '', address: '',
-        show_age_to_leaders: false, hide_from_birthday_list: false,
-        opt_out_services: []
-      });
-      setAuditHistory([]);
-      setShowHistory(false);
+        setFormData({
+          membership_id: genId,
+          full_name: '', phone: '', email: '', gender: '', marital_status: '',
+          occupation: '', age_group: '', section_id: '', leader_id: '',
+          home_cell_id: '', date_of_birth: '', address: '',
+          show_age_to_leaders: false, hide_from_birthday_list: false,
+          opt_out_services: []
+        });
+        setAuditHistory([]);
+        setShowHistory(false);
 
-      // Fetch auto-assignment suggestion
-      fetchSuggestion(genId);
+        // Fetch auto-assignment suggestion
+        fetchSuggestion(genId);
+      })();
     }
 
     loadServiceTypes();
