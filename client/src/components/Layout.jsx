@@ -315,7 +315,14 @@ const Layout = ({ children, showNav = true }) => {
   const isActive = (item) => {
     if (item.exact) {
       if (location.pathname !== item.path) return false;
-      if (item.search) return location.search === item.search;
+      if (item.search) {
+        const urlParams = new URLSearchParams(location.search);
+        const itemParams = new URLSearchParams(item.search);
+        for (const [key, value] of itemParams) {
+          if (urlParams.get(key) !== value) return false;
+        }
+        return true;
+      }
       // Exact match with no search param: only active if URL has no subtab param
       return !location.search.includes('subtab=');
     }
@@ -323,7 +330,13 @@ const Layout = ({ children, showNav = true }) => {
     if (!path.startsWith(item.path)) return false;
     const rest = path.slice(item.path.length);
     if (rest && rest[0] !== '/' && rest[0] !== '?') return false;
-    if (item.search && location.search !== item.search) return false;
+    if (item.search) {
+      const urlParams = new URLSearchParams(location.search);
+      const itemParams = new URLSearchParams(item.search);
+      for (const [key, value] of itemParams) {
+        if (urlParams.get(key) !== value) return false;
+      }
+    }
     return true;
   };
 
