@@ -38,12 +38,12 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
 
   const filteredLeaders = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return leaders
-      .filter((leader) => !term
-        || leader.full_name?.toLowerCase().includes(term)
-        || leader.section_name?.toLowerCase().includes(term))
-      .sort((a, b) => a.full_name.localeCompare(b.full_name));
-  }, [leaders, search]);
+    return allMembers
+      .filter((member) => !term
+        || member.full_name?.toLowerCase().includes(term)
+        || member.section_name?.toLowerCase().includes(term))
+      .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  }, [allMembers, search]);
 
   const selectedIdsFor = (cell) => new Set((cell.leaders || []).map((leader) => Number(leader.leader_id)));
 
@@ -54,7 +54,7 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
       if (selected.has(Number(leaderId))) {
         return { ...cell, leaders: cell.leaders.filter((leader) => Number(leader.leader_id) !== Number(leaderId)) };
       }
-      const leader = leaders.find((item) => Number(item.id) === Number(leaderId));
+      const leader = allMembers.find((item) => Number(item.id) === Number(leaderId));
       return {
         ...cell,
         leaders: [
@@ -258,7 +258,7 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search leaders by name or section..."
+            placeholder="Search members by name or section..."
             className="input pl-10"
           />
         </div>
@@ -278,7 +278,7 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
                   <div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{cell.name}</h3>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      {(cell.members || []).length} members &middot; {selected.size} leaders assigned
+                      {(cell.members || []).length} members &middot; {selected.size} assigned
                     </p>
                   </div>
                   <button
