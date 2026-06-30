@@ -3383,13 +3383,13 @@ const AttendanceReports = ({
               { key: 'longest_attendance_streak', label: 'Longest Attendance Streak', align: 'right' },
               { key: 'current_attendance_streak', label: 'Current Attendance Streak', align: 'right' },
               { key: 'consecutive_absences', label: 'Consecutive Absences', align: 'right' },
-              { key: 'last_attendance_date', label: 'Last Attendance Date' },
+              { key: 'last_attendance_date', label: 'Last Attendance Date', render: v => v ? fdate(v) : '—' },
               { key: 'days_since_last_attendance', label: 'Days Since Last Attendance', align: 'right', render: v => v === 9999 ? 'Never' : v },
               { key: 'active_status', label: 'Active Status' },
               { key: 'risk_level', label: 'Risk Level', render: (_, row) => <Badge variant={row.risk_variant}>{row.risk_level}</Badge> },
               { key: 'follow_up_status', label: 'Follow-up Status' },
-              { key: 'last_visitation_date', label: 'Last Visitation Date' },
-              { key: 'last_counseling_date', label: 'Last Counseling Date' },
+              { key: 'last_visitation_date', label: 'Last Visitation Date', render: v => v ? fdate(v) : '—' },
+              { key: 'last_counseling_date', label: 'Last Counseling Date', render: v => v ? fdate(v) : '—' },
               { key: 'prayer_request_status', label: 'Prayer Request Status' },
               { key: 'notes', label: 'Notes' },
               { key: 'retention_score', label: 'Retention Score', align: 'right', render: v => `${R(v)}%` },
@@ -3458,7 +3458,7 @@ const AttendanceReports = ({
                       <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700">
                         <h4 className="text-sm font-bold text-slate-900 dark:text-white">Attendance Records</h4>
                         <p className="text-[10px] text-slate-400">
-                          {selectedMemberDetails.date_range?.start} to {selectedMemberDetails.date_range?.end} · {serviceLabel}
+                          {fdate(selectedMemberDetails.date_range?.start)} to {fdate(selectedMemberDetails.date_range?.end)} · {serviceLabel}
                         </p>
                       </div>
                       <div className="overflow-x-auto">
