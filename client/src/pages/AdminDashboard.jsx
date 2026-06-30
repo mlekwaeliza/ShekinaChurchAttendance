@@ -47,9 +47,9 @@ const AdminDashboard = () => {
 
   // One-time migration: renumber all membership IDs to sequential numbers
   React.useEffect(() => {
-    if (!localStorage.getItem('membership_ids_renumbered')) {
+    if (!localStorage.getItem('membership_ids_renumbered_shacm')) {
       adminAPI.renumberMembershipIds()
-        .then(() => localStorage.setItem('membership_ids_renumbered', '1'))
+        .then(() => localStorage.setItem('membership_ids_renumbered_shacm', '1'))
         .catch(() => {});
     }
   }, []);

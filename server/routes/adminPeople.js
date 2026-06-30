@@ -874,22 +874,22 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
 // GET next membership number
 router.get('/members/next-id', async (req, res) => {
   try {
-    const row = await get(`SELECT membership_id FROM members WHERE membership_id NOT LIKE '%MEM-%' AND membership_id GLOB '[0-9]*' ORDER BY CAST(membership_id AS INTEGER) DESC LIMIT 1`);
-    const maxNum = row ? (parseInt(row.membership_id, 10) || 0) : 0;
-    res.json({ next_id: String(maxNum + 1) });
+    const row = await get(`SELECT membership_id FROM members WHERE membership_id LIKE 'SHACM%' ORDER BY CAST(SUBSTR(membership_id, 6) AS INTEGER) DESC LIMIT 1`);
+    const maxNum = row ? (parseInt(row.membership_id.slice(5), 10) || 0) : 0;
+    res.json({ next_id: `SHACM${String(maxNum + 1).padStart(4, '0')}` });
   } catch (error) {
     console.error('Next ID error:', error);
     res.status(500).json({ error: 'Failed to generate next ID' });
   }
 });
 
-// POST renumber all membership IDs to sequential numbers
+// POST renumber all membership IDs to sequential SHACM numbers
 router.post('/members/renumber-ids', async (req, res) => {
   try {
     const members = await all(`SELECT id, membership_id FROM members ORDER BY id ASC`);
     let counter = 1;
     for (const m of members) {
-      const newId = String(counter);
+      const newId = `SHACM${String(counter).padStart(4, '0')}`;
       if (m.membership_id !== newId) {
         await run(`UPDATE members SET membership_id = ? WHERE id = ?`, [newId, m.id]);
       }
