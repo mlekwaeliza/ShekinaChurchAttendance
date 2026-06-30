@@ -8,7 +8,6 @@ import {
   ArrowUp, ArrowDown, Minus, RefreshCw, Building2, PieChart
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
-import { formatEATDate, formatEATDateTimeParts } from '../../utils/date';
 import Badge from '../ui/Badge';
 import { fdate, fdatetime } from '../../utils/date';
 
@@ -3477,7 +3476,6 @@ const AttendanceReports = ({
                                 <td colSpan={5} className="py-10 text-center text-sm text-slate-400">No attendance records found for this member in the selected window.</td>
                               </tr>
                             ) : selectedMemberDetails.records.map(record => {
-                              const submittedAt = formatEastAfricaDateTime(record.submitted_at);
                               return (
                                 <tr key={record.id} className="border-b border-slate-50 dark:border-slate-800">
                                   <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white">{fdate(record.date)}</td>
