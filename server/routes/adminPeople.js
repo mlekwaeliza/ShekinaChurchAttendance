@@ -871,6 +871,18 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
   }
 });
 
+// GET next membership number
+router.get('/members/next-id', async (req, res) => {
+  try {
+    const row = await get(`SELECT membership_id FROM members ORDER BY CAST(membership_id AS INTEGER) DESC LIMIT 1`);
+    const maxNum = row ? (parseInt(row.membership_id, 10) || 0) : 0;
+    res.json({ next_id: String(maxNum + 1) });
+  } catch (error) {
+    console.error('Next ID error:', error);
+    res.status(500).json({ error: 'Failed to generate next ID' });
+  }
+});
+
 // GET suggest best section + leader for a new member (least members first)
 router.get('/members/suggest-assignment', async (req, res) => {
   try {

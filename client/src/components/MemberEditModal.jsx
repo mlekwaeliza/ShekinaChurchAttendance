@@ -72,9 +72,13 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
       setAutoSuggestion(null);
       isAutoAssigned.current = false;
 
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let genId = 'MEM-';
-      for (let i = 0; i < 8; i++) genId += chars.charAt(Math.floor(Math.random() * chars.length));
+      let genId = '';
+      try {
+        const res = await adminAPI.getNextMembershipId();
+        genId = res.data.next_id;
+      } catch {
+        genId = String(Date.now()).slice(-6);
+      }
 
       setFormData({
         membership_id: genId,
