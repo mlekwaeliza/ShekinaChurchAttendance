@@ -313,7 +313,12 @@ const Layout = ({ children, showNav = true }) => {
   })();
 
   const isActive = (item) => {
-    if (item.exact) return location.pathname === item.path && (!item.search || location.search === item.search);
+    if (item.exact) {
+      if (location.pathname !== item.path) return false;
+      if (item.search) return location.search === item.search;
+      // Exact match with no search param: only active if URL has no subtab param
+      return !location.search.includes('subtab=');
+    }
     const path = location.pathname;
     if (!path.startsWith(item.path)) return false;
     const rest = path.slice(item.path.length);
