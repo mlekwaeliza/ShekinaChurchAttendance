@@ -75,6 +75,7 @@ const LeaderEditModal = ({ isOpen, onClose, onSave, leader, sections, loading })
                 name="full_name"
                 value={formData.full_name}
                 onChange={handleChange}
+                onPaste={e => { e.preventDefault(); setFormData(prev => ({ ...prev, full_name: capitalizeName(e.clipboardData.getData('text')) })); }}
                 placeholder="e.g. John Doe"
                 className="input pl-10"
               />

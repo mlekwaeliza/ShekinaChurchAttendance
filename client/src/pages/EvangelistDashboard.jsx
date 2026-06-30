@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { evangelismAPI } from '../services/api';
 import SettingsView from '../components/admin/SettingsView';
-import { handlePhoneChange } from '../utils/phone';
+import { handlePhoneChange, capitalizeName } from '../utils/phone';
 import {
   Heart, TrendingUp, Users, Calendar, Target, UserPlus, Church, BookOpen,
   BarChart3, Phone, Mail, MapPin, Cross, Award, CheckCircle2, Clock,
@@ -417,7 +417,7 @@ const SoulsWonRegistry = () => {
       {showForm && (
         <form onSubmit={handleSave} className={STAT_STYLE + ' space-y-4'}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label><input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value.replace(/\b\w/g, c => c.toUpperCase())})} className="input w-full" required /></div>
+            <div><label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label><input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: capitalizeName(e.target.value)})} onPaste={e => { e.preventDefault(); setForm({...form, full_name: capitalizeName(e.clipboardData.getData('text'))}); }} className="input w-full" required /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Phone</label><input type="text" value={form.phone} onChange={e => setForm({...form, phone: handlePhoneChange(e.target.value)})} className="input w-full" /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Gender</label><select value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} className="input w-full"><option value="">Select...</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Age Group</label><select value={form.age_group} onChange={e => setForm({...form, age_group: e.target.value})} className="input w-full"><option value="">Select...</option><option>0-12</option><option>13-17</option><option>18-25</option><option>26-35</option><option>36-50</option><option>50+</option></select></div>
@@ -630,7 +630,7 @@ const EvangelismTeam = () => {
       {showForm && (
         <form onSubmit={handleSave} className={STAT_STYLE + ' space-y-4'}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div><label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label><input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value.replace(/\b\w/g, c => c.toUpperCase())})} className="input w-full" required /></div>
+            <div><label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label><input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: capitalizeName(e.target.value)})} onPaste={e => { e.preventDefault(); setForm({...form, full_name: capitalizeName(e.clipboardData.getData('text'))}); }} className="input w-full" required /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Role</label><select value={form.role} onChange={e => setForm({...form, role: e.target.value})} className="input w-full">{roleOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Phone</label><input type="text" value={form.phone} onChange={e => setForm({...form, phone: handlePhoneChange(e.target.value)})} className="input w-full" /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Email</label><input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="input w-full" /></div>
@@ -935,7 +935,7 @@ const ConvertModal = ({ onClose, onSaved }) => {
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div><label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label><input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value.replace(/\b\w/g, c => c.toUpperCase())})} className="input w-full" required /></div>
+          <div><label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label><input type="text" value={form.full_name} onChange={e => setForm({...form, full_name: capitalizeName(e.target.value)})} onPaste={e => { e.preventDefault(); setForm({...form, full_name: capitalizeName(e.clipboardData.getData('text'))}); }} className="input w-full" required /></div>
           <div className="grid grid-cols-2 gap-4">
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Phone</label><input type="text" value={form.phone} onChange={e => setForm({...form, phone: handlePhoneChange(e.target.value)})} className="input w-full" /></div>
             <div><label className="block text-sm font-medium text-slate-700 mb-1">Gender</label><select value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} className="input w-full"><option value="">Select</option><option>Male</option><option>Female</option></select></div>

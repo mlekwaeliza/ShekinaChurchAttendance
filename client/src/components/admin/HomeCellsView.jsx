@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Home, Plus, Save, Search, Trash2, UserPlus, Users } from 'lucide-react';
 import { adminAPI } from '../../services/api';
-import { handlePhoneChange } from '../../utils/phone';
+import { handlePhoneChange, capitalizeName } from '../../utils/phone';
 
 const emptyCellMember = { cell_id: '', membership_id: '', full_name: '', phone: '', email: '', address: '' };
 
@@ -100,7 +100,7 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
   };
 
   const updateCellMemberForm = (key, value) => {
-    if (key === 'full_name') value = value.replace(/\b\w/g, c => c.toUpperCase());
+    if (key === 'full_name') value = capitalizeName(value);
     if (key === 'phone') value = handlePhoneChange(value);
     setCellMemberForm((current) => {
       const next = { ...current, [key]: value };
@@ -241,7 +241,9 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
                 <option key={member.id} value={member.membership_id}>{member.full_name}</option>
               ))}
             </datalist>
-            <input required value={cellMemberForm.full_name} onChange={(event) => updateCellMemberForm('full_name', event.target.value)} className="input" placeholder="Full name" />
+            <input required value={cellMemberForm.full_name} onChange={(event) => updateCellMemberForm('full_name', event.target.value)}
+              onPaste={e => { e.preventDefault(); updateCellMemberForm('full_name', capitalizeName(e.clipboardData.getData('text'))); }}
+              className="input" placeholder="Full name" />
             <input value={cellMemberForm.phone} onChange={(event) => updateCellMemberForm('phone', event.target.value)} className="input" placeholder="Phone" />
             <input type="email" value={cellMemberForm.email} onChange={(event) => updateCellMemberForm('email', event.target.value)} className="input" placeholder="Email" />
             <input value={cellMemberForm.address} onChange={(event) => updateCellMemberForm('address', event.target.value)} className="input md:col-span-2" placeholder="Address" />

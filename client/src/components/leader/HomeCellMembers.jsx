@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Home, Plus, Trash2, UserPlus } from 'lucide-react';
 import { leaderAPI } from '../../services/api';
-import { handlePhoneChange } from '../../utils/phone';
+import { handlePhoneChange, capitalizeName } from '../../utils/phone';
 
 const emptyForm = { cell_id: '', membership_id: '', full_name: '', phone: '', email: '', address: '' };
 
@@ -38,7 +38,7 @@ const HomeCellMembers = () => {
   })), [cells, members]);
 
   const updateField = (key, value) => {
-    if (key === 'full_name') value = value.replace(/\b\w/g, c => c.toUpperCase());
+    if (key === 'full_name') value = capitalizeName(value);
     if (key === 'phone') value = handlePhoneChange(value);
     setForm((current) => ({ ...current, [key]: value }));
   };
@@ -107,7 +107,9 @@ const HomeCellMembers = () => {
               {cells.map((cell) => <option key={cell.id} value={cell.id}>{cell.name}</option>)}
             </select>
             <input value={form.membership_id} onChange={(event) => updateField('membership_id', event.target.value)} className="input" placeholder="Church member ID (optional)" />
-            <input value={form.full_name} onChange={(event) => updateField('full_name', event.target.value)} className="input" placeholder="Full name" required />
+            <input value={form.full_name} onChange={(event) => updateField('full_name', event.target.value)}
+              onPaste={e => { e.preventDefault(); updateField('full_name', capitalizeName(e.clipboardData.getData('text'))); }}
+              className="input" placeholder="Full name" required />
             <input value={form.phone} onChange={(event) => updateField('phone', event.target.value)} className="input" placeholder="Phone" />
             <input type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} className="input" placeholder="Email" />
             <input value={form.address} onChange={(event) => updateField('address', event.target.value)} className="input" placeholder="Address" />

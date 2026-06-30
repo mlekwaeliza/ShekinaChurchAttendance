@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { capitalizeName } from '../../utils/phone';
 import { Users, Plus, Pencil, Trash2, AlertTriangle, Phone, MessageSquare } from 'lucide-react';
 import DataTable from '../ui/DataTable';
 import Modal from '../ui/Modal';
@@ -237,7 +238,8 @@ const LeaderMembers = ({
                 required
                 name="full_name"
                 defaultValue={editingMember?.full_name}
-                onChange={e => { e.target.value = e.target.value.replace(/\b\w/g, c => c.toUpperCase()); }}
+                onChange={e => { e.target.value = capitalizeName(e.target.value); }}
+                onPaste={e => { e.preventDefault(); e.target.value = capitalizeName(e.clipboardData.getData('text')); e.target.dispatchEvent(new Event('input', { bubbles: true })); }}
                 className="input"
                 disabled={!isHead}
               />

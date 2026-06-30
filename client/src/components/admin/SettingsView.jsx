@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2, Users, UserPlus, Edit3, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
+import { capitalizeName } from '../../utils/phone';
 import TwoFactorSetup from '../TwoFactorSetup';
 import { fdate, fdatetime } from '../../utils/date';
 import { handlePhoneChange } from '../../utils/phone';
@@ -779,7 +780,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="input-label">Full Name *</label>
-                  <input type="text" value={userForm.full_name} onChange={(e) => setUserForm({ ...userForm, full_name: e.target.value })} className="input w-full" placeholder="e.g. John Doe" />
+                  <input type="text" value={userForm.full_name} onChange={(e) => setUserForm({ ...userForm, full_name: capitalizeName(e.target.value) })} onPaste={e => { e.preventDefault(); setUserForm({ ...userForm, full_name: capitalizeName(e.clipboardData.getData('text')) }); }} className="input w-full" placeholder="e.g. John Doe" />
                 </div>
                 <div>
                   <label className="input-label">Username *</label>
@@ -848,7 +849,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             <div className="modal-body space-y-4">
               <div>
                 <label className="input-label">Full Name</label>
-                <input type="text" value={editingUser.full_name || ''} onChange={(e) => setEditingUser({ ...editingUser, full_name: e.target.value })} className="input w-full" />
+                <input type="text" value={editingUser.full_name || ''} onChange={(e) => setEditingUser({ ...editingUser, full_name: capitalizeName(e.target.value) })} onPaste={e => { e.preventDefault(); setEditingUser({ ...editingUser, full_name: capitalizeName(e.clipboardData.getData('text')) }); }} className="input w-full" />
               </div>
               <div>
                 <label className="input-label">Username</label>

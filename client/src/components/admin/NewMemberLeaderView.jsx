@@ -3,6 +3,7 @@ import { newMemberLeaderAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import VisitorIntake from './VisitorIntake';
 import { fdate, fdatetime } from '../../utils/date';
+import { capitalizeName } from '../../utils/phone';
 import { handlePhoneChange } from '../../utils/phone';
 import {
   Users, UserPlus, GraduationCap, BarChart3, Calendar, CheckCircle2, X, AlertTriangle, Loader2,
@@ -201,7 +202,8 @@ const NewMemberLeaderView = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
-              <input type="text" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value.replace(/\b\w/g, c => c.toUpperCase()) })}
+              <input type="text" value={form.full_name} onChange={e => setForm({ ...form, full_name: capitalizeName(e.target.value) })}
+                onPaste={e => { e.preventDefault(); setForm({ ...form, full_name: capitalizeName(e.clipboardData.getData('text')) }); }}
                 className="input w-full" required placeholder="e.g. John Smith" />
             </div>
             <div>

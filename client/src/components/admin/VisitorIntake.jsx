@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { UserPlus, Save, Phone, Mail, MapPin } from 'lucide-react';
 import { adminAPI } from '../../services/api';
-import { handlePhoneChange } from '../../utils/phone';
+import { handlePhoneChange, capitalizeName } from '../../utils/phone';
 
 const VisitorIntake = ({ showMessage }) => {
   const [visitors, setVisitors] = useState([]);
@@ -34,7 +34,7 @@ const VisitorIntake = ({ showMessage }) => {
   }, []);
 
   const updateField = (key, value) => {
-    if (key === 'full_name') value = value.replace(/\b\w/g, c => c.toUpperCase());
+    if (key === 'full_name') value = capitalizeName(value);
     if (key === 'phone') value = handlePhoneChange(value);
     setForm((current) => ({ ...current, [key]: value }));
   };
@@ -83,7 +83,9 @@ const VisitorIntake = ({ showMessage }) => {
           <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Full Name</label>
-              <input value={form.full_name} onChange={(event) => updateField('full_name', event.target.value)} className="input w-full" />
+              <input value={form.full_name} onChange={(event) => updateField('full_name', event.target.value)}
+                onPaste={e => { e.preventDefault(); const v = capitalizeName(e.clipboardData.getData('text')); updateField('full_name', v); }}
+                className="input w-full" />
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>

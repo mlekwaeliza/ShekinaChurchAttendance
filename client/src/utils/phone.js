@@ -39,10 +39,21 @@ export function handlePhoneChange(value) {
 }
 
 /**
- * Auto-capitalize first letter of each word (title case for names).
+ * Convert name to ALL CAPS.
+ * Works on both typing and pasting.
  */
 export function capitalizeName(value) {
   if (!value) return '';
-  return value.replace(/\b\w/g, c => c.toUpperCase());
+  return value.toUpperCase();
+}
+
+/**
+ * onPaste handler for name fields — auto-capitalizes after paste.
+ */
+export function handleNamePaste(e, setter, fieldName) {
+  e.preventDefault();
+  const pasted = (e.clipboardData || window.clipboardData).getData('text');
+  const capitalized = capitalizeName(pasted);
+  setter(prev => ({ ...prev, [fieldName]: capitalized }));
 }
 
