@@ -45,6 +45,15 @@ const AdminDashboard = () => {
   const data = useAdminData();
   const { setCrumbs, clearCrumbs } = useBreadcrumbs();
 
+  // One-time migration: renumber all membership IDs to sequential numbers
+  React.useEffect(() => {
+    if (!localStorage.getItem('membership_ids_renumbered')) {
+      adminAPI.renumberMembershipIds()
+        .then(() => localStorage.setItem('membership_ids_renumbered', '1'))
+        .catch(() => {});
+    }
+  }, []);
+
   // Handle Dynamic Breadcrumbs for Sections
   React.useEffect(() => {
     if (activeTab === 'leaders' && data.leaderSectionFilter) {

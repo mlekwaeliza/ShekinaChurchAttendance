@@ -883,6 +883,25 @@ router.get('/members/next-id', async (req, res) => {
   }
 });
 
+// POST renumber all membership IDs to sequential numbers
+router.post('/members/renumber-ids', async (req, res) => {
+  try {
+    const members = await all(`SELECT id, membership_id FROM members ORDER BY id ASC`);
+    let counter = 1;
+    for (const m of members) {
+      const newId = String(counter);
+      if (m.membership_id !== newId) {
+        await run(`UPDATE members SET membership_id = ? WHERE id = ?`, [newId, m.id]);
+      }
+      counter++;
+    }
+    res.json({ message: `Renumbered ${members.length} members`, count: members.length });
+  } catch (error) {
+    console.error('Renumber IDs error:', error);
+    res.status(500).json({ error: 'Failed to renumber membership IDs' });
+  }
+});
+
 // GET suggest best section + leader for a new member (least members first)
 router.get('/members/suggest-assignment', async (req, res) => {
   try {
