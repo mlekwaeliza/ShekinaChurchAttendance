@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { financeAPI, adminAPI } from '../../services/api';
+import { financeAPI, adminAPI, evangelismAPI } from '../../services/api';
 import {
   DollarSign, TrendingUp, Calendar, CheckCircle2, XCircle, Clock,
   Loader2, Search, Eye, ArrowUpCircle, Ban, Receipt, HandCoins,
@@ -89,7 +89,12 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
       const res = await adminAPI.getMembers({});
       setAllMembers(res.data || []);
     } catch (e) {
-      console.error('Failed to load members:', e);
+      try {
+        const res = await evangelismAPI.getMemberNames();
+        setAllMembers(res.data || []);
+      } catch (e2) {
+        console.error('Failed to load members:', e2);
+      }
     }
   }, []);
 
