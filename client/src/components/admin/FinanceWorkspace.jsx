@@ -116,6 +116,7 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
   useEffect(() => { loadRecord(); }, [loadRecord]);
 
   const totalTitheAmount = useMemo(() => titheEntries.reduce((s, t) => s + (Number(t.amount) || 0), 0), [titheEntries]);
+  const hasTithes = useMemo(() => titheEntries.some(t => Number(t.amount) > 0), [titheEntries]);
   const totalExpenses = useMemo(() => expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0), [expenses]);
   const calc = useMemo(() => calcFinance(morning, afternoon, totalTitheAmount), [morning, afternoon, totalTitheAmount]);
   const netBalance = calc.usable - totalExpenses;
@@ -127,7 +128,6 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
     if (record?.status === 'submitted') return 5;
     if (record?.status === 'approved') return 5;
     if (calc.total > 0 && totalTitheAmount > 0 && totalExpenses > 0) return 4;
-    if (calc.total > 0 && totalExpenses > 0) return 4;
     if (calc.total > 0 && totalTitheAmount > 0) return 3;
     if (calc.total > 0) return 2;
     if (Number(morning) > 0 || Number(afternoon) > 0) return 1;
@@ -164,6 +164,10 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
   };
 
   const handleSubmitForApproval = async () => {
+    if (!hasTithes) {
+      showMessage?.('Please add at least one member tithe before submitting');
+      return;
+    }
     if (!record?.id) { await handleSaveDraft(); }
     if (!record?.id) return;
     setSaving(true);
@@ -204,6 +208,14 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
       showMessage?.('Tithes recalculated');
       loadRecord();
     } catch (e) { showMessage?.('Failed to recalculate'); }
+  };
+
+  const handleTabClick = (key) => {
+    if (key === 'expenses' && !hasTithes) {
+      showMessage?.('Please add at least one member tithe before recording expenses');
+      return;
+    }
+    setActiveTab(key);
   };
 
   const addExpenseRow = () => setExpenses(prev => [...prev, { category: '', description: '', amount: '' }]);
@@ -312,17 +324,23 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
         <div className="flex-1 min-w-0 space-y-4">
           {/* Tabs */}
           <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
-            {WORKSPACE_TABS.map(t => (
-              <button key={t.key} onClick={() => setActiveTab(t.key)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-                  activeTab === t.key
-                    ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                }`}>
-                <t.icon className="w-3.5 h-3.5" />
-                {t.label}
-              </button>
-            ))}
+            {WORKSPACE_TABS.map(t => {
+              const locked = t.key === 'expenses' && !hasTithes;
+              return (
+                <button key={t.key} onClick={() => handleTabClick(t.key)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+                    activeTab === t.key
+                      ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm'
+                      : locked
+                        ? 'text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60'
+                        : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}>
+                  <t.icon className="w-3.5 h-3.5" />
+                  {t.label}
+                  {locked && <Ban className="w-2.5 h-2.5 text-amber-400" />}
+                </button>
+              );
+            })}
           </div>
 
           {/* Tab Content */}
@@ -495,6 +513,15 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
             {/* Expenses Tab */}
             {activeTab === 'expenses' && (
               <div className="space-y-4">
+                {!hasTithes && (
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30">
+                    <AlertCircle className="w-5 h-5 text-amber-500 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Tithes required first</p>
+                      <p className="text-[10px] text-amber-600/70 dark:text-amber-500/70">Add at least one member tithe before recording expenses</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white">Expenses</h3>
