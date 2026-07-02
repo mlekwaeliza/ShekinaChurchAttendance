@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { financeAPI, contributionAPI } from '../../services/api';
+import { financeAPI, contributionAPI, adminAPI } from '../../services/api';
 import {
   DollarSign, TrendingUp, Calendar, CheckCircle2, XCircle, Clock,
   Loader2, Search, ChevronDown, Eye, ArrowUpCircle, Ban, Receipt,
@@ -84,8 +84,15 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   const [detailLoading, setDetailLoading] = useState(false);
 
   // New Record form state
-  const [newRecord, setNewRecord] = useState({ date: today(), morning: '', afternoon: '', tithes: '', expenses: [] });
+  const [newRecord, setNewRecord] = useState({ date: today(), morning: '', afternoon: '', expenses: [] });
   const [savingNewRecord, setSavingNewRecord] = useState(false);
+  const [allMembers, setAllMembers] = useState([]);
+  const [titheEntries, setTitheEntries] = useState([]);
+  const [titheSearch, setTitheSearch] = useState('');
+
+  useEffect(() => {
+    adminAPI.getMembers({}).then(res => setAllMembers(res.data || [])).catch(() => {});
+  }, []);
 
   const loadRecords = useCallback(async () => {
     try {
@@ -150,27 +157,43 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   };
 
   // New Record handlers
-  const newRecordCalc = calcFinance(newRecord.morning, newRecord.afternoon, newRecord.tithes);
+  const totalTitheAmount = titheEntries.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+  const newRecordCalc = calcFinance(newRecord.morning, newRecord.afternoon, totalTitheAmount);
 
   const handleAddExpense = () => setNewRecord(prev => ({ ...prev, expenses: [...prev.expenses, { category: '', description: '', amount: '' }] }));
   const handleUpdateExpense = (idx, field, value) => setNewRecord(prev => ({ ...prev, expenses: prev.expenses.map((e, i) => i === idx ? { ...e, [field]: value } : e) }));
   const handleRemoveExpense = (idx) => setNewRecord(prev => ({ ...prev, expenses: prev.expenses.filter((_, i) => i !== idx) }));
 
+  const handleAddTitheMember = (member) => {
+    if (titheEntries.some(t => Number(t.member_id) === Number(member.id))) return;
+    setTitheEntries(prev => [...prev, { member_id: member.id, full_name: member.full_name, amount: '' }]);
+    setTitheSearch('');
+  };
+  const handleUpdateTitheAmount = (idx, value) => setTitheEntries(prev => prev.map((t, i) => i === idx ? { ...t, amount: value } : t));
+  const handleRemoveTitheEntry = (idx) => setTitheEntries(prev => prev.filter((_, i) => i !== idx));
+
+  const filteredTitheMembers = allMembers.filter(m =>
+    !titheEntries.some(t => Number(t.member_id) === Number(m.id))
+    && (m.full_name || '').toLowerCase().includes(titheSearch.toLowerCase())
+  ).slice(0, 20);
+
   const handleResetNewRecord = () => {
-    setNewRecord({ date: today(), morning: '', afternoon: '', tithes: '', expenses: [] });
+    setNewRecord({ date: today(), morning: '', afternoon: '', expenses: [] });
+    setTitheEntries([]);
   };
 
   const handleSubmitNewRecord = async (e) => {
     e.preventDefault();
     if (!newRecord.date) { showMessage?.('Please select a date'); return; }
-    if (!newRecord.morning && !newRecord.afternoon && !newRecord.tithes) { showMessage?.('Enter at least one offering amount'); return; }
+    if (!newRecord.morning && !newRecord.afternoon && totalTitheAmount === 0) { showMessage?.('Enter at least one offering amount or add tithe entries'); return; }
     setSavingNewRecord(true);
     try {
       const payload = {
         record_date: newRecord.date,
         morning_offering: Number(newRecord.morning) || 0,
         afternoon_offering: Number(newRecord.afternoon) || 0,
-        tithes: Number(newRecord.tithes) || 0,
+        tithes: totalTitheAmount,
+        tithe_entries: titheEntries.filter(t => t.amount).map(t => ({ member_id: t.member_id, amount: Number(t.amount) || 0 })),
         expenses: newRecord.expenses.filter(e => e.category && e.amount).map(e => ({ category: e.category, description: e.description, amount: Number(e.amount) || 0 })),
       };
       const res = await financeAPI.createRecord(payload);
@@ -560,7 +583,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
             {/* Income Inputs */}
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
               <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Income</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Morning Offering (TZS)</label>
                   <input
@@ -583,18 +606,74 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                     placeholder="0.00"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Tithes - Member-based */}
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Tithes (TZS)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={newRecord.tithes}
-                    onChange={e => setNewRecord({ ...newRecord, tithes: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
-                    placeholder="0.00"
-                  />
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Tithes</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Select members and enter their tithe amounts</p>
+                </div>
+                <div className="text-xs font-bold text-violet-600 bg-violet-50 dark:bg-violet-900/20 px-2 py-1 rounded-lg">
+                  Total: {fmt(totalTitheAmount)}
                 </div>
               </div>
+              {/* Member Search */}
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={titheSearch}
+                  onChange={e => setTitheSearch(e.target.value)}
+                  placeholder="Search member name to add..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                />
+                {titheSearch && filteredTitheMembers.length > 0 && (
+                  <div className="absolute z-10 top-full mt-1 w-full max-h-48 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg">
+                    {filteredTitheMembers.map(m => (
+                      <button key={m.id} type="button" onClick={() => handleAddTitheMember(m)}
+                        className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                        <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-[10px] font-bold text-violet-600">
+                          {(m.full_name || '?').charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-slate-900 dark:text-white">{m.full_name}</p>
+                          <p className="text-[10px] text-slate-400">{m.section_name || 'No section'} · {m.membership_id || ''}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Tithe Entries */}
+              {titheEntries.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-4">No members added yet. Search above to add.</p>
+              ) : (
+                <div className="space-y-2">
+                  {titheEntries.map((entry, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700">
+                      <div className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-[10px] font-bold text-violet-600 shrink-0">
+                        {(entry.full_name || '?').charAt(0)}
+                      </div>
+                      <span className="text-xs font-medium text-slate-900 dark:text-white truncate flex-1">{entry.full_name}</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={entry.amount}
+                        onChange={e => handleUpdateTitheAmount(idx, e.target.value)}
+                        placeholder="Amount"
+                        className="w-32 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-right"
+                      />
+                      <button type="button" onClick={() => handleRemoveTitheEntry(idx)}
+                        className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-400 shrink-0">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Auto-Calculated Breakdown */}
