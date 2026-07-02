@@ -5,7 +5,7 @@ import {
   Loader2, Search, ChevronDown, Eye, ArrowUpCircle, Ban, Receipt,
   HandCoins, Sparkles, AlertCircle, Send, CheckCheck, BarChart3,
   PieChart, RefreshCw, X, Shield, Download, FileText, TrendingDown,
-  ArrowRight, PiggyBank, Banknote, Activity
+  ArrowRight, PiggyBank, Banknote, Activity, Plus, Save, Trash2
 } from 'lucide-react';
 import { fdate, fdatetime } from '../../utils/date';
 
@@ -19,6 +19,7 @@ const STATUS_COLORS = {
 const STATUS_ICONS = { draft: Clock, submitted: Send, approved: CheckCircle2, rejected: XCircle };
 
 const TABS = [
+  { key: 'new', label: 'New Record', icon: Plus },
   { key: 'overview', label: 'Overview', icon: BarChart3 },
   { key: 'approvals', label: 'Pending Approvals', icon: AlertCircle },
   { key: 'records', label: 'All Records', icon: FileText },
@@ -82,6 +83,12 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   const [detailData, setDetailData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  // New Record form state
+  const [form, setForm] = useState({ record_date: today(), morning_offering: '', afternoon_offering: '', tithes: '' });
+  const [expenses, setExpenses] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [saveOption, setSaveOption] = useState(null);
+
   const loadRecords = useCallback(async () => {
     try {
       const res = await financeAPI.getRecords(filterStatus ? { status: filterStatus } : {});
@@ -142,6 +149,53 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
       loadRecords();
       if (detailOpen === id) openDetail(id);
     } catch (e) { showMessage?.('Failed to recalculate'); }
+  };
+
+  // New Record handlers
+  const calc = calcFinance(form.morning_offering, form.afternoon_offering, form.tithes);
+
+  const addExpenseRow = () => setExpenses(prev => [...prev, { category: '', description: '', amount: '' }]);
+  const updateExpenseRow = (idx, field, value) => setExpenses(prev => prev.map((e, i) => i === idx ? { ...e, [field]: value } : e));
+  const removeExpenseRow = (idx) => setExpenses(prev => prev.filter((_, i) => i !== idx));
+
+  const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+  const resetForm = () => {
+    setForm({ record_date: today(), morning_offering: '', afternoon_offering: '', tithes: '' });
+    setExpenses([]);
+    setSaveOption(null);
+  };
+
+  const handleSaveRecord = async (submit = false) => {
+    if (!form.record_date) { showMessage?.('Please select a date'); return; }
+    if (!form.morning_offering && !form.afternoon_offering && !form.tithes) { showMessage?.('Enter at least one offering amount'); return; }
+    setSaving(true);
+    setSaveOption(submit ? 'submit' : 'draft');
+    try {
+      const payload = {
+        record_date: form.record_date,
+        morning_offering: Number(form.morning_offering) || 0,
+        afternoon_offering: Number(form.afternoon_offering) || 0,
+        tithes: Number(form.tithes) || 0,
+        expenses: expenses.filter(e => e.category && e.amount).map(e => ({ category: e.category, description: e.description, amount: Number(e.amount) || 0 })),
+      };
+      const res = await financeAPI.createRecord(payload);
+      const recordId = res.data?.id || res.data?.record?.id;
+      if (submit && recordId) {
+        await financeAPI.submitRecord(recordId);
+        showMessage?.('Record submitted for approval');
+      } else {
+        showMessage?.('Record saved as draft');
+      }
+      resetForm();
+      loadRecords();
+      setActiveTab('records');
+    } catch (e) {
+      showMessage?.(e.response?.data?.error || 'Failed to save record');
+    } finally {
+      setSaving(false);
+      setSaveOption(null);
+    }
   };
 
   const pendingRecords = records.filter(r => r.status === 'submitted');
@@ -491,6 +545,145 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
           ) : (
             <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /></div>
           )}
+        </div>
+      )}
+
+      {/* New Record Tab */}
+      {activeTab === 'new' && (
+        <div className="space-y-4">
+          <form onSubmit={handleSubmitNewRecord} className="space-y-4">
+            {/* Date Input */}
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">Record Date *</label>
+              <input
+                type="date"
+                value={newRecord.date}
+                onChange={e => setNewRecord({ ...newRecord, date: e.target.value })}
+                required
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
+              />
+            </div>
+
+            {/* Income Inputs */}
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Income</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Morning Offering (TZS)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newRecord.morning}
+                    onChange={e => setNewRecord({ ...newRecord, morning: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Afternoon Offering (TZS)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newRecord.afternoon}
+                    onChange={e => setNewRecord({ ...newRecord, afternoon: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Tithes (TZS)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newRecord.tithes}
+                    onChange={e => setNewRecord({ ...newRecord, tithes: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Auto-Calculated Breakdown */}
+            {newRecordCalc.total > 0 && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <MetricCard label="Total Income" value={fmt(newRecordCalc.total)} icon={DollarSign} color="indigo" />
+                  <MetricCard label="Mission Fund (10%)" value={fmt(newRecordCalc.mission)} icon={Sparkles} color="amber" />
+                  <MetricCard label="Bishop Fund (10%)" value={fmt(newRecordCalc.bishop)} icon={Shield} color="rose" />
+                  <MetricCard label="Remaining" value={fmt(newRecordCalc.remaining)} icon={Activity} color="sky" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <MetricCard label="Usable Church Funds" value={fmt(newRecordCalc.usable)} icon={PiggyBank} color="emerald" />
+                  <MetricCard label="Net Balance" value={fmt(newRecordCalc.usable - newRecord.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0))} icon={Banknote} color="emerald" />
+                </div>
+              </div>
+            )}
+
+            {/* Expenses */}
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Expenses</h3>
+                <button type="button" onClick={handleAddExpense}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+                  <Plus className="w-3 h-3" /> Add Expense
+                </button>
+              </div>
+              {newRecord.expenses.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-4">No expenses added yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {newRecord.expenses.map((exp, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700">
+                      <input
+                        type="text"
+                        value={exp.category}
+                        onChange={e => handleUpdateExpense(idx, 'category', e.target.value)}
+                        placeholder="Category"
+                        className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                      />
+                      <input
+                        type="text"
+                        value={exp.description}
+                        onChange={e => handleUpdateExpense(idx, 'description', e.target.value)}
+                        placeholder="Description"
+                        className="flex-[2] px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={exp.amount}
+                        onChange={e => handleUpdateExpense(idx, 'amount', e.target.value)}
+                        placeholder="Amount"
+                        className="w-32 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                      />
+                      <button type="button" onClick={() => handleRemoveExpense(idx)}
+                        className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-500">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white">Total Expenses</span>
+                    <span className="text-xs font-bold text-rose-600">{fmt(newRecord.expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0))}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Submit Buttons */}
+            <div className="flex items-center gap-3">
+              <button type="submit" disabled={savingNewRecord || !newRecord.date}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 transition-colors">
+                {savingNewRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {savingNewRecord ? 'Saving...' : 'Submit for Approval'}
+              </button>
+              <button type="button" onClick={handleResetNewRecord}
+                className="px-4 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">
+                Reset
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
