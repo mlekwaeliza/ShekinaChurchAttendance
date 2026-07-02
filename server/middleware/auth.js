@@ -37,7 +37,7 @@ async function isAuthenticated(req, res, next) {
       });
     }
 
-    return requireRole(['admin', 'leader', 'pastor', 'evangelist'])(req, res, next);
+    return requireRole(['admin', 'leader', 'pastor', 'evangelist', 'accountant'])(req, res, next);
   }
   res.status(401).json({ error: 'Not authenticated' });
 }
