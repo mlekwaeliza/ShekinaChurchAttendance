@@ -84,16 +84,21 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [lastSaved, setLastSaved] = useState(null);
 
-  const loadRecord = useCallback(async () => {
-    setLoading(true);
+  const loadMembers = useCallback(async () => {
     try {
-      const [recRes, memRes] = await Promise.all([
-        recordId ? financeAPI.getRecord(recordId) : Promise.resolve({ data: null }),
-        adminAPI.getMembers({}),
-      ]);
-      setAllMembers(memRes.data || []);
-      if (recRes.data) {
-        const r = recRes.data;
+      const res = await adminAPI.getMembers({});
+      setAllMembers(res.data || []);
+    } catch (e) {
+      console.error('Failed to load members:', e);
+    }
+  }, []);
+
+  const loadRecord = useCallback(async () => {
+    if (!recordId) return;
+    try {
+      const res = await financeAPI.getRecord(recordId);
+      const r = res.data;
+      if (r) {
         setRecord(r);
         setMorning(r.morning_offering ? String(r.morning_offering) : '');
         setAfternoon(r.afternoon_offering ? String(r.afternoon_offering) : '');
@@ -107,14 +112,18 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
         }
       }
     } catch (e) {
-      console.error('Failed to load record:', e);
       showMessage?.('Failed to load record');
-    } finally {
-      setLoading(false);
     }
   }, [recordId, showMessage]);
 
-  useEffect(() => { loadRecord(); }, [loadRecord]);
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([loadMembers(), loadRecord()]);
+      setLoading(false);
+    };
+    init();
+  }, [loadMembers, loadRecord]);
 
   const totalTitheAmount = useMemo(() => titheEntries.reduce((s, t) => s + (Number(t.amount) || 0), 0), [titheEntries]);
   const hasTithes = useMemo(() => titheEntries.some(t => Number(t.amount) > 0), [titheEntries]);
