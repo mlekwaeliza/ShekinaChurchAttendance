@@ -84,10 +84,8 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   const [detailLoading, setDetailLoading] = useState(false);
 
   // New Record form state
-  const [form, setForm] = useState({ record_date: today(), morning_offering: '', afternoon_offering: '', tithes: '' });
-  const [expenses, setExpenses] = useState([]);
-  const [saving, setSaving] = useState(false);
-  const [saveOption, setSaveOption] = useState(null);
+  const [newRecord, setNewRecord] = useState({ date: today(), morning: '', afternoon: '', tithes: '', expenses: [] });
+  const [savingNewRecord, setSavingNewRecord] = useState(false);
 
   const loadRecords = useCallback(async () => {
     try {
@@ -152,49 +150,44 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   };
 
   // New Record handlers
-  const calc = calcFinance(form.morning_offering, form.afternoon_offering, form.tithes);
+  const newRecordCalc = calcFinance(newRecord.morning, newRecord.afternoon, newRecord.tithes);
 
-  const addExpenseRow = () => setExpenses(prev => [...prev, { category: '', description: '', amount: '' }]);
-  const updateExpenseRow = (idx, field, value) => setExpenses(prev => prev.map((e, i) => i === idx ? { ...e, [field]: value } : e));
-  const removeExpenseRow = (idx) => setExpenses(prev => prev.filter((_, i) => i !== idx));
+  const handleAddExpense = () => setNewRecord(prev => ({ ...prev, expenses: [...prev.expenses, { category: '', description: '', amount: '' }] }));
+  const handleUpdateExpense = (idx, field, value) => setNewRecord(prev => ({ ...prev, expenses: prev.expenses.map((e, i) => i === idx ? { ...e, [field]: value } : e) }));
+  const handleRemoveExpense = (idx) => setNewRecord(prev => ({ ...prev, expenses: prev.expenses.filter((_, i) => i !== idx) }));
 
-  const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
-
-  const resetForm = () => {
-    setForm({ record_date: today(), morning_offering: '', afternoon_offering: '', tithes: '' });
-    setExpenses([]);
-    setSaveOption(null);
+  const handleResetNewRecord = () => {
+    setNewRecord({ date: today(), morning: '', afternoon: '', tithes: '', expenses: [] });
   };
 
-  const handleSaveRecord = async (submit = false) => {
-    if (!form.record_date) { showMessage?.('Please select a date'); return; }
-    if (!form.morning_offering && !form.afternoon_offering && !form.tithes) { showMessage?.('Enter at least one offering amount'); return; }
-    setSaving(true);
-    setSaveOption(submit ? 'submit' : 'draft');
+  const handleSubmitNewRecord = async (e) => {
+    e.preventDefault();
+    if (!newRecord.date) { showMessage?.('Please select a date'); return; }
+    if (!newRecord.morning && !newRecord.afternoon && !newRecord.tithes) { showMessage?.('Enter at least one offering amount'); return; }
+    setSavingNewRecord(true);
     try {
       const payload = {
-        record_date: form.record_date,
-        morning_offering: Number(form.morning_offering) || 0,
-        afternoon_offering: Number(form.afternoon_offering) || 0,
-        tithes: Number(form.tithes) || 0,
-        expenses: expenses.filter(e => e.category && e.amount).map(e => ({ category: e.category, description: e.description, amount: Number(e.amount) || 0 })),
+        record_date: newRecord.date,
+        morning_offering: Number(newRecord.morning) || 0,
+        afternoon_offering: Number(newRecord.afternoon) || 0,
+        tithes: Number(newRecord.tithes) || 0,
+        expenses: newRecord.expenses.filter(e => e.category && e.amount).map(e => ({ category: e.category, description: e.description, amount: Number(e.amount) || 0 })),
       };
       const res = await financeAPI.createRecord(payload);
       const recordId = res.data?.id || res.data?.record?.id;
-      if (submit && recordId) {
+      if (recordId) {
         await financeAPI.submitRecord(recordId);
         showMessage?.('Record submitted for approval');
       } else {
         showMessage?.('Record saved as draft');
       }
-      resetForm();
+      handleResetNewRecord();
       loadRecords();
       setActiveTab('records');
     } catch (e) {
       showMessage?.(e.response?.data?.error || 'Failed to save record');
     } finally {
-      setSaving(false);
-      setSaveOption(null);
+      setSavingNewRecord(false);
     }
   };
 
