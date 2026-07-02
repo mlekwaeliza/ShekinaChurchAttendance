@@ -25,7 +25,6 @@ const upload = multer({
 });
 
 router.use(isAuthenticated);
-router.use(requireRole(['admin']));
 
 async function syncChurchMemberHomeCell(memberId, cellId, userId) {
   const parsedMemberId = Number(memberId);
@@ -177,6 +176,9 @@ router.get('/members', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch members' });
   }
 });
+
+// Admin-only middleware for remaining routes
+router.use(requireRole(['admin']));
 
 // PUT bulk-update members. This must be registered before /members/:id.
 router.put('/members/bulk-update', async (req, res) => {
