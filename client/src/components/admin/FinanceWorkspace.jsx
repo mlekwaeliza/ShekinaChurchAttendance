@@ -89,7 +89,7 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
     try {
       const [recRes, memRes] = await Promise.all([
         recordId ? financeAPI.getRecord(recordId) : Promise.resolve({ data: null }),
-        adminAPI.getMembers({}).catch(() => ({ data: [] })),
+        adminAPI.getMembers({}),
       ]);
       setAllMembers(memRes.data || []);
       if (recRes.data) {
@@ -107,6 +107,7 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
         }
       }
     } catch (e) {
+      console.error('Failed to load record:', e);
       showMessage?.('Failed to load record');
     } finally {
       setLoading(false);
@@ -459,21 +460,27 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
                     <input type="text" value={titheSearch} onChange={e => setTitheSearch(e.target.value)}
                       placeholder="Search member name to add..."
                       className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" />
-                    {titheSearch && filteredTitheMembers.length > 0 && (
+                    {titheSearch && (
                       <div className="absolute z-20 top-full mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl">
-                        {filteredTitheMembers.map(m => (
-                          <button key={m.id} type="button" onClick={() => addTitheMember(m)}
-                            className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                            <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-xs font-bold text-violet-600 shrink-0">
-                              {(m.full_name || '?').charAt(0)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-slate-900 dark:text-white truncate">{m.full_name}</p>
-                              <p className="text-[10px] text-slate-400">{m.section_name || 'No section'} · {m.membership_id || ''}</p>
-                            </div>
-                            <Plus className="w-4 h-4 text-slate-400" />
-                          </button>
-                        ))}
+                        {filteredTitheMembers.length > 0 ? (
+                          filteredTitheMembers.map(m => (
+                            <button key={m.id} type="button" onClick={() => addTitheMember(m)}
+                              className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
+                              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-xs font-bold text-violet-600 shrink-0">
+                                {(m.full_name || '?').charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-slate-900 dark:text-white truncate">{m.full_name}</p>
+                                <p className="text-[10px] text-slate-400">{m.section_name || 'No section'} · {m.membership_id || ''}</p>
+                              </div>
+                              <Plus className="w-4 h-4 text-slate-400" />
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-3 text-center text-sm text-slate-500">
+                            No members found matching "{titheSearch}"
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
