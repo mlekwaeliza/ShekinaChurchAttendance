@@ -425,6 +425,12 @@ export const financeAPI = {
     });
   },
 
+  uploadRecordReceipt: (recordId, type, formData) => {
+    return api.post(`/admin/finance/records/${recordId}/receipt/${type}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
   getSubmissions: (status) => api.get('/admin/finance/submissions', { params: status ? { status } : {} }),
   getSummary: (dateFrom, dateTo) => api.get('/admin/finance/reports/summary', { params: { date_from: dateFrom, date_to: dateTo } }),
   getTrend: (year) => api.get('/admin/finance/reports/trend', { params: { year } }),

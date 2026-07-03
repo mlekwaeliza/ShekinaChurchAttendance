@@ -982,6 +982,21 @@ db.serialize(() => {
   db.run(`INSERT OR IGNORE INTO contribution_types (name, description, sort_order) VALUES ('Evangelism Offering', 'Dedicated offering for evangelism ministry', 1)`, (err) => {
     if (err) console.log('Migration note (evangelism offering):', err.message);
   });
+
+  // Migration: Add evangelism_offering and receipt columns to finance_daily_records
+  const financeMigrations = [
+    `ALTER TABLE finance_daily_records ADD COLUMN evangelism_offering REAL DEFAULT 0`,
+    `ALTER TABLE finance_daily_records ADD COLUMN bishop_receipt TEXT`,
+    `ALTER TABLE finance_daily_records ADD COLUMN evangelism_receipt TEXT`,
+    `ALTER TABLE finance_daily_records ADD COLUMN remaining_receipt TEXT`,
+  ];
+  financeMigrations.forEach(sql => {
+    db.run(sql, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.log('Migration note (finance):', err.message);
+      }
+    });
+  });
 });
 }
 
@@ -4832,11 +4847,11 @@ const queries = {
 
   createFinanceRecord: (data) => run(`
     INSERT INTO finance_daily_records (record_date, morning_offering, afternoon_offering, total_tithes,
-      total_income, mission_fund, remaining_after_mission, bishop_fund, usable_church_funds, notes, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      total_income, mission_fund, remaining_after_mission, bishop_fund, usable_church_funds, evangelism_offering, notes, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [data.record_date, data.morning_offering, data.afternoon_offering, data.total_tithes,
     data.total_income, data.mission_fund, data.remaining_after_mission, data.bishop_fund, data.usable_church_funds,
-    data.notes, data.created_by]),
+    data.evangelism_offering || 0, data.notes, data.created_by]),
 
   updateFinanceRecord: (id, data) => {
     const SET = [], params = [];
@@ -4849,7 +4864,11 @@ const queries = {
     if (data.remaining_after_mission !== undefined) { SET.push('remaining_after_mission=?'); params.push(data.remaining_after_mission); }
     if (data.bishop_fund !== undefined) { SET.push('bishop_fund=?'); params.push(data.bishop_fund); }
     if (data.usable_church_funds !== undefined) { SET.push('usable_church_funds=?'); params.push(data.usable_church_funds); }
+    if (data.evangelism_offering !== undefined) { SET.push('evangelism_offering=?'); params.push(data.evangelism_offering); }
     if (data.notes !== undefined) { SET.push('notes=?'); params.push(data.notes); }
+    if (data.bishop_receipt !== undefined) { SET.push('bishop_receipt=?'); params.push(data.bishop_receipt); }
+    if (data.evangelism_receipt !== undefined) { SET.push('evangelism_receipt=?'); params.push(data.evangelism_receipt); }
+    if (data.remaining_receipt !== undefined) { SET.push('remaining_receipt=?'); params.push(data.remaining_receipt); }
     SET.push('updated_at=CURRENT_TIMESTAMP');
     params.push(id);
     return run(`UPDATE finance_daily_records SET ${SET.join(', ')} WHERE id=?`, params);

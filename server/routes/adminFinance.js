@@ -38,13 +38,14 @@ function calcFinance(morning, afternoon, tithes) {
 
 router.post('/finance/records', async (req, res) => {
   try {
-    const { record_date, morning_offering, afternoon_offering, notes } = req.body;
+    const { record_date, morning_offering, afternoon_offering, evangelism_offering, notes } = req.body;
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
     const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [record_date]);
     const auto_tithes = tithesResult?.total || 0;
     const c = calcFinance(morning_offering, afternoon_offering, auto_tithes);
     await queries.createFinanceRecord({
       record_date, morning_offering: Number(morning_offering) || 0, afternoon_offering: Number(afternoon_offering) || 0,
+      evangelism_offering: Number(evangelism_offering) || 0,
       total_tithes: auto_tithes, total_income: c.total, mission_fund: c.mission,
       remaining_after_mission: c.remaining, bishop_fund: c.bishop,
       usable_church_funds: c.usable, notes, created_by: req.session.userId
@@ -90,11 +91,12 @@ router.put('/finance/records/:id', async (req, res) => {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
     if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
-    const { morning_offering, afternoon_offering, notes } = req.body;
+    const { morning_offering, afternoon_offering, evangelism_offering, notes } = req.body;
     const data = {};
     if (existing.status === 'rejected') { data.status = 'draft'; data.rejection_reason = null; }
     if (morning_offering !== undefined) data.morning_offering = Number(morning_offering);
     if (afternoon_offering !== undefined) data.afternoon_offering = Number(afternoon_offering);
+    if (evangelism_offering !== undefined) data.evangelism_offering = Number(evangelism_offering);
     if (notes !== undefined) data.notes = notes;
     const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [existing.record_date]);
     const auto_tithes = tithesResult?.total || 0;
@@ -186,6 +188,21 @@ router.post('/finance/expenses/:id/receipt', upload.single('receipt'), async (re
     const receiptPath = '/uploads/finance/' + req.file.filename;
     await queries.updateFinanceExpenseReceipt(req.params.id, receiptPath);
     res.json({ message: 'Receipt uploaded', path: receiptPath });
+  } catch (err) {
+    console.error('Error uploading receipt:', err);
+    res.status(500).json({ error: 'Failed to upload receipt' });
+  }
+});
+
+router.post('/finance/records/:id/receipt/:type', upload.single('receipt'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Receipt file is required' });
+    const { type } = req.params;
+    if (!['bishop', 'evangelism', 'remaining'].includes(type)) return res.status(400).json({ error: 'Invalid receipt type' });
+    const receiptPath = `/uploads/finance/${req.file.filename}`;
+    const fieldMap = { bishop: 'bishop_receipt', evangelism: 'evangelism_receipt', remaining: 'remaining_receipt' };
+    await queries.updateFinanceRecord(req.params.id, { [fieldMap[type]]: receiptPath });
+    res.json({ message: `${type} receipt uploaded`, path: receiptPath });
   } catch (err) {
     console.error('Error uploading receipt:', err);
     res.status(500).json({ error: 'Failed to upload receipt' });

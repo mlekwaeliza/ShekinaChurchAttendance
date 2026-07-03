@@ -55,6 +55,7 @@ const WORKSPACE_TABS = [
   { key: 'tithes', label: 'Member Tithes', icon: HandCoins },
   { key: 'expenses', label: 'Expenses', icon: Receipt },
   { key: 'notes', label: 'Notes', icon: StickyNote },
+  { key: 'receipts', label: 'Receipts', icon: Upload },
   { key: 'history', label: 'History', icon: History },
 ];
 
@@ -74,6 +75,9 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
 
   const [morning, setMorning] = useState('');
   const [afternoon, setAfternoon] = useState('');
+  const [evangelismOffering, setEvangelismOffering] = useState('');
+  const [receipts, setReceipts] = useState({ bishop: null, evangelism: null, remaining: null });
+  const [uploadingReceipt, setUploadingReceipt] = useState('');
   const [titheEntries, setTitheEntries] = useState([]);
   const [titheSearch, setTitheSearch] = useState('');
   const [expenses, setExpenses] = useState([]);
@@ -107,6 +111,8 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
         setRecord(r);
         setMorning(r.morning_offering ? String(r.morning_offering) : '');
         setAfternoon(r.afternoon_offering ? String(r.afternoon_offering) : '');
+        setEvangelismOffering(r.evangelism_offering ? String(r.evangelism_offering) : '');
+        setReceipts({ bishop: r.bishop_receipt || null, evangelism: r.evangelism_receipt || null, remaining: r.remaining_receipt || null });
         setNotes(r.notes || '');
         setHistory(r.activity_log || []);
         if (r.tithe_entries?.length) {
@@ -156,6 +162,7 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
         record_date: record?.record_date,
         morning_offering: Number(morning) || 0,
         afternoon_offering: Number(afternoon) || 0,
+        evangelism_offering: Number(evangelismOffering) || 0,
         tithes: totalTitheAmount,
         tithe_entries: titheEntries.filter(t => t.amount).map(t => ({ member_id: t.member_id, amount: Number(t.amount) || 0 })),
         expenses: expenses.filter(e => e.category && e.amount).map(e => ({
@@ -244,6 +251,31 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
   };
   const updateTitheAmount = (idx, value) => setTitheEntries(prev => prev.map((t, i) => i === idx ? { ...t, amount: value } : t));
   const removeTitheEntry = (idx) => setTitheEntries(prev => prev.filter((_, i) => i !== idx));
+
+  const handleReceiptUpload = async (type) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,.pdf';
+    input.onchange = async (e) => {
+      const file = e.target.files?.[0];
+      if (!file || !record?.id) return;
+      setUploadingReceipt(type);
+      try {
+        const formData = new FormData();
+        formData.append('receipt', file);
+        const res = await financeAPI.uploadRecordReceipt(record.id, type, formData);
+        if (res.data?.path) {
+          setReceipts(prev => ({ ...prev, [type]: res.data.path }));
+          showMessage?.('Receipt uploaded');
+        }
+      } catch (e) {
+        showMessage?.(e.response?.data?.error || 'Failed to upload receipt');
+      } finally {
+        setUploadingReceipt(false);
+      }
+    };
+    input.click();
+  };
 
   const filteredTitheMembers = allMembers
     .filter(m => !titheEntries.some(t => Number(t.member_id) === Number(m.id)) && (m.full_name || '').toLowerCase().includes(titheSearch.toLowerCase()))
@@ -363,7 +395,7 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Financial Summary</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Church Income</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     { label: 'Morning Offering', value: fmt(calc.morning), icon: ArrowUpCircle, color: 'emerald' },
@@ -380,6 +412,17 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
                     </div>
                   ))}
                 </div>
+
+                <div className="rounded-xl border-2 border-dashed border-purple-200 dark:border-purple-700/50 bg-purple-50/50 dark:bg-purple-900/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-500" />
+                      <span className="text-xs font-bold text-purple-700 dark:text-purple-300">Evangelism Offering (Independent)</span>
+                    </div>
+                    <span className="text-sm font-bold text-purple-600 dark:text-purple-400">{fmt(Number(evangelismOffering) || 0)}</span>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     { label: 'Mission Fund (10%)', value: fmt(calc.mission), color: 'amber' },
@@ -408,51 +451,90 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
 
             {/* Income Tab */}
             {activeTab === 'income' && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Church Offerings</h3>
-                {isEditable ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-4">
+              <div className="space-y-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <DollarSign className="w-4 h-4 text-indigo-500" />
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Church Offerings</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium">Affects formula</span>
+                  </div>
+                  {isEditable ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                            <ArrowUpCircle className="w-4 h-4 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-900 dark:text-white">Morning Offering</p>
+                            <p className="text-[10px] text-slate-400">Sunday morning service</p>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">TZS</span>
+                          <input type="number" step="0.01" value={morning} onChange={e => setMorning(e.target.value)}
+                            className="w-full pl-12 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                            placeholder="0.00" />
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
+                            <ArrowUpCircle className="w-4 h-4 text-sky-600" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-900 dark:text-white">Afternoon Offering</p>
+                            <p className="text-[10px] text-slate-400">Sunday afternoon service</p>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">TZS</span>
+                          <input type="number" step="0.01" value={afternoon} onChange={e => setAfternoon(e.target.value)}
+                            className="w-full pl-12 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none"
+                            placeholder="0.00" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4"><p className="text-[10px] text-slate-400">Morning</p><p className="text-lg font-bold text-slate-900 dark:text-white">{fmt(calc.morning)}</p></div>
+                      <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4"><p className="text-[10px] text-slate-400">Afternoon</p><p className="text-lg font-bold text-slate-900 dark:text-white">{fmt(calc.afternoon)}</p></div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-dashed border-slate-200 dark:border-slate-700 pt-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sparkles className="w-4 h-4 text-purple-500" />
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Evangelism Offering</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium">Independent</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mb-3 ml-6">Recorded separately — not included in mission/bishop/usable formula</p>
+                  {isEditable ? (
+                    <div className="rounded-xl border-2 border-dashed border-purple-200 dark:border-purple-700/50 bg-purple-50/50 dark:bg-purple-900/10 p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                          <ArrowUpCircle className="w-4 h-4 text-emerald-600" />
+                        <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 text-purple-600" />
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-slate-900 dark:text-white">Morning Offering</p>
-                          <p className="text-[10px] text-slate-400">Sunday morning service</p>
+                          <p className="text-xs font-semibold text-slate-900 dark:text-white">Evangelism Fund</p>
+                          <p className="text-[10px] text-slate-400">For evangelism activities and outreach</p>
                         </div>
                       </div>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">TZS</span>
-                        <input type="number" step="0.01" value={morning} onChange={e => setMorning(e.target.value)}
-                          className="w-full pl-12 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                        <input type="number" step="0.01" value={evangelismOffering} onChange={e => setEvangelismOffering(e.target.value)}
+                          className="w-full pl-12 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-lg font-bold text-purple-700 dark:text-purple-300 focus:ring-2 focus:ring-purple-500 outline-none"
                           placeholder="0.00" />
                       </div>
                     </div>
-                    <div className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
-                          <ArrowUpCircle className="w-4 h-4 text-sky-600" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold text-slate-900 dark:text-white">Afternoon Offering</p>
-                          <p className="text-[10px] text-slate-400">Sunday afternoon service</p>
-                        </div>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">TZS</span>
-                        <input type="number" step="0.01" value={afternoon} onChange={e => setAfternoon(e.target.value)}
-                          className="w-full pl-12 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none"
-                          placeholder="0.00" />
-                      </div>
+                  ) : (
+                    <div className="rounded-xl bg-purple-50 dark:bg-purple-900/10 p-4 border border-purple-200/60 dark:border-purple-700/30">
+                      <p className="text-[10px] text-slate-400">Evangelism Fund</p>
+                      <p className="text-lg font-bold text-purple-600 dark:text-purple-400">{fmt(Number(evangelismOffering) || 0)}</p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4"><p className="text-[10px] text-slate-400">Morning</p><p className="text-lg font-bold text-slate-900 dark:text-white">{fmt(calc.morning)}</p></div>
-                    <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4"><p className="text-[10px] text-slate-400">Afternoon</p><p className="text-lg font-bold text-slate-900 dark:text-white">{fmt(calc.afternoon)}</p></div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
@@ -609,6 +691,51 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
               </div>
             )}
 
+            {/* Receipts Tab */}
+            {activeTab === 'receipts' && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Receipt Uploads</h3>
+                <p className="text-[10px] text-slate-400">Upload receipts for fund allocations</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { type: 'bishop', label: 'Bishop Fund Receipt', desc: 'Upload receipt for bishop fund (10%)', color: 'rose' },
+                    { type: 'evangelism', label: 'Evangelism Fund Receipt', desc: 'Upload receipt for evangelism offering', color: 'purple' },
+                    { type: 'remaining', label: 'Remaining Balance Receipt', desc: 'Upload receipt for bank deposit of remaining balance', color: 'emerald' },
+                  ].map(({ type, label, desc, color }) => (
+                    <div key={type} className={`rounded-xl border border-${color}-200/60 dark:border-${color}-700 bg-${color}-50 dark:bg-${color}-900/10 p-4`}>
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white mb-1">{label}</p>
+                      <p className="text-[10px] text-slate-400 mb-3">{desc}</p>
+                      {receipts[type] ? (
+                        <div className="flex items-center gap-2">
+                          <a href={receipts[type]} target="_blank" rel="noopener noreferrer"
+                            className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-800 text-xs font-medium text-indigo-600 hover:bg-slate-50 border border-slate-200 dark:border-slate-700">
+                            <File className="w-3.5 h-3.5" />
+                            View Receipt
+                          </a>
+                          {isEditable && (
+                            <button onClick={() => handleReceiptUpload(type)} disabled={uploadingReceipt === type}
+                              className="p-2 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-600 border border-slate-200 dark:border-slate-700">
+                              <Upload className={`w-3.5 h-3.5 ${uploadingReceipt === type ? 'animate-pulse' : ''}`} />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <button onClick={() => handleReceiptUpload(type)} disabled={!!uploadingReceipt}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-white dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 border border-slate-200 dark:border-slate-700">
+                          {uploadingReceipt === type ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Upload className="w-3.5 h-3.5" />
+                          )}
+                          {uploadingReceipt === type ? 'Uploading...' : 'Upload Receipt'}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* History Tab */}
             {activeTab === 'history' && (
               <div className="space-y-4">
@@ -669,6 +796,14 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-900 dark:text-white">Net Balance</span>
                     <span className={`text-sm font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{fmt(netBalance)}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-dashed border-purple-200 dark:border-purple-700/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Evangelism
+                    </span>
+                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400">{fmt(Number(evangelismOffering) || 0)}</span>
                   </div>
                 </div>
               </div>
