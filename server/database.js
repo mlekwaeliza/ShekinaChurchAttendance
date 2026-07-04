@@ -201,11 +201,6 @@ db.serialize(() => {
       FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
     );
 
-        // Home Cells metadata columns (safe additive migrations)
-    try { await run(`ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS meeting_day TEXT`); } catch (_) {}
-    try { await run(`ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS location TEXT`); } catch (_) {}
-    try { await run(`ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS max_capacity INTEGER`); } catch (_) {}
-
     CREATE TABLE IF NOT EXISTS ip_login_failures (
       ip TEXT PRIMARY KEY,
       count INTEGER NOT NULL DEFAULT 0,
@@ -1684,6 +1679,31 @@ async function ensureHomeCellSchema() {
       'INSERT INTO home_cells (name, cell_number, is_active) VALUES (?, ?, 1) ON CONFLICT DO NOTHING',
       [`Home Cell ${number}`, number]
     );
+  }
+
+  // Ensure metadata columns exist in home_cells (idempotent migration)
+  if (usePostgres) {
+    try {
+      await run('ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS meeting_day TEXT');
+      await run('ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS location TEXT');
+      await run('ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS max_capacity INTEGER');
+    } catch (e) {
+      console.warn('PostgreSQL home_cells column migration failed (non-fatal):', e.message);
+    }
+  } else {
+    // SQLite
+    const addColumn = async (colName, colType) => {
+      try {
+        await run(`ALTER TABLE home_cells ADD COLUMN ${colName} ${colType}`);
+      } catch (e) {
+        if (!e.message.includes('duplicate column name') && !e.message.includes('already exists')) {
+          console.warn(`SQLite home_cells column migration failed for ${colName}:`, e.message);
+        }
+      }
+    };
+    await addColumn('meeting_day', 'TEXT');
+    await addColumn('location', 'TEXT');
+    await addColumn('max_capacity', 'INTEGER');
   }
 
   if (usePostgres) {
