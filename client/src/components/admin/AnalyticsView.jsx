@@ -3,7 +3,8 @@ import {
   BarChart3, TrendingUp, AlertTriangle, Users, Building2, Heart,
   Shield, Brain, Layers, UserCheck, Award, PieChart as PieChartIcon,
   ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle, TrendingDown,
-  Download, Printer, FileText, Eye, Info, Star, UserX, Clock, Target
+  Download, Printer, FileText, Eye, Info, Star, UserX, Clock, Target,
+  DollarSign, HandCoins, Wallet
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -50,6 +51,7 @@ const Badge = ({ children, variant = 'default' }) => {
 
 const TABS = [
   { key: 'executive', label: 'Executive', icon: Layers },
+  { key: 'finance', label: 'Finance', icon: DollarSign },
   { key: 'sections', label: 'Sections', icon: Building2 },
   { key: 'leaders', label: 'Leaders', icon: Users },
   { key: 'departments', label: 'Departments', icon: PieChartIcon },
@@ -86,6 +88,7 @@ const AnalyticsView = () => {
         analyticsAPI.getSectionComparison(period),
         analyticsAPI.getYearOverYear(),
         analyticsAPI.getAttendancePatterns(period),
+        analyticsAPI.getFinanceAnalytics(),
       ]);
       const ok = i => r[i].status === 'fulfilled' ? r[i].value.data : null;
       setData({
@@ -96,6 +99,7 @@ const AnalyticsView = () => {
         headLeaders: ok(9) || [], workload: ok(10) || [],
         sectionComparison: ok(11) || [], yearOverYear: ok(12) || [],
         dayPatterns: ok(13) || [],
+        finance: ok(14) || null,
       });
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -135,6 +139,7 @@ const AnalyticsView = () => {
       </div>
 
       {tab === 'executive' && <ExecutiveTab data={data} />}
+      {tab === 'finance' && <FinanceTab data={data} />}
       {tab === 'sections' && <SectionsTab data={data} />}
       {tab === 'leaders' && <LeadersTab data={data} />}
       {tab === 'departments' && <DepartmentsTab data={data} />}
@@ -754,6 +759,196 @@ const RiskTab = ({ data }) => {
                 <div><p className="text-xs font-medium text-slate-900 dark:text-white truncate">{m.full_name}</p><p className="text-[10px] text-slate-500">{m.section_name} | {m.present_count}/{m.total_services} services</p></div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const FinanceTab = ({ data }) => {
+  const fd = data.finance || {};
+  const summary = fd.summary || {};
+  const monthly = (fd.monthly || []).map(m => ({
+    name: MONTH_NAMES[Number(m.month) - 1] || m.month,
+    Income: R(m.income),
+    Tithes: R(m.tithes),
+    Usable: R(m.usable),
+    Mission: R(m.mission),
+    Bishop: R(m.bishop),
+  }));
+  const expenses = fd.expenses || [];
+  const statusBreakdown = fd.statusBreakdown || [];
+
+  const totalIncome = Number(summary.total_income) || 0;
+  const totalTithes = Number(summary.total_tithes) || 0;
+  const totalUsable = Number(summary.total_usable_funds) || 0;
+  const totalExpenses = Number(summary.total_expenses) || 0;
+  const totalMission = Number(summary.mission_fund) || 0;
+  const totalBishop = Number(summary.bishop_fund) || 0;
+
+  const fmtK = v => {
+    const n = Number(v) || 0;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+    return n.toLocaleString();
+  };
+  const fmt = v => `TZS ${(Number(v) || 0).toLocaleString()}`;
+
+  const noData = !data.finance;
+
+  return (
+    <div className="space-y-6">
+      {/* Finance KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+        {[
+          { label: 'Total Income', value: totalIncome, color: 'indigo', icon: DollarSign },
+          { label: 'Total Tithes', value: totalTithes, color: 'violet', icon: HandCoins },
+          { label: 'Mission Fund', value: totalMission, color: 'emerald', icon: TrendingUp },
+          { label: 'Bishop Fund', value: totalBishop, color: 'sky', icon: Wallet },
+          { label: 'Total Expenses', value: totalExpenses, color: 'rose', icon: TrendingDown },
+          { label: 'Usable Funds', value: totalUsable, color: 'amber', icon: BarChart3 },
+        ].map(({ label, value, color, icon: Icon }) => (
+          <div key={label} className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <div className={`w-7 h-7 rounded-lg bg-${color}-100 dark:bg-${color}-900/30 flex items-center justify-center`}>
+                <Icon className={`w-3.5 h-3.5 text-${color}-600`} />
+              </div>
+              <span className="text-[10px] font-semibold uppercase text-slate-400">{label}</span>
+            </div>
+            <p className="text-lg font-bold text-slate-900 dark:text-white">TZS {fmtK(value)}</p>
+          </div>
+        ))}
+      </div>
+
+      {noData && (
+        <div className="rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700 p-6 text-center">
+          <DollarSign className="w-10 h-10 mx-auto mb-2 text-amber-400" />
+          <p className="text-sm font-medium text-amber-700 dark:text-amber-300">No finance data available yet</p>
+          <p className="text-xs text-amber-500 mt-1">Finance records will appear here once submitted and approved</p>
+        </div>
+      )}
+
+      {monthly.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-indigo-500" />
+            Monthly Income Breakdown ({fd.year})
+          </h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <AreaChart data={monthly} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <defs>
+                <linearGradient id="fIncome" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="fTithes" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="fUsable" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tickFormatter={v => fmtK(v)} tick={{ fontSize: 10 }} width={55} />
+              <Tooltip formatter={(v, name) => [fmt(v), name]} />
+              <Legend />
+              <Area type="monotone" dataKey="Income" stroke="#6366f1" fill="url(#fIncome)" strokeWidth={2} dot={{ r: 3 }} />
+              <Area type="monotone" dataKey="Tithes" stroke="#8b5cf6" fill="url(#fTithes)" strokeWidth={2} dot={{ r: 3 }} />
+              <Area type="monotone" dataKey="Usable" stroke="#10b981" fill="url(#fUsable)" strokeWidth={2} dot={{ r: 3 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {expenses.length > 0 && (
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+              <TrendingDown className="w-4 h-4 text-rose-500" />
+              Expense Breakdown
+            </h3>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={expenses} dataKey="total" nameKey="category"
+                  cx="50%" cy="50%" innerRadius={55} outerRadius={95}
+                  paddingAngle={3}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}>
+                  {expenses.map((_, i) => <Cell key={i} fill={C[i % C.length]} />)}
+                </Pie>
+                <Tooltip formatter={v => fmt(v)} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-indigo-500" />
+            Fund Allocation Summary
+          </h3>
+          {[
+            { label: 'Total Income', value: totalIncome, color: 'indigo', pct: 100 },
+            { label: 'Tithes Collected', value: totalTithes, color: 'violet', pct: totalIncome ? Math.round((totalTithes / totalIncome) * 100) : 0 },
+            { label: 'Mission Fund (10%)', value: totalMission, color: 'emerald', pct: totalIncome ? Math.round((totalMission / totalIncome) * 100) : 0 },
+            { label: 'Bishop Fund', value: totalBishop, color: 'sky', pct: totalIncome ? Math.round((totalBishop / totalIncome) * 100) : 0 },
+            { label: 'Church Expenses', value: totalExpenses, color: 'rose', pct: totalIncome ? Math.round((totalExpenses / totalIncome) * 100) : 0 },
+            { label: 'Net Usable', value: totalUsable, color: 'amber', pct: totalIncome ? Math.round((totalUsable / totalIncome) * 100) : 0 },
+          ].map(({ label, value, color, pct }) => (
+            <div key={label}>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-slate-600 dark:text-slate-400 font-medium">{label}</span>
+                <span className="font-bold text-slate-900 dark:text-white">TZS {fmtK(value)} <span className="text-slate-400 font-normal">({pct}%)</span></span>
+              </div>
+              <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                <div className={`h-full rounded-full bg-${color}-500`} style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {monthly.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-violet-500" />
+            Mission & Bishop Fund Distribution
+          </h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={monthly} margin={{ top: 5, right: 20, left: 0, bottom: 5 }} barCategoryGap="30%">
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tickFormatter={v => fmtK(v)} tick={{ fontSize: 10 }} width={55} />
+              <Tooltip formatter={(v, name) => [fmt(v), name]} />
+              <Legend />
+              <Bar dataKey="Mission" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Bishop" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {statusBreakdown.length > 0 && (
+        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Record Status Breakdown ({fd.year})</h3>
+          <div className="flex flex-wrap gap-3">
+            {statusBreakdown.map(s => {
+              const colors = { draft: 'slate', submitted: 'amber', approved: 'emerald', rejected: 'rose' };
+              const c = colors[s.status] || 'slate';
+              return (
+                <div key={s.status} className={`flex-1 min-w-[100px] rounded-xl bg-${c}-50 dark:bg-${c}-900/20 border border-${c}-200 dark:border-${c}-700 p-3 text-center`}>
+                  <p className={`text-2xl font-bold text-${c}-700 dark:text-${c}-300`}>{s.count}</p>
+                  <p className={`text-[10px] font-semibold capitalize text-${c}-600`}>{s.status}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

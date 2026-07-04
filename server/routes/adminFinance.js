@@ -1,5 +1,5 @@
 const express = require('express');
-const { queries, run, get } = require('../database');
+const { queries, run, get, all } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
@@ -9,6 +9,39 @@ const fs = require('fs');
 const router = express.Router();
 router.use(isAuthenticated);
 router.use(requireRole(['admin', 'accountant']));
+
+// ── Member search for tithe entry ─────────────────────────────────────────
+router.get('/finance/members/search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q) return res.json([]);
+    const like = `%${q}%`;
+    const members = await all(
+      `SELECT m.id, m.full_name, m.membership_id, s.name as section_name
+       FROM members m
+       LEFT JOIN sections s ON s.id = m.section_id
+       WHERE m.is_active = 1 AND (m.full_name ILIKE $1 OR m.membership_id ILIKE $1)
+       ORDER BY m.full_name ASC
+       LIMIT 20`,
+      [like]
+    ).catch(() =>
+      // SQLite fallback (ILIKE not supported)
+      all(
+        `SELECT m.id, m.full_name, m.membership_id, s.name as section_name
+         FROM members m
+         LEFT JOIN sections s ON s.id = m.section_id
+         WHERE m.is_active = 1 AND (LOWER(m.full_name) LIKE LOWER(?) OR LOWER(m.membership_id) LIKE LOWER(?))
+         ORDER BY m.full_name ASC
+         LIMIT 20`,
+        [like, like]
+      )
+    );
+    res.json(members);
+  } catch (err) {
+    console.error('Member search error:', err);
+    res.status(500).json({ error: 'Failed to search members' });
+  }
+});
 
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']);
 const uploadsDir = path.join(__dirname, '../uploads/finance');
@@ -79,10 +112,20 @@ router.get('/finance/records/:id', async (req, res) => {
     const expenses = await queries.getFinanceExpenses(req.params.id);
     const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [record.record_date]);
     record.auto_tithes = tithes?.total || 0;
-    res.json({ ...record, expenses });
+    // Return individual tithe entries entered via the finance workspace
+    const tithe_entries = await all(
+      `SELECT c.member_id, m.full_name, c.amount
+       FROM contributions c
+       JOIN members m ON m.id = c.member_id
+       JOIN contribution_types ct ON ct.id = c.contribution_type_id
+       WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'
+       ORDER BY m.full_name`,
+      [record.record_date]
+    );
+    res.json({ ...record, expenses, tithe_entries });
   } catch (err) {
     console.error('Error fetching finance record:', err);
-    res.status(500).json({ error: 'Failed to fetch record' });
+    res.status(500).json({ error: 'Failed to fetch record', details: err.message });
   }
 });
 
@@ -91,13 +134,37 @@ router.put('/finance/records/:id', async (req, res) => {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
     if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
-    const { morning_offering, afternoon_offering, evangelism_offering, notes } = req.body;
+    const { morning_offering, afternoon_offering, evangelism_offering, notes, tithe_entries } = req.body;
+
+    // ── Save individual tithe entries as Contributions ────────────────────
+    if (Array.isArray(tithe_entries)) {
+      const titheType = await get(`SELECT id FROM contribution_types WHERE name = 'Tithes'`);
+      if (titheType) {
+        // Remove any previously finance-entered tithes for this record date
+        await run(
+          `DELETE FROM contributions WHERE contribution_type_id = ? AND payment_date = ? AND reference_number LIKE 'finance-%'`,
+          [titheType.id, existing.record_date]
+        );
+        for (const entry of tithe_entries) {
+          if (entry.member_id && Number(entry.amount) > 0) {
+            await run(
+              `INSERT INTO contributions (member_id, contribution_type_id, amount, payment_date, payment_method, reference_number, recorded_by) VALUES (?, ?, ?, ?, 'Cash', ?, ?)`,
+              [entry.member_id, titheType.id, Number(entry.amount), existing.record_date, `finance-${req.params.id}`, req.session.userId]
+            );
+          }
+        }
+      }
+    }
+
+    // ── Build update payload (recalculate tithes AFTER saving entries) ────
     const data = {};
     if (existing.status === 'rejected') { data.status = 'draft'; data.rejection_reason = null; }
     if (morning_offering !== undefined) data.morning_offering = Number(morning_offering);
     if (afternoon_offering !== undefined) data.afternoon_offering = Number(afternoon_offering);
     if (evangelism_offering !== undefined) data.evangelism_offering = Number(evangelism_offering);
     if (notes !== undefined) data.notes = notes;
+
+    // Recalculate tithes total (includes entries just saved above)
     const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [existing.record_date]);
     const auto_tithes = tithesResult?.total || 0;
     data.total_tithes = auto_tithes;
@@ -115,7 +182,7 @@ router.put('/finance/records/:id', async (req, res) => {
     res.json({ message: 'Record updated' });
   } catch (err) {
     console.error('Error updating finance record:', err);
-    res.status(500).json({ error: 'Failed to update record' });
+    res.status(500).json({ error: 'Failed to update record', details: err.message });
   }
 });
 

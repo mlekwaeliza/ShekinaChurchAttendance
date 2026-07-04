@@ -345,6 +345,7 @@ export const analyticsAPI = {
   getCorrelations: (months) => api.get('/analytics/correlations', { params: { months } }),
   getChurchGrowthIndex: () => api.get('/analytics/church-growth-index'),
   getAIInsights: () => api.get('/analytics/ai-insights'),
+  getFinanceAnalytics: (year) => api.get('/analytics/finance-analytics', { params: { year } }),
 };
 
 // New Member Leader API
@@ -435,6 +436,7 @@ export const financeAPI = {
   getSummary: (dateFrom, dateTo) => api.get('/admin/finance/reports/summary', { params: { date_from: dateFrom, date_to: dateTo } }),
   getTrend: (year) => api.get('/admin/finance/reports/trend', { params: { year } }),
   getExport: (dateFrom, dateTo) => api.get('/admin/finance/reports/export', { params: { date_from: dateFrom, date_to: dateTo } }),
+  searchMembers: (q) => api.get('/admin/finance/members/search', { params: { q } }),
 };
 
 export const evangelismAPI = {

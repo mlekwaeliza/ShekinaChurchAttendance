@@ -88,6 +88,32 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [lastSaved, setLastSaved] = useState(null);
 
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  // Debounced server-side member search for tithe entry
+  useEffect(() => {
+    if (!titheSearch.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await financeAPI.searchMembers(titheSearch.trim());
+        setSearchResults(res.data || []);
+      } catch {
+        // fallback: filter from allMembers if already loaded
+        setSearchResults(
+          allMembers.filter(m =>
+            !titheEntries.some(t => Number(t.member_id) === Number(m.id)) &&
+            (m.full_name || '').toLowerCase().includes(titheSearch.toLowerCase())
+          ).slice(0, 20)
+        );
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [titheSearch, allMembers, titheEntries]);
+
   const loadMembers = useCallback(async () => {
     try {
       const res = await adminAPI.getMembers({});
@@ -277,9 +303,9 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
     input.click();
   };
 
-  const filteredTitheMembers = allMembers
-    .filter(m => !titheEntries.some(t => Number(t.member_id) === Number(m.id)) && (m.full_name || '').toLowerCase().includes(titheSearch.toLowerCase()))
-    .slice(0, 20);
+  // filteredTitheMembers: exclude already-added members from server search results
+  const filteredTitheMembers = searchResults
+    .filter(m => !titheEntries.some(t => Number(t.member_id) === Number(m.id)));
 
   if (loading) {
     return (
@@ -558,7 +584,11 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
                       className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" />
                     {titheSearch && (
                       <div className="absolute z-20 top-full mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl">
-                        {filteredTitheMembers.length > 0 ? (
+                        {searchLoading ? (
+                          <div className="px-3 py-3 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Searching...
+                          </div>
+                        ) : filteredTitheMembers.length > 0 ? (
                           filteredTitheMembers.map(m => (
                             <button key={m.id} type="button" onClick={() => addTitheMember(m)}
                               className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
