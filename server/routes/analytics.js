@@ -2,14 +2,12 @@ const express = require('express');
 const { queries, get, all } = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString, parseDateInput } = require('../utils/date');
-const { yearOnly, monthOnly } = require('../utils/sqlDialect');
 
 const router = express.Router();
 
 // All analytics routes require authentication + admin or pastor role
 router.use(isAuthenticated);
 router.use(requireRole(['admin', 'pastor']));
-
 
 // GET /analytics/predictions
 // Returns moving average forecast based on last 12 weeks of attendance data
@@ -862,172 +860,11 @@ router.get('/ai-insights', async (req, res) => {
 
     res.json(insights.slice(0, 15));
   } catch (error) {
-  try {
-    const months = Math.min(parseInt(req.query.months) || 6, 24);
-    const [daily, sections] = await Promise.all([
-      queries.getAttendanceHeatMap(months),
-      queries.getSectionHeatMap(months),
-    ]);
-    res.json({ daily, sections });
-  } catch (error) {
-    console.error('Heatmap error:', error);
-    res.status(500).json({ error: 'Failed to fetch heatmap data' });
-  }
-});
-
-// GET /analytics/trends-ma?weeks=26
-router.get('/trends-ma', async (req, res) => {
-  try {
-    const weeks = Math.min(parseInt(req.query.weeks) || 26, 104);
-    const trends = await queries.getAttendanceTrendsWithMA(weeks);
-    res.json(trends);
-  } catch (error) {
-    console.error('Trends MA error:', error);
-    res.status(500).json({ error: 'Failed to fetch trends' });
-  }
-});
-
-// GET /analytics/risk-analysis
-router.get('/risk-analysis', async (req, res) => {
-  try {
-    const [members, atRisk, consecutiveAbsentees] = await Promise.all([
-      queries.getAttendanceRiskAnalysis(),
-      queries.getAtRiskMembers(),
-      queries.getConsecutiveAbsentees(),
-    ]);
-    const summary = {
-      highly_active: members.filter(m => m.risk_level === 'Highly Active').length,
-      active: members.filter(m => m.risk_level === 'Active').length,
-      moderately_active: members.filter(m => m.risk_level === 'Moderately Active').length,
-      at_risk: members.filter(m => m.risk_level === 'At Risk').length,
-      critical: members.filter(m => m.risk_level === 'Critical Follow-up Required').length,
-    };
-    res.json({ members, summary, at_risk_members: atRisk, consecutive_absentees: consecutiveAbsentees });
-  } catch (error) {
-    console.error('Risk analysis error:', error);
-    res.status(500).json({ error: 'Failed to fetch risk analysis' });
-  }
-});
-
-// GET /analytics/leader-workload?days=90
-router.get('/leader-workload', async (req, res) => {
-  try {
-    const days = Math.min(parseInt(req.query.days) || 90, 365);
-    const workload = await queries.getLeaderWorkload(days);
-    res.json(workload);
-  } catch (error) {
-    console.error('Leader workload error:', error);
-    res.status(500).json({ error: 'Failed to fetch leader workload' });
-  }
-});
-
-// GET /analytics/correlations?months=6
-router.get('/correlations', async (req, res) => {
-  try {
-    const months = Math.min(parseInt(req.query.months) || 6, 36);
-    const data = await queries.getCorrelationAnalytics(months);
-    res.json(data);
-  } catch (error) {
-    console.error('Correlations error:', error);
-    res.status(500).json({ error: 'Failed to fetch correlations' });
-  }
-});
-
-// GET /analytics/church-growth-index
-router.get('/church-growth-index', async (req, res) => {
-  try {
-    const data = await queries.getChurchGrowthIndex();
-    const activeGrowth = data.total_members > 0 ? ((data.current_active / data.total_members) * 100) : 0;
-    const retentionScore = data.previous_active > 0 ? ((data.current_active / data.previous_active) * 100) : 50;
-    const leaderScore = data.total_leaders > 0 ? ((data.active_leaders / data.total_leaders) * 100) : 0;
-    const rateChange = (data.current_rate || 0) - (data.previous_rate || 0);
-    const growthIndex = Math.min(100, Math.round(
-      Math.min(100, activeGrowth) * 0.25 +
-      Math.min(100, retentionScore) * 0.25 +
-      Math.min(100, leaderScore) * 0.20 +
-      Math.min(100, (data.current_rate || 0)) * 0.15 +
-      Math.min(100, Math.max(0, 50 + rateChange * 2)) * 0.15
-    ));
-    res.json({ ...data, growth_index: growthIndex, rate_change: Math.round(rateChange * 10) / 10 });
-  } catch (error) {
-    console.error('Church growth index error:', error);
-    res.status(500).json({ error: 'Failed to fetch church growth index' });
-  }
-});
-
-// GET /analytics/ai-insights
-router.get('/ai-insights', async (req, res) => {
-  try {
-    const [sectionData, riskData, consecutiveData, growthData] = await Promise.all([
-      queries.getSectionRankings(90),
-      queries.getAtRiskMembers(),
-      queries.getConsecutiveAbsentees(),
-      queries.getChurchGrowthIndex(),
-    ]);
-
-    const insights = [];
-
-    if (sectionData.length > 0) {
-      const best = sectionData[0];
-      insights.push({
-        type: 'success',
-        text: `${best.name} has the highest attendance rate at ${best.attendance_rate}% over the last 90 days.`,
-        category: 'section_performance',
-      });
-    }
-
-    if (growthData.current_rate && growthData.previous_rate) {
-      const diff = growthData.current_rate - growthData.previous_rate;
-      if (diff > 0) {
-        insights.push({ type: 'success', text: `Overall attendance improved by ${diff.toFixed(1)}% compared to the previous period.`, category: 'attendance_trend' });
-      } else if (diff < 0) {
-        insights.push({ type: 'warning', text: `Overall attendance declined by ${Math.abs(diff).toFixed(1)}% compared to the previous period.`, category: 'attendance_trend' });
-      }
-    }
-
-    if (consecutiveData.length > 0) {
-      insights.push({ type: 'danger', text: `${consecutiveData.length} member(s) have missed 3+ consecutive services and require follow-up.`, category: 'followup' });
-    }
-
-    if (riskData.length > 0) {
-      insights.push({ type: 'warning', text: `${riskData.length} member(s) are at risk with less than 20% attendance.`, category: 'risk' });
-    }
-
-    if (growthData.souls_won_90d > 0) {
-      insights.push({ type: 'success', text: `${growthData.souls_won_90d} souls have been won through evangelism in the last 90 days.`, category: 'evangelism' });
-    }
-
-    if (growthData.new_visitors_90d > 0) {
-      insights.push({ type: 'info', text: `${growthData.new_visitors_90d} new visitors have attended in the last 90 days.`, category: 'visitors' });
-    }
-
-    const activeLeaders = growthData.active_leaders || 0;
-    const totalLeaders = growthData.total_leaders || 1;
-    if (activeLeaders < totalLeaders * 0.8) {
-      insights.push({ type: 'warning', text: `Only ${activeLeaders} of ${totalLeaders} leaders have submitted attendance in the last 30 days.`, category: 'submissions' });
-    }
-
-    if (sectionData.length >= 2) {
-      const diff = sectionData[0].attendance_rate - sectionData[sectionData.length - 1].attendance_rate;
-      if (diff > 20) {
-        insights.push({ type: 'warning', text: `There is a ${diff.toFixed(1)}% gap between the best and lowest performing sections.`, category: 'section_gap' });
-      }
-    }
-
-    if (growthData.current_rate >= 80) {
-      insights.push({ type: 'success', text: `Church attendance is healthy at ${growthData.current_rate}% average rate.`, category: 'health' });
-    } else if (growthData.current_rate < 50) {
-      insights.push({ type: 'danger', text: `Church attendance is critically low at ${growthData.current_rate}% average rate. Immediate action needed.`, category: 'health' });
-    }
-
-    insights.push({ type: 'info', text: `${growthData.total_members} active members across ${growthData.total_departments} departments.`, category: 'overview' });
-
-    res.json(insights.slice(0, 15));
-  } catch (error) {
     console.error('AI insights error:', error);
     res.status(500).json({ error: 'Failed to generate insights' });
   }
 });
+
 
 // ── GET /analytics/finance-analytics ─────────────────────────────────────────
 // Finance summary, monthly income trend, and expense breakdown for a given year
@@ -1037,10 +874,8 @@ router.get('/finance-analytics', async (req, res) => {
     const yearFrom = `${year}-01-01`;
     const yearTo   = `${year}-12-31`;
 
-    // Overall summary for the year
     const summary = await queries.getFinanceSummary(yearFrom, yearTo);
 
-    // Monthly income/tithes/usable breakdown
     const monthly = await all(`
       SELECT
         ${monthOnly('record_date')} as month,
@@ -1059,7 +894,6 @@ router.get('/finance-analytics', async (req, res) => {
       ORDER BY month ASC
     `, [year]);
 
-    // Expense breakdown by category
     const expenses = await all(`
       SELECT fe.category, COALESCE(SUM(fe.amount), 0) as total
       FROM finance_expenses fe
@@ -1069,7 +903,6 @@ router.get('/finance-analytics', async (req, res) => {
       ORDER BY total DESC
     `, [year]);
 
-    // Status breakdown
     const statusBreakdown = await all(`
       SELECT status, COUNT(*) as count
       FROM finance_daily_records
