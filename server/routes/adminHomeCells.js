@@ -202,4 +202,32 @@ router.delete('/home-cell-members/:id', async (req, res) => {
   }
 });
 
+router.delete('/home-cells/:id', async (req, res) => {
+  try {
+    const cellId = Number(req.params.id);
+    if (!Number.isInteger(cellId)) {
+      return res.status(400).json({ error: 'Invalid home cell ID' });
+    }
+
+    const cell = await get('SELECT id, name FROM home_cells WHERE id = ? AND is_active = 1', [cellId]);
+    if (!cell) {
+      return res.status(404).json({ error: 'Home cell not found' });
+    }
+
+    await transaction(async (tx) => {
+      // 1. Soft-delete the home cell
+      await tx.run('UPDATE home_cells SET is_active = 0 WHERE id = ?', [cellId]);
+      // 2. Remove all leader associations
+      await tx.run('DELETE FROM home_cell_leaders WHERE cell_id = ?', [cellId]);
+      // 3. Soft-delete all member assignments in this cell
+      await tx.run('UPDATE home_cell_members SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE cell_id = ?', [cellId]);
+    });
+
+    res.json({ message: `Home cell '${cell.name}' deleted successfully` });
+  } catch (error) {
+    console.error('Delete home cell error:', error);
+    res.status(500).json({ error: 'Failed to delete home cell' });
+  }
+});
+
 module.exports = router;

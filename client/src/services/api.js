@@ -163,6 +163,7 @@ export const adminAPI = {
   getHomeCells: () => api.get('/admin/home-cells'),
   createHomeCell: (data) => api.post('/admin/home-cells', data),
   updateHomeCellLeaders: (cellId, leaderIds) => api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
+  deleteHomeCell: (id) => api.delete(`/admin/home-cells/${id}`),
   createHomeCellMember: (data) => api.post('/admin/home-cell-members', data),
   deleteHomeCellMember: (id) => api.delete(`/admin/home-cell-members/${id}`),
   // Leadership roles & assignments

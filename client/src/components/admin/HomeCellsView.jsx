@@ -98,6 +98,19 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
       setMessage(error.response?.data?.error || 'Failed to create home cell.');
     }
   };
+  const deleteCell = async (cell) => {
+    if (!window.confirm(`Are you sure you want to delete ${cell.name}? This will remove all leader and member assignments for this cell.`)) {
+      return;
+    }
+    setMessage('');
+    try {
+      await adminAPI.deleteHomeCell(cell.id);
+      setMessage(`${cell.name} deleted successfully.`);
+      await loadCells();
+    } catch (error) {
+      setMessage(error.response?.data?.error || 'Failed to delete home cell.');
+    }
+  };
 
   const updateCellMemberForm = (key, value) => {
     if (key === 'full_name') value = capitalizeName(value);
@@ -281,14 +294,24 @@ const HomeCellsView = ({ leaders = [], allMembers = [] }) => {
                       {(cell.members || []).length} members &middot; {selected.size} assigned
                     </p>
                   </div>
-                  <button
-                    onClick={() => saveCell(cell)}
-                    disabled={savingCellId === cell.id}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
-                  >
-                    <Save className="h-4 w-4" />
-                    {savingCellId === cell.id ? 'Saving...' : 'Save'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => deleteCell(cell)}
+                      type="button"
+                      className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/20"
+                      title="Delete Home Cell"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => saveCell(cell)}
+                      disabled={savingCellId === cell.id}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                      <Save className="h-4 w-4" />
+                      {savingCellId === cell.id ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
