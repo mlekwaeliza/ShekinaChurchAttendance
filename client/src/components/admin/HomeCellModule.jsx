@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   LayoutDashboard, Home, Users, UserCheck, Settings,
   Plus, UserPlus, HelpCircle
@@ -12,12 +12,27 @@ import HCSettings from './home-cells/HCSettings';
 import HCCreateModal from './home-cells/HCCreateModal';
 import HCAddMemberModal from './home-cells/HCAddMemberModal';
 
-const HomeCellModule = ({ leaders = [], allMembers = [] }) => {
+const HomeCellModule = ({ leaders = [], allMembers: propAllMembers = [] }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cells, setCells] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  
+  const [fetchedMembers, setFetchedMembers] = useState([]);
+
+  // Fetch the full members list directly so the leaders assignment panel
+  // is always populated regardless of parent prop timing or empty arrays.
+  useEffect(() => {
+    adminAPI.getMembers()
+      .then(res => setFetchedMembers(res.data || []))
+      .catch(() => {});
+  }, []);
+
+  // Prefer freshly-fetched list; fall back to prop if fetch hasn't resolved yet
+  const allMembers = useMemo(
+    () => (fetchedMembers.length > 0 ? fetchedMembers : propAllMembers),
+    [fetchedMembers, propAllMembers]
+  );
+
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
