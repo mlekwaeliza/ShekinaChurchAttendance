@@ -201,6 +201,11 @@ db.serialize(() => {
       FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
     );
 
+        // Home Cells metadata columns (safe additive migrations)
+    try { await run(`ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS meeting_day TEXT`); } catch (_) {}
+    try { await run(`ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS location TEXT`); } catch (_) {}
+    try { await run(`ALTER TABLE home_cells ADD COLUMN IF NOT EXISTS max_capacity INTEGER`); } catch (_) {}
+
     CREATE TABLE IF NOT EXISTS ip_login_failures (
       ip TEXT PRIMARY KEY,
       count INTEGER NOT NULL DEFAULT 0,

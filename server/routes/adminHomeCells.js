@@ -230,4 +230,71 @@ router.delete('/home-cells/:id', async (req, res) => {
   }
 });
 
+
+router.patch('/home-cells/:id', async (req, res) => {
+  try {
+    const cellId = Number(req.params.id);
+    if (!Number.isInteger(cellId)) return res.status(400).json({ error: 'Invalid home cell ID' });
+
+    const cell = await get('SELECT id FROM home_cells WHERE id = ? AND is_active = 1', [cellId]);
+    if (!cell) return res.status(404).json({ error: 'Home cell not found' });
+
+    const { name, meeting_day, location, max_capacity } = req.body;
+    const fields = [];
+    const values = [];
+
+    if (name !== undefined) {
+      const trimmed = String(name).trim();
+      if (!trimmed) return res.status(400).json({ error: 'Name cannot be empty' });
+      const conflict = await get('SELECT id FROM home_cells WHERE LOWER(name) = LOWER(?) AND id != ?', [trimmed, cellId]);
+      if (conflict) return res.status(400).json({ error: 'A home cell with that name already exists' });
+      fields.push('name = ?'); values.push(trimmed);
+    }
+    if (meeting_day !== undefined) { fields.push('meeting_day = ?'); values.push(meeting_day || null); }
+    if (location !== undefined) { fields.push('location = ?'); values.push(location || null); }
+    if (max_capacity !== undefined) { fields.push('max_capacity = ?'); values.push(max_capacity ? Number(max_capacity) : null); }
+
+    if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
+
+    values.push(cellId);
+    await run(`UPDATE home_cells SET ${fields.join(', ')} WHERE id = ?`, values);
+    res.json({ message: 'Home cell updated' });
+  } catch (error) {
+    console.error('Update home cell error:', error);
+    res.status(500).json({ error: 'Failed to update home cell' });
+  }
+});
+
+router.put('/home-cell-members/:id/transfer', async (req, res) => {
+  try {
+    const memberId = Number(req.params.id);
+    const newCellId = Number(req.body.new_cell_id);
+
+    if (!Number.isInteger(memberId) || !Number.isInteger(newCellId)) {
+      return res.status(400).json({ error: 'Invalid member or cell ID' });
+    }
+
+    const member = await get('SELECT id, full_name, church_member_id FROM home_cell_members WHERE id = ? AND is_active = 1', [memberId]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+
+    const targetCell = await get('SELECT id FROM home_cells WHERE id = ? AND is_active = 1', [newCellId]);
+    if (!targetCell) return res.status(404).json({ error: 'Target home cell not found' });
+
+    // Check for duplicate in target cell
+    if (member.church_member_id) {
+      const dup = await get(
+        'SELECT id FROM home_cell_members WHERE cell_id = ? AND church_member_id = ? AND is_active = 1 AND id != ?',
+        [newCellId, member.church_member_id, memberId]
+      );
+      if (dup) return res.status(400).json({ error: 'Member is already in the target cell' });
+    }
+
+    await run('UPDATE home_cell_members SET cell_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newCellId, memberId]);
+    res.json({ message: `${member.full_name} transferred successfully` });
+  } catch (error) {
+    console.error('Transfer home cell member error:', error);
+    res.status(500).json({ error: 'Failed to transfer member' });
+  }
+});
+
 module.exports = router;

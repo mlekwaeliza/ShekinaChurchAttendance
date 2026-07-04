@@ -162,10 +162,12 @@ export const adminAPI = {
   saveServiceInstance: (date, serviceId, assignedLeaderIds) => api.post('/admin/service-instances', { date, service_id: serviceId, assigned_leader_ids: assignedLeaderIds }),
   getHomeCells: () => api.get('/admin/home-cells'),
   createHomeCell: (data) => api.post('/admin/home-cells', data),
+  updateHomeCell: (id, data) => api.patch(`/admin/home-cells/${id}`, data),
   updateHomeCellLeaders: (cellId, leaderIds) => api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
   deleteHomeCell: (id) => api.delete(`/admin/home-cells/${id}`),
   createHomeCellMember: (data) => api.post('/admin/home-cell-members', data),
   deleteHomeCellMember: (id) => api.delete(`/admin/home-cell-members/${id}`),
+  transferHomeCellMember: (memberId, newCellId) => api.put(`/admin/home-cell-members/${memberId}/transfer`, { new_cell_id: newCellId }),
   // Leadership roles & assignments
   getTitles: () => api.get('/admin/titles'),
   createTitle: (data) => api.post('/admin/titles', data),
