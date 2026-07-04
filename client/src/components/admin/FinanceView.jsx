@@ -135,7 +135,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
         <div className="relative z-10 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold">Finance Module</h2>
+            <h2 className="text-xl font-bold">Accountant Dashboard</h2>
             <p className="text-white/80 text-sm">Daily records, tithes, expenses &amp; reports</p>
           </div>
           <button onClick={createNew}
