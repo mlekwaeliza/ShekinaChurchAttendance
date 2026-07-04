@@ -29,6 +29,7 @@ const CellProfile = ({ cell, cells, allLeaders, onClose, onRefresh, onAddMember 
   const [message, setMessage] = useState('');
   const [localLeaders, setLocalLeaders] = useState(() => new Set((cell.leaders || []).map(l => Number(l.leader_id))));
   const [transferTarget, setTransferTarget] = useState({});
+  const [leaderSearch, setLeaderSearch] = useState('');
 
   const toast = (msg) => { setMessage(msg); setTimeout(() => setMessage(''), 3000); };
 
@@ -209,28 +210,50 @@ const CellProfile = ({ cell, cells, allLeaders, onClose, onRefresh, onAddMember 
 
           {profileTab === 'leaders' && (
             <div className="space-y-3">
-              <p className="text-xs text-slate-500 dark:text-slate-400">Select leaders from the list below, then click Save.</p>
-              <div className="max-h-80 space-y-2 overflow-y-auto">
-                {allLeaders.map(l => {
-                  const checked = localLeaders.has(Number(l.id));
-                  return (
-                    <label key={l.id}
-                      className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${checked ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-900/20' : 'border-slate-200 bg-slate-50 hover:border-emerald-200 dark:border-slate-700 dark:bg-slate-800'}`}>
-                      <input type="checkbox" checked={checked}
-                        onChange={() => setLocalLeaders(s => {
-                          const next = new Set(s);
-                          checked ? next.delete(Number(l.id)) : next.add(Number(l.id));
-                          return next;
-                        })}
-                        className="h-4 w-4 accent-emerald-600"
-                      />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{l.full_name}</p>
-                        <p className="text-xs text-slate-500">{l.section_name}</p>
-                      </div>
-                    </label>
-                  );
-                })}
+              <p className="text-xs text-slate-500 dark:text-slate-400">Search and select members to assign as leaders, then click Save.</p>
+              {/* Search box */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={leaderSearch}
+                  onChange={e => setLeaderSearch(e.target.value)}
+                  placeholder="Search members by name or section…"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-8 pr-3 text-xs placeholder-slate-400 focus:border-emerald-400 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                />
+              </div>
+              <div className="max-h-72 space-y-2 overflow-y-auto">
+                {(() => {
+                  const term = leaderSearch.toLowerCase().trim();
+                  const filtered = term
+                    ? allLeaders.filter(l =>
+                        l.full_name?.toLowerCase().includes(term) ||
+                        l.section_name?.toLowerCase().includes(term)
+                      )
+                    : allLeaders;
+                  if (filtered.length === 0)
+                    return <p className="py-4 text-center text-xs text-slate-400">No members match your search.</p>;
+                  return filtered.map(l => {
+                    const checked = localLeaders.has(Number(l.id));
+                    return (
+                      <label key={l.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${checked ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-900/20' : 'border-slate-200 bg-slate-50 hover:border-emerald-200 dark:border-slate-700 dark:bg-slate-800'}`}>
+                        <input type="checkbox" checked={checked}
+                          onChange={() => setLocalLeaders(s => {
+                            const next = new Set(s);
+                            checked ? next.delete(Number(l.id)) : next.add(Number(l.id));
+                            return next;
+                          })}
+                          className="h-4 w-4 accent-emerald-600"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{l.full_name}</p>
+                          <p className="text-xs text-slate-500">{l.section_name || 'No section'}</p>
+                        </div>
+                      </label>
+                    );
+                  });
+                })()}
               </div>
               <button onClick={saveLeaders} disabled={saving === 'leaders'}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
