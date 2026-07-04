@@ -49,17 +49,6 @@ async function syncChurchMemberHomeCell(memberId, cellId, userId) {
     throw error;
   }
 
-  const duplicate = await get(`
-    SELECT id, full_name
-    FROM home_cell_members
-    WHERE church_member_id = ? AND is_active = 1 AND cell_id != ?
-  `, [parsedMemberId, parsedCellId]);
-  if (duplicate) {
-    const error = new Error(`${duplicate.full_name} is already assigned to another home cell`);
-    error.statusCode = 400;
-    throw error;
-  }
-
   const active = await get('SELECT id FROM home_cell_members WHERE church_member_id = ? AND is_active = 1', [parsedMemberId]);
   const duplicateKey = `member:${parsedMemberId}`;
   if (active) {
