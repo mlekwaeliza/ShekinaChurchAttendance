@@ -88,7 +88,7 @@ const HomeCellModule = ({ leaders = [], allMembers = [] }) => {
         return (
           <HCList
             cells={cells}
-            allLeaders={leaders}
+            allLeaders={allMembers}
             loading={loading}
             onRefresh={loadCells}
             onCreateCell={handleCreateCell}
@@ -108,7 +108,7 @@ const HomeCellModule = ({ leaders = [], allMembers = [] }) => {
         return (
           <HCLeadersPage
             cells={cells}
-            allLeaders={leaders}
+            allLeaders={allMembers}
           />
         );
       case 'settings':

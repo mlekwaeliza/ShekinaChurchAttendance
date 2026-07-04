@@ -10,7 +10,7 @@ const HCLeadersPage = ({ cells = [], allLeaders = [] }) => {
 
   // Map leaders to their assigned cell and member count details
   const leadersData = useMemo(() => {
-    return allLeaders.map(leader => {
+    const mapped = allLeaders.map(leader => {
       // Find all cells where this leader is assigned
       const assignedCells = cells.filter(cell =>
         (cell.leaders || []).some(l => Number(l.leader_id) === Number(leader.id))
@@ -26,6 +26,7 @@ const HCLeadersPage = ({ cells = [], allLeaders = [] }) => {
         assignedCellsCount: assignedCells.length
       };
     });
+    return mapped.filter(l => l.assignedCellsCount > 0);
   }, [cells, allLeaders]);
 
   const filtered = useMemo(() => {

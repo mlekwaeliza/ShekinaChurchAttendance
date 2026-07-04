@@ -29,13 +29,12 @@ router.get('/home-cells', async (req, res) => {
     `);
 
     const leaders = await all(`
-      SELECT hcl.cell_id, l.id AS leader_id, u.full_name, s.name AS section_name
+      SELECT hcl.cell_id, m.id AS leader_id, m.full_name, s.name AS section_name
       FROM home_cell_leaders hcl
-      JOIN leaders l ON l.id = hcl.leader_id
-      JOIN users u ON u.id = l.user_id
-      JOIN sections s ON s.id = l.section_id
-      WHERE l.is_active = 1
-      ORDER BY u.full_name
+      JOIN members m ON m.id = hcl.leader_id
+      LEFT JOIN sections s ON s.id = m.section_id
+      WHERE m.is_active = 1
+      ORDER BY m.full_name
     `);
 
     const members = await all(`
@@ -109,7 +108,7 @@ router.put('/home-cells/:id/leaders', async (req, res) => {
 
     const validLeaderIds = [];
     for (const leaderId of leaderIds) {
-      const leader = await get('SELECT id FROM leaders WHERE id = ? AND is_active = 1', [leaderId]);
+      const leader = await get('SELECT id FROM members WHERE id = ? AND is_active = 1', [leaderId]);
       if (leader) validLeaderIds.push(leaderId);
     }
 

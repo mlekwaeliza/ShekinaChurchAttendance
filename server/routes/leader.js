@@ -196,8 +196,8 @@ router.delete('/members/:id', async (req, res) => {
 // GET home cells assigned to this leader
 router.get('/home-cells', async (req, res) => {
   try {
-    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
-    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+    const userRecord = await get('SELECT member_id FROM users WHERE id = ?', [req.session.userId]);
+    const memberId = userRecord?.member_id || 0;
 
     const cells = await all(`
       SELECT hc.*
@@ -205,7 +205,7 @@ router.get('/home-cells', async (req, res) => {
       JOIN home_cell_leaders hcl ON hcl.cell_id = hc.id
       WHERE hcl.leader_id = ? AND hc.is_active = 1
       ORDER BY hc.cell_number
-    `, [leaderRecord.id]);
+    `, [memberId]);
 
     const members = await all(`
       SELECT hcm.*, hc.name AS cell_name, m.membership_id AS church_membership_id
@@ -215,7 +215,7 @@ router.get('/home-cells', async (req, res) => {
       LEFT JOIN members m ON m.id = hcm.church_member_id
       WHERE hcl.leader_id = ? AND hcm.is_active = 1
       ORDER BY hc.cell_number, hcm.full_name
-    `, [leaderRecord.id]);
+    `, [memberId]);
 
     res.json({ cells, members });
   } catch (error) {
@@ -226,8 +226,8 @@ router.get('/home-cells', async (req, res) => {
 
 router.post('/home-cell-members', async (req, res) => {
   try {
-    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
-    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+    const userRecord = await get('SELECT member_id FROM users WHERE id = ?', [req.session.userId]);
+    const memberId = userRecord?.member_id || 0;
 
     const cellId = Number(req.body.cell_id);
     const fullName = String(req.body.full_name || '').trim();
@@ -240,7 +240,7 @@ router.post('/home-cell-members', async (req, res) => {
 
     const assignment = await get(
       'SELECT id FROM home_cell_leaders WHERE cell_id = ? AND leader_id = ?',
-      [cellId, leaderRecord.id]
+      [cellId, memberId]
     );
     if (!assignment) {
       return res.status(403).json({ error: 'You are not assigned to this home cell' });
@@ -293,15 +293,15 @@ router.post('/home-cell-members', async (req, res) => {
 
 router.delete('/home-cell-members/:id', async (req, res) => {
   try {
-    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
-    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+    const userRecord = await get('SELECT member_id FROM users WHERE id = ?', [req.session.userId]);
+    const memberId = userRecord?.member_id || 0;
 
     const member = await get(`
       SELECT hcm.id
       FROM home_cell_members hcm
       JOIN home_cell_leaders hcl ON hcl.cell_id = hcm.cell_id
       WHERE hcm.id = ? AND hcl.leader_id = ?
-    `, [req.params.id, leaderRecord.id]);
+    `, [req.params.id, memberId]);
     if (!member) {
       return res.status(404).json({ error: 'Home cell member not found' });
     }
