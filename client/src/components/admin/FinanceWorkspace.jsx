@@ -221,8 +221,12 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
     setSaving(true);
     try {
       await financeAPI.submitRecord(record.id);
-      showMessage?.('Submitted for approval');
-      loadRecord();
+      alert('Daily record successfully submitted for approval!');
+      if (onBack) {
+        onBack();
+      } else {
+        loadRecord();
+      }
     } catch (e) {
       showMessage?.(e.response?.data?.error || 'Failed to submit');
     } finally {
