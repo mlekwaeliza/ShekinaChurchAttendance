@@ -90,6 +90,7 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
 
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [newRecordDate, setNewRecordDate] = useState(today());
 
   // Debounced server-side member search for tithe entry
   useEffect(() => {
@@ -185,7 +186,7 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
     setSaving(true);
     try {
       const payload = {
-        record_date: record?.record_date,
+        record_date: record?.record_date || newRecordDate,
         morning_offering: Number(morning) || 0,
         afternoon_offering: Number(afternoon) || 0,
         evangelism_offering: Number(evangelismOffering) || 0,
@@ -196,16 +197,21 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
         })),
         notes,
       };
+      let savedRecord = null;
       if (record?.id) {
         await financeAPI.updateRecord(record.id, payload);
+        savedRecord = { ...record, ...payload };
       } else {
         const res = await financeAPI.createRecord(payload);
-        setRecord(res.data?.record || res.data);
+        savedRecord = res.data?.record || res.data;
+        setRecord(savedRecord);
       }
       setLastSaved(new Date());
       showMessage?.('Draft saved');
+      return savedRecord;
     } catch (e) {
       showMessage?.(e.response?.data?.error || 'Failed to save');
+      throw e;
     } finally {
       setSaving(false);
     }
@@ -216,11 +222,14 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
       showMessage?.('Please add at least one member tithe before submitting');
       return;
     }
-    if (!record?.id) { await handleSaveDraft(); }
-    if (!record?.id) return;
     setSaving(true);
     try {
-      await financeAPI.submitRecord(record.id);
+      let currentRecord = record;
+      if (!currentRecord?.id) {
+        currentRecord = await handleSaveDraft();
+      }
+      if (!currentRecord?.id) return;
+      await financeAPI.submitRecord(currentRecord.id);
       alert('Daily record successfully submitted for approval!');
       if (onBack) {
         onBack();
@@ -329,7 +338,19 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
               <ArrowRight className="w-4 h-4 rotate-180" />
             </button>
             <div>
-              <h2 className="text-lg font-bold">{record?.record_date ? fdate(record.record_date) : 'New Daily Record'}</h2>
+              {record?.record_date ? (
+                <h2 className="text-lg font-bold">{fdate(record.record_date)}</h2>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-white/95">Record Date:</span>
+                  <input
+                    type="date"
+                    value={newRecordDate}
+                    onChange={(e) => setNewRecordDate(e.target.value)}
+                    className="bg-white/20 border border-white/30 rounded-xl px-3 py-1.5 text-xs font-bold text-white outline-none focus:ring-2 focus:ring-white/50"
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-2 mt-1">
                 <StatusBadge status={record?.status || 'draft'} />
                 {record?.submitted_by_name && <span className="text-white/70 text-[10px]">by {record.submitted_by_name}</span>}

@@ -83,7 +83,8 @@ router.post('/finance/records', async (req, res) => {
       remaining_after_mission: c.remaining, bishop_fund: c.bishop,
       usable_church_funds: c.usable, notes, created_by: req.session.userId
     });
-    res.status(201).json({ message: 'Record created' });
+    const createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+    res.status(201).json({ message: 'Record created', record: createdRecord });
   } catch (err) {
     if (err.message?.includes('UNIQUE')) return res.status(409).json({ error: 'A record for this date already exists' });
     console.error('Error creating finance record:', err);
