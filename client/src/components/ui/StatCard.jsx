@@ -83,7 +83,7 @@ const StatCard = ({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               )}
-              <span>{trend != null ? `${Math.abs(trend)}%` : ''} {trendLabel || ''}</span>
+              <span>{trend != null ? `${Number(Math.abs(trend).toFixed(1))}%` : ''} {trendLabel || ''}</span>
             </div>
           )}
         </div>
