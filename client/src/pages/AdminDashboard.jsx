@@ -281,20 +281,7 @@ const AdminDashboard = () => {
         );
 
       case 'rewards':
-        return (
-          <RewardsView
-            rewardsYear={data.rewardsYear}
-            setRewardsYear={data.setRewardsYear}
-            rewardsMode={data.rewardsMode}
-            setRewardsMode={data.setRewardsMode}
-            rewardsWeek={data.rewardsWeek}
-            setRewardsWeek={data.setRewardsWeek}
-            topMembers={data.topMembers}
-            topLeaders={data.topLeaders}
-            rewardsLoading={data.rewardsLoading}
-            loadRewards={data.loadRewards}
-          />
-        );
+        return <RewardsView />;
 
       case 'settings':
         return (

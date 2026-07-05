@@ -20,6 +20,7 @@
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "connect-pg-simple": "^10.0.0",
+    "connect-sqlite3": "^0.9.16",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parser": "^3.0.0",

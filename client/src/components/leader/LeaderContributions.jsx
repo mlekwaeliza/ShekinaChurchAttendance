@@ -31,6 +31,7 @@ export default function LeaderContributions({ members: propMembers = [], showMes
       setContributions(contribs);
     } catch (err) {
       console.error('Failed to load:', err);
+      showMessage?.(err?.response?.data?.error || 'Failed to load contributions data');
     }
     setLoading(false);
   }

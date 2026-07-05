@@ -344,9 +344,27 @@ function buildSessionStore() {
     activeSessionStore = store;
     return store;
   }
-  // L14-fix: for SQLite/dev mode, wrap the default MemoryStore with a
-  // periodic TTL sweep so expired sessions don't accumulate. The default
-  // MemoryStore never expires entries, which is a memory leak.
+
+  // For SQLite mode: use connect-sqlite3 to persist sessions to disk so
+  // they survive server restarts (common in development). Fall back to
+  // MemoryStore only if the package is unavailable.
+  try {
+    const SqliteStore = require('connect-sqlite3')(session);
+    const dbPath = path.join(__dirname, 'db');
+    if (!require('fs').existsSync(dbPath)) require('fs').mkdirSync(dbPath, { recursive: true });
+    const store = new SqliteStore({
+      db: 'sessions.sqlite',
+      dir: dbPath,
+      table: 'sessions'
+    });
+    activeSessionStore = store;
+    console.log('[Session] Using SQLite-backed session store (sessions survive server restarts)');
+    return store;
+  } catch (e) {
+    console.warn('[Session] connect-sqlite3 not available, falling back to MemoryStore. Sessions will be lost on restart.');
+  }
+
+  // L14-fix: MemoryStore fallback with periodic TTL sweep.
   const memStore = new session.MemoryStore();
   const sweep = setInterval(() => {
     if (typeof memStore.all === 'function') {

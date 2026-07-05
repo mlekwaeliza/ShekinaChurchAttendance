@@ -21,7 +21,7 @@ function parseIds(value) {
 async function resolveLeaderId(req) {
   const queryLeaderId = parseId(req.query.leader_id);
   if (queryLeaderId) return queryLeaderId;
-  if (req.session?.userRole === 'leader') {
+  if (req.session?.user?.role === 'leader') {
     const { get } = require('../database');
     const row = await get('SELECT id FROM leaders WHERE user_id = ?', [req.session.userId]);
     return row ? row.id : null;

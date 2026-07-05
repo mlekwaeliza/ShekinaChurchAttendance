@@ -327,8 +327,8 @@ router.get('/attendance/:date', validateDate('date'), async (req, res) => {
     if (String(service_id) !== '1') {
       const instance = await queries.getServiceInstance(service_id, date);
       if (instance) {
-        const assignedIds = JSON.parse(instance.assigned_leader_ids || '[]');
-        if (!assignedIds.includes(leaderRecord.id) && !assignedIds.includes(targetLeader.id)) {
+        const assignedIds = (JSON.parse(instance.assigned_leader_ids || '[]') || []).map(Number);
+        if (!assignedIds.includes(Number(leaderRecord.id)) && !assignedIds.includes(Number(targetLeader.id))) {
            return res.json({ unauthorized: true, submitted: false, attendance: [] });
         }
       } else {
@@ -337,8 +337,8 @@ router.get('/attendance/:date', validateDate('date'), async (req, res) => {
     } else {
       const instance = await queries.getServiceInstance(service_id, date);
       if (instance) {
-        const assignedIds = JSON.parse(instance.assigned_leader_ids || '[]');
-        if (!assignedIds.includes(leaderRecord.id) && !assignedIds.includes(targetLeader.id)) {
+        const assignedIds = (JSON.parse(instance.assigned_leader_ids || '[]') || []).map(Number);
+        if (!assignedIds.includes(Number(leaderRecord.id)) && !assignedIds.includes(Number(targetLeader.id))) {
            return res.json({ unauthorized: true, submitted: false, attendance: [] });
         }
       }
@@ -486,8 +486,8 @@ router.post('/attendance', async (req, res) => {
     if (String(service_id) !== '1') {
       const instance = await queries.getServiceInstance(service_id, date);
       if (instance) {
-        const assignedIds = JSON.parse(instance.assigned_leader_ids || '[]');
-        if (!assignedIds.includes(leaderRecord.id) && !assignedIds.includes(targetLeader.id)) {
+        const assignedIds = (JSON.parse(instance.assigned_leader_ids || '[]') || []).map(Number);
+        if (!assignedIds.includes(Number(leaderRecord.id)) && !assignedIds.includes(Number(targetLeader.id))) {
            return res.status(403).json({ error: 'You are not assigned to take attendance for this service.' });
         }
       } else {
@@ -496,8 +496,8 @@ router.post('/attendance', async (req, res) => {
     } else {
       const instance = await queries.getServiceInstance(service_id, date);
       if (instance) {
-        const assignedIds = JSON.parse(instance.assigned_leader_ids || '[]');
-        if (!assignedIds.includes(leaderRecord.id) && !assignedIds.includes(targetLeader.id)) {
+        const assignedIds = (JSON.parse(instance.assigned_leader_ids || '[]') || []).map(Number);
+        if (!assignedIds.includes(Number(leaderRecord.id)) && !assignedIds.includes(Number(targetLeader.id))) {
            return res.status(403).json({ error: 'You are not assigned to this Main Service instance.' });
         }
       }
