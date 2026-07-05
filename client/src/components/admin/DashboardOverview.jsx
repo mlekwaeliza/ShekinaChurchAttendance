@@ -20,7 +20,7 @@ import NeedsAttentionWidget from './NeedsAttentionWidget';
 import HallOfFamePreview from './HallOfFamePreview';
 import LeadershipWidget from './LeadershipWidget';
 import StatCard from '../ui/StatCard';
-import { formatLocalDate, fdate, fdatetime } from '../../utils/date';
+import { formatLocalDate, fdate, fdatetime, parseLocalDate } from '../../utils/date';
 
 const DashboardOverview = ({
   allMembers = [],
@@ -58,6 +58,36 @@ const DashboardOverview = ({
 
   const totalMembers = comparisons?.total_members || allMembers.length;
   const newMembersMonth = comparisons?.new_members_month || 0;
+
+  const upcomingBirthdays = React.useMemo(() => {
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    return allMembers
+      .filter((member) => member.date_of_birth && !member.hide_from_birthday_list)
+      .map((member) => {
+        const bday = parseLocalDate(member.date_of_birth);
+        const birthMonth = bday.getMonth();
+        const birthDay = bday.getDate();
+
+        const currentYear = today.getFullYear();
+        const bdayThisYear = new Date(currentYear, birthMonth, birthDay);
+        const bdayNextYear = new Date(currentYear + 1, birthMonth, birthDay);
+
+        const tThis = bdayThisYear.getTime();
+        const tNext = bdayNextYear.getTime();
+        const tToday = todayStart.getTime();
+
+        const diffThis = Math.round((tThis - tToday) / (1000 * 60 * 60 * 24));
+        const diffNext = Math.round((tNext - tToday) / (1000 * 60 * 60 * 24));
+
+        const daysUntil = diffThis >= 0 ? diffThis : diffNext;
+
+        return { ...member, daysUntil };
+      })
+      .filter((member) => member.daysUntil >= 0 && member.daysUntil < 7)
+      .sort((a, b) => a.daysUntil - b.daysUntil);
+  }, [allMembers]);
 
   const todayStats = dashboardMetrics?.todayStats || { present: 0, absent: 0, excused: 0 };
   const totalToday = todayStats.present + todayStats.absent + todayStats.excused;
@@ -341,35 +371,58 @@ const DashboardOverview = ({
           </div>
 
           <div className="p-5 space-y-3">
-            {allMembers
-              .filter((member) => member.date_of_birth && !member.hide_from_birthday_list)
-              .slice(0, 5)
-              .map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 dark:border-slate-700/50 dark:bg-slate-800/50"
-                >
-                  <div className="flex items-center gap-3.5">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-100 bg-white shadow-sm dark:border-slate-600 dark:bg-slate-700">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">
-                        {fdate(member.date_of_birth)}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {member.full_name}
-                      </p>
-                      <p className="text-xs font-medium text-slate-400">
-                        {member.section_name}
-                      </p>
-                    </div>
-                  </div>
+            {upcomingBirthdays.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center text-slate-400">
+                <Cake className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
+                <p className="text-xs">No birthdays in the next 7 days 🎉</p>
+              </div>
+            ) : (
+              upcomingBirthdays.slice(0, 5).map((member) => {
+                const dob = parseLocalDate(member.date_of_birth);
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const monthAbbr = months[dob.getMonth()];
+                const day = dob.getDate();
 
-                  <button className="btn-icon btn-ghost p-2 rounded-lg text-slate-400 hover:text-primary-600">
-                    <MessageSquare className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+                let proximityLabel = '';
+                if (member.daysUntil === 0) proximityLabel = 'Today 🎉';
+                else if (member.daysUntil === 1) proximityLabel = 'Tomorrow';
+                else proximityLabel = `In ${member.daysUntil} days`;
+
+                const turnAge = new Date().getFullYear() - dob.getFullYear();
+                const ageLabel = turnAge > 0 ? ` · Turning ${turnAge}` : '';
+
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3 dark:border-slate-700/50 dark:bg-slate-800/50"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white shadow-sm dark:border-rose-950 dark:bg-slate-800">
+                        <div className="w-full bg-rose-500 py-0.5 text-center text-[9px] font-extrabold uppercase tracking-wider text-white">
+                          {monthAbbr}
+                        </div>
+                        <div className="flex-1 flex items-center justify-center text-sm font-bold text-slate-800 dark:text-slate-100">
+                          {day}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {member.full_name}
+                        </p>
+                        <p className="text-xs font-medium text-slate-400">
+                          <span className="text-rose-500 font-semibold">{proximityLabel}</span>
+                          {ageLabel} · {member.section_name}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button className="btn-icon btn-ghost p-2 rounded-lg text-slate-400 hover:text-primary-600">
+                      <MessageSquare className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
