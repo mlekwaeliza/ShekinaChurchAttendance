@@ -57,11 +57,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-function calcFinance(morning, afternoon, tithes) {
+function calcFinance(morning, afternoon, tithes, evangelism = 0) {
   const m = Number(morning) || 0;
   const a = Number(afternoon) || 0;
   const t = Number(tithes) || 0;
-  const total = m + a + t;
+  const e = Number(evangelism) || 0;
+  const total = m + a + t + e;
   const mission = Math.round(total * 0.1 * 100) / 100;
   const remaining = Math.round((total - mission) * 100) / 100;
   const bishop = Math.round(remaining * 0.1 * 100) / 100;
@@ -71,11 +72,25 @@ function calcFinance(morning, afternoon, tithes) {
 
 router.post('/finance/records', async (req, res) => {
   try {
-    const { record_date, morning_offering, afternoon_offering, evangelism_offering, notes } = req.body;
+    const { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries, expenses, notes } = req.body;
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
+
+    // ── Save individual tithe entries as Contributions ────────────────────
+    const titheType = await get(`SELECT id FROM contribution_types WHERE name = 'Tithes'`);
+    if (Array.isArray(tithe_entries) && titheType) {
+      for (const entry of tithe_entries) {
+        if (entry.member_id && Number(entry.amount) > 0) {
+          await run(
+            `INSERT INTO contributions (member_id, contribution_type_id, amount, payment_date, payment_method, recorded_by) VALUES (?, ?, ?, ?, 'Cash', ?)`,
+            [entry.member_id, titheType.id, Number(entry.amount), record_date, req.session.userId]
+          );
+        }
+      }
+    }
+
     const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [record_date]);
     const auto_tithes = tithesResult?.total || 0;
-    const c = calcFinance(morning_offering, afternoon_offering, auto_tithes);
+    const c = calcFinance(morning_offering, afternoon_offering, auto_tithes, evangelism_offering);
     await queries.createFinanceRecord({
       record_date, morning_offering: Number(morning_offering) || 0, afternoon_offering: Number(afternoon_offering) || 0,
       evangelism_offering: Number(evangelism_offering) || 0,
@@ -84,6 +99,16 @@ router.post('/finance/records', async (req, res) => {
       usable_church_funds: c.usable, notes, created_by: req.session.userId
     });
     const createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+
+    // ── Save expenses ─────────────────────────────────────────────────────
+    if (Array.isArray(expenses)) {
+      for (const exp of expenses) {
+        if (exp.category && Number(exp.amount) > 0) {
+          await queries.createFinanceExpense({ record_id: createdRecord.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
+        }
+      }
+    }
+
     res.status(201).json({ message: 'Record created', record: createdRecord });
   } catch (err) {
     if (err.message?.includes('UNIQUE')) return res.status(409).json({ error: 'A record for this date already exists' });
@@ -135,7 +160,7 @@ router.put('/finance/records/:id', async (req, res) => {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
     if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
-    const { morning_offering, afternoon_offering, evangelism_offering, notes, tithe_entries } = req.body;
+    const { morning_offering, afternoon_offering, evangelism_offering, notes, tithe_entries, expenses } = req.body;
 
     // ── Save individual tithe entries as Contributions ────────────────────
     if (Array.isArray(tithe_entries)) {
@@ -157,6 +182,16 @@ router.put('/finance/records/:id', async (req, res) => {
       }
     }
 
+    // ── Save expenses ─────────────────────────────────────────────────────
+    if (Array.isArray(expenses)) {
+      await run(`DELETE FROM finance_expenses WHERE record_id = ?`, [req.params.id]);
+      for (const exp of expenses) {
+        if (exp.category && Number(exp.amount) > 0) {
+          await queries.createFinanceExpense({ record_id: req.params.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
+        }
+      }
+    }
+
     // ── Build update payload (recalculate tithes AFTER saving entries) ────
     const data = {};
     if (existing.status === 'rejected') { data.status = 'draft'; data.rejection_reason = null; }
@@ -172,7 +207,8 @@ router.put('/finance/records/:id', async (req, res) => {
     const c = calcFinance(
       data.morning_offering ?? existing.morning_offering,
       data.afternoon_offering ?? existing.afternoon_offering,
-      auto_tithes
+      auto_tithes,
+      data.evangelism_offering ?? existing.evangelism_offering
     );
     Object.assign(data, {
       total_income: c.total, mission_fund: c.mission,
@@ -324,7 +360,7 @@ router.put('/finance/records/:id/recalculate', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Record not found' });
     const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [existing.record_date]);
     const auto_tithes = tithesResult?.total || 0;
-    const c = calcFinance(existing.morning_offering, existing.afternoon_offering, auto_tithes);
+    const c = calcFinance(existing.morning_offering, existing.afternoon_offering, auto_tithes, existing.evangelism_offering);
     await queries.updateFinanceRecord(req.params.id, {
       total_tithes: auto_tithes, total_income: c.total, mission_fund: c.mission,
       remaining_after_mission: c.remaining, bishop_fund: c.bishop, usable_church_funds: c.usable

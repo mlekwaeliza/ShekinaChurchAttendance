@@ -13,14 +13,14 @@ import { fdate, fdatetime } from '../../utils/date';
 const fmt = (v) => `TZS ${Number(v || 0).toLocaleString()}`;
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
-const calcFinance = (morning, afternoon, tithes) => {
-  const m = Number(morning) || 0, a = Number(afternoon) || 0, t = Number(tithes) || 0;
-  const total = m + a + t;
+const calcFinance = (morning, afternoon, tithes, evangelism = 0) => {
+  const m = Number(morning) || 0, a = Number(afternoon) || 0, t = Number(tithes) || 0, e = Number(evangelism) || 0;
+  const total = m + a + t + e;
   const mission = Math.round(total * 0.1 * 100) / 100;
   const remaining = Math.round((total - mission) * 100) / 100;
   const bishop = Math.round(remaining * 0.1 * 100) / 100;
   const usable = Math.round((remaining - bishop) * 100) / 100;
-  return { morning: m, afternoon: a, tithes: t, total, mission, remaining, bishop, usable };
+  return { morning: m, afternoon: a, tithes: t, evangelism: e, total, mission, remaining, bishop, usable };
 };
 
 const STATUS_COLORS = {
@@ -166,7 +166,7 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
   const totalTitheAmount = useMemo(() => titheEntries.reduce((s, t) => s + (Number(t.amount) || 0), 0), [titheEntries]);
   const hasTithes = useMemo(() => titheEntries.some(t => Number(t.amount) > 0), [titheEntries]);
   const totalExpenses = useMemo(() => expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0), [expenses]);
-  const calc = useMemo(() => calcFinance(morning, afternoon, totalTitheAmount), [morning, afternoon, totalTitheAmount]);
+  const calc = useMemo(() => calcFinance(morning, afternoon, totalTitheAmount, evangelismOffering), [morning, afternoon, totalTitheAmount, evangelismOffering]);
   const netBalance = calc.usable - totalExpenses;
 
   const isReadonly = record?.status === 'approved' || record?.status === 'submitted';
