@@ -99,6 +99,10 @@ router.post('/finance/records', async (req, res) => {
       usable_church_funds: c.usable, notes, created_by: req.session.userId
     });
     const createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+    if (!createdRecord) {
+      console.error('Created record not found after INSERT for date:', record_date);
+      return res.status(500).json({ error: 'Failed to create record - database error' });
+    }
 
     // ── Save expenses ─────────────────────────────────────────────────────
     if (Array.isArray(expenses)) {
