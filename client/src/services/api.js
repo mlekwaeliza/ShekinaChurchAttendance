@@ -56,6 +56,7 @@ api.interceptors.response.use(
     e.status = status;
     e.data = err.response?.data;
     e.original = err;
+    console.error(`[API ${status}] ${err.config?.method?.toUpperCase()} ${err.config?.url}`, err.response?.data);
     return Promise.reject(e);
   }
 );
