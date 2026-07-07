@@ -210,8 +210,9 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
       showMessage?.('Draft saved');
       return savedRecord;
     } catch (e) {
-      const errMsg = typeof e.response?.data?.error === 'string' ? e.response?.data?.error : (e.response?.data?.error?.message || e.message || 'Failed to save');
-      console.error('handleSaveDraft error:', e.response?.data || e.message);
+      const errData = e.data || e.response?.data;
+      const errMsg = typeof errData?.error === 'string' ? errData.error : (errData?.error?.message || e.message || 'Failed to save');
+      console.error('handleSaveDraft error:', errData || e.message);
       showMessage?.(errMsg);
       throw e;
     } finally {
@@ -239,8 +240,9 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
         loadRecord();
       }
     } catch (e) {
-      const errMsg = typeof e.response?.data?.error === 'string' ? e.response?.data?.error : (e.response?.data?.error?.message || e.message || 'Failed to submit');
-      console.error('handleSubmitForApproval error:', e.response?.data || e.message);
+      const errData = e.data || e.response?.data;
+      const errMsg = typeof errData?.error === 'string' ? errData.error : (errData?.error?.message || e.message || 'Failed to submit');
+      console.error('handleSubmitForApproval error:', errData || e.message);
       showMessage?.(errMsg);
     } finally {
       setSaving(false);

@@ -54,6 +54,7 @@ api.interceptors.response.use(
 
     const e = new Error(`${status ? `[${status}] ` : ''}${message}`);
     e.status = status;
+    e.data = err.response?.data;
     e.original = err;
     return Promise.reject(e);
   }

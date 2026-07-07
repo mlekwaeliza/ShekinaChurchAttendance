@@ -11,10 +11,10 @@ function requireRole(allowedRoles) {
   return (req, res, next) => {
     const userRole = req.session.user?.role;
     if (!userRole) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(401).json({ error: 'Not authenticated', _debug: { userId: req.session.userId, hasUser: !!req.session.user, userKeys: req.session.user ? Object.keys(req.session.user) : null } });
     }
     if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      return res.status(403).json({ error: 'Insufficient permissions', _debug: { role: userRole, userId: req.session.userId, allowed: allowedRoles } });
     }
     next();
   };
