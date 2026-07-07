@@ -1,4 +1,4 @@
-const { queries } = require('../database');
+const { queries, get } = require('../database');
 
 const rolePermissions = {
   admin: ['admin', 'leader', 'pastor', 'evangelist'],
@@ -28,6 +28,20 @@ function requireRole(allowedRoles) {
 // The session itself is the trust boundary; this is read-only after auth.
 async function isAuthenticated(req, res, next) {
   if (req.session.userId && req.session.user) {
+    // If the session user object is missing a role (can happen when
+    // sessions were created by older code or after a DB role change),
+    // refresh the user data from the database.
+    if (!req.session.user.role) {
+      try {
+        const dbUser = await get('SELECT id, username, role, full_name, is_new_member_leader FROM users WHERE id = ?', [req.session.userId]);
+        if (dbUser) {
+          req.session.user = { id: dbUser.id, username: dbUser.username, role: dbUser.role, full_name: dbUser.full_name, is_new_member_leader: dbUser.is_new_member_leader };
+        }
+      } catch (e) {
+        console.error('isAuthenticated: failed to refresh user from DB:', e.message);
+      }
+    }
+
     // Require 2FA if the session flag says it's enabled but not yet verified.
     if (req.session.totpEnabled === true && !req.session.twoFactorVerified) {
       return res.status(401).json({

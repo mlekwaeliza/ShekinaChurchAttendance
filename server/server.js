@@ -121,12 +121,7 @@ app.use(helmet({
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", 'blob:'],
-          // L1-fix: drop 'unsafe-inline' for styles. The compiled bundle
-          // uses external CSS, React's JSX style={{}} props set styles
-          // via element.style (CSP-safe), and index.html has no inline
-          // style attributes. If a third-party widget ever needs inline
-          // <style>, use a nonce (per-request) or a hash of the literal.
-          styleSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:', 'blob:'],
           fontSrc: ["'self'", 'data:'],
           // When Sentry is enabled, add the Sentry ingest host so the

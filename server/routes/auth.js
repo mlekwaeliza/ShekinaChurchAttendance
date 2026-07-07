@@ -174,6 +174,24 @@ router.post('/logout', (req, res) => {
   });
 });
 
+// Debug: inspect session + headers (dev only, remove after debugging)
+router.get('/debug-session', (req, res) => {
+  res.json({
+    sessionUserId: req.session.userId || null,
+    sessionUserRole: req.session.user?.role || null,
+    sessionUser: req.session.user ? { id: req.session.user.id, username: req.session.user.username, role: req.session.user.role } : null,
+    cookies: req.cookies ? Object.keys(req.cookies) : [],
+    headers: {
+      cookie: req.headers.cookie ? '[present, length=' + req.headers.cookie.length + ']' : '[none]',
+      authorization: req.headers.authorization || '[none]',
+      'x-forwarded-for': req.headers['x-forwarded-for'] || '[none]',
+      'x-user-id': req.headers['x-user-id'] || '[none]',
+      'x-user-role': req.headers['x-user-role'] || '[none]',
+    },
+    isAuthenticated: !!(req.session.userId && req.session.user),
+  });
+});
+
 // Check session
 router.get('/me', async (req, res) => {
   if (req.session.user) {
