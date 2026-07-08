@@ -8,15 +8,25 @@ const rolePermissions = {
 };
 
 function requireRole(allowedRoles) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const userRole = req.session.user?.role;
-    if (!userRole) {
-      return res.status(401).json({ error: 'Not authenticated', _debug: { userId: req.session.userId, hasUser: !!req.session.user, userKeys: req.session.user ? Object.keys(req.session.user) : null } });
+    if (userRole && allowedRoles.includes(userRole)) {
+      return next();
     }
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ error: 'Insufficient permissions', _debug: { role: userRole, userId: req.session.userId, allowed: allowedRoles } });
+    // Fallback: re-check the database role (session may be stale)
+    try {
+      const dbUser = await get('SELECT id, username, role, full_name, is_new_member_leader FROM users WHERE id = ?', [req.session.userId]);
+      if (dbUser && dbUser.role && allowedRoles.includes(dbUser.role)) {
+        req.session.user = { id: dbUser.id, username: dbUser.username, role: dbUser.role, full_name: dbUser.full_name, is_new_member_leader: dbUser.is_new_member_leader };
+        return next();
+      }
+    } catch (e) {
+      console.error('requireRole DB fallback failed:', e.message);
     }
-    next();
+    return res.status(403).json({
+      error: 'Insufficient permissions',
+      _debug: { role: userRole, userId: req.session.userId, allowed: allowedRoles }
+    });
   };
 }
 
@@ -34,6 +44,16 @@ async function isAuthenticated(req, res, next) {
       const dbUser = await get('SELECT id, username, role, full_name, is_new_member_leader FROM users WHERE id = ?', [req.session.userId]);
       if (dbUser) {
         req.session.user = { id: dbUser.id, username: dbUser.username, role: dbUser.role, full_name: dbUser.full_name, is_new_member_leader: dbUser.is_new_member_leader };
+      } else {
+        // User not found by ID — try username fallback
+        const username = req.session.user?.username;
+        if (username) {
+          const byUsername = await get('SELECT id, username, role, full_name, is_new_member_leader FROM users WHERE username = ?', [username]);
+          if (byUsername) {
+            req.session.userId = byUsername.id;
+            req.session.user = { id: byUsername.id, username: byUsername.username, role: byUsername.role, full_name: byUsername.full_name, is_new_member_leader: byUsername.is_new_member_leader };
+          }
+        }
       }
     } catch (e) {
       console.error('isAuthenticated: failed to refresh user from DB:', e.message);
@@ -48,7 +68,12 @@ async function isAuthenticated(req, res, next) {
       });
     }
 
-    return requireRole(['admin', 'leader', 'pastor', 'evangelist', 'accountant'])(req, res, next);
+    // If we still have a valid user after DB refresh, allow through.
+    // The per-route requireRole will check specific role permissions.
+    if (req.session.user?.role) {
+      return next();
+    }
+    return res.status(401).json({ error: 'Not authenticated' });
   }
   res.status(401).json({ error: 'Not authenticated' });
 }
