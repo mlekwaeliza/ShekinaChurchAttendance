@@ -199,10 +199,13 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
       };
       let savedRecord = null;
       if (record?.id) {
+        console.log('SAVE PAYLOAD (update):', JSON.stringify(payload));
         await financeAPI.updateRecord(record.id, payload);
         savedRecord = { ...record, ...payload };
       } else {
+        console.log('SAVE PAYLOAD (create):', JSON.stringify(payload));
         const res = await financeAPI.createRecord(payload);
+        console.log('SAVE RESPONSE:', JSON.stringify(res.data));
         savedRecord = res.data?.record || res.data;
         setRecord(savedRecord);
       }

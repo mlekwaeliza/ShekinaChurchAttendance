@@ -72,6 +72,7 @@ function calcFinance(morning, afternoon, tithes, evangelism = 0) {
 router.post('/finance/records', async (req, res) => {
   try {
     const { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries, expenses, notes } = req.body;
+    console.error('[finance POST] received body:', JSON.stringify(req.body));
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
 
     // ── Save individual tithe entries as Contributions ────────────────────
@@ -112,7 +113,7 @@ router.post('/finance/records', async (req, res) => {
       }
     }
 
-    res.status(201).json({ message: 'Record created', record: createdRecord });
+    res.status(201).json({ message: 'Record created', record: createdRecord, debug_received: { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries_count: tithe_entries?.length, expenses_count: expenses?.length, bodyKeys: req.body ? Object.keys(req.body) : null } });
   } catch (err) {
     if (err.message?.includes('UNIQUE')) return res.status(409).json({ error: 'A record for this date already exists' });
     console.error('Error creating finance record:', err);
