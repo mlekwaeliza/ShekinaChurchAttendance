@@ -131,7 +131,11 @@ router.post('/finance/records', async (req, res) => {
     if (Array.isArray(expenses)) {
       for (const exp of expenses) {
         if (exp.category && Number(exp.amount) > 0) {
-          await queries.createFinanceExpense({ record_id: createdRecord.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
+          try {
+            await queries.createFinanceExpense({ record_id: createdRecord.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
+          } catch (expErr) {
+            console.error('Failed to save expense row:', exp, expErr.message);
+          }
         }
       }
     }
@@ -215,7 +219,11 @@ router.put('/finance/records/:id', async (req, res) => {
       await run(`DELETE FROM finance_expenses WHERE record_id = ?`, [req.params.id]);
       for (const exp of expenses) {
         if (exp.category && Number(exp.amount) > 0) {
-          await queries.createFinanceExpense({ record_id: req.params.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
+          try {
+            await queries.createFinanceExpense({ record_id: req.params.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
+          } catch (expErr) {
+            console.error('Failed to save expense row (update):', exp, expErr.message);
+          }
         }
       }
     }

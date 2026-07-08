@@ -11,6 +11,8 @@ import {
 import { fdate, fdatetime } from '../../utils/date';
 
 const fmt = (v) => `TZS ${Number(v || 0).toLocaleString()}`;
+// Must match the finance_expenses.category CHECK constraint in the schema.
+const EXPENSE_CATEGORIES = ['Food', 'Water', 'Fruits', 'Sugar', 'Media', 'Visitors', 'Transport', 'Other'];
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 
 const calcFinance = (morning, afternoon, tithes, evangelism = 0) => {
@@ -737,9 +739,14 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                   <div className="space-y-2">
                     {expenses.map((exp, idx) => (
                       <div key={idx} className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700">
-                        <input type="text" value={exp.category} onChange={e => updateExpense(idx, 'category', e.target.value)}
-                          placeholder="Category" disabled={!isEditable}
-                          className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium" />
+                        <select value={exp.category} onChange={e => updateExpense(idx, 'category', e.target.value)}
+                          disabled={!isEditable}
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium">
+                          <option value="">Category…</option>
+                          {EXPENSE_CATEGORIES.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                         <input type="text" value={exp.description} onChange={e => updateExpense(idx, 'description', e.target.value)}
                           placeholder="Description" disabled={!isEditable}
                           className="flex-[2] px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs" />
