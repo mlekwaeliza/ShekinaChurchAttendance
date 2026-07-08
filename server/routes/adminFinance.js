@@ -191,7 +191,8 @@ router.put('/finance/records/:id', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
+    // Records can be edited at any stage (draft/submitted/approved/rejected);
+    // editing resets the record to draft so corrections re-enter the workflow.
     const { morning_offering, afternoon_offering, evangelism_offering, notes, tithe_entries, expenses } = req.body;
 
     // ── Save individual tithe entries as Contributions ────────────────────
@@ -230,7 +231,10 @@ router.put('/finance/records/:id', async (req, res) => {
 
     // ── Build update payload (recalculate tithes AFTER saving entries) ────
     const data = {};
-    if (existing.status === 'rejected') { data.status = 'draft'; data.rejection_reason = null; }
+    // Editing any record reverts it to draft so the corrected figures go
+    // back through submission/approval.
+    data.status = 'draft';
+    data.rejection_reason = null;
     if (morning_offering !== undefined) data.morning_offering = Number(morning_offering);
     if (afternoon_offering !== undefined) data.afternoon_offering = Number(afternoon_offering);
     if (evangelism_offering !== undefined) data.evangelism_offering = Number(evangelism_offering);

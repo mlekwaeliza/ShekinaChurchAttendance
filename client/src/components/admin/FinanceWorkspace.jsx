@@ -171,8 +171,11 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
   const calc = useMemo(() => calcFinance(morning, afternoon, totalTitheAmount, evangelismOffering), [morning, afternoon, totalTitheAmount, evangelismOffering]);
   const netBalance = calc.usable - totalExpenses;
 
+  // Records can be edited at any stage (draft, submitted, or approved) so
+  // errors can be corrected; saving a submitted/approved record resets it to
+  // draft and re-enters the approval workflow.
   const isReadonly = record?.status === 'approved' || record?.status === 'submitted';
-  const isEditable = !isReadonly || userRole === 'admin';
+  const isEditable = true;
 
   const workflowStep = useMemo(() => {
     if (record?.status === 'submitted') return 5;
@@ -232,10 +235,8 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
     }
     setSaving(true);
     try {
-      let currentRecord = record;
-      if (!currentRecord?.id) {
-        currentRecord = await handleSaveDraft();
-      }
+      // Always save first so any unsaved edits are persisted before submission.
+      const currentRecord = await handleSaveDraft();
       if (!currentRecord?.id) return;
       await financeAPI.submitRecord(currentRecord.id);
       alert('Daily record successfully submitted for approval!');
@@ -397,7 +398,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> New
               </button>
-              {!isReadonly && (
+              {isEditable && (
               <>
                 <button onClick={handleSaveDraft} disabled={saving}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50">
