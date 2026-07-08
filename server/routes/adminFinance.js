@@ -75,14 +75,25 @@ router.post('/finance/records', async (req, res) => {
     console.error('[finance POST] received body:', JSON.stringify(req.body));
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
 
+    // Create-or-update by date: re-saving the same day should update, not 500.
+    const existing = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+    if (existing && ['submitted', 'approved'].includes(existing.status)) {
+      return res.status(409).json({ error: 'Cannot modify a submitted or approved record' });
+    }
+
     // ── Save individual tithe entries as Contributions ────────────────────
     const titheType = await get(`SELECT id FROM contribution_types WHERE name = 'Tithes'`);
     if (Array.isArray(tithe_entries) && titheType) {
+      // Remove any finance-entered tithes for this date before re-inserting
+      await run(
+        `DELETE FROM contributions WHERE contribution_type_id = ? AND payment_date = ? AND reference_number LIKE 'finance-%'`,
+        [titheType.id, record_date]
+      );
       for (const entry of tithe_entries) {
         if (entry.member_id && Number(entry.amount) > 0) {
           await run(
-            `INSERT INTO contributions (member_id, contribution_type_id, amount, payment_date, payment_method, recorded_by) VALUES (?, ?, ?, ?, 'Cash', ?)`,
-            [entry.member_id, titheType.id, Number(entry.amount), record_date, req.session.userId]
+            `INSERT INTO contributions (member_id, contribution_type_id, amount, payment_date, payment_method, reference_number, recorded_by) VALUES (?, ?, ?, ?, 'Cash', ?, ?)`,
+            [entry.member_id, titheType.id, Number(entry.amount), record_date, `finance-${record_date}`, req.session.userId]
           );
         }
       }
@@ -91,20 +102,32 @@ router.post('/finance/records', async (req, res) => {
     const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [record_date]);
     const auto_tithes = tithesResult?.total || 0;
     const c = calcFinance(morning_offering, afternoon_offering, auto_tithes, evangelism_offering);
-    await queries.createFinanceRecord({
+    const recordData = {
       record_date, morning_offering: Number(morning_offering) || 0, afternoon_offering: Number(afternoon_offering) || 0,
       evangelism_offering: Number(evangelism_offering) || 0,
       total_tithes: auto_tithes, total_income: c.total, mission_fund: c.mission,
       remaining_after_mission: c.remaining, bishop_fund: c.bishop,
       usable_church_funds: c.usable, notes, created_by: req.session.userId
-    });
-    const createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+    };
+
+    let createdRecord;
+    if (existing) {
+      if (existing.status === 'rejected') recordData.status = 'draft';
+      await queries.updateFinanceRecord(existing.id, recordData);
+      createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+    } else {
+      await queries.createFinanceRecord(recordData);
+      createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+    }
     if (!createdRecord) {
-      console.error('Created record not found after INSERT for date:', record_date);
+      console.error('Created record not found after write for date:', record_date);
       return res.status(500).json({ error: 'Failed to create record - database error' });
     }
 
-    // ── Save expenses ─────────────────────────────────────────────────────
+    // ── Save expenses (replace existing on update) ─────────────────────────
+    if (existing) {
+      await run(`DELETE FROM finance_expenses WHERE record_id = ?`, [existing.id]);
+    }
     if (Array.isArray(expenses)) {
       for (const exp of expenses) {
         if (exp.category && Number(exp.amount) > 0) {
@@ -113,11 +136,12 @@ router.post('/finance/records', async (req, res) => {
       }
     }
 
-    res.status(201).json({ message: 'Record created', record: createdRecord, debug_received: { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries_count: tithe_entries?.length, expenses_count: expenses?.length, bodyKeys: req.body ? Object.keys(req.body) : null } });
+    res.status(existing ? 200 : 201).json({ message: existing ? 'Record updated' : 'Record created', record: createdRecord, debug_received: { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries_count: tithe_entries?.length, expenses_count: expenses?.length, bodyKeys: req.body ? Object.keys(req.body) : null } });
   } catch (err) {
-    if (err.message?.includes('UNIQUE')) return res.status(409).json({ error: 'A record for this date already exists' });
+    const isUnique = /unique|duplicate key/i.test(err.message || '');
+    if (isUnique) return res.status(409).json({ error: 'A record for this date already exists' });
     console.error('Error creating finance record:', err);
-    res.status(500).json({ error: 'Failed to create record' });
+    res.status(500).json({ error: 'Failed to create record', details: err.message });
   }
 });
 
