@@ -125,7 +125,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   };
 
   if (view === 'workspace') {
-    return <FinanceWorkspace recordId={selectedId} onBack={backToList} showMessage={showMessage} userRole={userRole} />;
+    return <FinanceWorkspace recordId={selectedId} onBack={backToList} onNewRecord={createNew} showMessage={showMessage} userRole={userRole} />;
   }
 
   return (

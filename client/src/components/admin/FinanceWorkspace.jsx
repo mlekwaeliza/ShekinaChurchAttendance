@@ -66,7 +66,7 @@ const MiniStat = ({ label, value, color = 'slate' }) => (
   </div>
 );
 
-const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
+const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole }) => {
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -280,6 +280,29 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
     } catch (e) { showMessage?.('Failed to recalculate'); }
   };
 
+  // Reset the workspace to a blank "new record" state so the user can keep
+  // adding more daily records in the same session without leaving the view.
+  const startNewRecord = () => {
+    setRecord(null);
+    setMorning('');
+    setAfternoon('');
+    setEvangelismOffering('');
+    setReceipts({ bishop: null, evangelism: null, remaining: null });
+    setTitheEntries([]);
+    setTitheSearch('');
+    setExpenses([]);
+    setNotes('');
+    setHistory([]);
+    setRejectOpen(false);
+    setRejectReason('');
+    setLastSaved(null);
+    setNewRecordDate(today());
+    setActiveTab('overview');
+    // Clear the parent's selected id so we're in "new" mode and the load
+    // effect won't re-fetch (and overwrite) the reset state.
+    onNewRecord?.();
+  };
+
   const handleTabClick = (key) => {
     if (key === 'expenses' && !hasTithes) {
       showMessage?.('Please add at least one member tithe before recording expenses');
@@ -367,8 +390,12 @@ const FinanceWorkspace = ({ recordId, onBack, showMessage, userRole }) => {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {!isReadonly && (
+            <div className="flex items-center gap-2">
+              <button onClick={startNewRecord}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors">
+                <Plus className="w-3.5 h-3.5" /> New
+              </button>
+              {!isReadonly && (
               <>
                 <button onClick={handleSaveDraft} disabled={saving}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50">
