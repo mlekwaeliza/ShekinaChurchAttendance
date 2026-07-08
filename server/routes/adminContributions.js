@@ -121,6 +121,36 @@ router.get('/contributions', async (req, res) => {
   }
 });
 
+// ── Reports (defined BEFORE /:id so static segments win over the param) ──
+router.get('/contributions/summary', async (req, res) => {
+  try {
+    const { date_from, date_to, contribution_type_id, member_id } = req.query;
+    const summary = await queries.getContributionSummary({
+      date_from, date_to,
+      contribution_type_id: parseIds(contribution_type_id),
+      member_id: parseId(member_id)
+    });
+    const grandTotal = summary.reduce((sum, s) => sum + s.total, 0);
+    const grandCount = summary.reduce((sum, s) => sum + s.count, 0);
+    res.json({ rows: summary, grandTotal, grandCount });
+  } catch (err) {
+    console.error('Error fetching contribution summary:', err);
+    res.status(500).json({ error: 'Failed to fetch contribution summary' });
+  }
+});
+
+router.get('/contributions/detail', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) return res.status(400).json({ error: 'from and to query params required' });
+    const rows = await queries.getContributionsByDateRange(from, to);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error fetching contribution detail:', err);
+    res.status(500).json({ error: 'Failed to fetch contribution detail' });
+  }
+});
+
 router.get('/contributions/:id', async (req, res) => {
   try {
     const id = parseId(req.params.id);
@@ -181,37 +211,6 @@ router.delete('/contributions/:id', async (req, res) => {
   } catch (err) {
     console.error('Error deleting contribution:', err);
     res.status(500).json({ error: 'Failed to delete contribution' });
-  }
-});
-
-// ── Reports ────────────────────────────────────────────────────────────────
-
-router.get('/contributions/summary', async (req, res) => {
-  try {
-    const { date_from, date_to, contribution_type_id, member_id } = req.query;
-    const summary = await queries.getContributionSummary({
-      date_from, date_to,
-      contribution_type_id: parseIds(contribution_type_id),
-      member_id: parseId(member_id)
-    });
-    const grandTotal = summary.reduce((sum, s) => sum + s.total, 0);
-    const grandCount = summary.reduce((sum, s) => sum + s.count, 0);
-    res.json({ rows: summary, grandTotal, grandCount });
-  } catch (err) {
-    console.error('Error fetching contribution summary:', err);
-    res.status(500).json({ error: 'Failed to fetch contribution summary' });
-  }
-});
-
-router.get('/contributions/detail', async (req, res) => {
-  try {
-    const { from, to } = req.query;
-    if (!from || !to) return res.status(400).json({ error: 'from and to query params required' });
-    const rows = await queries.getContributionsByDateRange(from, to);
-    res.json(rows);
-  } catch (err) {
-    console.error('Error fetching contribution detail:', err);
-    res.status(500).json({ error: 'Failed to fetch contribution detail' });
   }
 });
 

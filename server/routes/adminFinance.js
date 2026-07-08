@@ -75,11 +75,9 @@ router.post('/finance/records', async (req, res) => {
     console.error('[finance POST] received body:', JSON.stringify(req.body));
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
 
-    // Create-or-update by date: re-saving the same day should update, not 500.
+    // Create-or-update by date: re-saving the same day updates the existing
+    // record (resetting it to draft so it can be corrected and re-submitted).
     const existing = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
-    if (existing && ['submitted', 'approved'].includes(existing.status)) {
-      return res.status(409).json({ error: 'Cannot modify a submitted or approved record' });
-    }
 
     // ── Save individual tithe entries as Contributions ────────────────────
     const titheType = await get(`SELECT id FROM contribution_types WHERE name = 'Tithes'`);
@@ -112,7 +110,9 @@ router.post('/finance/records', async (req, res) => {
 
     let createdRecord;
     if (existing) {
-      if (existing.status === 'rejected') recordData.status = 'draft';
+      // Re-saving a submitted/approved/rejected record reverts it to draft
+      // so the corrected figures can be re-submitted and re-approved.
+      recordData.status = 'draft';
       await queries.updateFinanceRecord(existing.id, recordData);
       createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
     } else {
