@@ -78,6 +78,9 @@ router.post('/finance/records', async (req, res) => {
     // Create-or-update by date: re-saving the same day updates the existing
     // record (resetting it to draft so it can be corrected and re-submitted).
     const existing = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+    if (existing && existing.status === 'approved') {
+      return res.status(409).json({ error: 'Approved records must be sent back before editing' });
+    }
 
     // ── Save individual tithe entries as Contributions ────────────────────
     const titheType = await get(`SELECT id FROM contribution_types WHERE name = 'Tithes'`);
@@ -191,6 +194,8 @@ router.put('/finance/records/:id', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
+    // Approved records must be sent back by an admin before they can be edited.
+    if (existing.status === 'approved') return res.status(409).json({ error: 'Approved records must be sent back before editing' });
     // Records can be edited at any stage (draft/submitted/approved/rejected);
     // editing resets the record to draft so corrections re-enter the workflow.
     const { morning_offering, afternoon_offering, evangelism_offering, notes, tithe_entries, expenses } = req.body;
@@ -385,7 +390,7 @@ router.put('/finance/records/:id/send-back', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (!['submitted', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only submitted or rejected records can be sent back' });
+    if (!['submitted', 'rejected', 'approved'].includes(existing.status)) return res.status(400).json({ error: 'Only submitted, rejected, or approved records can be sent back' });
     await run(`UPDATE finance_daily_records SET status='draft', rejection_reason=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?`, [req.params.id]);
     res.json({ message: 'Record sent back for correction' });
   } catch (err) {

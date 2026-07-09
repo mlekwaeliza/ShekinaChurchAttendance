@@ -171,11 +171,11 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
   const calc = useMemo(() => calcFinance(morning, afternoon, totalTitheAmount, evangelismOffering), [morning, afternoon, totalTitheAmount, evangelismOffering]);
   const netBalance = calc.usable - totalExpenses;
 
-  // Records can be edited at any stage (draft, submitted, or approved) so
-  // errors can be corrected; saving a submitted/approved record resets it to
-  // draft and re-enters the approval workflow.
-  const isReadonly = record?.status === 'approved' || record?.status === 'submitted';
-  const isEditable = true;
+  // Draft and submitted records are editable directly (saving resets them to
+  // draft). Approved records are read-only and must be explicitly sent back by
+  // an admin before they can be edited again.
+  const isReadonly = record?.status === 'approved';
+  const isEditable = !isReadonly;
 
   const workflowStep = useMemo(() => {
     if (record?.status === 'submitted') return 5;
@@ -261,6 +261,16 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
       showMessage?.('Record approved');
       loadRecord();
     } catch (e) { showMessage?.(e.response?.data?.error || 'Failed to approve'); }
+  };
+
+  const handleSendBack = async () => {
+    if (!record?.id) return;
+    if (!window.confirm('Send this record back for correction? It will return to draft and require re-submission and re-approval.')) return;
+    try {
+      await financeAPI.sendBackRecord(record.id);
+      showMessage?.('Record sent back for correction');
+      loadRecord();
+    } catch (e) { showMessage?.(e.data?.error || e.response?.data?.error || 'Failed to send back'); }
   };
 
   const handleReject = async () => {
@@ -398,7 +408,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> New
               </button>
-              {isEditable && (
+              {(record?.status === 'draft' || record?.status === 'submitted') && (
               <>
                 <button onClick={handleSaveDraft} disabled={saving}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50">
@@ -413,7 +423,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 )}
               </>
             )}
-            {isReadonly && record?.status === 'submitted' && userRole === 'admin' && (
+            {record?.status === 'submitted' && userRole === 'admin' && (
               <>
                 <button onClick={handleApprove} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 transition-colors">
                   <CheckCheck className="w-3.5 h-3.5" /> Approve
@@ -422,6 +432,12 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                   <Ban className="w-3.5 h-3.5" /> Reject
                 </button>
               </>
+            )}
+            {record?.status === 'approved' && userRole === 'admin' && (
+              <button onClick={handleSendBack}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-600 transition-colors">
+                <ArrowUpCircle className="w-3.5 h-3.5" /> Send back
+              </button>
             )}
             <button onClick={handleRecalculate} className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors" title="Recalculate tithes">
               <RefreshCw className="w-4 h-4" />
