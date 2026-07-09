@@ -4970,7 +4970,9 @@ const queries = {
     if (filters.date_to) { WHERE.push('f.record_date<=?'); params.push(filters.date_to); }
     const where = WHERE.length ? `WHERE ${WHERE.join(' AND ')}` : '';
     return all(`
-      SELECT f.*, u.full_name as created_by_name, sb.full_name as submitted_by_name, ap.full_name as approved_by_name
+      SELECT f.*,
+        (SELECT COALESCE(SUM(amount), 0) FROM finance_expenses WHERE record_id = f.id) as total_expenses,
+        u.full_name as created_by_name, sb.full_name as submitted_by_name, ap.full_name as approved_by_name
       FROM finance_daily_records f
       LEFT JOIN users u ON u.id = f.created_by
       LEFT JOIN users sb ON sb.id = f.submitted_by
@@ -4981,7 +4983,9 @@ const queries = {
   },
 
   getFinanceRecordById: (id) => get(`
-    SELECT f.*, u.full_name as created_by_name, sb.full_name as submitted_by_name, ap.full_name as approved_by_name
+    SELECT f.*,
+      (SELECT COALESCE(SUM(amount), 0) FROM finance_expenses WHERE record_id = f.id) as total_expenses,
+      u.full_name as created_by_name, sb.full_name as submitted_by_name, ap.full_name as approved_by_name
     FROM finance_daily_records f
     LEFT JOIN users u ON u.id = f.created_by
     LEFT JOIN users sb ON sb.id = f.submitted_by
