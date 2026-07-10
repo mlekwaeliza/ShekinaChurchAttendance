@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Trophy, Star, Crown, Award, TrendingUp, TrendingDown, Users,
   Church, Heart, Flame, BookOpen, Target, Settings2, ChevronRight,
@@ -668,7 +669,7 @@ const RewardsView = () => {
       )}
 
       {/* ── Settings Modal ── */}
-      {showSettings && localWeights && (
+      {showSettings && localWeights && createPortal((
         <div style={s.modal} onClick={e => { if (e.target === e.currentTarget) setShowSettings(false); }}>
           <div style={s.modalBox}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -732,10 +733,10 @@ const RewardsView = () => {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       {/* ── Profile Modal ── */}
-      {selectedProfile && (() => {
+      {selectedProfile && createPortal((() => {
         const profile = selectedProfile;
         const isAggregate = profile.churchAttendance == null && profile.submissionRate == null;
         const isLeader = profile.submissionRate != null;
@@ -851,7 +852,7 @@ const RewardsView = () => {
             </div>
           </div>
         );
-      })()}
+      })(), document.body)}
     </div>
   );
 };
