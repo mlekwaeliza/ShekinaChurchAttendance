@@ -17,6 +17,34 @@ const getRankMedal = (rank) => {
   return { icon: String(rank), color: '#64748B', bg: 'rgba(100,116,139,0.08)' };
 };
 
+// Descriptors for the score-breakdown modal. `weightKey` maps to the
+// matching entry in data.weights.{member,leader}. `note` explains in plain
+// language what each metric is and where it comes from (so e.g. Ministry and
+// Volunteer are no longer mysterious).
+const SCORE_METRICS = [
+  { key: 'churchAttendance', label: '⛪ Church Attendance', color: '#6366F1', weightKey: 'perf_member_church_attendance', note: 'Share of services attended (present ÷ total) this period.' },
+  { key: 'cellAttendance', label: '🏠 Cell Attendance', color: '#A78BFA', weightKey: 'perf_member_cell_attendance', note: 'Home-cell meeting attendance. No separate tracking exists yet, so it shows 0.' },
+  { key: 'ministryParticipation', label: '🛡 Ministry', color: '#F472B6', weightKey: 'perf_member_ministry', note: '100 if the member is assigned to a department, else 0. Based on department membership.' },
+  { key: 'evangelism', label: '🔥 Evangelism', color: '#F97316', weightKey: 'perf_member_evangelism', note: 'From outreach logs + visitor intakes this period (25 points each).' },
+  { key: 'contributions', label: '⭐ Contributions', color: '#FBBF24', weightKey: 'perf_member_contributions', note: '100 if any contribution was recorded this period, else 0.' },
+  { key: 'volunteerService', label: '❤️ Volunteer', color: '#34D399', weightKey: 'perf_member_volunteer', note: '100 if assigned to a department, else 0. Currently the SAME signal as Ministry (both reflect department membership).' },
+  { key: 'eventParticipation', label: '📅 Event', color: '#38BDF8', weightKey: 'perf_member_events', note: 'Event/study participation. Not tracked separately, so 0.' },
+  { key: 'submissionRate', label: '📋 Submission Rate', color: '#6366F1', weightKey: 'perf_leader_submission_rate', note: 'Share of service days the leader submitted attendance.' },
+  { key: 'memberAttendance', label: '👥 Member Attendance', color: '#818CF8', weightKey: 'perf_leader_member_attendance', note: 'Average church attendance of the leader’s members.' },
+  { key: 'retentionRate', label: '🔒 Retention', color: '#94A3B8', weightKey: 'perf_leader_retention', note: 'Member retention. Not tracked yet, so 0.' },
+  { key: 'cellGrowth', label: '📈 Cell Growth', color: '#F97316', weightKey: 'perf_leader_cell_growth', note: 'Home-cell growth. Not tracked yet, so 0.' },
+  { key: 'followupCompletion', label: '📞 Follow-up', color: '#34D399', weightKey: 'perf_leader_followups', note: 'Share of the leader’s assigned absent-follow-ups marked contacted.' },
+  { key: 'reportSubmission', label: '📝 Reports', color: '#64748B', weightKey: 'perf_leader_reports', note: 'Report submission. Not tracked yet, so 0.' },
+];
+
+const AGG_METRICS = [
+  { key: 'overallScore', label: '🏆 Overall Score', color: '#818CF8', note: 'Average of the members’ overall scores within this group.' },
+  { key: 'attendance', label: '⛪ Attendance', color: '#34D399', note: 'Average church attendance of members in this group.' },
+  { key: 'visitors', label: '🙌 Visitors', color: '#F97316', note: 'Members in this group with high evangelism this period.' },
+  { key: 'growth', label: '📈 Growth', color: '#A78BFA', note: 'Group growth. Not tracked yet, so 0.' },
+  { key: 'membersCount', label: '👥 Members', color: '#94A3B8', note: 'Number of members in this group.' },
+];
+
 const ScoreBar = ({ value, max = 100, color = '#6366F1' }) => (
   <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', width: '100%' }}>
     <div style={{
@@ -484,7 +512,8 @@ const RewardsView = () => {
             cells.map((c, i) => {
               const enhanced = { ...c, rankDelta: ((c.id * 2) % 5) - 2, badges: [] };
               return (
-                <div key={c.id} style={{
+                <div key={c.id} onClick={() => setSelectedProfile(c)} style={{
+                  cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
                   background: i < 3 ? `linear-gradient(135deg, ${getRankMedal(i + 1).bg}, transparent)` : 'rgba(15,23,42,0.4)',
                   border: `1px solid ${i < 3 ? `${getRankMedal(i + 1).color}20` : 'rgba(71,85,105,0.25)'}`,
@@ -517,7 +546,8 @@ const RewardsView = () => {
             <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No section data for this period.</p>
           ) : (
             sections.map((sec, i) => (
-              <div key={sec.id} style={{
+              <div key={sec.id} onClick={() => setSelectedProfile(sec)} style={{
+                cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
                 background: i < 3 ? `linear-gradient(135deg, ${getRankMedal(i + 1).bg}, transparent)` : 'rgba(15,23,42,0.4)',
                 border: `1px solid ${i < 3 ? `${getRankMedal(i + 1).color}20` : 'rgba(71,85,105,0.25)'}`,
@@ -548,7 +578,8 @@ const RewardsView = () => {
             <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No ministry data for this period.</p>
           ) : (
             departments.map((d, i) => (
-              <div key={d.id} style={{
+              <div key={d.id} onClick={() => setSelectedProfile(d)} style={{
+                cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
                 background: i < 3 ? `linear-gradient(135deg, ${getRankMedal(i + 1).bg}, transparent)` : 'rgba(15,23,42,0.4)',
                 border: `1px solid ${i < 3 ? `${getRankMedal(i + 1).color}20` : 'rgba(71,85,105,0.25)'}`,
@@ -707,57 +738,78 @@ const RewardsView = () => {
       )}
 
       {/* ── Profile Modal ── */}
-      {selectedProfile && (
-        <div style={s.modal} onClick={e => { if (e.target === e.currentTarget) setSelectedProfile(null); }}>
-          <div style={s.modalBox}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#F1F5F9' }}>
-                  {selectedProfile.full_name || selectedProfile.leader_name}
-                </h3>
-                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748B' }}>
-                  {selectedProfile.section_name} · Overall Score: {selectedProfile.overallScore}%
-                </p>
-              </div>
-              <button onClick={() => setSelectedProfile(null)} style={{ background: 'rgba(71,85,105,0.3)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                <X size={16} />
-              </button>
-            </div>
+      {selectedProfile && (() => {
+        const profile = selectedProfile;
+        const isAggregate = profile.churchAttendance == null && profile.submissionRate == null;
+        const metricDefs = isAggregate ? AGG_METRICS : SCORE_METRICS;
+        const weights = isAggregate ? null : (profile.submissionRate != null ? data.weights?.leader : data.weights?.member);
+        const rows = metricDefs
+          .filter(m => profile[m.key] != null)
+          .map(m => {
+            const value = profile[m.key];
+            const weight = weights ? (weights[m.weightKey] ?? 0) : null;
+            const contribution = weight != null ? Math.round((value * weight) / 100) : null;
+            return { ...m, value, weight, contribution };
+          });
+        const profileName = profile.full_name || profile.leader_name || profile.name || '—';
+        const profileSub = profile.section_name
+          || (profile.membersCount != null ? `${profile.membersCount} members` : '')
+          || '';
 
-            {/* Badges */}
-            {selectedProfile.badges?.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                {selectedProfile.badges.map((b, i) => <Badge key={i} badge={b} />)}
-              </div>
-            )}
-
-            {/* Score breakdown */}
-            <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 12, padding: '14px 16px' }}>
-              <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.07em' }}>Score Breakdown</p>
-              {[
-                selectedProfile.churchAttendance != null && { label: '⛪ Church Attendance', value: selectedProfile.churchAttendance, color: '#6366F1' },
-                selectedProfile.cellAttendance != null && { label: '🏠 Cell Attendance', value: selectedProfile.cellAttendance, color: '#A78BFA' },
-                selectedProfile.evangelism != null && { label: '🔥 Evangelism', value: selectedProfile.evangelism, color: '#F97316' },
-                selectedProfile.contributions != null && { label: '⭐ Contributions', value: selectedProfile.contributions, color: '#FBBF24' },
-                selectedProfile.ministryParticipation != null && { label: '🛡 Ministry', value: selectedProfile.ministryParticipation, color: '#F472B6' },
-                selectedProfile.volunteerService != null && { label: '❤️ Volunteer', value: selectedProfile.volunteerService, color: '#34D399' },
-                selectedProfile.submissionRate != null && { label: '📋 Submission Rate', value: selectedProfile.submissionRate, color: '#6366F1' },
-                selectedProfile.memberAttendance != null && { label: '👥 Member Att.', value: selectedProfile.memberAttendance, color: '#818CF8' },
-                selectedProfile.followupCompletion != null && { label: '📞 Follow-up', value: selectedProfile.followupCompletion, color: '#34D399' },
-                selectedProfile.cellGrowth != null && { label: '📈 Cell Growth', value: selectedProfile.cellGrowth, color: '#F97316' },
-              ].filter(Boolean).map((metric, i) => (
-                <div key={i} style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: '#CBD5E1' }}>{metric.label}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: metric.color }}>{metric.value}%</span>
-                  </div>
-                  <ScoreBar value={metric.value} color={metric.color} />
+        return (
+          <div style={s.modal} onClick={e => { if (e.target === e.currentTarget) setSelectedProfile(null); }}>
+            <div style={s.modalBox}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#F1F5F9' }}>
+                    {profileName}
+                  </h3>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748B' }}>
+                    {profileSub}{profile.overallScore != null ? ` · Overall Score: ${profile.overallScore}%` : ''}
+                  </p>
                 </div>
-              ))}
+                <button onClick={() => setSelectedProfile(null)} style={{ background: 'rgba(71,85,105,0.3)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Badges */}
+              {profile.badges?.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                  {profile.badges.map((b, i) => <Badge key={i} badge={b} />)}
+                </div>
+              )}
+
+              {/* Score breakdown */}
+              <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 12, padding: '14px 16px' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.07em' }}>
+                  Score Breakdown {weights ? '(value × weight = contribution)' : '(group metrics)'}
+                </p>
+                {rows.map((r, i) => (
+                  <div key={i} style={{ marginBottom: 14 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: '#CBD5E1' }}>{r.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: r.color }}>
+                        {r.value}{r.key === 'membersCount' || r.key === 'visitors' ? '' : '%'}
+                        {r.weight != null && <span style={{ fontWeight: 400, color: '#64748B', marginLeft: 6 }}>× {r.weight}%</span>}
+                        {r.contribution != null && <span style={{ fontWeight: 700, color: '#94A3B8', marginLeft: 6 }}>+{r.contribution}</span>}
+                      </span>
+                    </div>
+                    <ScoreBar value={r.key === 'membersCount' || r.key === 'visitors' ? 100 : r.value} color={r.color} />
+                    {r.note && <p style={{ margin: '5px 0 0', fontSize: 11, color: '#64748B', lineHeight: 1.4 }}>{r.note}</p>}
+                  </div>
+                ))}
+                {weights && (
+                  <div style={{ marginTop: 8, paddingTop: 10, borderTop: '1px solid rgba(99,102,241,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#94A3B8' }}>Sum of contributions → Overall</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: '#818CF8' }}>{profile.overallScore}%</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
