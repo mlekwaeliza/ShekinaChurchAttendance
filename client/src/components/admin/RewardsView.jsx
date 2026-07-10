@@ -736,8 +736,9 @@ const RewardsView = () => {
       {selectedProfile && (() => {
         const profile = selectedProfile;
         const isAggregate = profile.churchAttendance == null && profile.submissionRate == null;
+        const isLeader = profile.submissionRate != null;
         const metricDefs = isAggregate ? AGG_METRICS : SCORE_METRICS;
-        const weights = isAggregate ? null : (profile.submissionRate != null ? data.weights?.leader : data.weights?.member);
+        const weights = isAggregate ? null : (isLeader ? data.weights?.leader : data.weights?.member);
         const rows = metricDefs
           .filter(m => profile[m.key] != null)
           .map(m => {
@@ -747,20 +748,32 @@ const RewardsView = () => {
             return { ...m, value, weight, contribution };
           });
         const profileName = profile.full_name || profile.leader_name || profile.name || '—';
-        const profileSub = profile.section_name
-          || (profile.membersCount != null ? `${profile.membersCount} members` : '')
-          || '';
+
+        const infoFields = [];
+        if (!isAggregate && !isLeader) {
+          if (profile.membership_id) infoFields.push({ label: 'Membership ID', value: profile.membership_id });
+          if (profile.section_name) infoFields.push({ label: 'Section', value: profile.section_name });
+          if (profile.leader_name) infoFields.push({ label: 'Leader', value: profile.leader_name });
+          if (profile.gender) infoFields.push({ label: 'Gender', value: profile.gender });
+          if (profile.age_group) infoFields.push({ label: 'Age Group', value: profile.age_group });
+        } else if (isLeader) {
+          if (profile.section_name) infoFields.push({ label: 'Section', value: profile.section_name });
+          if (profile.memberCount != null) infoFields.push({ label: 'Members', value: profile.memberCount });
+        } else {
+          if (profile.name) infoFields.push({ label: 'Name', value: profile.name });
+          if (profile.membersCount != null) infoFields.push({ label: 'Members', value: profile.membersCount });
+        }
 
         return (
           <div style={s.modal} onClick={e => { if (e.target === e.currentTarget) setSelectedProfile(null); }}>
             <div style={s.modalBox}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <div>
                   <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#F1F5F9' }}>
                     {profileName}
                   </h3>
                   <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748B' }}>
-                    {profileSub}{profile.overallScore != null ? ` · Overall Score: ${profile.overallScore}%` : ''}
+                    {profile.overallScore != null ? `Overall Score: ${profile.overallScore}%` : ''}
                   </p>
                 </div>
                 <button onClick={() => setSelectedProfile(null)} style={{ background: 'rgba(71,85,105,0.3)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
@@ -768,10 +781,42 @@ const RewardsView = () => {
                 </button>
               </div>
 
+              {/* Info fields */}
+              {infoFields.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8, marginBottom: 16 }}>
+                  {infoFields.map((f, i) => (
+                    <div key={i} style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: 10, padding: '10px 12px' }}>
+                      <p style={{ margin: 0, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748B' }}>{f.label}</p>
+                      <p style={{ margin: '3px 0 0', fontSize: 14, fontWeight: 700, color: '#F1F5F9' }}>{f.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Badges */}
               {profile.badges?.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
                   {profile.badges.map((b, i) => <Badge key={i} badge={b} />)}
+                </div>
+              )}
+
+              {/* Quick stat cards for individual profiles */}
+              {!isAggregate && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8, marginBottom: 16 }}>
+                  {[
+                    { label: 'Attendance', value: profile.churchAttendance, color: '#6366F1' },
+                    { label: 'Cell', value: profile.cellAttendance, color: '#A78BFA' },
+                    { label: 'Evangelism', value: profile.evangelism, color: '#F97316' },
+                    { label: 'Contributions', value: profile.contributions, color: '#FBBF24' },
+                    { label: 'Events', value: profile.eventParticipation, color: '#38BDF8' },
+                    isLeader ? { label: 'Submission', value: profile.submissionRate, color: '#6366F1' } : null,
+                    isLeader ? { label: 'Follow-ups', value: profile.followupCompletion, color: '#34D399' } : null,
+                  ].filter(Boolean).map((stat, i) => (
+                    <div key={i} style={{ background: `${stat.color}10`, border: `1px solid ${stat.color}20`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                      <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: stat.color, lineHeight: 1 }}>{stat.value != null ? stat.value : '—'}</p>
+                      <p style={{ margin: '3px 0 0', fontSize: 10, fontWeight: 600, color: '#64748B' }}>{stat.label}</p>
+                    </div>
+                  ))}
                 </div>
               )}
 
