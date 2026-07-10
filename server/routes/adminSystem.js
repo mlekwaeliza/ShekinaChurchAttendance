@@ -603,32 +603,36 @@ router.get('/performance/dashboard', async (req, res) => {
     ]);
 
     const totalServiceDaysRow = await get("SELECT COUNT(DISTINCT date) as count FROM submission_log WHERE date >= ? AND date <= ?", [startDate, endDate]);
-    const totalServiceDays = totalServiceDaysRow?.count || 4;
+    const totalServiceDays = totalServiceDaysRow?.count || 0;
 
-    // Calculate members
+    // Calculate members. Every metric is derived from real records only.
+    // When a member has no supporting data for a metric the value is 0 —
+    // never an invented positive number.
     const calculatedMembers = members.map(m => {
       const mAtt = attendance.filter(a => a.member_id === m.id);
       const totalServices = mAtt.length;
       const presentServices = mAtt.filter(a => a.status === 'present').length;
-      const churchAttendance = totalServices > 0 
-        ? (presentServices / totalServices) * 100 
-        : ((m.id * 7) % 21 + 80);
+      const churchAttendance = totalServices > 0
+        ? (presentServices / totalServices) * 100
+        : 0;
 
-      const inCell = cellMembers.some(cm => cm.church_member_id === m.id);
-      const cellAttendance = inCell ? ((m.id * 9) % 20 + 80) : 0;
+      // No separate cell-attendance dataset is tracked, so report 0 rather
+      // than fabricate a figure.
+      const cellAttendance = 0;
 
       const inDept = deptMembers.some(dm => dm.member_id === m.id);
       const ministryParticipation = inDept ? 100 : 0;
 
       const memberOutreaches = outreachLogs.filter(o => o.member_id === m.id).length;
       const memberVisitors = visitorIntake.filter(v => v.created_by === m.id).length;
-      const evangelism = Math.min(100, (memberOutreaches + memberVisitors) * 25 + ((m.id * 13) % 40 + 40));
+      const evangelism = Math.min(100, (memberOutreaches + memberVisitors) * 25);
 
       const memberContribs = contributions.filter(c => c.member_id === m.id).length;
-      const contributionsScore = memberContribs > 0 ? 100 : ((m.id * 17) % 2 * 100);
+      const contributionsScore = memberContribs > 0 ? 100 : 0;
 
-      const volunteerService = inDept ? 100 : ((m.id * 5) % 2 === 0 ? 100 : 0);
-      const eventParticipation = ((m.id * 19) % 20 + 80);
+      const volunteerService = inDept ? 100 : 0;
+      // Event/study participation is not tracked as a separate record.
+      const eventParticipation = 0;
 
       const overallScore = Math.round(
         churchAttendance * (memberWeights.perf_member_church_attendance / 100) +
@@ -640,13 +644,14 @@ router.get('/performance/dashboard', async (req, res) => {
         eventParticipation * (memberWeights.perf_member_events / 100)
       );
 
-      const rankDelta = ((m.id * 3) % 7) - 3;
+      // No historical ranking is stored, so movement cannot be computed.
+      const rankDelta = 0;
 
       const badges = [];
       if (churchAttendance >= 95) badges.push({ name: 'Gold Attendance', desc: '95%+ Attendance', icon: '🥇' });
       else if (churchAttendance >= 90) badges.push({ name: 'Silver Attendance', desc: '90%+ Attendance', icon: '🥈' });
       else if (churchAttendance >= 80) badges.push({ name: 'Bronze Attendance', desc: '80%+ Attendance', icon: '🥉' });
-      
+
       if (evangelism >= 85) badges.push({ name: 'Soul Winner', desc: 'Invited & converted visitors', icon: '🔥' });
       if (volunteerService === 100 && churchAttendance >= 90) badges.push({ name: 'Faithful Servant', desc: 'Active volunteer & attendee', icon: '❤️' });
       if (eventParticipation >= 90) badges.push({ name: 'Bible Student', desc: 'Consistent study & events', icon: '📖' });
@@ -667,30 +672,35 @@ router.get('/performance/dashboard', async (req, res) => {
       };
     });
 
-    // Calculate leaders
+    // Calculate leaders. As with members, every metric comes from real
+    // records; metrics with no supporting data are 0, not invented figures.
     const calculatedLeaders = leaders.map(l => {
       const lSub = submissionLogs.filter(s => s.leader_id === l.id).length;
-      const submissionRate = totalServiceDays > 0 ? (lSub / totalServiceDays) * 100 : ((l.id * 11) % 15 + 85);
+      const submissionRate = totalServiceDays > 0
+        ? Math.min(100, (lSub / totalServiceDays) * 100)
+        : 0;
 
       const leaderMembers = calculatedMembers.filter(m => m.leader_id === l.id);
-      const memberAttendance = leaderMembers.length > 0 
+      const memberAttendance = leaderMembers.length > 0
         ? (leaderMembers.reduce((sum, m) => sum + m.churchAttendance, 0) / leaderMembers.length)
-        : ((l.id * 13) % 10 + 85);
+        : 0;
 
-      const retentionRate = ((l.id * 7) % 10 + 90);
-      const cellGrowth = ((l.id * 17) % 30 + 70);
+      // Retention and cell growth are not derived from tracked records.
+      const retentionRate = 0;
+      const cellGrowth = 0;
 
       const leaderOutreaches = outreachLogs.filter(o => o.leader_id === l.id).length;
-      const evangelism = Math.min(100, leaderOutreaches * 15 + ((l.id * 3) % 25 + 75));
+      const evangelism = Math.min(100, leaderOutreaches * 15);
 
       const leaderFollowups = absentFollowups.filter(f => f.leader_id === l.id);
       const contacted = leaderFollowups.filter(f => f.contacted).length;
       const followupCompletion = leaderFollowups.length > 0
         ? (contacted / leaderFollowups.length) * 100
-        : ((l.id * 19) % 15 + 80);
+        : 0;
 
-      const reportSubmission = ((l.id * 23) % 10 + 90);
-      const ministryParticipation = ((l.id * 29) % 15 + 85);
+      // Report submission is not tracked as a separate record.
+      const reportSubmission = 0;
+      const ministryParticipation = leaderMembers.length > 0 ? 100 : 0;
 
       const overallScore = Math.round(
         submissionRate * (leaderWeights.perf_leader_submission_rate / 100) +
@@ -703,7 +713,7 @@ router.get('/performance/dashboard', async (req, res) => {
         ministryParticipation * (leaderWeights.perf_leader_ministry / 100)
       );
 
-      const rankDelta = ((l.id * 2) % 5) - 2;
+      const rankDelta = 0;
 
       const badges = [];
       if (submissionRate >= 95) badges.push({ name: 'Ministry Champion', desc: 'Excellent submission rate', icon: '🏅' });
@@ -723,7 +733,7 @@ router.get('/performance/dashboard', async (req, res) => {
         overallScore,
         rankDelta,
         badges,
-        memberCount: leaderMembers.length || ((l.id * 5) % 15 + 10)
+        memberCount: leaderMembers.length
       };
     });
 
@@ -732,18 +742,19 @@ router.get('/performance/dashboard', async (req, res) => {
       const cellMemberIds = cellMembers.filter(cm => cm.cell_id === cell.id).map(cm => cm.church_member_id);
       const cellMembersData = calculatedMembers.filter(m => cellMemberIds.includes(m.id));
 
-      const overallScore = Math.round(cellMembersData.length > 0 
+      const overallScore = cellMembersData.length > 0
         ? (cellMembersData.reduce((sum, m) => sum + m.overallScore, 0) / cellMembersData.length)
-        : ((cell.id * 11) % 20 + 75));
-      const cellAttendance = Math.round(cellMembersData.length > 0
+        : 0;
+      const cellAttendance = cellMembersData.length > 0
         ? (cellMembersData.reduce((sum, m) => sum + m.churchAttendance, 0) / cellMembersData.length)
-        : ((cell.id * 7) % 15 + 80));
-      const growth = Math.round(((cell.id * 9) % 25 + 75));
-      const visitors = cellMembersData.reduce((sum, m) => sum + (m.evangelism > 80 ? 1 : 0), 0) || ((cell.id * 3) % 8 + 1);
+        : 0;
+      // Cell growth is not derived from tracked historical records.
+      const growth = 0;
+      const visitors = cellMembersData.reduce((sum, m) => sum + (m.evangelism > 80 ? 1 : 0), 0);
 
       return {
         ...cell,
-        membersCount: cellMembersData.length || ((cell.id * 5) % 12 + 6),
+        membersCount: cellMembersData.length,
         overallScore,
         attendance: cellAttendance,
         growth,
@@ -756,14 +767,14 @@ router.get('/performance/dashboard', async (req, res) => {
     const calculatedSections = uniqueSectionIds.map(sId => {
       const sectionName = members.find(m => m.section_id === sId)?.section_name || 'Section';
       const secMembers = calculatedMembers.filter(m => m.section_id === sId);
-      const overallScore = Math.round(secMembers.length > 0
+      const overallScore = secMembers.length > 0
         ? (secMembers.reduce((sum, m) => sum + m.overallScore, 0) / secMembers.length)
-        : 82);
-      const attendance = Math.round(secMembers.length > 0
+        : 0;
+      const attendance = secMembers.length > 0
         ? (secMembers.reduce((sum, m) => sum + m.churchAttendance, 0) / secMembers.length)
-        : 84);
-      const visitors = secMembers.reduce((sum, m) => sum + (m.evangelism > 80 ? 1 : 0), 0) || 5;
-      const growth = Math.round(80 + (sId * 3) % 15);
+        : 0;
+      const visitors = secMembers.reduce((sum, m) => sum + (m.evangelism > 80 ? 1 : 0), 0);
+      const growth = 0;
 
       return {
         id: sId,
@@ -780,18 +791,18 @@ router.get('/performance/dashboard', async (req, res) => {
       const dMemberIds = deptMembers.filter(dm => dm.department_id === d.id).map(dm => dm.member_id);
       const dMembers = calculatedMembers.filter(m => dMemberIds.includes(m.id));
 
-      const overallScore = Math.round(dMembers.length > 0
+      const overallScore = dMembers.length > 0
         ? (dMembers.reduce((sum, m) => sum + m.overallScore, 0) / dMembers.length)
-        : ((d.id * 13) % 15 + 80));
-      const attendance = Math.round(dMembers.length > 0
+        : 0;
+      const attendance = dMembers.length > 0
         ? (dMembers.reduce((sum, m) => sum + m.churchAttendance, 0) / dMembers.length)
-        : ((d.id * 7) % 10 + 85));
+        : 0;
 
       return {
         ...d,
         overallScore,
         attendance,
-        membersCount: dMembers.length || ((d.id * 3) % 15 + 10)
+        membersCount: dMembers.length
       };
     });
 
@@ -835,13 +846,15 @@ router.get('/performance/dashboard', async (req, res) => {
     if (mostActiveMinistry) insights.push({ type: 'success', text: `The "${mostActiveMinistry.name}" ministry achieved 100% active volunteer participation.` });
     if (fastestGrowingCell) insights.push({ type: 'info', text: `"${fastestGrowingCell.name}" cell is leading growth metrics with +${(fastestGrowingCell.id % 4) + 2} new active member conversions.` });
 
-    // Monthly/yearly awards history
+    // Awards history — reflect the actual current top performers for each
+    // category. No invented recipients; fall back to an em dash when there
+    // is genuinely no data.
     const currentMonthLabel = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date());
     const awardsHistory = [
-      { period: `${currentMonthLabel} 2026`, award: 'Member of the Month', recipient: topMember?.full_name || 'John Peter', details: `Overall score: ${topMember?.overallScore || 95}%` },
-      { period: `${currentMonthLabel} 2026`, award: 'Leader of the Month', recipient: topLeader?.leader_name || 'Pastor James', details: `Overall score: ${topLeader?.overallScore || 91}%` },
-      { period: 'June 2026', award: 'Best Evangelist', recipient: bestEvangelist?.full_name || 'Mary Smith', details: `Visitors invited: ${bestEvangelist?.evangelism || 98}%` },
-      { period: 'May 2026', award: 'Top Home Cell', recipient: bestCell?.name || 'Home Cell Alpha', details: `Average score: ${bestCell?.overallScore || 94}%` }
+      { period: `${currentMonthLabel} 2026`, award: 'Member of the Month', recipient: topMember?.full_name || '—', details: topMember ? `Overall score: ${topMember.overallScore}%` : 'No member data' },
+      { period: `${currentMonthLabel} 2026`, award: 'Leader of the Month', recipient: topLeader?.leader_name || '—', details: topLeader ? `Overall score: ${topLeader.overallScore}%` : 'No leader data' },
+      { period: 'June 2026', award: 'Best Evangelist', recipient: bestEvangelist?.full_name || '—', details: bestEvangelist ? `Evangelism score: ${bestEvangelist.evangelism}%` : 'No outreach data' },
+      { period: 'May 2026', award: 'Top Home Cell', recipient: bestCell?.name || '—', details: bestCell ? `Average score: ${bestCell.overallScore}%` : 'No cell data' }
     ];
 
     res.json({
