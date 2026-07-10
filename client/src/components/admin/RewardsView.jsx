@@ -197,6 +197,8 @@ const LeaderboardRow = ({ item, rank, onClick, nameKey, subKey, scoreKey = 'over
         <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: metricColor, lineHeight: 1 }}>{score}</p>
         <p style={{ margin: 0, fontSize: 10, color: '#64748B', marginTop: 2 }}>{subLabel || 'Score'}</p>
       </div>
+
+      {onClick && <ChevronRight size={16} color="#64748B" style={{ flexShrink: 0, marginLeft: 4 }} />}
     </div>
   );
 };
