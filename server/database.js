@@ -755,10 +755,8 @@ db.serialize(() => {
       // Performance Center - Member Weights
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_member_church_attendance', '30')`);
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_member_cell_attendance', '20')`);
-      db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_member_ministry', '15')`);
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_member_evangelism', '15')`);
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_member_contributions', '10')`);
-      db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_member_volunteer', '5')`);
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_member_events', '5')`);
 
       // Performance Center - Leader Weights
@@ -769,7 +767,6 @@ db.serialize(() => {
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_leader_evangelism', '10')`);
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_leader_followups', '10')`);
       db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_leader_reports', '5')`);
-      db.run(`INSERT OR IGNORE INTO settings (key, value) VALUES ('perf_leader_ministry', '5')`);
     }
   });
 

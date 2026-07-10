@@ -24,10 +24,8 @@ const getRankMedal = (rank) => {
 const SCORE_METRICS = [
   { key: 'churchAttendance', label: '⛪ Church Attendance', color: '#6366F1', weightKey: 'perf_member_church_attendance', note: 'Share of services attended (present ÷ total) this period.' },
   { key: 'cellAttendance', label: '🏠 Cell Attendance', color: '#A78BFA', weightKey: 'perf_member_cell_attendance', note: 'Home-cell meeting attendance. No separate tracking exists yet, so it shows 0.' },
-  { key: 'ministryParticipation', label: '🛡 Ministry', color: '#F472B6', weightKey: 'perf_member_ministry', note: '100 if the member is assigned to a department, else 0. Based on department membership.' },
   { key: 'evangelism', label: '🔥 Evangelism', color: '#F97316', weightKey: 'perf_member_evangelism', note: 'From outreach logs + visitor intakes this period (25 points each).' },
   { key: 'contributions', label: '⭐ Contributions', color: '#FBBF24', weightKey: 'perf_member_contributions', note: '100 if any contribution was recorded this period, else 0.' },
-  { key: 'volunteerService', label: '❤️ Volunteer', color: '#34D399', weightKey: 'perf_member_volunteer', note: '100 if assigned to a department, else 0. Currently the SAME signal as Ministry (both reflect department membership).' },
   { key: 'eventParticipation', label: '📅 Event', color: '#38BDF8', weightKey: 'perf_member_events', note: 'Event/study participation. Not tracked separately, so 0.' },
   { key: 'submissionRate', label: '📋 Submission Rate', color: '#6366F1', weightKey: 'perf_leader_submission_rate', note: 'Share of service days the leader submitted attendance.' },
   { key: 'memberAttendance', label: '👥 Member Attendance', color: '#818CF8', weightKey: 'perf_leader_member_attendance', note: 'Average church attendance of the leader’s members.' },
@@ -686,18 +684,16 @@ const RewardsView = () => {
               {[
                 ['Church Attendance', 'perf_member_church_attendance'],
                 ['Home Cell Attendance', 'perf_member_cell_attendance'],
-                ['Ministry Participation', 'perf_member_ministry'],
                 ['Evangelism / Visitors', 'perf_member_evangelism'],
                 ['Contributions & Tithing', 'perf_member_contributions'],
-                ['Volunteer Service', 'perf_member_volunteer'],
                 ['Event Participation', 'perf_member_events'],
               ].map(([label, key]) => (
                 <WeightRow key={key} label={label} keyName={key} value={localWeights[key] ?? 0} onChange={handleWeightChange} />
               ))}
               <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, color: '#64748B' }}>Total</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: ['perf_member_church_attendance','perf_member_cell_attendance','perf_member_ministry','perf_member_evangelism','perf_member_contributions','perf_member_volunteer','perf_member_events'].reduce((s, k) => s + (localWeights[k] || 0), 0) === 100 ? '#34D399' : '#F87171' }}>
-                  {['perf_member_church_attendance','perf_member_cell_attendance','perf_member_ministry','perf_member_evangelism','perf_member_contributions','perf_member_volunteer','perf_member_events'].reduce((s, k) => s + (localWeights[k] || 0), 0)}%
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#94A3B8' }}>
+                  {['perf_member_church_attendance','perf_member_cell_attendance','perf_member_evangelism','perf_member_contributions','perf_member_events'].reduce((s, k) => s + (localWeights[k] || 0), 0)}%
                 </span>
               </div>
             </div>
@@ -712,14 +708,13 @@ const RewardsView = () => {
                 ['Evangelism Performance', 'perf_leader_evangelism'],
                 ['Follow-up Completion', 'perf_leader_followups'],
                 ['Report Submission', 'perf_leader_reports'],
-                ['Ministry Participation', 'perf_leader_ministry'],
               ].map(([label, key]) => (
                 <WeightRow key={key} label={label} keyName={key} value={localWeights[key] ?? 0} onChange={handleWeightChange} />
               ))}
               <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(167,139,250,0.08)', borderRadius: 8, display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, color: '#64748B' }}>Total</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: ['perf_leader_submission_rate','perf_leader_member_attendance','perf_leader_retention','perf_leader_cell_growth','perf_leader_evangelism','perf_leader_followups','perf_leader_reports','perf_leader_ministry'].reduce((s, k) => s + (localWeights[k] || 0), 0) === 100 ? '#34D399' : '#F87171' }}>
-                  {['perf_leader_submission_rate','perf_leader_member_attendance','perf_leader_retention','perf_leader_cell_growth','perf_leader_evangelism','perf_leader_followups','perf_leader_reports','perf_leader_ministry'].reduce((s, k) => s + (localWeights[k] || 0), 0)}%
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#94A3B8' }}>
+                  {['perf_leader_submission_rate','perf_leader_member_attendance','perf_leader_retention','perf_leader_cell_growth','perf_leader_evangelism','perf_leader_followups','perf_leader_reports'].reduce((s, k) => s + (localWeights[k] || 0), 0)}%
                 </span>
               </div>
             </div>

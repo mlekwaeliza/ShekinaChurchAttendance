@@ -556,10 +556,8 @@ router.get('/performance/dashboard', async (req, res) => {
     const memberWeights = {
       perf_member_church_attendance: config.perf_member_church_attendance ?? 30,
       perf_member_cell_attendance: config.perf_member_cell_attendance ?? 20,
-      perf_member_ministry: config.perf_member_ministry ?? 15,
       perf_member_evangelism: config.perf_member_evangelism ?? 15,
       perf_member_contributions: config.perf_member_contributions ?? 10,
-      perf_member_volunteer: config.perf_member_volunteer ?? 5,
       perf_member_events: config.perf_member_events ?? 5
     };
     const leaderWeights = {
@@ -569,8 +567,7 @@ router.get('/performance/dashboard', async (req, res) => {
       perf_leader_cell_growth: config.perf_leader_cell_growth ?? 15,
       perf_leader_evangelism: config.perf_leader_evangelism ?? 10,
       perf_leader_followups: config.perf_leader_followups ?? 10,
-      perf_leader_reports: config.perf_leader_reports ?? 5,
-      perf_leader_ministry: config.perf_leader_ministry ?? 5
+      perf_leader_reports: config.perf_leader_reports ?? 5
     };
 
     // Fetch basic church data from database tables directly
@@ -620,9 +617,6 @@ router.get('/performance/dashboard', async (req, res) => {
       // than fabricate a figure.
       const cellAttendance = 0;
 
-      const inDept = deptMembers.some(dm => dm.member_id === m.id);
-      const ministryParticipation = inDept ? 100 : 0;
-
       const memberOutreaches = outreachLogs.filter(o => o.member_id === m.id).length;
       const memberVisitors = visitorIntake.filter(v => v.created_by === m.id).length;
       const evangelism = Math.min(100, (memberOutreaches + memberVisitors) * 25);
@@ -630,17 +624,14 @@ router.get('/performance/dashboard', async (req, res) => {
       const memberContribs = contributions.filter(c => c.member_id === m.id).length;
       const contributionsScore = memberContribs > 0 ? 100 : 0;
 
-      const volunteerService = inDept ? 100 : 0;
       // Event/study participation is not tracked as a separate record.
       const eventParticipation = 0;
 
       const overallScore = Math.round(
         churchAttendance * (memberWeights.perf_member_church_attendance / 100) +
         cellAttendance * (memberWeights.perf_member_cell_attendance / 100) +
-        ministryParticipation * (memberWeights.perf_member_ministry / 100) +
         evangelism * (memberWeights.perf_member_evangelism / 100) +
         contributionsScore * (memberWeights.perf_member_contributions / 100) +
-        volunteerService * (memberWeights.perf_member_volunteer / 100) +
         eventParticipation * (memberWeights.perf_member_events / 100)
       );
 
@@ -653,7 +644,6 @@ router.get('/performance/dashboard', async (req, res) => {
       else if (churchAttendance >= 80) badges.push({ name: 'Bronze Attendance', desc: '80%+ Attendance', icon: '🥉' });
 
       if (evangelism >= 85) badges.push({ name: 'Soul Winner', desc: 'Invited & converted visitors', icon: '🔥' });
-      if (volunteerService === 100 && churchAttendance >= 90) badges.push({ name: 'Faithful Servant', desc: 'Active volunteer & attendee', icon: '❤️' });
       if (eventParticipation >= 90) badges.push({ name: 'Bible Student', desc: 'Consistent study & events', icon: '📖' });
       if (contributionsScore === 100) badges.push({ name: 'Consistent Giver', desc: 'Tithing consistency', icon: '⭐' });
 
@@ -661,10 +651,8 @@ router.get('/performance/dashboard', async (req, res) => {
         ...m,
         churchAttendance: Math.round(churchAttendance),
         cellAttendance: Math.round(cellAttendance),
-        ministryParticipation,
         evangelism: Math.round(evangelism),
         contributions: Math.round(contributionsScore),
-        volunteerService,
         eventParticipation,
         overallScore,
         rankDelta,
@@ -700,7 +688,6 @@ router.get('/performance/dashboard', async (req, res) => {
 
       // Report submission is not tracked as a separate record.
       const reportSubmission = 0;
-      const ministryParticipation = leaderMembers.length > 0 ? 100 : 0;
 
       const overallScore = Math.round(
         submissionRate * (leaderWeights.perf_leader_submission_rate / 100) +
@@ -709,8 +696,7 @@ router.get('/performance/dashboard', async (req, res) => {
         cellGrowth * (leaderWeights.perf_leader_cell_growth / 100) +
         evangelism * (leaderWeights.perf_leader_evangelism / 100) +
         followupCompletion * (leaderWeights.perf_leader_followups / 100) +
-        reportSubmission * (leaderWeights.perf_leader_reports / 100) +
-        ministryParticipation * (leaderWeights.perf_leader_ministry / 100)
+        reportSubmission * (leaderWeights.perf_leader_reports / 100)
       );
 
       const rankDelta = 0;
@@ -729,7 +715,6 @@ router.get('/performance/dashboard', async (req, res) => {
         evangelism: Math.round(evangelism),
         followupCompletion: Math.round(followupCompletion),
         reportSubmission: Math.round(reportSubmission),
-        ministryParticipation: Math.round(ministryParticipation),
         overallScore,
         rankDelta,
         badges,
