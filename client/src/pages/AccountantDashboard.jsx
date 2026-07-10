@@ -53,18 +53,19 @@ const AccountantOverview = ({ showMessage }) => {
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
 
-  const totalContributions = data.memberContributions.reduce((s, c) => s + Number(c.amount), 0);
-  const uniqueContributors = new Set(data.memberContributions.map(c => c.member_id)).size;
+  const financeContributions = data.memberContributions.filter(c => String(c.reference_number || '').startsWith('finance-'));
+  const totalContributions = financeContributions.reduce((s, c) => s + Number(c.amount), 0);
+  const uniqueContributors = new Set(financeContributions.map(c => c.member_id)).size;
 
   const cards = [
-    { label: 'Total Contributions', value: `TZS ${totalContributions.toLocaleString()}`, icon: HandCoins, border: 'border-emerald-200/70', darkBorder: 'dark:border-emerald-700', textColor: 'text-emerald-600', darkText: 'dark:text-emerald-400', iconColor: 'text-emerald-500' },
+    { label: 'Finance Tithes', value: `TZS ${totalContributions.toLocaleString()}`, icon: HandCoins, border: 'border-emerald-200/70', darkBorder: 'dark:border-emerald-700', textColor: 'text-emerald-600', darkText: 'dark:text-emerald-400', iconColor: 'text-emerald-500' },
     { label: 'Finance Entries', value: data.finance.length.toString(), icon: Building2, border: 'border-blue-200/70', darkBorder: 'dark:border-blue-700', textColor: 'text-blue-600', darkText: 'dark:text-blue-400', iconColor: 'text-blue-500' },
     { label: 'Contributors (This Month)', value: uniqueContributors.toString(), icon: Users, border: 'border-violet-200/70', darkBorder: 'dark:border-violet-700', textColor: 'text-violet-600', darkText: 'dark:text-violet-400', iconColor: 'text-violet-500' },
     { label: 'Total Members', value: data.members.toLocaleString(), icon: Calendar, border: 'border-amber-200/70', darkBorder: 'dark:border-amber-700', textColor: 'text-amber-600', darkText: 'dark:text-amber-400', iconColor: 'text-amber-500' },
   ];
 
   const contributionsByType = {};
-  data.memberContributions.forEach(c => {
+  financeContributions.forEach(c => {
     const type = c.contribution_type_name || 'Other';
     contributionsByType[type] = (contributionsByType[type] || 0) + Number(c.amount);
   });
@@ -87,7 +88,7 @@ const AccountantOverview = ({ showMessage }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Contributions by Type (This Month)</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Finance-recorded Contributions (This Month)</h3>
           {Object.keys(contributionsByType).length === 0 ? (
             <p className="text-slate-400 text-sm py-8 text-center">No contributions this month</p>
           ) : (
@@ -107,7 +108,7 @@ const AccountantOverview = ({ showMessage }) => {
         </div>
 
         <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Member Contributions</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Finance-recorded Contributions</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -118,14 +119,14 @@ const AccountantOverview = ({ showMessage }) => {
                 </tr>
               </thead>
               <tbody>
-                {data.memberContributions.slice(0, 10).map(c => (
+                {financeContributions.slice(0, 10).map(c => (
                   <tr key={c.id} className="border-b border-slate-100 dark:border-slate-700">
                     <td className="py-2 px-2 text-slate-900 dark:text-white">{c.full_name || 'Unknown'}</td>
                     <td className="py-2 px-2"><span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{c.contribution_type_name}</span></td>
                     <td className="py-2 px-2 text-right font-semibold text-emerald-600">TZS {Number(c.amount).toLocaleString()}</td>
                   </tr>
                 ))}
-                {data.memberContributions.length === 0 && (
+                {financeContributions.length === 0 && (
                   <tr><td colSpan={3} className="text-center py-8 text-slate-400">No contributions yet this month</td></tr>
                 )}
               </tbody>

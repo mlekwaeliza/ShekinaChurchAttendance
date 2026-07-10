@@ -112,6 +112,8 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
     if (searchDate && r.record_date !== searchDate) return false;
     return true;
   });
+  const financeMemberContributions = dbData.memberContributions.filter(c => String(c.reference_number || '').startsWith('finance-'));
+  const financeContributionTotal = financeMemberContributions.reduce((sum, contribution) => sum + Number(contribution.amount || 0), 0);
 
   const exportCSV = () => {
     const rows = [['Date', 'Status', 'Morning', 'Afternoon', 'Tithes', 'Income', 'Expenses', 'Usable']];
@@ -359,9 +361,9 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: 'Total Contributions', value: `TZS ${dbData.memberContributions.reduce((s, c) => s + Number(c.amount), 0).toLocaleString()}`, icon: HandCoins, border: 'border-emerald-200/70', darkBorder: 'dark:border-emerald-700', textColor: 'text-emerald-600', darkText: 'dark:text-emerald-400', iconColor: 'text-emerald-500' },
+                { label: 'Finance Tithes', value: `TZS ${financeContributionTotal.toLocaleString()}`, icon: HandCoins, border: 'border-emerald-200/70', darkBorder: 'dark:border-emerald-700', textColor: 'text-emerald-600', darkText: 'dark:text-emerald-400', iconColor: 'text-emerald-500' },
                 { label: 'Finance Entries', value: dbData.finance.length.toString(), icon: Building2, border: 'border-blue-200/70', darkBorder: 'dark:border-blue-700', textColor: 'text-blue-600', darkText: 'dark:text-blue-400', iconColor: 'text-blue-500' },
-                { label: 'Contributors (This Month)', value: new Set(dbData.memberContributions.map(c => c.member_id)).size.toString(), icon: Users, border: 'border-violet-200/70', darkBorder: 'dark:border-violet-700', textColor: 'text-violet-600', darkText: 'dark:text-violet-400', iconColor: 'text-violet-500' },
+                { label: 'Contributors (This Month)', value: new Set(financeMemberContributions.map(c => c.member_id)).size.toString(), icon: Users, border: 'border-violet-200/70', darkBorder: 'dark:border-violet-700', textColor: 'text-violet-600', darkText: 'dark:text-violet-400', iconColor: 'text-violet-500' },
                 { label: 'Total Members', value: dbData.members.toLocaleString(), icon: Users, border: 'border-amber-200/70', darkBorder: 'dark:border-amber-700', textColor: 'text-amber-600', darkText: 'dark:text-amber-400', iconColor: 'text-amber-500' },
               ].map((card, i) => (
                 <div key={i} className={`rounded-2xl border ${card.border} bg-white dark:bg-slate-800 ${card.darkBorder} p-4 shadow-sm`}>
@@ -376,14 +378,14 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Contributions by Type (This Month)</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Finance-recorded Contributions (This Month)</h3>
                 {(() => {
                   const contributionsByType = {};
-                  dbData.memberContributions.forEach(c => {
+                  financeMemberContributions.forEach(c => {
                     const type = c.contribution_type_name || 'Other';
                     contributionsByType[type] = (contributionsByType[type] || 0) + Number(c.amount);
                   });
-                  const totalContributions = dbData.memberContributions.reduce((s, c) => s + Number(c.amount), 0);
+                  const totalContributions = financeContributionTotal;
 
                   return Object.keys(contributionsByType).length === 0 ? (
                     <p className="text-slate-400 text-sm py-8 text-center">No contributions this month</p>
@@ -405,7 +407,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
               </div>
 
               <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Member Contributions</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Finance-recorded Contributions</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -416,14 +418,14 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {dbData.memberContributions.slice(0, 10).map(c => (
+                      {financeMemberContributions.slice(0, 10).map(c => (
                         <tr key={c.id} className="border-b border-slate-100 dark:border-slate-700">
                           <td className="py-2 px-2 text-slate-900 dark:text-white">{c.full_name || 'Unknown'}</td>
                           <td className="py-2 px-2"><span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{c.contribution_type_name}</span></td>
                           <td className="py-2 px-2 text-right font-semibold text-emerald-600">TZS {Number(c.amount).toLocaleString()}</td>
                         </tr>
                       ))}
-                      {dbData.memberContributions.length === 0 && (
+                      {financeMemberContributions.length === 0 && (
                         <tr><td colSpan={3} className="text-center py-8 text-slate-400">No contributions yet this month</td></tr>
                       )}
                     </tbody>

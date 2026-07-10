@@ -114,7 +114,7 @@ router.post('/finance/records', async (req, res) => {
       }
     }
 
-    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [record_date]);
+    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [record_date]);
     const auto_tithes = tithesResult?.total || 0;
     const c = calcFinance(morning_offering, afternoon_offering, auto_tithes, evangelism_offering);
     const recordData = {
@@ -164,7 +164,7 @@ router.get('/finance/records', async (req, res) => {
   try {
     const records = await queries.getFinanceRecords(req.query);
     for (const r of records) {
-      const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [r.record_date]);
+      const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [r.record_date]);
       r.auto_tithes = tithes?.total || 0;
     }
     res.json(records);
@@ -179,7 +179,7 @@ router.get('/finance/records/:id', async (req, res) => {
     const record = await queries.getFinanceRecordById(req.params.id);
     if (!record) return res.status(404).json({ error: 'Record not found' });
     const expenses = await queries.getFinanceExpenses(req.params.id);
-    const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [record.record_date]);
+    const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [record.record_date]);
     record.auto_tithes = tithes?.total || 0;
     // Return individual tithe entries entered via the finance workspace
     const tithe_entries = await all(
@@ -249,7 +249,7 @@ router.put('/finance/records/:id', async (req, res) => {
     if (notes !== undefined) data.notes = notes;
 
     // Recalculate tithes total (includes entries just saved above)
-    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [existing.record_date]);
+    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [existing.record_date]);
     const auto_tithes = tithesResult?.total || 0;
     data.total_tithes = auto_tithes;
     const c = calcFinance(
@@ -406,7 +406,7 @@ router.put('/finance/records/:id/recalculate', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ?`, [existing.record_date]);
+    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [existing.record_date]);
     const auto_tithes = tithesResult?.total || 0;
     const c = calcFinance(existing.morning_offering, existing.afternoon_offering, auto_tithes, existing.evangelism_offering);
     await queries.updateFinanceRecord(req.params.id, {
