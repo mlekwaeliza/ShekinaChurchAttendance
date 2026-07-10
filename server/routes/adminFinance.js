@@ -55,6 +55,19 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+const EXPENSE_CATEGORIES = new Set(['Food', 'Water', 'Fruits', 'Sugar', 'Media', 'Visitors', 'Transport', 'Other']);
+
+function validateExpenses(expenses) {
+  if (!Array.isArray(expenses)) return;
+  for (const expense of expenses) {
+    if (!EXPENSE_CATEGORIES.has(expense.category)) {
+      throw new Error(`Invalid expense category: ${expense.category || 'missing category'}`);
+    }
+    if (!Number.isFinite(Number(expense.amount)) || Number(expense.amount) <= 0) {
+      throw new Error('Every expense must have an amount greater than zero');
+    }
+  }
+}
 
 function calcFinance(morning, afternoon, tithes, evangelism = 0) {
   const m = Number(morning) || 0;
@@ -74,6 +87,7 @@ router.post('/finance/records', async (req, res) => {
     const { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries, expenses, notes } = req.body;
     console.error('[finance POST] received body:', JSON.stringify(req.body));
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
+    validateExpenses(expenses);
 
     // Create-or-update by date: re-saving the same day updates the existing
     // record (resetting it to draft so it can be corrected and re-submitted).
@@ -133,13 +147,7 @@ router.post('/finance/records', async (req, res) => {
     }
     if (Array.isArray(expenses)) {
       for (const exp of expenses) {
-        if (exp.category && Number(exp.amount) > 0) {
-          try {
-            await queries.createFinanceExpense({ record_id: createdRecord.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
-          } catch (expErr) {
-            console.error('Failed to save expense row:', exp, expErr.message);
-          }
-        }
+        await queries.createFinanceExpense({ record_id: createdRecord.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
       }
     }
 
@@ -199,6 +207,7 @@ router.put('/finance/records/:id', async (req, res) => {
     // Records can be edited at any stage (draft/submitted/approved/rejected);
     // editing resets the record to draft so corrections re-enter the workflow.
     const { morning_offering, afternoon_offering, evangelism_offering, notes, tithe_entries, expenses } = req.body;
+    validateExpenses(expenses);
 
     // ── Save individual tithe entries as Contributions ────────────────────
     if (Array.isArray(tithe_entries)) {
@@ -224,13 +233,7 @@ router.put('/finance/records/:id', async (req, res) => {
     if (Array.isArray(expenses)) {
       await run(`DELETE FROM finance_expenses WHERE record_id = ?`, [req.params.id]);
       for (const exp of expenses) {
-        if (exp.category && Number(exp.amount) > 0) {
-          try {
-            await queries.createFinanceExpense({ record_id: req.params.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
-          } catch (expErr) {
-            console.error('Failed to save expense row (update):', exp, expErr.message);
-          }
-        }
+        await queries.createFinanceExpense({ record_id: req.params.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
       }
     }
 
