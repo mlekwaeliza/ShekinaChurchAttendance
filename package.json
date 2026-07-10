@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "start": "concurrently \"npm run server\" \"npm run client\"",
+    "prestart": "npm run build",
     "server": "cd server && npm start",
     "client": "cd client && npm run dev",
     "install-all": "npm install && npm run install-client && npm run install-server",
