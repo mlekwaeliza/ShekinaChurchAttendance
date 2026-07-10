@@ -1,6 +1,6 @@
 const express = require('express');
 const { queries, run, get, all } = require('../database');
-const { isAuthenticated } = require('../middleware/auth');
+const { isAuthenticated, requireRole } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
@@ -8,6 +8,7 @@ const fs = require('fs');
 
 const router = express.Router();
 router.use(isAuthenticated);
+router.use(requireRole(['admin', 'accountant']));
 
 // ── Member search for tithe entry ─────────────────────────────────────────
 router.get('/finance/members/search', async (req, res) => {

@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus,
   Sparkles, Building2
 } from 'lucide-react';
-import adminApi from '../../services/api';
+import { adminAPI } from '../../services/api';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const getRankMedal = (rank) => {
@@ -208,7 +208,7 @@ const RewardsView = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminApi.getPerformanceDashboard({ filter });
+      const res = await adminAPI.getPerformanceDashboard({ filter });
       setData(res.data);
       if (!localWeights && res.data?.weights) {
         const flat = { ...res.data.weights.member, ...res.data.weights.leader };
@@ -230,7 +230,7 @@ const RewardsView = () => {
   const saveWeights = async () => {
     setSavingWeights(true);
     try {
-      await adminApi.updatePerformanceWeights(localWeights);
+      await adminAPI.updatePerformanceWeights(localWeights);
       await load();
     } catch (e) {}
     setSavingWeights(false);

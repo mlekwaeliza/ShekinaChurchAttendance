@@ -8,14 +8,15 @@ const rolePermissions = {
 };
 
 function requireRole(allowedRoles) {
+  const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
   return (req, res, next) => {
-    // TEMPORARY: allow any authenticated user through (role enforcement
-    // bypassed to unblock finance recording). Restore role checks after
-    // session/role sync is verified.
-    if (req.session.userId && req.session.user) {
-      return next();
+    if (!req.session.userId || !req.session.user) {
+      return res.status(401).json({ error: 'Not authenticated' });
     }
-    return res.status(401).json({ error: 'Not authenticated', _debug: { userId: req.session.userId } });
+    if (!roles.includes(req.session.user.role)) {
+      return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
+    }
+    next();
   };
 }
 
