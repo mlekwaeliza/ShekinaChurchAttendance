@@ -5012,6 +5012,8 @@ const queries = {
     if (data.remaining_after_mission !== undefined) { SET.push('remaining_after_mission=?'); params.push(data.remaining_after_mission); }
     if (data.bishop_fund !== undefined) { SET.push('bishop_fund=?'); params.push(data.bishop_fund); }
     if (data.usable_church_funds !== undefined) { SET.push('usable_church_funds=?'); params.push(data.usable_church_funds); }
+    if (data.status !== undefined) { SET.push('status=?'); params.push(data.status); }
+    if (data.rejection_reason !== undefined) { SET.push('rejection_reason=?'); params.push(data.rejection_reason); }
     if (data.evangelism_offering !== undefined) { SET.push('evangelism_offering=?'); params.push(data.evangelism_offering); }
     if (data.notes !== undefined) { SET.push('notes=?'); params.push(data.notes); }
     if (data.bishop_receipt !== undefined) { SET.push('bishop_receipt=?'); params.push(data.bishop_receipt); }
