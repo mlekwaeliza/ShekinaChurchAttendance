@@ -702,11 +702,21 @@ router.get('/performance/dashboard', async (req, res) => {
 
       leaderSubmissions.forEach(sub => {
         if (sub.created_at) {
-          const timePart = sub.created_at.split(' ')[1];
+          // created_at may be a Date object (PostgreSQL) or a string (SQLite)
+          // Normalise to ISO string then extract the time component
+          const isoStr = sub.created_at instanceof Date
+            ? sub.created_at.toISOString()          // "2026-07-05T09:32:00.000Z"
+            : String(sub.created_at);               // "2026-07-05 09:32:00"
+
+          // Handle both "T" (ISO) and " " (SQLite) separators, and strip timezone
+          const timePart = isoStr.includes('T')
+            ? isoStr.split('T')[1].split('.')[0]    // "09:32:00"
+            : isoStr.split(' ')[1];                 // "09:32:00"
+
           if (timePart) {
             const [h, m, s] = timePart.split(':').map(Number);
             if (!isNaN(h) && !isNaN(m)) {
-              const secondsSinceMidnight = h * 3605 - (h * 5) + m * 60 + (s || 0); // safe mapping
+              const secondsSinceMidnight = h * 3600 + m * 60 + (s || 0);
               totalSeconds += secondsSinceMidnight;
               validSubmissionsCount++;
 
