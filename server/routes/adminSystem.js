@@ -3,17 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { queries, db } = require('../database');
+const { queries, db, all, get } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
-const { yearEquals, weekEquals } = require('../utils/sqlDialect');
+const { yearEquals, weekEquals, timeToSeconds } = require('../utils/sqlDialect');
 
-// Promisified raw query helpers
-const all = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
-});
-const get = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => err ? reject(err) : resolve(row || null));
-});
+
 
 const router = express.Router();
 
@@ -96,8 +90,7 @@ router.get('/rewards/top-members', async (req, res) => {
   try {
     const { condition, params } = buildRewardDateCondition(req.query);
 
-    const rows = await new Promise((resolve, reject) => {
-      const query = `
+    const rows = await all(`
         WITH service_days AS (
           SELECT DISTINCT date
           FROM submission_log sl
@@ -131,9 +124,7 @@ router.get('/rewards/top-members', async (req, res) => {
           END AS attendance_rate
         FROM member_stats
         ORDER BY attendance_rate DESC, times_present DESC
-      `;
-      db.all(query, params, (err, r) => err ? reject(err) : resolve(r || []));
-    });
+    `, params);
 
     // Assign shared ranks (dense ranking — ties share the same rank)
     let rank = 1;
@@ -157,8 +148,7 @@ router.get('/rewards/top-leaders', async (req, res) => {
   try {
     const { condition, params } = buildRewardDateCondition(req.query);
 
-    const rows = await new Promise((resolve, reject) => {
-      const query = `
+    const rows = await all(`
         WITH service_days AS (
           SELECT DISTINCT date
           FROM submission_log sl
@@ -174,9 +164,9 @@ router.get('/rewards/top-leaders', async (req, res) => {
               WHEN sl.date IN (SELECT date FROM service_days)
               THEN sl.date
             END) AS submitted_count,
-            AVG(CASE 
-              WHEN sl.created_at IS NOT NULL 
-              THEN (strftime('%H', sl.created_at) * 3600 + strftime('%M', sl.created_at) * 60 + strftime('%S', sl.created_at))
+            AVG(CASE
+              WHEN sl.created_at IS NOT NULL
+              THEN ${timeToSeconds('sl.created_at')}
               ELSE 86399
             END) AS avg_submission_seconds
           FROM leaders  l
@@ -191,13 +181,11 @@ router.get('/rewards/top-leaders', async (req, res) => {
           avg_submission_seconds,
           CASE
             WHEN total_service_days > 0
-            THEN ROUND((submitted_count * 100.0 / total_service_days), 1)
+            THEN ROUND(${String('submitted_count * 100.0 / total_service_days')} , 1)
             ELSE 0
           END AS submission_rate
         FROM leader_stats
-      `;
-      db.all(query, params, (err, r) => err ? reject(err) : resolve(r || []));
-    });
+    `, params);
 
     const processed = rows.map((row) => {
       const avgSec = row.avg_submission_seconds;

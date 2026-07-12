@@ -249,6 +249,15 @@ function castToNumeric(expr) {
   return isPostgres() ? `(${expr})::numeric` : `CAST(${expr} AS REAL)`;
 }
 
+// timeToSeconds(column) -> seconds since midnight from a DATETIME/TIMESTAMPTZ column
+// On Postgres: EXTRACT(EPOCH FROM (column::time))
+// On SQLite:   strftime('%H', column) * 3600 + strftime('%M', column) * 60 + strftime('%S', column)
+function timeToSeconds(column) {
+  return isPostgres()
+    ? `EXTRACT(EPOCH FROM (${column}::time))::int`
+    : `(CAST(strftime('%H', ${column}) AS INTEGER) * 3600 + CAST(strftime('%M', ${column}) AS INTEGER) * 60 + CAST(strftime('%S', ${column}) AS INTEGER))`;
+}
+
 module.exports = {
   isPostgres,
   yearEquals,
@@ -280,4 +289,6 @@ module.exports = {
   roundAvg,
   roundExpr,
   castToNumeric,
+  // Time helpers
+  timeToSeconds,
 };
