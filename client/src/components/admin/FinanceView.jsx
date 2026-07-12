@@ -123,6 +123,24 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   const financeExpenseTotal = dbData.finance.reduce((sum, record) => sum + Number(record.total_expenses || 0), 0);
   const usableFundsTotal = dbData.finance.reduce((sum, record) => sum + Number(record.usable_church_funds || 0), 0);
 
+  const allExpenses = useMemo(() => {
+    const list = [];
+    dbData.finance.forEach(record => {
+      if (Array.isArray(record.expenses)) {
+        record.expenses.forEach(exp => {
+          list.push({
+            id: exp.id,
+            date: record.record_date,
+            category: exp.category,
+            amount: exp.amount,
+            description: exp.description,
+          });
+        });
+      }
+    });
+    return list.sort((a, b) => b.date.localeCompare(a.date));
+  }, [dbData.finance]);
+
   const exportCSV = () => {
     const rows = [['Date', 'Status', 'Morning', 'Afternoon', 'Tithes', 'Income', 'Expenses', 'Usable']];
     filteredRecords.forEach(r => rows.push([
@@ -397,6 +415,71 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                   <p className={`text-2xl font-bold ${card.textColor} ${card.darkText}`}>{card.value}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Daily Records Card */}
+              <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Daily Finance Records</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-700 text-left">
+                        <th className="py-2 px-2 font-semibold text-slate-600">Date</th>
+                        <th className="py-2 px-2 font-semibold text-slate-600">Status</th>
+                        <th className="py-2 px-2 text-right font-semibold text-slate-600">Income</th>
+                        <th className="py-2 px-2 text-right font-semibold text-slate-600">Expenses</th>
+                        <th className="py-2 px-2 text-right font-semibold text-slate-600">Net Usable</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dbData.finance.slice(0, 5).map(r => (
+                        <tr key={r.id} className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+                          onClick={() => openRecord(r.id)}>
+                          <td className="py-2.5 px-2 text-slate-900 dark:text-white font-medium">{fdate(r.record_date)}</td>
+                          <td className="py-2.5 px-2"><StatusBadge status={r.status} /></td>
+                          <td className="py-2.5 px-2 text-right font-semibold text-emerald-600">TZS {Number(r.total_income || 0).toLocaleString()}</td>
+                          <td className="py-2.5 px-2 text-right text-rose-500">TZS {Number(r.total_expenses || 0).toLocaleString()}</td>
+                          <td className="py-2.5 px-2 text-right font-bold text-indigo-600 dark:text-indigo-400">TZS {Number(r.usable_church_funds || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {dbData.finance.length === 0 && (
+                        <tr><td colSpan={5} className="text-center py-8 text-slate-400">No daily records yet this month</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Recent Expenses Card */}
+              <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
+                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Expenses</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 dark:border-slate-700 text-left">
+                        <th className="py-2 px-2 font-semibold text-slate-600">Date</th>
+                        <th className="py-2 px-2 font-semibold text-slate-600">Category</th>
+                        <th className="py-2 px-2 font-semibold text-slate-600">Description</th>
+                        <th className="py-2 px-2 text-right font-semibold text-slate-600">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allExpenses.slice(0, 5).map(e => (
+                        <tr key={e.id} className="border-b border-slate-100 dark:border-slate-700">
+                          <td className="py-2.5 px-2 text-slate-500 whitespace-nowrap">{fdate(e.date)}</td>
+                          <td className="py-2.5 px-2"><span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 font-semibold">{e.category}</span></td>
+                          <td className="py-2.5 px-2 text-slate-600 dark:text-slate-300 max-w-[150px] truncate" title={e.description}>{e.description || '-'}</td>
+                          <td className="py-2.5 px-2 text-right font-bold text-rose-600">TZS {Number(e.amount || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {allExpenses.length === 0 && (
+                        <tr><td colSpan={4} className="text-center py-8 text-slate-400">No expenses yet this month</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

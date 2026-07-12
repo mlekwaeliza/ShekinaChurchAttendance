@@ -167,6 +167,7 @@ router.get('/finance/records', async (req, res) => {
     for (const r of records) {
       const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [r.record_date]);
       r.auto_tithes = tithes?.total || 0;
+      r.expenses = await queries.getFinanceExpenses(r.id);
     }
     res.json(records);
   } catch (err) {
