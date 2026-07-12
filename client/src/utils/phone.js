@@ -33,8 +33,24 @@ function formatDigits(digits) {
 
 /**
  * Handle phone input change — returns the formatted value to set in state.
+ * Instantly converts a leading 0 to +255 as the user types.
  */
 export function handlePhoneChange(value) {
+  if (!value) return '';
+
+  // Strip everything except digits and leading +
+  const raw = String(value).replace(/[^0-9+]/g, '');
+
+  // As soon as user types a single "0", immediately swap to "+255 "
+  if (raw === '0') return '+255 ';
+
+  // If they type "07...", "08...", etc. — convert on the fly
+  if (raw.startsWith('0') && raw.length > 1) {
+    const rest = raw.slice(1); // digits after the leading 0
+    return '+255 ' + formatDigits(rest);
+  }
+
+  // For everything else, use the full formatter (handles +255, 255, paste, etc.)
   return formatPhone(value);
 }
 
