@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Clock, CalendarDays, FileText, Users, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, CalendarDays, FileText, Users, Search, ChevronDown, ChevronUp, Phone } from 'lucide-react';
 import { addDays, formatDisplayDate, formatLocalDate, parseLocalDate, fdate, fdatetime } from '../../utils/date';
 
 const SubmissionHistory = ({ 
@@ -8,7 +8,8 @@ const SubmissionHistory = ({
   serviceTypes = [],
   selectedServiceId,
   onServiceChange,
-  loadHistory 
+  loadHistory,
+  leaders = []
 }) => {
   const initializedServiceRef = useRef(false);
 
@@ -202,60 +203,14 @@ const SubmissionHistory = ({
                   </div>
                 </button>
 
-                {/* Submissions List */}
+                {/* Submissions List & Pending Details */}
                 {isExpanded && (
-                  <div className="mt-2 ml-4 pl-6 border-l-2 border-slate-200 dark:border-slate-700 space-y-2">
-                    {logs.map((log, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-sm transition-all"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {/* Avatar */}
-                            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                              {log.leader_name?.charAt(0)}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">
-                                  {log.leader_name}
-                                </p>
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                  log.service_name === 'Main Service' ? 'bg-amber-100 text-amber-700' :
-                                  log.service_name === 'Leaders Gathering' ? 'bg-indigo-100 text-indigo-700' :
-                                  log.service_name === 'Youth Service' ? 'bg-emerald-100 text-emerald-700' :
-                                  'bg-slate-100 text-slate-600'
-                                }`}>
-                                  {log.service_name}
-                                </span>
-                              </div>
-                              <p className="text-xs text-slate-400 dark:text-slate-500">
-                                {log.section_name}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-4">
-                            {/* Records count */}
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50">
-                              <Users className="w-3.5 h-3.5 text-slate-400" />
-                              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 tabular-nums">
-                                {log.records_count}
-                              </span>
-                            </div>
-
-                            {/* Time */}
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 tabular-nums">
-                                {fdatetime(log.submitted_at)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <DateSubmissionDetails 
+                    date={date} 
+                    logs={logs} 
+                    allLeaders={leaders} 
+                    serviceTypes={serviceTypes} 
+                  />
                 )}
               </div>
             );
@@ -275,5 +230,189 @@ const SubmissionHistory = ({
     </div>
   );
 };
+
+const DateSubmissionDetails = ({ date, logs, allLeaders, serviceTypes }) => {
+  const [activeTab, setActiveTab] = useState('submitted'); // 'submitted' or 'pending'
+  
+  // Group logs by service
+  const servicesMap = useMemo(() => {
+    const map = {};
+    logs.forEach(log => {
+      const svc = log.service_name || 'Selected Service';
+      if (!map[svc]) map[svc] = [];
+      map[svc].push(log);
+    });
+    return map;
+  }, [logs]);
+
+  // For each service, find pending leaders
+  const serviceDetails = useMemo(() => {
+    return Object.entries(servicesMap).map(([serviceName, svcLogs]) => {
+      const submittedNames = new Set(svcLogs.map(l => l.leader_name));
+      const pending = (allLeaders || []).filter(leader => !submittedNames.has(leader.full_name));
+      return {
+        serviceName,
+        submitted: svcLogs,
+        pending
+      };
+    });
+  }, [servicesMap, allLeaders]);
+
+  const totalSubmitted = logs.length;
+  const totalPending = serviceDetails.reduce((sum, s) => sum + s.pending.length, 0);
+
+  return (
+    <div className="mt-2 ml-4 pl-6 border-l-2 border-slate-200 dark:border-slate-700 space-y-4">
+      {/* Inner Tabs Selector */}
+      <div className="flex items-center gap-2 mb-2 bg-slate-50 dark:bg-slate-900/40 p-1 rounded-xl w-fit border border-slate-100 dark:border-slate-800">
+        <button
+          onClick={() => setActiveTab('submitted')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            activeTab === 'submitted'
+              ? 'bg-emerald-500 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          Submitted ({totalSubmitted})
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            activeTab === 'pending'
+              ? 'bg-amber-500 text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          Pending ({totalPending})
+        </button>
+      </div>
+
+      {/* Render based on selected inner tab */}
+      {activeTab === 'submitted' ? (
+        <div className="space-y-3">
+          {serviceDetails.map((svc, sIdx) => (
+            <div key={sIdx} className="space-y-2">
+              {serviceDetails.length > 1 && (
+                <h4 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">{svc.serviceName}</h4>
+              )}
+              {svc.submitted.map((log, idx) => (
+                <SubmittedRow key={idx} log={log} />
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {serviceDetails.map((svc, sIdx) => (
+            <div key={sIdx} className="space-y-2">
+              {serviceDetails.length > 1 && (
+                <h4 className="text-xs font-bold text-slate-455 dark:text-slate-500 uppercase tracking-wider">{svc.serviceName}</h4>
+              )}
+              {svc.pending.length > 0 ? (
+                <div className="grid gap-2">
+                  {svc.pending.map((leader, idx) => (
+                    <PendingRow key={idx} leader={leader} serviceName={svc.serviceName} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-400 italic py-2">
+                  All leaders have submitted for this service!
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const SubmittedRow = ({ log }) => (
+  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-sm transition-all">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        {/* Avatar */}
+        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+          {log.leader_name?.charAt(0)}
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+              {log.leader_name}
+            </p>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+              log.service_name === 'Main Service' ? 'bg-amber-100 text-amber-700' :
+              log.service_name === 'Leaders Gathering' ? 'bg-indigo-100 text-indigo-700' :
+              log.service_name === 'Youth Service' ? 'bg-emerald-100 text-emerald-700' :
+              'bg-slate-100 text-slate-600'
+            }`}>
+              {log.service_name}
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {log.section_name}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        {/* Records count */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 tabular-nums">
+            {log.records_count} records
+          </span>
+        </div>
+
+        {/* Time */}
+        <div className="text-right">
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-400 tabular-nums">
+            {fdatetime(log.submitted_at)}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const PendingRow = ({ leader, serviceName }) => (
+  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-sm transition-all">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        {/* Avatar */}
+        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-550 to-amber-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+          {leader.full_name?.charAt(0)}
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+              {leader.full_name}
+            </p>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400">
+              Pending
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            {leader.section_name}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        {/* Phone Action */}
+        {leader.phone ? (
+          <a
+            href={`tel:${leader.phone}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-900/30 text-amber-750 dark:text-amber-400 transition-all font-semibold text-xs"
+          >
+            <Phone className="w-3.5 h-3.5" />
+            Call: {leader.phone}
+          </a>
+        ) : (
+          <span className="text-xs text-slate-400 dark:text-slate-500 italic">No phone on file</span>
+        )}
+      </div>
+    </div>
+  </div>
+);
 
 export default SubmissionHistory;

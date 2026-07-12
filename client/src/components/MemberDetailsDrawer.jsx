@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Phone, Mail, Award, Clock, Activity, Calendar, Shield, Users, Heart, MapPin, User, ChevronRight } from 'lucide-react';
-import { adminAPI, leaderAPI } from '../services/api';
+import { X, Phone, Mail, Award, Clock, Activity, Calendar, Shield, Users, Heart, MapPin, User, ChevronRight, DollarSign } from 'lucide-react';
+import { adminAPI, leaderAPI, analyticsAPI, contributionAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { fdate, fdatetime } from '../utils/date';
 import Badge from './ui/Badge';
@@ -24,10 +24,12 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
   const [titles, setTitles] = useState([]);
   const [attendance, setAttendance] = useState(null);
   const [auditLog, setAuditLog] = useState([]);
+  const [contributions, setContributions] = useState([]);
   const [error, setError] = useState(null);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'pastor';
   const apiGroup = isAdmin ? adminAPI : leaderAPI;
+  const canViewFinancials = user?.role === 'admin' || user?.role === 'pastor' || user?.role === 'leader' || user?.role === 'accountant';
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -53,12 +55,18 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
         const promises = [
           apiGroup.getMemberTitles(member.id).then(res => setTitles(res.data || [])).catch(e => console.error("Error fetching titles", e)),
           apiGroup.getMemberDepartments(member.id).then(res => setDepartments(res.data || [])).catch(e => console.error("Error fetching depts", e)),
-          apiGroup.getMemberAttendanceDetails(member.id).then(res => setAttendance(res.data || null)).catch(e => console.error("Error fetching attendance", e))
+          (isAdmin ? analyticsAPI : leaderAPI).getMemberAttendanceDetails(member.id).then(res => setAttendance(res.data || null)).catch(e => console.error("Error fetching attendance", e))
         ];
 
         if (isAdmin) {
           promises.push(
             adminAPI.getMemberAuditHistory(member.id).then(res => setAuditLog(res.data || [])).catch(e => console.error("Error fetching audit logs", e))
+          );
+        }
+
+        if (canViewFinancials) {
+          promises.push(
+            contributionAPI.getContributions({ member_id: member.id }).then(res => setContributions(res.data || [])).catch(e => console.error("Error fetching contributions", e))
           );
         }
 
@@ -72,7 +80,7 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
     };
 
     fetchDetails();
-  }, [isOpen, member?.id, user?.role]);
+  }, [isOpen, member?.id, user?.role, canViewFinancials]);
 
   if (!isOpen || !member) return null;
 
@@ -99,6 +107,7 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'attendance', label: 'Attendance', icon: Activity },
     { id: 'departments', label: 'Depts & Titles', icon: Award },
+    ...(canViewFinancials ? [{ id: 'financials', label: 'Financials', icon: DollarSign }] : []),
     ...(isAdmin ? [{ id: 'audit', label: 'Audit Trail', icon: Shield }] : [])
   ];
 
@@ -406,6 +415,71 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
                       ) : (
                         <div className="text-center py-10 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-xs italic bg-white dark:bg-slate-900">
                           No titles assigned.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Financials Tab */}
+                {activeTab === 'financials' && canViewFinancials && (
+                  <div className="space-y-6">
+                    {/* Financial Summary */}
+                    <div className="grid grid-cols-3 gap-3 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-100/50 dark:border-slate-800/50 bg-white dark:bg-slate-900">
+                      <StatCard 
+                        label="Total Given" 
+                        value={`TZS ${(contributions.reduce((sum, c) => sum + (c.amount || 0), 0)).toLocaleString()}`} 
+                        color="text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20" 
+                      />
+                      <StatCard 
+                        label="Gifts Count" 
+                        value={contributions.length} 
+                        color="text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20" 
+                      />
+                      <StatCard 
+                        label="Last Date" 
+                        value={contributions.length > 0 ? fdate(contributions[0].payment_date) : '—'} 
+                        color="text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/20" 
+                      />
+                    </div>
+
+                    {/* Contribution History */}
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Giving History</h3>
+                      {contributions.length > 0 ? (
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900/50">
+                          {contributions.map((item) => (
+                            <div key={item.id} className="p-3.5 flex items-center justify-between text-xs hover:bg-slate-50/50 dark:hover:bg-slate-800/10 bg-white dark:bg-slate-900">
+                              <div className="space-y-1">
+                                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                                  {item.contribution_type_name}
+                                </p>
+                                <div className="text-[10px] text-slate-400 dark:text-slate-500 flex flex-wrap items-center gap-1.5">
+                                  <span>{fdate(item.payment_date)}</span>
+                                  <span>•</span>
+                                  <span>{item.payment_method}</span>
+                                  {item.reference_number && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="font-mono text-[9px] bg-slate-100 dark:bg-slate-800 px-1 py-0.2 rounded">{item.reference_number}</span>
+                                    </>
+                                  )}
+                                </div>
+                                {item.notes && (
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 italic mt-1">
+                                    "{item.notes}"
+                                  </p>
+                                )}
+                              </div>
+                              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                TZS {Number(item.amount || 0).toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-xs italic bg-white dark:bg-slate-900">
+                          No contributions recorded.
                         </div>
                       )}
                     </div>

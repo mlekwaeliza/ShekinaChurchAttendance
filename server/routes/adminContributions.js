@@ -5,7 +5,7 @@ const { isAuthenticated, requireRole } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(isAuthenticated);
-router.use(requireRole(['admin', 'leader', 'accountant']));
+router.use(requireRole(['admin', 'pastor', 'leader', 'accountant']));
 
 function parseId(value) {
   const n = Number(value);
