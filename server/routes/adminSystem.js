@@ -173,7 +173,12 @@ router.get('/rewards/top-leaders', async (req, res) => {
             COUNT(DISTINCT CASE
               WHEN sl.date IN (SELECT date FROM service_days)
               THEN sl.date
-            END) AS submitted_count
+            END) AS submitted_count,
+            AVG(CASE 
+              WHEN sl.created_at IS NOT NULL 
+              THEN (strftime('%H', sl.created_at) * 3600 + strftime('%M', sl.created_at) * 60 + strftime('%S', sl.created_at))
+              ELSE 86399
+            END) AS avg_submission_seconds
           FROM leaders  l
           JOIN users    u ON l.user_id    = u.id
           JOIN sections s ON l.section_id = s.id
@@ -183,21 +188,54 @@ router.get('/rewards/top-leaders', async (req, res) => {
         SELECT
           id, leader_name, section_name,
           total_service_days, submitted_count,
+          avg_submission_seconds,
           CASE
             WHEN total_service_days > 0
             THEN ROUND((submitted_count * 100.0 / total_service_days), 1)
             ELSE 0
           END AS submission_rate
         FROM leader_stats
-        ORDER BY submission_rate DESC, submitted_count DESC
       `;
       db.all(query, params, (err, r) => err ? reject(err) : resolve(r || []));
     });
 
+    const processed = rows.map((row) => {
+      const avgSec = row.avg_submission_seconds;
+      let speedScore = 0;
+      let avgSubmissionTime = '—';
+
+      if (avgSec !== null && avgSec < 86399) {
+        // 09:00 AM (32400s) -> 100 points
+        // 06:00 PM (64800s) -> 0 points
+        // Scale linearly in between
+        speedScore = Math.max(0, Math.min(100, Math.round(100 - ((avgSec - 32400) / (64800 - 32400)) * 100)));
+
+        const hours = Math.floor(avgSec / 3600);
+        const minutes = Math.floor((avgSec % 3600) / 60);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        avgSubmissionTime = `${String(displayHours).padStart(2, '0')}:${displayMinutes} ${ampm}`;
+      }
+
+      // Combine consistency (70%) and submission speed (30%)
+      const overallScore = Math.round((row.submission_rate * 0.7) + (speedScore * 0.3));
+
+      return {
+        ...row,
+        speedScore,
+        avgSubmissionTime,
+        overallScore
+      };
+    });
+
+    // Sort by overallScore DESC, submission_rate DESC
+    processed.sort((a, b) => b.overallScore - a.overallScore || b.submission_rate - a.submission_rate);
+
     // Dense ranking — ties share the same rank
     let rank = 1;
-    const ranked = rows.map((row, idx) => {
-      if (idx > 0 && row.submission_rate < rows[idx - 1].submission_rate) {
+    const ranked = processed.map((row, idx) => {
+      if (idx > 0 && row.overallScore < processed[idx - 1].overallScore) {
         rank = idx + 1;
       }
       return { ...row, rank };
@@ -595,7 +633,7 @@ router.get('/performance/dashboard', async (req, res) => {
       all("SELECT member_id, leader_id FROM outreach_logs WHERE created_at >= ? AND created_at <= ?", [startDate + ' 00:00:00', endDate + ' 23:59:59']),
       all("SELECT created_by, status FROM visitor_intake WHERE created_at >= ? AND created_at <= ?", [startDate + ' 00:00:00', endDate + ' 23:59:59']),
       all("SELECT member_id, leader_id, contacted FROM absent_followups WHERE created_at >= ? AND created_at <= ?", [startDate + ' 00:00:00', endDate + ' 23:59:59']),
-      all("SELECT leader_id, date FROM submission_log WHERE date >= ? AND date <= ?", [startDate, endDate]),
+      all("SELECT leader_id, date, created_at FROM submission_log WHERE date >= ? AND date <= ?", [startDate, endDate]),
       all("SELECT id, name FROM departments")
     ]);
 
@@ -663,10 +701,57 @@ router.get('/performance/dashboard', async (req, res) => {
     // Calculate leaders. As with members, every metric comes from real
     // records; metrics with no supporting data are 0, not invented figures.
     const calculatedLeaders = leaders.map(l => {
-      const lSub = submissionLogs.filter(s => s.leader_id === l.id).length;
+      const leaderSubmissions = submissionLogs.filter(s => s.leader_id === l.id);
+      const lSub = leaderSubmissions.length;
       const submissionRate = totalServiceDays > 0
         ? Math.min(100, (lSub / totalServiceDays) * 100)
         : 0;
+
+      // Calculate speed score & average submission time
+      let totalSpeedScore = 0;
+      let validSubmissionsCount = 0;
+      let totalSeconds = 0;
+
+      leaderSubmissions.forEach(sub => {
+        if (sub.created_at) {
+          const timePart = sub.created_at.split(' ')[1];
+          if (timePart) {
+            const [h, m, s] = timePart.split(':').map(Number);
+            if (!isNaN(h) && !isNaN(m)) {
+              const secondsSinceMidnight = h * 3605 - (h * 5) + m * 60 + (s || 0); // safe mapping
+              totalSeconds += secondsSinceMidnight;
+              validSubmissionsCount++;
+
+              // 09:00 AM (32400s) -> 100 points
+              // 06:00 PM (64800s) -> 0 points
+              // Scale linearly in between
+              const score = Math.max(0, Math.min(100, Math.round(100 - ((secondsSinceMidnight - 32400) / (64800 - 32400)) * 100)));
+              totalSpeedScore += score;
+            }
+          }
+        }
+      });
+
+      const speedScore = validSubmissionsCount > 0 
+        ? Math.round(totalSpeedScore / validSubmissionsCount) 
+        : 0;
+
+      const avgSeconds = validSubmissionsCount > 0
+        ? Math.round(totalSeconds / validSubmissionsCount)
+        : null;
+
+      let avgSubmissionTime = '—';
+      if (avgSeconds !== null) {
+        const hours = Math.floor(avgSeconds / 3600);
+        const minutes = Math.floor((avgSeconds % 3600) / 60);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        avgSubmissionTime = `${String(displayHours).padStart(2, '0')}:${displayMinutes} ${ampm}`;
+      }
+
+      // Combine consistency (70%) and submission speed (30%)
+      const submissionScore = Math.round((submissionRate * 0.7) + (speedScore * 0.3));
 
       const leaderMembers = calculatedMembers.filter(m => m.leader_id === l.id);
       const memberAttendance = leaderMembers.length > 0
@@ -690,7 +775,7 @@ router.get('/performance/dashboard', async (req, res) => {
       const reportSubmission = 0;
 
       const overallScore = Math.round(
-        submissionRate * (leaderWeights.perf_leader_submission_rate / 100) +
+        submissionScore * (leaderWeights.perf_leader_submission_rate / 100) +
         memberAttendance * (leaderWeights.perf_leader_member_attendance / 100) +
         retentionRate * (leaderWeights.perf_leader_retention / 100) +
         cellGrowth * (leaderWeights.perf_leader_cell_growth / 100) +
@@ -703,12 +788,16 @@ router.get('/performance/dashboard', async (req, res) => {
 
       const badges = [];
       if (submissionRate >= 95) badges.push({ name: 'Ministry Champion', desc: 'Excellent submission rate', icon: '🏅' });
+      if (speedScore >= 85) badges.push({ name: 'Early Bird', desc: 'Averages early attendance submission', icon: '⚡' });
       if (followupCompletion >= 90) badges.push({ name: 'Faithful Shepherd', desc: '90%+ followup completion', icon: '🙏' });
       if (cellGrowth >= 85) badges.push({ name: 'Cell Builder', desc: 'Home cell growth & outreach', icon: '👨‍👩‍👧' });
 
       return {
         ...l,
         submissionRate: Math.round(submissionRate),
+        submissionScore,
+        speedScore,
+        avgSubmissionTime,
         memberAttendance: Math.round(memberAttendance),
         retentionRate: Math.round(retentionRate),
         cellGrowth: Math.round(cellGrowth),

@@ -28,7 +28,8 @@ const SCORE_METRICS = [
   { key: 'evangelism', label: '🔥 Evangelism', color: '#F97316', weightKey: 'perf_member_evangelism', note: 'From outreach logs + visitor intakes this period (25 points each).' },
   { key: 'contributions', label: '⭐ Contributions', color: '#FBBF24', weightKey: 'perf_member_contributions', note: '100 if any contribution was recorded this period, else 0.' },
   { key: 'eventParticipation', label: '📅 Event', color: '#38BDF8', weightKey: 'perf_member_events', note: 'Event/study participation. Not tracked separately, so 0.' },
-  { key: 'submissionRate', label: '📋 Submission Rate', color: '#6366F1', weightKey: 'perf_leader_submission_rate', note: 'Share of service days the leader submitted attendance.' },
+  { key: 'submissionRate', label: '📋 Submission Consistency', color: '#6366F1', weightKey: 'perf_leader_submission_rate', note: 'Share of service days the leader submitted attendance (70% weight of submission score).' },
+  { key: 'speedScore', label: '⚡ Submission Speed', color: '#F97316', note: 'How early the leader submits attendance. Submissions before 09:00 AM get 100 points, scaling down to 0 points at 06:00 PM (30% weight of submission score).' },
   { key: 'memberAttendance', label: '👥 Member Attendance', color: '#818CF8', weightKey: 'perf_leader_member_attendance', note: 'Average church attendance of the leader’s members.' },
   { key: 'retentionRate', label: '🔒 Retention', color: '#94A3B8', weightKey: 'perf_leader_retention', note: 'Member retention. Not tracked yet, so 0.' },
   { key: 'cellGrowth', label: '📈 Cell Growth', color: '#F97316', weightKey: 'perf_leader_cell_growth', note: 'Home-cell growth. Not tracked yet, so 0.' },
@@ -190,7 +191,16 @@ const LeaderboardRow = ({ item, rank, onClick, nameKey, subKey, scoreKey = 'over
           <p style={{ margin: 0, fontWeight: 700, color: '#F1F5F9', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
           {badges.slice(0, 2).map((b, i) => <Badge key={i} badge={b} />)}
         </div>
-        {sub && <p style={{ margin: 0, fontSize: 11, color: '#64748B', marginTop: 2 }}>{sub}</p>}
+        {sub && (
+          <p style={{ margin: 0, fontSize: 11, color: '#64748B', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <span>{sub}</span>
+            {item.avgSubmissionTime && item.avgSubmissionTime !== '—' && (
+              <span style={{ padding: '1px 5px', borderRadius: 4, background: 'rgba(249,115,22,0.1)', color: '#F97316', fontSize: 9, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                ⏰ Avg: {item.avgSubmissionTime}
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Rank delta */}
@@ -834,7 +844,12 @@ const RewardsView = () => {
                 {rows.map((r, i) => (
                   <div key={i} style={{ marginBottom: 14 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, color: '#CBD5E1' }}>{r.label}</span>
+                      <span style={{ fontSize: 12, color: '#CBD5E1' }}>
+                        {r.label}
+                        {r.key === 'speedScore' && profile.avgSubmissionTime && (
+                          <span style={{ fontSize: 11, color: '#64748B', marginLeft: 6 }}>(Avg time: {profile.avgSubmissionTime})</span>
+                        )}
+                      </span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: r.color }}>
                         {r.value}{r.key === 'membersCount' || r.key === 'visitors' ? '' : '%'}
                         {r.weight != null && <span style={{ fontWeight: 400, color: '#64748B', marginLeft: 6 }}>× {r.weight}%</span>}
