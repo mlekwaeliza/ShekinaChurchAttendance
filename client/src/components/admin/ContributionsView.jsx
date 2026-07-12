@@ -10,7 +10,7 @@ const fmt = (n) => (n || 0).toLocaleString('en-TZ', { minimumFractionDigits: 0, 
 
 export default function ContributionsView({ showMessage, allMembers = [] }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'pastor';
 
   const [members, setMembers] = useState(allMembers);
   const [contributions, setContributions] = useState([]);
