@@ -36,7 +36,9 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
   const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
 
-  // Guarantee types load on mount
+  const [typesLoading, setTypesLoading] = useState(true);
+
+  // Guarantee types load on mount independently of contributions list
   useEffect(() => {
     async function fetchTypes() {
       try {
@@ -44,6 +46,8 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
         setTypes(data || []);
       } catch (err) {
         console.error('Failed to load types on mount:', err);
+      } finally {
+        setTypesLoading(false);
       }
     }
     fetchTypes();
@@ -54,25 +58,38 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
     loadInitial();
   }, [allMembers.length]);
 
-  useEffect(() => {
-    if (contributions.length === 0 && !loading) loadContributions();
-  }, [types.length]);
-
   async function loadInitial() {
     setLoading(true);
     try {
-      setMembers(allMembers);
-      const { data: typesData } = await contributionAPI.getTypes();
-      setTypes(typesData);
       const defaultFrom = new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0];
       const defaultTo = new Date().toISOString().split('T')[0];
-      const { data: contribs } = await contributionAPI.getContributions({ date_from: defaultFrom, date_to: defaultTo });
-      setContributions(contribs);
       setFilters(f => ({ ...f, date_from: defaultFrom, date_to: defaultTo }));
+
+      // Fetch both concurrently. If contributions fail, types will still load
+      const [typesRes, contribsRes] = await Promise.allSettled([
+        contributionAPI.getTypes(),
+        contributionAPI.getContributions({ date_from: defaultFrom, date_to: defaultTo })
+      ]);
+
+      if (typesRes.status === 'fulfilled') {
+        setTypes(typesRes.value.data || []);
+      } else {
+        console.error('Failed to load initial types:', typesRes.reason);
+      }
+
+      if (contribsRes.status === 'fulfilled') {
+        setContributions(contribsRes.value.data || []);
+      } else {
+        console.error('Failed to load initial contributions:', contribsRes.reason);
+        showMessage?.(contribsRes.reason?.message || 'Failed to load contributions list');
+      }
+
     } catch (err) {
       console.error('Failed to load initial data:', err);
+      showMessage?.(err.message || 'Failed to load initial contributions data');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function loadContributions(f = filters) {
@@ -84,11 +101,13 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
       if (f.contribution_type_id) params.contribution_type_id = f.contribution_type_id;
       if (f.payment_method) params.payment_method = f.payment_method;
       const { data } = await contributionAPI.getContributions(params);
-      setContributions(data);
+      setContributions(data || []);
     } catch (err) {
       console.error('Failed to load contributions:', err);
+      showMessage?.(err.message || 'Failed to load contributions');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function loadSummary() {
@@ -535,21 +554,25 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsTypeDropdownOpen(false)} />
                       <div className="absolute z-50 w-full mt-1.5 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-700/40">
-                        {types.filter(t => t.is_active !== 0).map(t => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => {
-                              setForm(f => ({ ...f, contribution_type_id: t.id }));
-                              setIsTypeDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2.5 hover:bg-gray-750 flex items-center justify-between transition-colors ${
-                              Number(form.contribution_type_id) === t.id ? 'bg-emerald-600/10 border-l-2 border-emerald-500 text-emerald-400' : 'text-gray-200'
-                            }`}
-                          >
-                            <span className="text-sm font-medium">{t.name}</span>
-                          </button>
-                        ))}
+                        {types.filter(t => t.is_active !== 0).length === 0 ? (
+                          <p className="p-3 text-xs text-gray-400 text-center italic">No contribution types loaded</p>
+                        ) : (
+                          types.filter(t => t.is_active !== 0).map(t => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => {
+                                setForm(f => ({ ...f, contribution_type_id: t.id }));
+                                setIsTypeDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 hover:bg-gray-750 flex items-center justify-between transition-colors ${
+                                Number(form.contribution_type_id) === t.id ? 'bg-emerald-600/10 border-l-2 border-emerald-500 text-emerald-400' : 'text-gray-200'
+                              }`}
+                            >
+                              <span className="text-sm font-medium">{t.name}</span>
+                            </button>
+                          ))
+                        )}
                       </div>
                     </>
                   )}
