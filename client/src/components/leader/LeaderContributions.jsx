@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, X, DollarSign, PieChart, List, TrendingUp, Receipt, Calendar, RotateCw, Wallet } from 'lucide-react';
+import { Search, Plus, X, DollarSign, PieChart, List, TrendingUp, Receipt, Calendar, RotateCw, Wallet, ChevronDown } from 'lucide-react';
 import { contributionAPI } from '../../services/api';
 
 const PAYMENT_METHODS = ['Cash', 'Mobile Money', 'Bank Transfer', 'Other'];
@@ -12,11 +12,16 @@ export default function LeaderContributions({ members: propMembers = [], showMes
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [members] = useState(propMembers);
+  const members = propMembers;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState({ member_id: '', contribution_type_id: '', amount: '', payment_date: new Date().toISOString().split('T')[0], payment_method: 'Cash', reference_number: '', notes: '' });
   const [saving, setSaving] = useState(false);
+
+  // Search & custom dropdown states for contribution form
+  const [memberSearch, setMemberSearch] = useState('');
+  const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -97,7 +102,7 @@ export default function LeaderContributions({ members: propMembers = [], showMes
         </div>
         <div className="flex items-center gap-2">
           <button onClick={loadData} className="btn-ghost p-2 text-gray-400 hover:text-white" title="Refresh"><RotateCw size={16} /></button>
-          <button onClick={() => setIsModalOpen(true)} className="btn-primary text-sm flex items-center gap-1.5"><Plus size={15} /> Record Contribution</button>
+          <button onClick={() => { setMemberSearch(''); setIsMemberDropdownOpen(false); setIsTypeDropdownOpen(false); setIsModalOpen(true); }} className="btn-primary text-sm flex items-center gap-1.5"><Plus size={15} /> Record Contribution</button>
         </div>
       </div>
 
@@ -224,19 +229,112 @@ export default function LeaderContributions({ members: propMembers = [], showMes
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+                <div className="col-span-2 relative">
                   <label className="block text-sm font-medium text-gray-300 mb-1.5">Member</label>
-                  <select value={form.member_id} onChange={e => setForm(f => ({ ...f, member_id: e.target.value }))} required className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
-                    <option value="">Select member...</option>
-                    {members.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={memberSearch}
+                      onChange={e => {
+                        setMemberSearch(e.target.value);
+                        setIsMemberDropdownOpen(true);
+                        const match = members.find(m => m.full_name.toLowerCase() === e.target.value.toLowerCase());
+                        setForm(f => ({ ...f, member_id: match ? match.id : '' }));
+                      }}
+                      onFocus={() => setIsMemberDropdownOpen(true)}
+                      placeholder="Search member by name..."
+                      className="w-full pl-10 pr-10 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-white placeholder-gray-400"
+                    />
+                    <div className="absolute left-3 top-3 text-gray-400">
+                      <Search size={16} />
+                    </div>
+                    {memberSearch && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMemberSearch('');
+                          setForm(f => ({ ...f, member_id: '' }));
+                          setIsMemberDropdownOpen(true);
+                        }}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+
+                  {isMemberDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsMemberDropdownOpen(false)} />
+                      <div className="absolute z-50 w-full mt-1.5 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-700/40">
+                        {members.filter(m => m.full_name.toLowerCase().includes(memberSearch.toLowerCase())).length > 0 ? (
+                          members
+                            .filter(m => m.full_name.toLowerCase().includes(memberSearch.toLowerCase()))
+                            .slice(0, 15)
+                            .map(m => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => {
+                                  setMemberSearch(m.full_name);
+                                  setForm(f => ({ ...f, member_id: m.id }));
+                                  setIsMemberDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-4 py-3 hover:bg-gray-750 flex items-center justify-between transition-colors ${
+                                  form.member_id === m.id ? 'bg-emerald-600/10 border-l-2 border-emerald-500' : ''
+                                }`}
+                              >
+                                <div>
+                                  <p className="text-sm font-medium text-white">{m.full_name}</p>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    {m.section_name || 'No Section'} {m.leader_name ? `• Leader: ${m.leader_name}` : ''}
+                                  </p>
+                                </div>
+                                <span className="text-xs text-gray-500 font-mono">#{m.id}</span>
+                              </button>
+                            ))
+                        ) : (
+                          <p className="p-3 text-xs text-gray-400 text-center italic">No members found</p>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-300 mb-1.5">Contribution Type</label>
-                  <select value={form.contribution_type_id} onChange={e => setForm(f => ({ ...f, contribution_type_id: e.target.value }))} required className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40">
-                    <option value="">Select type...</option>
-                    {types.filter(t => t.is_active !== 0).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
+                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-left text-white flex items-center justify-between"
+                  >
+                    <span>
+                      {types.find(t => t.id === Number(form.contribution_type_id))?.name || 'Select type...'}
+                    </span>
+                    <ChevronDown size={16} className="text-gray-400" />
+                  </button>
+
+                  {isTypeDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsTypeDropdownOpen(false)} />
+                      <div className="absolute z-50 w-full mt-1.5 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-700/40">
+                        {types.filter(t => t.is_active !== 0).map(t => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              setForm(f => ({ ...f, contribution_type_id: t.id }));
+                              setIsTypeDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-gray-750 flex items-center justify-between transition-colors ${
+                              Number(form.contribution_type_id) === t.id ? 'bg-emerald-600/10 border-l-2 border-emerald-500 text-emerald-400' : 'text-gray-200'
+                            }`}
+                          >
+                            <span className="text-sm font-medium">{t.name}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1.5">Amount ({CURRENCY})</label>
