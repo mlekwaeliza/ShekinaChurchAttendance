@@ -29,7 +29,7 @@ const SCORE_METRICS = [
   { key: 'contributions', label: '⭐ Contributions', color: '#FBBF24', weightKey: 'perf_member_contributions', note: '100 if any contribution was recorded this period, else 0.' },
   { key: 'eventParticipation', label: '📅 Event', color: '#38BDF8', weightKey: 'perf_member_events', note: 'Event/study participation. Not tracked separately, so 0.' },
   { key: 'submissionRate', label: '📋 Submission Consistency', color: '#6366F1', weightKey: 'perf_leader_submission_rate', note: 'Share of service days the leader submitted attendance (70% weight of submission score).' },
-  { key: 'speedScore', label: '⚡ Submission Speed', color: '#F97316', note: 'How early the leader submits attendance. Submissions before 09:00 AM get 100 points, scaling down to 0 points at 06:00 PM (30% weight of submission score).' },
+  { key: 'speedScore', label: '⚡ Submission Speed', color: '#F97316', note: 'How early the leader submits attendance. Submissions before 11:00 AM get 100 points, scaling down to 0 points at 02:00 PM (30% weight of submission score).' },
   { key: 'memberAttendance', label: '👥 Member Attendance', color: '#818CF8', weightKey: 'perf_leader_member_attendance', note: 'Average church attendance of the leader’s members.' },
   { key: 'retentionRate', label: '🔒 Retention', color: '#94A3B8', weightKey: 'perf_leader_retention', note: 'Member retention. Not tracked yet, so 0.' },
   { key: 'cellGrowth', label: '📈 Cell Growth', color: '#F97316', weightKey: 'perf_leader_cell_growth', note: 'Home-cell growth. Not tracked yet, so 0.' },

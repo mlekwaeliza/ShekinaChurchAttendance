@@ -205,10 +205,10 @@ router.get('/rewards/top-leaders', async (req, res) => {
       let avgSubmissionTime = '—';
 
       if (avgSec !== null && avgSec < 86399) {
-        // 09:00 AM (32400s) -> 100 points
-        // 06:00 PM (64800s) -> 0 points
+        // 11:00 AM (39600s) -> 100 points
+        // 02:00 PM (50400s) -> 0 points
         // Scale linearly in between
-        speedScore = Math.max(0, Math.min(100, Math.round(100 - ((avgSec - 32400) / (64800 - 32400)) * 100)));
+        speedScore = Math.max(0, Math.min(100, Math.round(100 - ((avgSec - 39600) / (50400 - 39600)) * 100)));
 
         const hours = Math.floor(avgSec / 3600);
         const minutes = Math.floor((avgSec % 3600) / 60);
@@ -722,10 +722,10 @@ router.get('/performance/dashboard', async (req, res) => {
               totalSeconds += secondsSinceMidnight;
               validSubmissionsCount++;
 
-              // 09:00 AM (32400s) -> 100 points
-              // 06:00 PM (64800s) -> 0 points
+              // 11:00 AM (39600s) -> 100 points
+              // 02:00 PM (50400s) -> 0 points
               // Scale linearly in between
-              const score = Math.max(0, Math.min(100, Math.round(100 - ((secondsSinceMidnight - 32400) / (64800 - 32400)) * 100)));
+              const score = Math.max(0, Math.min(100, Math.round(100 - ((secondsSinceMidnight - 39600) / (50400 - 39600)) * 100)));
               totalSpeedScore += score;
             }
           }
