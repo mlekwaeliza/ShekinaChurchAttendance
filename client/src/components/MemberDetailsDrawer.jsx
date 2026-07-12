@@ -31,6 +31,8 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
   const isAdmin = user?.role === 'admin' || user?.role === 'pastor';
   const apiGroup = isAdmin ? adminAPI : leaderAPI;
   const canViewFinancials = user?.role === 'admin' || user?.role === 'pastor' || user?.role === 'leader' || user?.role === 'accountant';
+  // Tithe info is sensitive — only admin & accountant may see it
+  const canViewTithes = user?.role === 'admin' || user?.role === 'accountant';
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -482,12 +484,15 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
                     <StatCard 
                       label="Total Given" 
-                      value={`TZS ${contributions.reduce((sum, c) => sum + Number(c.amount || 0), 0).toLocaleString()}`} 
+                      value={`TZS ${contributions
+                        .filter(c => canViewTithes || (c.contribution_type_name || '').toLowerCase() !== 'tithes')
+                        .reduce((sum, c) => sum + Number(c.amount || 0), 0)
+                        .toLocaleString()}`} 
                       color="text-emerald-600 dark:text-emerald-450 bg-emerald-50/50 dark:bg-emerald-950/20" 
                     />
                     <StatCard 
                       label="Gifts Count" 
-                      value={contributions.length} 
+                      value={contributions.filter(c => canViewTithes || (c.contribution_type_name || '').toLowerCase() !== 'tithes').length} 
                       color="text-blue-600 dark:text-blue-450 bg-blue-50/50 dark:bg-blue-950/20" 
                     />
                     <StatCard 
@@ -502,7 +507,9 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
                     <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Giving History</h3>
                     {contributions.length > 0 ? (
                       <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                        {contributions.map((item) => (
+                        {contributions
+                          .filter(c => canViewTithes || (c.contribution_type_name || '').toLowerCase() !== 'tithes')
+                          .map((item) => (
                           <div key={item.id} className="py-3.5 flex items-center justify-between text-xs hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
                             <div className="space-y-1">
                               <p className="font-semibold text-slate-800 dark:text-slate-200">
