@@ -33,7 +33,9 @@ async function resolveLeaderId(req) {
 
 router.get('/contribution-types', async (req, res) => {
   try {
+    console.log(`[DEBUG] GET /contribution-types requested by user: ${req.session?.userId}, role: ${req.session?.user?.role}`);
     const types = await queries.getContributionTypes();
+    console.log(`[DEBUG] Fetched ${types?.length || 0} contribution types:`, JSON.stringify(types));
     res.json(types);
   } catch (err) {
     console.error('Error fetching contribution types:', err);
