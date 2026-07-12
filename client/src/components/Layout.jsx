@@ -201,7 +201,6 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/leadership', label: 'Leadership', icon: Users },
         { path: '/admin/departments', label: 'Departments', icon: Building2 },
         { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
-        { path: '/admin/contributions', label: 'Contributions', icon: DollarSign },
         { path: '/admin/finance', label: 'Finance', icon: Banknote },
       ]},
       { section: 'INSIGHTS', items: [
