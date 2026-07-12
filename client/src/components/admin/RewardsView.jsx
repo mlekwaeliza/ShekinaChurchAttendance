@@ -160,6 +160,9 @@ const LeaderboardRow = ({ item, rank, onClick, nameKey, subKey, scoreKey = 'over
   return (
     <div
       onClick={() => onClick && onClick(item)}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(item); } } : undefined}
       style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '14px 16px',

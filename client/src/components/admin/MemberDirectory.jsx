@@ -7,6 +7,8 @@ import { fdatetime } from '../../utils/date';
 import BulkDeleteModal from './BulkDeleteModal';
 import PendingDeletionModal from './PendingDeletionModal';
 import { adminAPI } from '../../services/api';
+import MemberDetailsDrawer from '../MemberDetailsDrawer';
+
 
 const avatarColors = [
   'from-violet-500 to-purple-600',
@@ -67,6 +69,7 @@ const MemberDirectory = ({
   const [viewHistoryFor, setViewHistoryFor] = useState(null);
   const [titleHistory, setTitleHistory] = useState([]);
   const [removingTitle, setRemovingTitle] = useState(null); // { memberId, titleId, titleName }
+  const [detailsMember, setDetailsMember] = useState(null);
 
   const fetchMemberTitles = useCallback(async (memberId) => {
     try {
@@ -566,14 +569,15 @@ const MemberDirectory = ({
                   return (
                     <React.Fragment key={member.id}>
                       <tr
-                        className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-700/30 ${
+                        onClick={() => setDetailsMember(member)}
+                        className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-700/30 cursor-pointer ${
                           isExpanded ? 'bg-primary-50/30 dark:bg-primary-900/10' : ''
                         } ${isSelected ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''}`}
                       >
                         {/* Checkbox */}
                         <td className="px-4 py-3">
                           <button
-                            onClick={() => toggleSelect(member.id)}
+                            onClick={(e) => { e.stopPropagation(); toggleSelect(member.id); }}
                             className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
                               isSelected
                                 ? 'border-primary-500 bg-primary-500'
@@ -586,7 +590,7 @@ const MemberDirectory = ({
                         {/* Expand */}
                         <td className="px-2 py-3">
                           <button
-                            onClick={() => handleExpandRow(member.id)}
+                            onClick={(e) => { e.stopPropagation(); handleExpandRow(member.id); }}
                             className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition-colors"
                           >
                             {isExpanded ? <ChevronLeft className="w-4 h-4 rotate-90" /> : <ChevronLeft className="w-4 h-4 -rotate-90" />}
@@ -662,22 +666,22 @@ const MemberDirectory = ({
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-0.5">
                             <button
-                                            onClick={() => { ensureModalMembersLoaded(); setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
+                                            onClick={(e) => { e.stopPropagation(); ensureModalMembersLoaded(); setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
                               className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
                               title="Assign Title"
                             >
                               <Award className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => onEdit(member)}
+                              onClick={(e) => { e.stopPropagation(); onEdit(member); }}
                               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors active:scale-90"
                               title="Edit"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => onDelete(member)}
-                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors active:scale-90"
+                              onClick={(e) => { e.stopPropagation(); onDelete(member); }}
+                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-505 transition-colors active:scale-90"
                               title="Delete"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -798,6 +802,13 @@ const MemberDirectory = ({
           </p>
         </div>
       )}
+
+      {/* Member Details Drawer */}
+      <MemberDetailsDrawer
+        member={detailsMember}
+        isOpen={!!detailsMember}
+        onClose={() => setDetailsMember(null)}
+      />
 
       {/* Bulk Edit Modal */}
       {showBulkEdit && (

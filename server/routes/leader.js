@@ -971,4 +971,84 @@ router.delete('/members/:id/titles/:titleId', async (req, res) => {
   }
 });
 
+// GET member departments for a leader
+router.get('/members/:id/departments', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const member = await get('SELECT id, section_id FROM members WHERE id = ?', [req.params.id]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (Number(member.section_id) !== Number(leaderRecord.section_id)) {
+      return res.status(403).json({ error: 'Member is not in your section' });
+    }
+
+    const departments = await queries.getMemberDepartments(req.params.id);
+    res.json(departments);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch member departments' });
+  }
+});
+
+// GET member attendance history for a leader
+router.get('/members/:id/attendance', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader not found' });
+
+    const member = await get('SELECT id, section_id FROM members WHERE id = ?', [req.params.id]);
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    if (Number(member.section_id) !== Number(leaderRecord.section_id)) {
+      return res.status(403).json({ error: 'Member is not in your section' });
+    }
+
+    const memberId = Number(req.params.id);
+    const days = Math.min(parseInt(req.query.days, 10) || 180, 365);
+    const { service_id = 'all' } = req.query;
+    const endDate = formatLocalDate(new Date());
+    const startDate = formatLocalDate(addDays(endDate, -days));
+    const serviceCondition = service_id === 'all' ? '' : ' AND a.service_type_id = ?';
+    const serviceParams = service_id === 'all' ? [] : [service_id];
+
+    const records = await all(`
+      SELECT
+        a.id,
+        a.date,
+        a.status,
+        a.service_type_id,
+        COALESCE(st.name, 'Service') as service_name,
+        a.submitted_at,
+        submitted_by.full_name as submitted_by_name
+      FROM attendance a
+      LEFT JOIN service_types st ON a.service_type_id = st.id
+      LEFT JOIN users submitted_by ON a.submitted_by = submitted_by.id
+      WHERE a.member_id = ?
+        AND a.date BETWEEN ? AND ?
+        ${serviceCondition}
+      ORDER BY a.date DESC, a.submitted_at DESC
+      LIMIT 200
+    `, [memberId, startDate, endDate, ...serviceParams]);
+
+    const stats = records.reduce((acc, record) => {
+      const status = String(record.status || '').trim().toLowerCase();
+      if (status === 'present') acc.present += 1;
+      if (status === 'absent') acc.absent += 1;
+      if (status === 'excused') acc.excused += 1;
+      acc.total += 1;
+      return acc;
+    }, { present: 0, absent: 0, excused: 0, total: 0 });
+
+    stats.attendance_rate = stats.total ? Math.round((stats.present / stats.total) * 100) : 0;
+
+    res.json({
+      records,
+      stats,
+      date_range: { start: startDate, end: endDate }
+    });
+  } catch (error) {
+    console.error('Member attendance details error:', error);
+    res.status(500).json({ error: 'Failed to fetch member attendance details' });
+  }
+});
+
 module.exports = router;

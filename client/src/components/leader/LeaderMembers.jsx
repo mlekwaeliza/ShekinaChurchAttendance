@@ -5,6 +5,8 @@ import DataTable from '../ui/DataTable';
 import Modal from '../ui/Modal';
 import Badge from '../ui/Badge';
 import { handlePhoneChange } from '../../utils/phone';
+import MemberDetailsDrawer from '../MemberDetailsDrawer';
+
 
 const LeaderMembers = ({
   members,
@@ -27,6 +29,7 @@ const LeaderMembers = ({
   const [followUpMember, setFollowUpMember] = useState(null);
   const [followUpForm, setFollowUpForm] = useState({ contacted: false, contact_method: '', notes: '' });
   const [followUpSaving, setFollowUpSaving] = useState(false);
+  const [detailsMember, setDetailsMember] = useState(null);
 
   const absenceMap = useMemo(() => {
     const map = {};
@@ -160,7 +163,7 @@ const LeaderMembers = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onEdit(row);
+                setDetailsMember(row);
               }}
               className="btn-ghost btn-sm text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
             >
@@ -171,7 +174,7 @@ const LeaderMembers = ({
         </div>
       ),
     },
-  ], [onEdit, setDeletingMember, absenceMap, followUpMap, isHead]);
+  ], [onEdit, setDeletingMember, absenceMap, followUpMap, isHead, setDetailsMember]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -195,6 +198,7 @@ const LeaderMembers = ({
         searchable={true}
         searchPlaceholder="Search members..."
         searchKeys={['full_name', 'membership_id', 'phone']}
+        onRowClick={(row) => setDetailsMember(row)}
         emptyIcon={Users}
         emptyTitle="No members yet"
         emptyDescription="Add your first member to get started."
@@ -426,6 +430,13 @@ const LeaderMembers = ({
           </div>
         </Modal>
       )}
+
+      {/* Member Details Drawer */}
+      <MemberDetailsDrawer
+        member={detailsMember}
+        isOpen={!!detailsMember}
+        onClose={() => setDetailsMember(null)}
+      />
     </div>
   );
 };

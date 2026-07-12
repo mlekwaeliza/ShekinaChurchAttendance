@@ -248,6 +248,8 @@ export const leaderAPI = {
   assignMemberTitle: (memberId, titleId, data = {}) => api.post(`/leader/members/${memberId}/titles`, { title_id: titleId, ...data }),
   updateMemberTitle: (memberId, titleId, data) => api.put(`/leader/members/${memberId}/titles/${titleId}`, data),
   removeMemberTitle: (memberId, titleId) => api.delete(`/leader/members/${memberId}/titles/${titleId}`),
+  getMemberDepartments: (memberId) => api.get(`/leader/members/${memberId}/departments`),
+  getMemberAttendanceDetails: (memberId, days = 180, serviceId = 'all') => api.get(`/leader/members/${memberId}/attendance`, { params: { days, service_id: serviceId } }),
 };
 
 // Pastor API
