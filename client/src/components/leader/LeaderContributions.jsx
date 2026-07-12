@@ -23,6 +23,25 @@ export default function LeaderContributions({ members: propMembers = [], showMes
   const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
 
+  const [typesLoading, setTypesLoading] = useState(true);
+
+  // Fetch contribution types independently on mount so they
+  // are always available when the modal opens, regardless of
+  // whether the contributions list has finished loading.
+  useEffect(() => {
+    async function fetchTypes() {
+      try {
+        const { data } = await contributionAPI.getTypes();
+        setTypes(data || []);
+      } catch (err) {
+        console.error('Failed to load contribution types:', err);
+      } finally {
+        setTypesLoading(false);
+      }
+    }
+    fetchTypes();
+  }, []);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -30,10 +49,20 @@ export default function LeaderContributions({ members: propMembers = [], showMes
   async function loadData() {
     setLoading(true);
     try {
-      const { data: typesData } = await contributionAPI.getTypes();
-      setTypes(typesData);
-      const { data: contribs } = await contributionAPI.getContributions();
-      setContributions(contribs);
+      // Use allSettled so a contributions failure doesn't block types
+      const [typesRes, contribsRes] = await Promise.allSettled([
+        contributionAPI.getTypes(),
+        contributionAPI.getContributions(),
+      ]);
+      if (typesRes.status === 'fulfilled') {
+        setTypes(typesRes.value.data || []);
+        setTypesLoading(false);
+      }
+      if (contribsRes.status === 'fulfilled') setContributions(contribsRes.value.data || []);
+      if (contribsRes.status === 'rejected') {
+        console.error('Failed to load contributions:', contribsRes.reason);
+        showMessage?.(contribsRes.reason?.response?.data?.error || 'Failed to load contributions');
+      }
     } catch (err) {
       console.error('Failed to load:', err);
       showMessage?.(err?.response?.data?.error || 'Failed to load contributions data');
@@ -317,21 +346,27 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setIsTypeDropdownOpen(false)} />
                       <div className="absolute z-50 w-full mt-1.5 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-700/40">
-                        {types.filter(t => t.is_active !== 0).map(t => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => {
-                              setForm(f => ({ ...f, contribution_type_id: t.id }));
-                              setIsTypeDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2.5 hover:bg-gray-750 flex items-center justify-between transition-colors ${
-                              Number(form.contribution_type_id) === t.id ? 'bg-emerald-600/10 border-l-2 border-emerald-500 text-emerald-400' : 'text-gray-200'
-                            }`}
-                          >
-                            <span className="text-sm font-medium">{t.name}</span>
-                          </button>
-                        ))}
+                        {typesLoading ? (
+                          <p className="p-3 text-xs text-gray-400 text-center italic">Loading types...</p>
+                        ) : types.filter(t => t.is_active !== 0).length === 0 ? (
+                          <p className="p-3 text-xs text-gray-400 text-center italic">No contribution types found</p>
+                        ) : (
+                          types.filter(t => t.is_active !== 0).map(t => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => {
+                                setForm(f => ({ ...f, contribution_type_id: t.id }));
+                                setIsTypeDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-4 py-2.5 hover:bg-gray-750 flex items-center justify-between transition-colors ${
+                                Number(form.contribution_type_id) === t.id ? 'bg-emerald-600/10 border-l-2 border-emerald-500 text-emerald-400' : 'text-gray-200'
+                              }`}
+                            >
+                              <span className="text-sm font-medium">{t.name}</span>
+                            </button>
+                          ))
+                        )}
                       </div>
                     </>
                   )}
