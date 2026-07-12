@@ -161,12 +161,12 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
     );
   }, [contributions, filters.search]);
 
-  const totalAmount = useMemo(() => filteredContributions.reduce((s, c) => s + c.amount, 0), [filteredContributions]);
+  const totalAmount = useMemo(() => filteredContributions.reduce((s, c) => s + Number(c.amount || 0), 0), [filteredContributions]);
   const totalByType = useMemo(() => {
     const map = {};
     filteredContributions.forEach(c => {
       const key = c.contribution_type_name || 'Unknown';
-      map[key] = (map[key] || 0) + c.amount;
+      map[key] = (map[key] || 0) + Number(c.amount || 0);
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [filteredContributions]);
@@ -383,7 +383,7 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
                     <tbody>
                       {filteredContributions.map(c => (
                         <tr key={c.id} className="border-b border-gray-700/20 hover:bg-gray-700/20 transition-colors">
-                          <td className="py-3 px-5 text-gray-300 whitespace-nowrap">{c.payment_date}</td>
+                          <td className="py-3 px-5 text-gray-300 whitespace-nowrap">{fdate(c.payment_date)}</td>
                           <td className="py-3 px-5 font-medium text-white">{c.full_name || 'Unknown'}</td>
                           <td className="py-3 px-5"><span className="inline-flex px-2.5 py-1 bg-emerald-900/40 text-emerald-300 rounded-lg text-xs font-medium">{c.contribution_type_name}</span></td>
                           <td className="py-3 px-5 text-right text-emerald-400 font-semibold whitespace-nowrap">{CURRENCY} {fmt(c.amount)}</td>
