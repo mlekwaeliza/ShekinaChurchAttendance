@@ -25,9 +25,6 @@ export default function LeaderContributions({ members: propMembers = [], showMes
 
   const [typesLoading, setTypesLoading] = useState(true);
 
-  // Fetch contribution types independently on mount so they
-  // are always available when the modal opens, regardless of
-  // whether the contributions list has finished loading.
   useEffect(() => {
     async function fetchTypes() {
       try {
@@ -49,7 +46,6 @@ export default function LeaderContributions({ members: propMembers = [], showMes
   async function loadData() {
     setLoading(true);
     try {
-      // Use allSettled so a contributions failure doesn't block types
       const [typesRes, contribsRes] = await Promise.allSettled([
         contributionAPI.getTypes(),
         contributionAPI.getContributions(),
@@ -58,14 +54,18 @@ export default function LeaderContributions({ members: propMembers = [], showMes
         setTypes(typesRes.value.data || []);
         setTypesLoading(false);
       }
-      if (contribsRes.status === 'fulfilled') setContributions(contribsRes.value.data || []);
+      if (contribsRes.status === 'fulfilled') {
+        setContributions(contribsRes.value.data || []);
+      }
       if (contribsRes.status === 'rejected') {
         console.error('Failed to load contributions:', contribsRes.reason);
-        showMessage?.(contribsRes.reason?.response?.data?.error || 'Failed to load contributions');
+        // Extract message from standard Axios custom Error wrapper
+        const msg = contribsRes.reason?.message || 'Failed to load contributions';
+        showMessage?.(msg);
       }
     } catch (err) {
       console.error('Failed to load:', err);
-      showMessage?.(err?.response?.data?.error || 'Failed to load contributions data');
+      showMessage?.(err?.message || 'Failed to load contributions data');
     }
     setLoading(false);
   }
