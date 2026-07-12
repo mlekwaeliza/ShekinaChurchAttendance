@@ -4,10 +4,11 @@ import {
   DollarSign, Calendar, CheckCircle2, XCircle, Clock,
   Loader2, Search, Eye, Edit3, Send, PieChart, Plus,
   FileText, ArrowUpCircle, HandCoins, Download, AlertCircle,
-  LayoutDashboard, Users, Building2
+  LayoutDashboard, Users, Building2, Receipt
 } from 'lucide-react';
 import { fdate, fdatetime } from '../../utils/date';
 import FinanceWorkspace from './FinanceWorkspace';
+import ContributionsView from './ContributionsView';
 
 const fmt = (v) => `TZS ${Number(v || 0).toLocaleString()}`;
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
@@ -42,6 +43,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   const [rptFrom, setRptFrom] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`; });
   const [rptTo, setRptTo] = useState(today());
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [allMembers, setAllMembers] = useState([]);
   const [dbData, setDbData] = useState({ contributions: [], finance: [], members: 0, memberContributions: [] });
   const [dbLoading, setDbLoading] = useState(true);
   const YEAR = new Date().getFullYear();
@@ -58,10 +60,12 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
         adminAPI.getMembers({}),
         contributionAPI.getContributions({ date_from: from, date_to: todayVal }),
       ]);
+      const membersList = memRes.data || [];
+      setAllMembers(membersList);
       setDbData({
         contributions: conRes.data?.rows || [],
         finance: finRes.data || [],
-        members: memRes.data?.length || 0,
+        members: membersList.length || 0,
         memberContributions: memberConRes.data || [],
       });
     } catch (e) {
@@ -157,6 +161,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
           { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { key: 'records', label: 'Daily Records', icon: FileText },
           { key: 'approvals', label: 'Pending Approvals', icon: AlertCircle, badge: pendingRecords.length },
+          { key: 'contributions', label: 'Contributions', icon: Receipt },
           { key: 'reports', label: 'Reports', icon: PieChart },
         ].map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
@@ -354,6 +359,16 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
           ) : (
             <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /></div>
           )}
+        </div>
+      )}
+
+      {/* Contributions Tab */}
+      {activeTab === 'contributions' && (
+        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+          <ContributionsView
+            allMembers={allMembers}
+            showMessage={showMessage}
+          />
         </div>
       )}
 

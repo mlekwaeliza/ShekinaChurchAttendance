@@ -1,37 +1,24 @@
-const { Client } = require('pg');
-const dotenv = require('dotenv');
-const path = require('path');
-
-dotenv.config();
-
-const connectionString = process.env.DATABASE_URL;
-
-const client = new Client({
-  connectionString,
-  ssl: {
-    rejectUnauthorized: false
-  }
-});
+const { queries, get, all } = require('./database');
 
 async function main() {
-  await client.connect();
   try {
-    const titlesRes = await client.query('SELECT * FROM congregation_titles ORDER BY sort_order, name');
-    console.log('--- congregation_titles ---');
-    console.log(titlesRes.rows);
+    const counts = {};
+    const tables = ['users', 'members', 'sections', 'leaders', 'attendance', 'finance_daily_records', 'finance_expenses', 'contributions'];
+    for (const table of tables) {
+      const res = await get(`SELECT COUNT(*) as count FROM ${table}`);
+      counts[table] = res.count;
+    }
+    console.log('--- Table Counts ---', counts);
 
-    const membersTitlesRes = await client.query(`
-      SELECT mt.*, m.full_name, ct.name as title_name 
-      FROM member_titles mt 
-      JOIN members m ON mt.member_id = m.id 
-      JOIN congregation_titles ct ON mt.title_id = ct.id
-    `);
-    console.log('--- member_titles assignments ---');
-    console.log(membersTitlesRes.rows);
+    const financeRes = await queries.getFinanceRecords({});
+    console.log('--- getFinanceRecords result ---');
+    console.log(JSON.stringify(financeRes.slice(0, 5), null, 2));
+
+    const contribsRes = await queries.getContributions({});
+    console.log('--- getContributions result ---');
+    console.log(JSON.stringify(contribsRes.slice(0, 5), null, 2));
   } catch (err) {
     console.error('Error running queries:', err);
-  } finally {
-    await client.end();
   }
 }
 

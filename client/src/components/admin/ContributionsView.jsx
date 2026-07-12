@@ -87,7 +87,10 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.member_id || !form.contribution_type_id || !form.amount || Number(form.amount) <= 0) return;
+    const amt = Number(form.amount);
+    if (!form.member_id || !form.contribution_type_id || !form.amount || amt <= 0) return;
+    if (amt < 500) { showMessage?.('Minimum contribution amount is TZS 500'); return; }
+    if (amt > 10_000_000) { showMessage?.('Amount exceeds maximum allowed (TZS 10,000,000). Please verify before saving.'); return; }
     setSaving(true);
     try {
       const payload = {
@@ -435,7 +438,12 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1.5">Amount ({CURRENCY})</label>
-                  <input type="number" step="1" min="1" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} required className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40" placeholder="0" />
+                  <input type="number" step="500" min="500" max="10000000" value={form.amount}
+                    onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
+                    required
+                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    placeholder="e.g. 10,000" />
+                  <p className="text-[10px] text-gray-500 mt-1">Typical range: TZS 500 – 5,000,000</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1.5">Date</label>
