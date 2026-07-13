@@ -47,7 +47,7 @@ async function isAuthenticated(req, res, next) {
         }
       }
     } catch (e) {
-      console.error('isAuthenticated: failed to refresh user from DB:', e.message);
+      console.error('isAuthenticated: failed to refresh user from DB:', e.stack || e);
     }
 
     // Require 2FA if the session flag says it's enabled but not yet verified.
