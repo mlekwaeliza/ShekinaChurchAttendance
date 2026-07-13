@@ -22,8 +22,13 @@ async function resolveLeaderId(req) {
   const queryLeaderId = parseId(req.query.leader_id);
   if (queryLeaderId) return queryLeaderId;
   if (req.session?.user?.role === 'leader') {
+    const userId = req.session.userId;
+    if (userId == null) {
+      console.error('[resolveLeaderId] leader session missing userId');
+      return null;
+    }
     const { get } = require('../database');
-    const row = await get('SELECT id FROM leaders WHERE user_id = ?', [req.session.userId]);
+    const row = await get('SELECT id FROM leaders WHERE user_id = ?', [userId]);
     return row ? row.id : null;
   }
   return null;
@@ -33,13 +38,11 @@ async function resolveLeaderId(req) {
 
 router.get('/contribution-types', async (req, res) => {
   try {
-    console.log(`[DEBUG] GET /contribution-types requested by user: ${req.session?.userId}, role: ${req.session?.user?.role}`);
     const types = await queries.getContributionTypes();
-    console.log(`[DEBUG] Fetched ${types?.length || 0} contribution types:`, JSON.stringify(types));
     res.json(types);
   } catch (err) {
-    console.error('Error fetching contribution types:', err);
-    res.status(500).json({ error: 'Failed to fetch contribution types' });
+    console.error('[contribution-types] Error:', err.stack || err);
+    res.status(500).json({ error: 'Failed to fetch contribution types', detail: err.message });
   }
 });
 
@@ -118,8 +121,8 @@ router.get('/contributions', async (req, res) => {
     });
     res.json(contributions);
   } catch (err) {
-    console.error('Error fetching contributions:', err);
-    res.status(500).json({ error: 'Failed to fetch contributions' });
+    console.error('[contributions] Error:', err.stack || err);
+    res.status(500).json({ error: 'Failed to fetch contributions', detail: err.message });
   }
 });
 

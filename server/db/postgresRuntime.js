@@ -19,7 +19,8 @@ function normalizeArgs(params, callback) {
   if (typeof params === 'function') {
     return { params: [], callback: params };
   }
-  return { params: params || [], callback };
+  const safe = (params || []).map(p => p === undefined ? null : p);
+  return { params: safe, callback };
 }
 
 // Sequential Execution Queue to prevent PG command concurrency errors
@@ -42,8 +43,9 @@ function enqueue(fn) {
 
 async function execute(sql, params = []) {
   const normalizedSql = toPostgresSql(sql);
+  const safe = params.map(p => p === undefined ? null : p);
   const client = transactionClient || pool;
-  return client.query(normalizedSql, params);
+  return client.query(normalizedSql, safe);
 }
 
 async function runAsync(sql, params = []) {
