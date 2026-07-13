@@ -14,6 +14,7 @@ function requireRole(allowedRoles) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
     if (!roles.includes(req.session.user.role)) {
+      console.error(`[requireRole] 403: path=${req.path}, session.role="${req.session.user.role}", allowed=[${roles}]`);
       return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
     }
     next();
