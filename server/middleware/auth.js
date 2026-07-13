@@ -9,23 +9,12 @@ const rolePermissions = {
 
 function requireRole(allowedRoles) {
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-  return async (req, res, next) => {
+  return (req, res, next) => {
     if (!req.session.userId || !req.session.user) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
-    let userRole = req.session.user.role;
-    if (!userRole || !roles.includes(userRole)) {
-      try {
-        const { get } = require('../database');
-        const dbUser = await get('SELECT id, role FROM users WHERE id = ?', [req.session.userId]);
-        if (dbUser && dbUser.role && roles.includes(dbUser.role)) {
-          req.session.user = { ...req.session.user, role: dbUser.role };
-          return next();
-        }
-      } catch (e) {
-        console.error('[requireRole] fallback DB lookup failed:', e.stack || e);
-      }
-      console.error(`[requireRole] 403: path=${req.path}, session.role="${userRole}", allowed=[${roles}]`);
+    if (!roles.includes(req.session.user.role)) {
+      console.error(`[requireRole] 403: path=${req.path}, session.role="${req.session.user.role}", allowed=[${roles}]`);
       return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
     }
     next();
