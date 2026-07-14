@@ -5156,7 +5156,7 @@ module.exports = {
         NULLIF((SELECT COUNT(*) FROM members WHERE is_active=1), 0) AS NUMERIC), 1), 0) as retention_rate,
       COALESCE(ROUND(CAST((SELECT AVG(engagement) FROM (
         SELECT m.id, COALESCE((SELECT COUNT(*) FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ? AND status='present'), 0) * 1.0 /
-          NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 1) as engagement
+          NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 0) as engagement
         FROM members m WHERE m.is_active=1
       )) AS NUMERIC), 2), 0) as engagement_score,
       COALESCE((SELECT COUNT(*) FROM visitor_intake WHERE created_at BETWEEN ? AND ?), 0) as visitors,
@@ -5201,7 +5201,7 @@ module.exports = {
       COALESCE(ROUND(CAST((SELECT COUNT(DISTINCT a.member_id) FROM attendance a JOIN members m ON a.member_id=m.id WHERE m.leader_id=l.id AND a.date BETWEEN ? AND ? AND a.status='present') * 100.0 /
         NULLIF((SELECT COUNT(*) FROM members WHERE leader_id=l.id AND is_active=1), 0) AS NUMERIC), 1), 0) as attendance_rate,
       COALESCE(ROUND(CAST((SELECT COUNT(*) FROM submission_log WHERE leader_id=l.id AND date BETWEEN ? AND ?) * 100.0 /
-        NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 1) AS NUMERIC), 1), 0) as submission_rate,
+        NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 0) AS NUMERIC), 1), 0) as submission_rate,
       COALESCE((SELECT COUNT(*) FROM absent_followups WHERE leader_id=l.id AND absence_date BETWEEN ? AND ? AND contacted=1), 0) as followups_completed,
       COALESCE((SELECT COUNT(*) FROM absent_followups WHERE leader_id=l.id AND absence_date BETWEEN ? AND ?), 0) as followups_needed,
       COALESCE((SELECT COUNT(*) FROM members WHERE leader_id=l.id AND is_active=1 AND created_at BETWEEN ? AND ?), 0) as new_members,
@@ -5243,13 +5243,13 @@ module.exports = {
       COALESCE((SELECT COUNT(*) FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ?), 0) as total_attendances,
       COALESCE(ROUND(CAST((SELECT COUNT(*) FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ? AND status='present') * 100.0 /
         NULLIF((SELECT COUNT(*) FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ?), 0) AS NUMERIC), 1), 0) as attendance_rate,
-      COALESCE((SELECT date FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 1), 'never') as last_attendance,
+      COALESCE(CAST((SELECT date FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ? ORDER BY date DESC LIMIT 1) AS TEXT), 'never') as last_attendance,
       CASE
         WHEN COALESCE((SELECT COUNT(*) FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ? AND status='present'), 0) = 0 THEN 'critical'
         WHEN COALESCE((SELECT COUNT(*) FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ? AND status='present'), 0) * 1.0 /
-          NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 1) < 0.3 THEN 'high'
+          NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 0) < 0.3 THEN 'high'
         WHEN COALESCE((SELECT COUNT(*) FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ? AND status='present'), 0) * 1.0 /
-          NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 1) < 0.6 THEN 'medium'
+          NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 0) < 0.6 THEN 'medium'
         ELSE 'low'
       END as risk_level
     FROM members m
