@@ -96,7 +96,7 @@ const AlertCard = ({ alert, index }) => {
   );
 };
 
-const ExecutiveSummary = ({ days = 90 }) => {
+const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [activeSection, setActiveSection] = useState('overview');
@@ -191,8 +191,124 @@ const ExecutiveSummary = ({ days = 90 }) => {
         </div>
       )}
 
-      {/* ── Navigation ── */}
-      <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
+      {/* ── Reports Variant: Graph-heavy overview ── */}
+      {variant === 'reports' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Attendance Momentum */}
+            {momentumData && momentumData.length > 0 && (
+              <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-indigo-500" />Attendance Trend
+                </h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={momentumData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="rptMomentum" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="period" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} />
+                    <Tooltip formatter={v => [`${v}%`, 'Rate']} />
+                    <Area type="monotone" dataKey="rate" stroke="#6366f1" fill="url(#rptMomentum)" strokeWidth={2} dot={{ r: 4, fill: '#6366f1' }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Section Attendance Bar Chart */}
+            {sectionRankings && sectionRankings.length > 0 && (
+              <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-indigo-500" />Section Attendance Rates
+                </h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <ReBar data={sectionRankings.slice(0, 8)} margin={{ top: 5, right: 10, left: -10, bottom: 0 }} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
+                    <Tooltip formatter={v => [`${v}%`, 'Rate']} />
+                    <Bar dataKey="attendanceRate" radius={[0, 4, 4, 0]}>
+                      {sectionRankings.slice(0, 8).map((entry, i) => (
+                        <Cell key={i} fill={entry.attendanceRate >= 75 ? '#10b981' : entry.attendanceRate >= 50 ? '#f59e0b' : '#ef4444'} />
+                      ))}
+                    </Bar>
+                  </ReBar>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Leader Performance Bar Chart */}
+            {leaderRankings && leaderRankings.length > 0 && (
+              <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-indigo-500" />Top Leaders by Rate
+                </h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <ReBar data={leaderRankings.slice(0, 8)} margin={{ top: 5, right: 10, left: -10, bottom: 0 }} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
+                    <Tooltip formatter={v => [`${v}%`, 'Rate']} />
+                    <Bar dataKey="attendanceRate" radius={[0, 4, 4, 0]}>
+                      {leaderRankings.slice(0, 8).map((entry, i) => (
+                        <Cell key={i} fill={entry.attendanceRate >= 75 ? '#10b981' : entry.attendanceRate >= 50 ? '#f59e0b' : '#ef4444'} />
+                      ))}
+                    </Bar>
+                  </ReBar>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Member Health Pie Chart */}
+            {healthBreakdown && healthBreakdown.length > 0 && (
+              <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-indigo-500" />Member Health Distribution
+                </h3>
+                <ResponsiveContainer width="100%" height={220}>
+                  <RePie>
+                    <Pie data={healthBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="count" nameKey="label">
+                      {healthBreakdown.map((entry, i) => {
+                        const pieColors = { Healthy: '#10b981', Moderate: '#f59e0b', 'At Risk': '#f97316', Critical: '#ef4444' };
+                        return <Cell key={i} fill={pieColors[entry.label] || C[i % C.length]} />;
+                      })}
+                    </Pie>
+                    <Tooltip formatter={(v, n) => [v, n]} />
+                    <Legend wrapperStyle={{ fontSize: '10px' }} />
+                  </RePie>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* Compact Alerts */}
+          {highPriorityAlerts.length > 0 && (
+            <div className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/10 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                <span className="text-xs font-bold text-rose-700 dark:text-rose-300">{highPriorityAlerts.length} critical alert{highPriorityAlerts.length > 1 ? 's' : ''}</span>
+              </div>
+              <div className="space-y-1.5">
+                {highPriorityAlerts.slice(0, 3).map((a, i) => (
+                  <p key={i} className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                    {a.title}: {a.message}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Analytics Navigation ── */}
+      {variant === 'analytics' && (
+        <>
+        <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
         {sections.map(s => (
           <button key={s.key} onClick={() => setActiveSection(s.key)}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[11px] font-medium whitespace-nowrap transition-all ${activeSection === s.key ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
@@ -504,8 +620,8 @@ const ExecutiveSummary = ({ days = 90 }) => {
                 </div>
               ) : (
                 <div className="text-center text-slate-400 text-xs py-8">No member health data available</div>
-              )}
-            </div>
+      )} {/* end variant === 'analytics' */}
+    </div>
             {/* KPIs related to health */}
             <div className="grid grid-cols-2 gap-3">
               {['memberHealth', 'ministryHealth', 'engagementScore', 'retentionRate'].filter(k => kpis[k]).map(k => (
@@ -636,7 +752,9 @@ const ExecutiveSummary = ({ days = 90 }) => {
             ))
           )}
         </div>
-      )}
+      )} {/* end recommendations */}
+        </>
+      )} {/* end variant === 'analytics' */}
     </div>
   );
 };
