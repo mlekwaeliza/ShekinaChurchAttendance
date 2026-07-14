@@ -5158,7 +5158,7 @@ module.exports = {
         NULLIF((SELECT COUNT(*) FROM members WHERE is_active=1), 0), 1), 0) as retention_rate,
       COALESCE(ROUND((SELECT AVG(engagement) FROM (
         SELECT m.id, COALESCE((SELECT COUNT(*) FROM attendance WHERE member_id=m.id AND date BETWEEN ? AND ? AND status='present'), 0) * 1.0 /
-          NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 1), 0) as engagement
+          NULLIF((SELECT COUNT(DISTINCT date) FROM attendance WHERE date BETWEEN ? AND ?), 1) as engagement
         FROM members m WHERE m.is_active=1
       )), 2), 0) as engagement_score,
       COALESCE((SELECT COUNT(*) FROM visitor_intake WHERE created_at BETWEEN ? AND ?), 0) as visitors,
@@ -5169,11 +5169,11 @@ module.exports = {
       COALESCE((SELECT COUNT(*) FROM members WHERE is_active=1 AND created_at BETWEEN ? AND ?) -
         (SELECT COUNT(*) FROM members WHERE is_active=0 AND soft_deleted_at BETWEEN ? AND ?), 0) as net_growth
     `, [start, end, start, end, start, end, start, end, start, end, start, end,
-        start, end, start, end, start, end, start, end, end,
         start, end, start, end, start, end,
-        start, end, start, end, start, end,
-        start, end, start, end, start, end,
-        start, end, start, end]),
+        end,
+        start, end, start, end, start, end, start, end, start, end,
+        start, end, start, end, start, end, start, end, start, end,
+        start, end]),
 
   getMultiPeriodSections: (start, end) => all(`
     SELECT
@@ -5258,7 +5258,7 @@ module.exports = {
     JOIN sections s ON s.id = m.section_id
     WHERE m.is_active = 1
     ORDER BY attendance_rate DESC
-  `, [start, end, start, end, start, end, start, end, start, end, start, end, start, end, start, end, start, end, start, end]),
+  `, [start, end, start, end, start, end, start, end, start, end, start, end, start, end, start, end, start, end, start, end, start, end, start, end]),
 
   getAttendanceMovement: (start, end) => get(`
     SELECT
