@@ -4,9 +4,12 @@ import {
   DollarSign, Calendar, CheckCircle2, XCircle, Clock,
   Loader2, Search, Eye, Edit3, Send, PieChart, Plus,
   FileText, ArrowUpCircle, HandCoins, Download, AlertCircle,
-  LayoutDashboard, Users, Building2, Receipt
+  LayoutDashboard, Users, Building2, Receipt,
+  TrendingUp, TrendingDown
 } from 'lucide-react';
 import { fdate, fdatetime } from '../../utils/date';
+import { BarChart, Bar, PieChart as RePie, Pie, Cell, AreaChart, Area,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import FinanceWorkspace from './FinanceWorkspace';
 import ContributionsView from './ContributionsView';
 
@@ -416,6 +419,107 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                 </div>
               ))}
             </div>
+
+            {/* ── Charts ──────────────────────────────────────────────── */}
+            {(() => {
+              const monthly = {};
+              dbData.finance.forEach(r => {
+                if (!r.record_date) return;
+                const m = r.record_date.slice(0, 7);
+                if (!monthly[m]) monthly[m] = { month: m, Income: 0, Tithes: 0, Usable: 0 };
+                monthly[m].Income += Number(r.total_income || 0);
+                monthly[m].Tithes += Number(r.total_tithes || 0);
+                monthly[m].Usable += Number(r.usable_church_funds || 0);
+              });
+              const monthlyData = Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month));
+              const monthLabels = { '01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun','07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec' };
+              monthlyData.forEach(d => { const parts = d.month.split('-'); d.name = monthLabels[parts[1]] || parts[1]; });
+
+              const expensesByCat = {};
+              allExpenses.forEach(e => { const cat = e.category || 'Other'; expensesByCat[cat] = (expensesByCat[cat] || 0) + Number(e.amount); });
+              const expenseData = Object.entries(expensesByCat).map(([name, total]) => ({ name, total }));
+
+              const contribByType = {};
+              dbData.memberContributions.forEach(c => { const t = c.contribution_type_name || 'Other'; contribByType[t] = (contribByType[t] || 0) + Number(c.amount); });
+              const contribTypeData = Object.entries(contribByType).map(([name, total]) => ({ name, total }));
+              const CHART_COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#84cc16'];
+
+              return (
+                <div className="space-y-6">
+                  {monthlyData.length > 0 && (
+                    <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
+                      <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-indigo-500" />
+                        Monthly Income Trend
+                      </h3>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <AreaChart data={monthlyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                          <defs>
+                            <linearGradient id="mi" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/><stop offset="95%" stopColor="#6366f1" stopOpacity={0}/></linearGradient>
+                            <linearGradient id="mt" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/></linearGradient>
+                            <linearGradient id="mu" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                          <YAxis tickFormatter={v => Number(v) >= 1e6 ? `${(v/1e6).toFixed(1)}M` : Number(v) >= 1e3 ? `${(v/1e3).toFixed(0)}K` : v} tick={{ fontSize: 10 }} width={55} />
+                          <Tooltip formatter={(v) => [`TZS ${Number(v).toLocaleString()}`, undefined]} />
+                          <Legend />
+                          <Area type="monotone" dataKey="Income" stroke="#6366f1" fill="url(#mi)" strokeWidth={2} dot={{ r: 3 }} />
+                          <Area type="monotone" dataKey="Tithes" stroke="#8b5cf6" fill="url(#mt)" strokeWidth={2} dot={{ r: 3 }} />
+                          <Area type="monotone" dataKey="Usable" stroke="#10b981" fill="url(#mu)" strokeWidth={2} dot={{ r: 3 }} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {expenseData.length > 0 && (
+                      <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
+                        <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                          <TrendingDown className="w-4 h-4 text-rose-500" />
+                          Expense Breakdown
+                        </h3>
+                        <ResponsiveContainer width="100%" height={240}>
+                          <RePie>
+                            <Pie data={expenseData} dataKey="total" nameKey="name"
+                              cx="50%" cy="50%" innerRadius={55} outerRadius={95}
+                              paddingAngle={3}
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                              labelLine={false}>
+                              {expenseData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                            </Pie>
+                            <Tooltip formatter={v => `TZS ${Number(v).toLocaleString()}`} />
+                            <Legend />
+                          </RePie>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+
+                    {contribTypeData.length > 0 && (
+                      <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
+                        <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                          <HandCoins className="w-4 h-4 text-violet-500" />
+                          Contributions by Type
+                        </h3>
+                        <ResponsiveContainer width="100%" height={240}>
+                          <RePie>
+                            <Pie data={contribTypeData} dataKey="total" nameKey="name"
+                              cx="50%" cy="50%" innerRadius={55} outerRadius={95}
+                              paddingAngle={3}
+                              label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                              labelLine={false}>
+                              {contribTypeData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                            </Pie>
+                            <Tooltip formatter={v => `TZS ${Number(v).toLocaleString()}`} />
+                            <Legend />
+                          </RePie>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Recent Daily Records Card */}
