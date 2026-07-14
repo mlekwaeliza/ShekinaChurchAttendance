@@ -381,6 +381,7 @@ const AdminDashboard = () => {
         isOpen={data.isLeaderModalOpen}
         leader={data.editingLeader}
         sections={data.sections}
+        members={data.allMembers}
         loading={data.leaderSaving}
         onClose={() => data.setIsLeaderModalOpen(false)}
         onSave={data.handleLeaderSave}
