@@ -139,7 +139,7 @@ const AnalyticsView = () => {
         ))}
       </div>
 
-      {tab === 'executive' && <ExecutiveSummary days={period} />}
+          {tab === 'executive' && <ExecutiveSummary days={period} variant="reports" />}
       {tab === 'finance' && <FinanceTab data={data} />}
       {tab === 'sections' && <SectionsTab data={data} />}
       {tab === 'leaders' && <LeadersTab data={data} />}

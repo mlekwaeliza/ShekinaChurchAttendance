@@ -766,7 +766,7 @@ const AttendanceReports = ({
   };
 
   const renderOverviewTab = () => {
-    return <ExecutiveSummary days={90} variant="reports" />;
+    return <ExecutiveSummary days={90} />;
   };
 
   const renderComparisonTab = () => {
