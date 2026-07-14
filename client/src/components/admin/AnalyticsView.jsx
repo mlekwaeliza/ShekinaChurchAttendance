@@ -10,6 +10,7 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { analyticsAPI } from '../../services/api';
 import { fdate } from '../../utils/date';
+import ExecutiveSummary from './ExecutiveSummary';
 
 const R = v => Math.round(Number(v) || 0);
 const C = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#84cc16'];
@@ -138,7 +139,7 @@ const AnalyticsView = () => {
         ))}
       </div>
 
-      {tab === 'executive' && <ExecutiveTab data={data} />}
+      {tab === 'executive' && <ExecutiveSummary days={period} />}
       {tab === 'finance' && <FinanceTab data={data} />}
       {tab === 'sections' && <SectionsTab data={data} />}
       {tab === 'leaders' && <LeadersTab data={data} />}
@@ -152,64 +153,7 @@ const AnalyticsView = () => {
   );
 };
 
-const ExecutiveTab = ({ data }) => {
-  const ex = data.executive || {};
-  const rate = Number(ex.attendance_rate) || 0;
-  const sc = data.sectionComparison || [];
-  const yoy = data.yearOverYear || [];
-  const chartData = sc.slice(0, 10).map(s => ({ name: s.name?.length > 10 ? s.name.slice(0, 10) + '…' : s.name, rate: R(s.attendance_rate), members: s.member_count || 0 }));
-  const yoyData = yoy.map(y => ({ month: y.month_name, current: R(y.current_rate), previous: R(y.previous_rate) }));
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-        <KpiCard label="Total Members" value={ex.total_members || 0} color="indigo" />
-        <KpiCard label="Present" value={ex.present_today || 0} prev={ex.present_prev} color="emerald" />
-        <KpiCard label="Absent" value={ex.absent_today || 0} prev={ex.absent_prev} color="rose" />
-        <KpiCard label="Attendance Rate" value={rate} suffix="%" color="indigo" />
-        <KpiCard label="Weekly Growth" value={ex.weekly_growth || 0} suffix="%" color="emerald" />
-        <KpiCard label="Monthly Growth" value={ex.monthly_growth || 0} suffix="%" color="blue" />
-      </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard label="Annual Growth" value={ex.annual_growth || 0} suffix="%" color="violet" />
-        <KpiCard label="Visitors (Week)" value={ex.visitors_this_week || 0} color="pink" />
-        <KpiCard label="Visitors (Month)" value={ex.visitors_this_month || 0} color="pink" />
-        <KpiCard label="Excused" value={ex.excused_today || 0} color="amber" />
-      </div>
-      {chartData.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Section Attendance Rates</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
-              <Tooltip formatter={(v) => [`${v}%`, 'Rate']} />
-              <Bar dataKey="rate" radius={[6, 6, 0, 0]}>
-                {chartData.map((entry, i) => <Cell key={i} fill={entry.rate >= 75 ? '#10b981' : entry.rate >= 50 ? '#f59e0b' : '#ef4444'} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-      {yoyData.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Year-over-Year Attendance</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={yoyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
-              <Tooltip formatter={(v) => [`${v}%`, '']} />
-              <Legend />
-              <Bar dataKey="current" name="Current Year" fill="#6366f1" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="previous" name="Previous Year" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-    </div>
-  );
-};
+// ExecutiveTab replaced by imported ExecutiveSummary component
 
 const SectionsTab = ({ data }) => {
   const s = data.sections || [];

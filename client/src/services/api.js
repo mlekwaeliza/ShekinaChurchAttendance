@@ -356,6 +356,7 @@ export const analyticsAPI = {
   getAIInsights: () => api.get('/analytics/ai-insights'),
   getFinanceAnalytics: (year) => api.get('/analytics/finance-analytics', { params: { year } }),
   getExecutiveComparison: (data) => api.post('/analytics/executive-comparison', data),
+  getExecutiveSummary: (days = 90) => api.get('/analytics/executive-summary', { params: { days } }),
 };
 
 // New Member Leader API
