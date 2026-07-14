@@ -464,6 +464,9 @@ const AttendanceCorrections = ({ showMessage }) => {
   const [editing, setEditing] = useState(null);
   const [filters, setFilters] = useState({ q: '', start_date: '', end_date: '', status: '' });
   const [showFilters, setShowFilters] = useState(false);
+  const [memberSuggestions, setMemberSuggestions] = useState([]);
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const searchRef = useRef(null);
 
   // Missing submissions state
   const [mlsDate, setMlsDate] = useState(formatLocalDate(new Date()));
@@ -499,6 +502,24 @@ const AttendanceCorrections = ({ showMessage }) => {
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
   const loadRef = useRef(load);
   loadRef.current = load;
+
+  const searchMembers = async (q) => {
+    if (!q || q.length < 1) { setMemberSuggestions([]); setShowMemberDropdown(false); return; }
+    try {
+      const res = await adminAPI.searchMembers(q);
+      setMemberSuggestions(res.data || []);
+      setShowMemberDropdown(true);
+    } catch { setMemberSuggestions([]); }
+  };
+
+  const selectMember = (member) => {
+    const next = { ...filtersRef.current, q: member.full_name };
+    setFilters(next);
+    filtersRef.current = next;
+    setShowMemberDropdown(false);
+    setMemberSuggestions([]);
+    load(next);
+  };
 
   const handleApplyFilters = () => load(filters);
   const handleClearFilters = () => {
@@ -587,6 +608,12 @@ const AttendanceCorrections = ({ showMessage }) => {
 
   useEffect(() => { if (activeTab === 'missing') loadMissingSubmissions(); }, [activeTab, mlsDate, mlsServiceId]);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => { if (searchRef.current && !searchRef.current.contains(e.target)) setShowMemberDropdown(false); };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const summaryCards = mlsData?.summary ? [
     { label: 'Missing Submissions', count: mlsData.summary.missing, variant: 'danger', icon: XCircle },
     { label: 'Partial Submissions', count: mlsData.summary.partial, variant: 'warning', icon: AlertTriangle },
@@ -633,16 +660,31 @@ const AttendanceCorrections = ({ showMessage }) => {
         <>
           <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative flex-1">
+              <div className="relative flex-1" ref={searchRef}>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input value={filters.q} onChange={(e) => { handleFilterChange('q', e.target.value.toUpperCase()); debouncedLoad(); }}
+                <input value={filters.q} onChange={(e) => { handleFilterChange('q', e.target.value); debouncedLoad(); searchMembers(e.target.value); }}
                   onKeyDown={(e) => e.key === 'Enter' && handleApplyFilters()}
-                  placeholder="Search member name or membership ID..." className="input h-10 w-full pl-10 pr-10" />
+                  onFocus={() => { if (memberSuggestions.length) setShowMemberDropdown(true); }}
+                  placeholder="Search member name or membership ID..." className="input h-10 w-full pl-10 pr-10" autoComplete="off" />
                 {filters.q && (
-                  <button type="button" onClick={() => { const next = { ...filtersRef.current, q: '' }; setFilters(next); filtersRef.current = next; load(next); }}
+                  <button type="button" onClick={() => { const next = { ...filtersRef.current, q: '' }; setFilters(next); filtersRef.current = next; setMemberSuggestions([]); setShowMemberDropdown(false); load(next); }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200" title="Clear search" aria-label="Clear search">
                     <X className="h-4 w-4" />
                   </button>
+                )}
+                {showMemberDropdown && memberSuggestions.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800 max-h-60 overflow-y-auto">
+                    {memberSuggestions.map(m => (
+                      <button key={m.id} type="button" onClick={() => selectMember(m)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700/50 last:border-0">
+                        <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold shrink-0 text-[10px]">{m.full_name?.charAt(0) || '?'}</div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{m.full_name}</p>
+                          <p className="text-[10px] text-slate-400">{m.membership_id}{m.section_name ? ` · ${m.section_name}` : ''}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
               <div className="flex items-center gap-2">
