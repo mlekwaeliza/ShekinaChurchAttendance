@@ -355,6 +355,7 @@ export const analyticsAPI = {
   getChurchGrowthIndex: () => api.get('/analytics/church-growth-index'),
   getAIInsights: () => api.get('/analytics/ai-insights'),
   getFinanceAnalytics: (year) => api.get('/analytics/finance-analytics', { params: { year } }),
+  getExecutiveComparison: (data) => api.post('/analytics/executive-comparison', data),
 };
 
 // New Member Leader API

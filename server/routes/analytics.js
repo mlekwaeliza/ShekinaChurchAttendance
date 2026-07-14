@@ -917,4 +917,444 @@ router.get('/finance-analytics', async (req, res) => {
   }
 });
 
+// ── POST /analytics/executive-comparison ─────────────────────────────────────
+// Multi-Period Executive Attendance Intelligence Engine
+// Accepts multiple periods, returns comprehensive comparison data for all modes
+router.post('/executive-comparison', async (req, res) => {
+  try {
+    const { periods, mode = 'overall', filters = {} } = req.body;
+    if (!Array.isArray(periods) || periods.length < 1) {
+      return res.status(400).json({ error: 'At least one period is required' });
+    }
+
+    const periodResults = [];
+    for (const p of periods) {
+      const { id, label, start, end } = p;
+      if (!start || !end) continue;
+
+      // Overall attendance stats for this period
+      const overall = await queries.getMultiPeriodOverall(start, end);
+
+      // Section rankings for this period
+      const sections = await queries.getMultiPeriodSections(start, end);
+
+      // Leader rankings for this period
+      const leaders = await queries.getMultiPeriodLeaders(start, end);
+
+      // Department data for this period
+      const departments = await queries.getMultiPeriodDepartments(start, end);
+
+      // Member engagement data
+      const memberEngagement = await queries.getMultiPeriodMembers(start, end);
+
+      // Daily breakdown
+      const daily = await queries.getHistoricalDaily(start, end);
+
+      // Movement analysis
+      const movement = await queries.getAttendanceMovement(start, end);
+
+      periodResults.push({
+        id, label, start, end,
+        overall,
+        sections,
+        leaders,
+        departments,
+        memberEngagement,
+        daily,
+        movement
+      });
+    }
+
+    // Compute executive KPIs across all periods
+    const kpis = computeExecutiveKPIs(periodResults);
+
+    // Trend intelligence
+    const trends = analyzeTrends(periodResults);
+
+    // Root cause analysis
+    const rootCauses = analyzeRootCauses(periodResults);
+
+    // Action center
+    const actions = generateActions(periodResults, trends);
+
+    res.json({
+      periods: periodResults,
+      kpis,
+      trends,
+      rootCauses,
+      actions,
+      mode,
+      filters
+    });
+  } catch (error) {
+    console.error('Executive comparison error:', error);
+    res.status(500).json({ error: 'Failed to run executive comparison', details: error.message });
+  }
+});
+
+function computeExecutiveKPIs(periodResults) {
+  const total = periodResults.length;
+  if (total === 0) return {};
+
+  const rates = periodResults.map(p => p.overall?.attendance_rate || 0);
+  const presents = periodResults.map(p => p.overall?.present || 0);
+  const members = periodResults.map(p => p.overall?.total_members || 0);
+  const growth = periodResults.map(p => p.overall?.net_growth || 0);
+  const sections = periodResults.map(p => p.overall?.active_sections || 0);
+  const leaders = periodResults.map(p => p.overall?.leaders_submitted || 0);
+  const totalLeaders = periodResults[0]?.overall?.total_leaders || 1;
+
+  const latest = periodResults[total - 1];
+  const prev = total > 1 ? periodResults[total - 2] : null;
+  const avgRate = rates.reduce((a, b) => a + b, 0) / total;
+  const bestRate = Math.max(...rates);
+  const worstRate = Math.min(...rates);
+
+  // Church Health Score (composite)
+  const healthScore = Math.round(
+    (avgRate * 0.35) +
+    (members.length > 0 ? (members[members.length - 1] / Math.max(...members) * 100) * 0.2 : 20) +
+    (leaders.length > 0 ? (leaders[leaders.length - 1] / totalLeaders * 100) * 0.2 : 20) +
+    (sections.length > 0 ? (sections[sections.length - 1] / (sections.reduce((a,b)=>a+b,0)/sections.length) * 100) * 0.15 : 15) +
+    (growth.length > 0 ? (growth[growth.length - 1] + 100) * 0.1 : 10)
+  );
+
+  // Attendance Growth Index
+  const growthIndex = prev && prev.overall?.attendance_rate
+    ? Math.round(((latest.overall?.attendance_rate || 0) - prev.overall?.attendance_rate) / prev.overall?.attendance_rate * 100)
+    : 0;
+
+  // Stability Index (lower variance = more stable)
+  const mean = rates.reduce((a, b) => a + b, 0) / rates.length;
+  const variance = rates.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / rates.length;
+  const stabilityIndex = Math.max(0, Math.min(100, Math.round(100 - Math.sqrt(variance))));
+
+  // Retention Index
+  const retentionIndex = latest?.overall?.retention_rate || 0;
+
+  // Engagement Score
+  const engagementScore = latest?.overall?.engagement_score || 0;
+
+  // Leader Performance Index
+  const leaderPerfIndex = totalLeaders > 0
+    ? Math.round((leaders[leaders.length - 1] || 0) / totalLeaders * 100)
+    : 0;
+
+  // Forecast (simple linear projection)
+  const forecast = rates.length >= 3
+    ? Math.round(rates[rates.length - 1] + (rates[rates.length - 1] - rates[rates.length - 3]) / 2)
+    : rates[rates.length - 1] || 0;
+
+  return {
+    church_health_score: healthScore,
+    attendance_growth_index: growthIndex,
+    stability_index: stabilityIndex,
+    retention_index: retentionIndex,
+    engagement_score: engagementScore,
+    leader_performance_index: leaderPerfIndex,
+    attendance_forecast: Math.min(100, Math.max(0, forecast)),
+    average_attendance_rate: Math.round(avgRate * 10) / 10,
+    average_growth_rate: growthIndex,
+    consistency_score: stabilityIndex,
+    best_rate: Math.round(bestRate * 10) / 10,
+    worst_rate: Math.round(worstRate * 10) / 10,
+    current_rate: latest?.overall?.attendance_rate || 0,
+    previous_rate: prev?.overall?.attendance_rate || 0,
+    rate_change: latest?.overall?.attendance_rate - (prev?.overall?.attendance_rate || 0),
+    total_periods: total
+  };
+}
+
+function analyzeTrends(periodResults) {
+  if (periodResults.length < 2) return { trend: 'insufficient_data', classification: 'neutral' };
+
+  const rates = periodResults.map(p => p.overall?.attendance_rate || 0);
+  const first = rates[0];
+  const last = rates[rates.length - 1];
+  const direction = last - first;
+
+  // Detect pattern
+  const half = Math.floor(rates.length / 2);
+  const firstHalf = rates.slice(0, half).reduce((a, b) => a + b, 0) / half;
+  const secondHalf = rates.slice(half).reduce((a, b) => a + b, 0) / (rates.length - half);
+
+  let classification, trend;
+  if (direction > 3 && secondHalf > firstHalf) {
+    classification = 'growing';
+    trend = 'up';
+  } else if (direction < -3 && secondHalf < firstHalf) {
+    classification = 'declining';
+    trend = 'down';
+  } else if (Math.abs(direction) <= 2) {
+    classification = 'stable';
+    trend = 'stable';
+  } else if (direction > 0 && firstHalf > secondHalf) {
+    classification = 'recovering';
+    trend = 'up';
+  } else if (Math.abs(direction) > 5) {
+    classification = 'volatile';
+    trend = direction > 0 ? 'up' : 'down';
+  } else {
+    classification = 'inconsistent';
+    trend = direction > 0 ? 'slightly_up' : 'slightly_down';
+  }
+
+  // Detect anomalies (periods with >15% deviation from average)
+  const avg = rates.reduce((a, b) => a + b, 0) / rates.length;
+  const anomalies = [];
+  periodResults.forEach((p, i) => {
+    const dev = ((rates[i] - avg) / avg) * 100;
+    if (Math.abs(dev) > 15) {
+      anomalies.push({
+        period: p.label,
+        rate: rates[i],
+        deviation: Math.round(dev * 10) / 10,
+        type: dev > 0 ? 'positive' : 'negative'
+      });
+    }
+  });
+
+  // Momentum (rate of change between last 3 periods)
+  const recentChange = rates.length >= 3
+    ? rates[rates.length - 1] - rates[rates.length - 3]
+    : direction;
+
+  return {
+    classification,
+    trend,
+    direction: Math.round(direction * 10) / 10,
+    average_rate: Math.round(avg * 10) / 10,
+    first_period_rate: rates[0],
+    last_period_rate: last,
+    recent_momentum: Math.round(recentChange * 10) / 10,
+    half1_avg: Math.round(firstHalf * 10) / 10,
+    half2_avg: Math.round(secondHalf * 10) / 10,
+    anomalies,
+    seasonal_pattern: detectSeasonality(rates)
+  };
+}
+
+function detectSeasonality(rates) {
+  if (rates.length < 4) return 'insufficient_data';
+  // Simple check: if first half and second half patterns repeat
+  const half = Math.floor(rates.length / 2);
+  const firstHalf = rates.slice(0, half);
+  const secondHalf = rates.slice(half, half * 2);
+  if (firstHalf.length !== secondHalf.length) return 'insufficient_data';
+  let diff = 0;
+  for (let i = 0; i < firstHalf.length; i++) diff += Math.abs(firstHalf[i] - secondHalf[i]);
+  const avgDiff = diff / firstHalf.length;
+  return avgDiff < 5 ? 'likely_seasonal' : 'not_seasonal';
+}
+
+function analyzeRootCauses(periodResults) {
+  if (periodResults.length < 2) return { factors: [], summary: 'Insufficient periods for analysis' };
+
+  const latest = periodResults[periodResults.length - 1];
+  const prev = periodResults[periodResults.length - 2];
+  const rateDiff = (latest.overall?.attendance_rate || 0) - (prev.overall?.attendance_rate || 0);
+  const factors = [];
+
+  // Analyze sections
+  if (latest.sections?.length && prev.sections?.length) {
+    const secMap = {};
+    latest.sections.forEach(s => secMap[s.name] = s);
+    prev.sections.forEach(s => {
+      const curr = secMap[s.name];
+      if (curr) {
+        const secDiff = (curr.attendance_rate || 0) - (s.attendance_rate || 0);
+        if (Math.abs(secDiff) > 2) {
+          factors.push({
+            type: 'section',
+            name: s.name,
+            impact: Math.round(secDiff * 10) / 10,
+            contribution: rateDiff !== 0 ? Math.round((secDiff / rateDiff) * 100) : 0,
+            direction: secDiff > 0 ? 'positive' : 'negative'
+          });
+        }
+      }
+    });
+  }
+
+  // Analyze leaders
+  if (latest.leaders?.length && prev.leaders?.length) {
+    const leadMap = {};
+    latest.leaders.forEach(l => leadMap[l.id] = l);
+    prev.leaders.forEach(l => {
+      const curr = leadMap[l.id];
+      if (curr) {
+        const leadDiff = (curr.attendance_rate || 0) - (l.attendance_rate || 0);
+        if (Math.abs(leadDiff) > 3) {
+          factors.push({
+            type: 'leader',
+            name: l.leader_name || l.name,
+            impact: Math.round(leadDiff * 10) / 10,
+            contribution: rateDiff !== 0 ? Math.round((leadDiff / rateDiff) * 100) : 0,
+            direction: leadDiff > 0 ? 'positive' : 'negative'
+          });
+        }
+      }
+    });
+  }
+
+  factors.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
+
+  const positive = factors.filter(f => f.direction === 'positive');
+  const negative = factors.filter(f => f.direction === 'negative');
+
+  let summary;
+  if (rateDiff > 0) {
+    summary = `Attendance increased by ${Math.abs(rateDiff).toFixed(1)}%. Top contributors: ${positive.slice(0, 3).map(f => f.name).join(', ') || 'broad-based improvement'}.`;
+  } else if (rateDiff < 0) {
+    summary = `Attendance declined by ${Math.abs(rateDiff).toFixed(1)}%. Main factors: ${negative.slice(0, 3).map(f => f.name).join(', ') || 'broad-based decline'}.`;
+  } else {
+    summary = 'Attendance remained stable across periods.';
+  }
+
+  return { factors, summary, rate_diff: Math.round(rateDiff * 10) / 10 };
+}
+
+function generateActions(periodResults, trends) {
+  const actions = [];
+  const latest = periodResults[periodResults.length - 1];
+  const prev = periodResults.length > 1 ? periodResults[periodResults.length - 2] : null;
+
+  // Check for declining sections
+  if (latest?.sections && prev?.sections) {
+    const secMap = {};
+    latest.sections.forEach(s => secMap[s.name] = s);
+    prev.sections.forEach(s => {
+      const curr = secMap[s.name];
+      if (curr) {
+        const diff = (curr.attendance_rate || 0) - (s.attendance_rate || 0);
+        if (diff < -10) {
+          actions.push({
+            priority: 'high',
+            category: 'section_intervention',
+            title: `Section "${s.name}" needs immediate intervention`,
+            description: `Attendance dropped by ${Math.abs(diff).toFixed(1)}%. Schedule leadership review meeting.`,
+            affected: [s.name],
+            expected_impact: 'Recovery of attendance rate',
+            type: 'decline'
+          });
+        } else if (diff < -5) {
+          actions.push({
+            priority: 'medium',
+            category: 'section_review',
+            title: `Review section "${s.name}" performance`,
+            description: `Attendance declined by ${Math.abs(diff).toFixed(1)}%. Consider additional support.`,
+            affected: [s.name],
+            expected_impact: 'Stabilize attendance',
+            type: 'decline'
+          });
+        }
+        if (diff > 10) {
+          actions.push({
+            priority: 'low',
+            category: 'section_recognition',
+            title: `Recognize section "${s.name}" for outstanding growth`,
+            description: `Attendance increased by ${diff.toFixed(1)}%. This section sets the standard.`,
+            affected: [s.name],
+            expected_impact: 'Motivate other sections',
+            type: 'improvement'
+          });
+        }
+      }
+    });
+  }
+
+  // Check for leader performance issues
+  if (latest?.leaders && prev?.leaders) {
+    const leadMap = {};
+    latest.leaders.forEach(l => leadMap[l.id] = l);
+    prev.leaders.forEach(l => {
+      const curr = leadMap[l.id];
+      if (curr) {
+        if ((curr.submission_rate || 0) < 50) {
+          actions.push({
+            priority: 'high',
+            category: 'leader_submission',
+            title: `Leader "${l.leader_name || l.name}" has low submission rate`,
+            description: `Submission rate is ${curr.submission_rate || 0}%. Provide training and support.`,
+            affected: [l.leader_name || l.name],
+            expected_impact: 'Improved data accuracy and member tracking',
+            type: 'improvement'
+          });
+        }
+        if ((curr.follow_up_completion || 0) < 40) {
+          actions.push({
+            priority: 'medium',
+            category: 'leader_followup',
+            title: `Follow-up needed for leader "${l.leader_name || l.name}"`,
+            description: `Follow-up completion rate is ${curr.follow_up_completion || 0}%. Assign mentoring.`,
+            affected: [l.leader_name || l.name],
+            expected_impact: 'Better member engagement and retention',
+            type: 'improvement'
+          });
+        }
+      }
+    });
+  }
+
+  // Attendance trend based actions
+  if (trends?.classification === 'declining') {
+    actions.push({
+      priority: 'high',
+      category: 'attendance_decline',
+      title: 'Overall attendance is declining',
+      description: 'Immediate attention required. Review all sections, increase visitation, and consider special events.',
+      affected: ['All sections'],
+      expected_impact: 'Reverse attendance decline trajectory',
+      type: 'intervention'
+    });
+  }
+
+  if (trends?.classification === 'growing') {
+    actions.push({
+      priority: 'low',
+      category: 'growth_sustainability',
+      title: 'Positive attendance growth trend',
+      description: 'Sustain momentum with continued engagement and new member integration programs.',
+      affected: ['All sections'],
+      expected_impact: 'Maintain growth trajectory',
+      type: 'sustain'
+    });
+  }
+
+  // Member engagement
+  if (latest?.memberEngagement?.length) {
+    const atRisk = latest.memberEngagement.filter(m => (m.risk_level || 'low') === 'high' || (m.risk_level || 'low') === 'critical');
+    if (atRisk.length > 0) {
+      actions.push({
+        priority: 'high',
+        category: 'at_risk_members',
+        title: `${atRisk.length} member(s) at risk of disengagement`,
+        description: `Assign visitation and counseling. Priority members: ${atRisk.slice(0, 3).map(m => m.full_name).join(', ')}`,
+        affected: atRisk.slice(0, 5).map(m => m.full_name),
+        expected_impact: 'Retention of at-risk members',
+        type: 'intervention'
+      });
+    }
+  }
+
+  // Visitor follow-up
+  if (latest?.overall?.visitors && latest.overall.visitors > 0) {
+    actions.push({
+      priority: 'medium',
+      category: 'visitor_followup',
+      title: `${latest.overall.visitors} visitor(s) recorded`,
+      description: 'Ensure all visitors receive follow-up contact within 48 hours.',
+      affected: [`${latest.overall.visitors} visitors`],
+      expected_impact: 'Visitor-to-member conversion',
+      type: 'followup'
+    });
+  }
+
+  // Rank by priority
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  actions.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+
+  return actions;
+}
+
 module.exports = router;
