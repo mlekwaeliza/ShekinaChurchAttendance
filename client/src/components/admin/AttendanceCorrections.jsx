@@ -264,8 +264,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
     try {
       const records = members.map(m => ({ member_id: m.member_id, status: m.status }));
       await adminAPI.bulkCorrectAttendance({ date, service_id: serviceId, leader_id: leader.leader_id, reason, records });
-      showMessage?.(`Attendance saved for ${leader.leader_name} (${summary.total} members).`);
-      onSaved();
+      onSaved(summary.total);
     } catch (err) {
       showMessage?.(err.response?.data?.error || 'Failed to save attendance.', 4000);
     } finally {
@@ -865,7 +864,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               date={mlsDate}
               serviceId={mlsServiceId}
               onClose={() => setBulkLeader(null)}
-              onSaved={() => { setBulkLeader(null); loadMissingSubmissions(); }}
+              onSaved={(count) => { const name = bulkLeader?.leader_name; setBulkLeader(null); showMessage?.(`Attendance saved for ${name} (${count} members).`); loadMissingSubmissions(); }}
               showMessage={showMessage}
             />
           )}

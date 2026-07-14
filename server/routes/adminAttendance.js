@@ -725,13 +725,12 @@ router.post('/attendance/bulk-correct', async (req, res) => {
             ).catch(e => console.error('Audit write failed:', e.message));
           }
         } else {
-          await tx.run(
+          const insertResult = await tx.run(
             'INSERT INTO attendance (member_id, date, status, submitted_by, service_type_id) VALUES (?, ?, ?, ?, ?)',
             [record.member_id, date, record.status, req.session.userId, Number(service_id)]
           );
-          const newRow = await tx.get('SELECT last_insert_rowid() AS id');
           queries.createAuditEntry(
-            req.session.userId, 'create', 'attendance', newRow?.id || 0,
+            req.session.userId, 'create', 'attendance', insertResult?.lastID || 0,
             null,
             { status: record.status, reason: trimmedReason, original_leader: leader.leader_name, corrected_by_admin: true },
             ipAddress, userAgent
