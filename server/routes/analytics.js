@@ -556,6 +556,78 @@ router.get('/departments', async (req, res) => {
   }
 });
 
+// GET /analytics/member-weekly-matrix?weeks=12&service_id=1
+router.get('/member-weekly-matrix', async (req, res) => {
+  try {
+    const numWeeks = Math.min(Math.max(parseInt(req.query.weeks) || 12, 4), 52);
+    const serviceId = parseInt(req.query.service_id) || 1;
+
+    const today = new Date();
+    const weeks = [];
+    for (let i = numWeeks - 1; i >= 0; i--) {
+      const d = addDays(today, -i * 7);
+      const weekStr = getISOWeekString(d);
+      const range = getISOWeekRange(weekStr);
+      weeks.push({ label: weekStr, start: range.start, end: range.end });
+    }
+
+    const members = await all(`
+      SELECT m.id, m.full_name, m.membership_id, s.name AS section_name
+      FROM members m
+      LEFT JOIN sections s ON m.section_id = s.id
+      WHERE m.is_active = 1
+      ORDER BY m.full_name
+    `);
+
+    const attendanceRows = await all(`
+      SELECT a.member_id, a.date, a.status
+      FROM attendance a
+      JOIN members m ON a.member_id = m.id
+      WHERE m.is_active = 1 AND a.date BETWEEN ? AND ? AND a.service_type_id = ?
+      ORDER BY a.member_id, a.date
+    `, [weeks[0].start, weeks[weeks.length - 1].end, serviceId]);
+
+    const byMember = {};
+    for (const row of attendanceRows) {
+      if (!byMember[row.member_id]) byMember[row.member_id] = {};
+      byMember[row.member_id][row.date] = row.status;
+    }
+
+    const matrix = members.map(m => {
+      const weekly = weeks.map(w => {
+        const statuses = [];
+        let d = new Date(w.start);
+        const end = new Date(w.end);
+        while (d <= end) {
+          const dateStr = formatLocalDate(d);
+          if (byMember[m.id]?.[dateStr]) statuses.push(byMember[m.id][dateStr]);
+          d = addDays(d, 1);
+        }
+        if (statuses.length === 0) return null;
+        const counts = { present: 0, absent: 0, excused: 0 };
+        statuses.forEach(s => { if (counts[s] !== undefined) counts[s]++; });
+        const max = Math.max(counts.present, counts.absent, counts.excused);
+        if (max === 0) return null;
+        if (counts.present === max) return 'present';
+        if (counts.absent === max) return 'absent';
+        return 'excused';
+      });
+      return {
+        member_id: m.id,
+        full_name: m.full_name,
+        membership_id: m.membership_id,
+        section_name: m.section_name,
+        weekly,
+      };
+    });
+
+    res.json({ weeks: weeks.map(w => w.label), matrix });
+  } catch (error) {
+    console.error('Member weekly matrix error:', error);
+    res.status(500).json({ error: 'Failed to load member weekly matrix' });
+  }
+});
+
 // GET /analytics/member-intelligence?days=90
 router.get('/member-intelligence', async (req, res) => {
   try {

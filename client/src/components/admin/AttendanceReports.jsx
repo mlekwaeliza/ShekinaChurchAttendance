@@ -5,7 +5,8 @@ import {
   Calendar, Download, Printer, FileText, Activity, Shield,
   X, Zap, Award, Clock, Eye, Layers, CheckCircle2, Flame, Heart, Brain,
   UserCheck, UserX, Star, Info, ChevronDown, ChevronUp, Search,
-  ArrowUp, ArrowDown, Minus, RefreshCw, Building2, PieChart
+  ArrowUp, ArrowDown, Minus, RefreshCw, Building2, PieChart,
+  XCircle, HelpCircle
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
 import Badge from '../ui/Badge';
@@ -222,6 +223,9 @@ const AttendanceReports = ({
   const [selectedMemberDetails, setSelectedMemberDetails] = useState(null);
   const [memberDetailsLoading, setMemberDetailsLoading] = useState(false);
   const [memberDetailsError, setMemberDetailsError] = useState(null);
+  const [memberWeeklyMatrix, setMemberWeeklyMatrix] = useState(null);
+  const [memberWeeklyMatrixWeeks, setMemberWeeklyMatrixWeeks] = useState([]);
+  const [memberWeeklyLoading, setMemberWeeklyLoading] = useState(false);
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, [selectedServiceId, filterType, filterValue, overviewData?.filterValue, overviewData?.requestedFilterValue, overviewData?.service_id]);
@@ -587,6 +591,20 @@ const AttendanceReports = ({
     } catch (e) { console.error('Failed to load analytics:', e); }
     finally { setAnalyticsLoading(false); }
   };
+
+  const loadMemberWeeklyMatrix = async (numWeeks = 12) => {
+    setMemberWeeklyLoading(true);
+    try {
+      const res = await analyticsAPI.getMemberWeeklyMatrix(numWeeks, selectedServiceId === 'all' ? 1 : selectedServiceId);
+      setMemberWeeklyMatrix(res.data.matrix || []);
+      setMemberWeeklyMatrixWeeks(res.data.weeks || []);
+    } catch (e) { console.error('Failed to load weekly matrix:', e); setMemberWeeklyMatrix([]); }
+    finally { setMemberWeeklyLoading(false); }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'members') loadMemberWeeklyMatrix();
+  }, [activeTab, selectedServiceId]);
 
   const stats = overviewData?.stats || {};
   const leaders = overviewData?.subleaders || [];
@@ -2467,47 +2485,43 @@ const AttendanceReports = ({
               ))}
             </div>
           </div>
-          <IntelligenceTable
-            columns={[
-              { key: 'full_name', label: 'Member Name', render: v => <span className="font-bold text-slate-900 dark:text-white">{v}</span> },
-              { key: 'gender', label: 'Gender' },
-              { key: 'age_group', label: 'Age Group' },
-              { key: 'section_name', label: 'Section' },
-              { key: 'head_leader_name', label: 'Head Leader' },
-              { key: 'leader_name', label: 'Section Leader' },
-              { key: 'registered_date', label: 'Registered Date', render: v => fdate(v) },
-              { key: 'membership_duration', label: 'Membership Duration' },
-              { key: 'attendance_rate', label: 'Attendance Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 55 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
-              { key: 'present_count', label: 'Present Count', align: 'right' },
-              { key: 'absent_count', label: 'Absent Count', align: 'right' },
-              { key: 'excused_count', label: 'Excused Count', align: 'right' },
-              { key: 'previous_attendance_rate', label: 'Previous Attendance %', align: 'right', render: v => `${R(v)}%` },
-              { key: 'attendance_difference', label: 'Attendance Difference', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{v >= 0 ? '+' : ''}{R(v)}%</span> },
-              { key: 'weekly_growth', label: 'Weekly Growth', align: 'right' },
-              { key: 'monthly_growth', label: 'Monthly Growth', align: 'right' },
-              { key: 'longest_attendance_streak', label: 'Longest Attendance Streak', align: 'right' },
-              { key: 'current_attendance_streak', label: 'Current Attendance Streak', align: 'right' },
-              { key: 'consecutive_absences', label: 'Consecutive Absences', align: 'right' },
-              { key: 'last_attendance_date', label: 'Last Attendance Date', render: v => v ? fdate(v) : '—' },
-              { key: 'days_since_last_attendance', label: 'Days Since Last Attendance', align: 'right', render: v => v === 9999 ? 'Never' : v },
-              { key: 'active_status', label: 'Active Status' },
-              { key: 'risk_level', label: 'Risk Level', render: (_, row) => <Badge variant={row.risk_variant}>{row.risk_level}</Badge> },
-              { key: 'follow_up_status', label: 'Follow-up Status' },
-              { key: 'last_visitation_date', label: 'Last Visitation Date', render: v => v ? fdate(v) : '—' },
-              { key: 'last_counseling_date', label: 'Last Counseling Date', render: v => v ? fdate(v) : '—' },
-              { key: 'prayer_request_status', label: 'Prayer Request Status' },
-              { key: 'notes', label: 'Notes' },
-              { key: 'retention_score', label: 'Retention Score', align: 'right', render: v => `${R(v)}%` },
-              { key: 'engagement_score', label: 'Engagement Score', align: 'right', render: v => `${R(v)}%` },
-              { key: 'overall_member_health_score', label: 'Overall Member Health Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v}/100</Badge> },
-              { key: 'previous_rank', label: 'Previous Rank', align: 'right', render: v => `#${v}` },
-              { key: 'current_rank', label: 'Current Rank', align: 'right', render: v => `#${v}` },
-              { key: 'rank_movement', label: 'Rank Movement', align: 'right', render: v => v > 0 ? <span className="text-emerald-600 font-bold">+{v}</span> : v < 0 ? <span className="text-rose-600 font-bold">{v}</span> : <span className="text-slate-400">0</span> },
-            ]}
-            data={filteredMembers}
-            onRowClick={openMemberAttendanceDetails}
-            emptyMessage="No members match the selected intelligence filters."
-          />
+          {memberWeeklyMatrix && memberWeeklyMatrix.length > 0 ? (
+            <div className="overflow-x-auto">
+              <div className="min-w-max">
+                {/* Header row */}
+                <div className="flex bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase text-slate-500">
+                  <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900/40 w-44 shrink-0 px-3 py-2">Member</div>
+                  <div className="w-28 shrink-0 px-3 py-2">Section</div>
+                  {memberWeeklyMatrixWeeks.map(w => (
+                    <div key={w} className="w-20 shrink-0 px-2 py-2 text-center">{w.replace('W', 'W')}</div>
+                  ))}
+                </div>
+                {/* Data rows */}
+                {memberWeeklyMatrix.filter(m => {
+                  if (!memberSearch) return true;
+                  const haystack = [m.full_name, m.section_name, m.membership_id].join(' ').toLowerCase();
+                  return haystack.includes(memberSearch.toLowerCase());
+                }).map(m => (
+                  <div key={m.member_id} className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                    <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-44 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">{m.full_name}</div>
+                    <div className="w-28 shrink-0 px-3 py-2.5 text-slate-500 truncate">{m.section_name || '—'}</div>
+                    {m.weekly.map((status, wi) => (
+                      <div key={wi} className="w-20 shrink-0 px-2 py-2 text-center">
+                        {status === 'present' && <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-200 px-2 py-1 rounded-full text-[10px] font-semibold"><CheckCircle2 className="w-3 h-3" />Present</span>}
+                        {status === 'absent' && <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-200 px-2 py-1 rounded-full text-[10px] font-semibold"><XCircle className="w-3 h-3" />Absent</span>}
+                        {status === 'excused' && <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-200 px-2 py-1 rounded-full text-[10px] font-semibold"><HelpCircle className="w-3 h-3" />Excused</span>}
+                        {!status && <span className="text-slate-300 dark:text-slate-600">—</span>}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : memberWeeklyLoading ? (
+            <div className="flex items-center justify-center py-12 text-slate-400 text-sm"><RefreshCw className="w-5 h-5 mr-2 animate-spin" />Loading member attendance matrix...</div>
+          ) : (
+            <div className="py-12 text-center text-slate-400 text-sm">No weekly attendance data available. Select a different period or service.</div>
+          )}
         </div>
 
         {selectedMemberDetails && createPortal((

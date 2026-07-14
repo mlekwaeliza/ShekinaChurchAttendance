@@ -360,6 +360,7 @@ export const analyticsAPI = {
   getFinanceAnalytics: (year) => api.get('/analytics/finance-analytics', { params: { year } }),
   getExecutiveComparison: (data) => api.post('/analytics/executive-comparison', data),
   getExecutiveSummary: (days = 90) => api.get('/analytics/executive-summary', { params: { days } }),
+  getMemberWeeklyMatrix: (weeks = 12, serviceId = 1) => api.get('/analytics/member-weekly-matrix', { params: { weeks, service_id: serviceId } }),
 };
 
 // New Member Leader API
