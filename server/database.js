@@ -5002,9 +5002,21 @@ const queries = {
     if (data.morning_offering !== undefined) { SET.push('morning_offering=?'); params.push(data.morning_offering); }
     if (data.afternoon_offering !== undefined) { SET.push('afternoon_offering=?'); params.push(data.afternoon_offering); }
     if (data.total_tithes !== undefined) { SET.push('total_tithes=?'); params.push(data.total_tithes); }
-    const baptized = await get('SELECT COUNT(DISTINCT soul_won_id) as count FROM baptism_tracking WHERE status = ?', ['completed']);
-    const members = await get("SELECT COUNT(*) as count FROM souls_won WHERE follow_up_status IN ('active_member','joined_church')");
-    return { visitors: visitors.count, saved: saved.count, followed_up: followedUp.count, baptized: baptized.count, members: members.count };
+    if (data.total_income !== undefined) { SET.push('total_income=?'); params.push(data.total_income); }
+    if (data.mission_fund !== undefined) { SET.push('mission_fund=?'); params.push(data.mission_fund); }
+    if (data.remaining_after_mission !== undefined) { SET.push('remaining_after_mission=?'); params.push(data.remaining_after_mission); }
+    if (data.bishop_fund !== undefined) { SET.push('bishop_fund=?'); params.push(data.bishop_fund); }
+    if (data.usable_church_funds !== undefined) { SET.push('usable_church_funds=?'); params.push(data.usable_church_funds); }
+    if (data.status !== undefined) { SET.push('status=?'); params.push(data.status); }
+    if (data.rejection_reason !== undefined) { SET.push('rejection_reason=?'); params.push(data.rejection_reason); }
+    if (data.evangelism_offering !== undefined) { SET.push('evangelism_offering=?'); params.push(data.evangelism_offering); }
+    if (data.notes !== undefined) { SET.push('notes=?'); params.push(data.notes); }
+    if (data.created_by !== undefined) { SET.push('created_by=?'); params.push(data.created_by); }
+    if (data.bishop_receipt !== undefined) { SET.push('bishop_receipt=?'); params.push(data.bishop_receipt); }
+    if (data.evangelism_receipt !== undefined) { SET.push('evangelism_receipt=?'); params.push(data.evangelism_receipt); }
+    if (data.remaining_receipt !== undefined) { SET.push('remaining_receipt=?'); params.push(data.remaining_receipt); }
+    if (SET.length === 0) return Promise.resolve({ changes: 0 });
+    return run(`UPDATE finance_daily_records SET ${SET.join(', ')}, updated_at=CURRENT_TIMESTAMP WHERE id=?`, [...params, id]);
   },
   getEvangelismMonthlyReport: (year) => all(usePostgres ? `
     SELECT EXTRACT(MONTH FROM date_saved) as month,
@@ -5191,22 +5203,13 @@ const queries = {
     data.total_income, data.mission_fund, data.remaining_after_mission, data.bishop_fund, data.usable_church_funds,
     data.evangelism_offering || 0, data.notes, data.created_by]),
 
-  updateFinanceRecord: (id, data) => {
-    const SET = [], params = [];
-    if (data.record_date !== undefined) { SET.push('record_date=?'); params.push(data.record_date); }
-    if (data.morning_offering !== undefined) { SET.push('morning_offering=?'); params.push(data.morning_offering); }
-    if (data.afternoon_offering !== undefined) { SET.push('afternoon_offering=?'); params.push(data.afternoon_offering); }
-    if (data.total_tithes !== undefined) { SET.push('total_tithes=?'); params.push(data.total_tithes); }
-    if (data.total_income !== undefined) { SET.push('total_income=?'); params.push(data.total_income); }
-    if (data.mission_fund !== undefined) { SET.push('mission_fund=?'); params.push(data.mission_fund); }
-    if (data.remaining_after_mission !== undefined) { SET.push('remaining_after_mission=?'); params.push(data.remaining_after_mission); }
-    if (data.bishop_fund !== undefined) { SET.push('bishop_fund=?'); params.push(data.bishop_fund); }
-    if (data.usable_church_funds !== undefined) { SET.push('usable_church_funds=?'); params.push(data.usable_church_funds); }
-    if (data.status !== undefined) { SET.push('status=?'); params.push(data.status); }
-    if (data.rejection_reason !== undefined) { SET.push('rejection_reason=?'); params.push(data.rejection_reason); }
-    if (data.evangelism_offering !== undefined) { SET.push('evangelism_offering=?'); params.push(data.evangelism_offering); }
+  submitFinanceRecord: (id, userId) => run(`
     UPDATE finance_daily_records SET status='submitted', submitted_at=CURRENT_TIMESTAMP, submitted_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?
   `, [userId, id]),
+
+  deleteFinanceRecord: (id) => run(`
+    DELETE FROM finance_daily_records WHERE id=?
+  `, [id]),
 
   approveFinanceRecord: (id, userId) => run(`
     UPDATE finance_daily_records SET status='approved', approved_at=CURRENT_TIMESTAMP, approved_by=?, rejection_reason=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?
