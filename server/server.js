@@ -454,6 +454,8 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminContributionsRoutes);
+app.use('/api/admin', adminFinanceRoutes);
 app.use('/api/admin', adminAttendanceRoutes);
 app.use('/api/admin', adminEngagementRoutes);
 app.use('/api/admin', adminHomeCellRoutes);
@@ -461,8 +463,6 @@ app.use('/api/admin', adminInsightsRoutes);
 app.use('/api/admin', adminOperationsRoutes);
 app.use('/api/admin', adminPeopleRoutes);
 app.use('/api/admin', adminSystemRoutes);
-app.use('/api/admin', adminContributionsRoutes);
-app.use('/api/admin', adminFinanceRoutes);
 app.use('/api/leader', leaderRoutes);
 app.use('/api/pastor', pastorRoutes);
 app.use('/api/analytics', analyticsRoutes);
