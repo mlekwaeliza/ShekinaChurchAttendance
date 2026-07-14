@@ -556,19 +556,39 @@ router.get('/departments', async (req, res) => {
   }
 });
 
-// GET /analytics/member-weekly-matrix?weeks=12&service_id=1
+// GET /analytics/member-weekly-matrix?weeks=12&service_id=1&startDate=2026-01-01&endDate=2026-07-14
 router.get('/member-weekly-matrix', async (req, res) => {
   try {
-    const numWeeks = Math.min(Math.max(parseInt(req.query.weeks) || 12, 4), 52);
-    const serviceId = parseInt(req.query.service_id) || 1;
+    const { startDate, endDate } = req.query;
+    const serviceIdParam = req.query.service_id;
+    const serviceId = serviceIdParam === 'all' || serviceIdParam === undefined ? null : parseInt(serviceIdParam);
 
-    const today = new Date();
-    const weeks = [];
-    for (let i = numWeeks - 1; i >= 0; i--) {
-      const d = addDays(today, -i * 7);
-      const weekStr = getISOWeekString(d);
-      const range = getISOWeekRange(weekStr);
-      weeks.push({ label: weekStr, start: range.start, end: range.end });
+    let weeks;
+    if (startDate && endDate) {
+      // Build weeks from the provided date range
+      const start = new Date(startDate + 'T00:00:00');
+      const end = new Date(endDate + 'T00:00:00');
+      weeks = [];
+      let cursor = new Date(start);
+      while (cursor <= end) {
+        const weekStr = getISOWeekString(cursor);
+        const range = getISOWeekRange(weekStr);
+        // Avoid duplicates if cursor lands in same week
+        if (!weeks.length || weeks[weeks.length - 1].label !== weekStr) {
+          weeks.push({ label: weekStr, start: range.start, end: range.end });
+        }
+        cursor = addDays(cursor, 7);
+      }
+    } else {
+      const numWeeks = Math.min(Math.max(parseInt(req.query.weeks) || 12, 4), 52);
+      const today = new Date();
+      weeks = [];
+      for (let i = numWeeks - 1; i >= 0; i--) {
+        const d = addDays(today, -i * 7);
+        const weekStr = getISOWeekString(d);
+        const range = getISOWeekRange(weekStr);
+        weeks.push({ label: weekStr, start: range.start, end: range.end });
+      }
     }
 
     const members = await all(`
@@ -579,13 +599,15 @@ router.get('/member-weekly-matrix', async (req, res) => {
       ORDER BY m.full_name
     `);
 
+    const serviceCondition = serviceId ? 'AND a.service_type_id = ?' : '';
+    const serviceParams = serviceId ? [serviceId] : [];
     const attendanceRows = await all(`
       SELECT a.member_id, a.date, a.status
       FROM attendance a
       JOIN members m ON a.member_id = m.id
-      WHERE m.is_active = 1 AND a.date BETWEEN ? AND ? AND a.service_type_id = ?
+      WHERE m.is_active = 1 AND a.date BETWEEN ? AND ? ${serviceCondition}
       ORDER BY a.member_id, a.date
-    `, [weeks[0].start, weeks[weeks.length - 1].end, serviceId]);
+    `, [weeks[0].start, weeks[weeks.length - 1].end, ...serviceParams]);
 
     const byMember = {};
     for (const row of attendanceRows) {

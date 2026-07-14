@@ -592,10 +592,50 @@ const AttendanceReports = ({
     finally { setAnalyticsLoading(false); }
   };
 
+  const deriveDateRange = () => {
+    if (filterType === 'weekly' && filterValue) {
+      const [yearStr, weekPart] = String(filterValue).split('-W');
+      const year = Number(yearStr);
+      const week = Number(weekPart);
+      if (Number.isInteger(year) && Number.isInteger(week)) {
+        const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+        const day = simple.getUTCDay();
+        const isoWeekStart = new Date(simple);
+        if (day <= 4) isoWeekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
+        else isoWeekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+        const isoWeekEnd = new Date(isoWeekStart);
+        isoWeekEnd.setUTCDate(isoWeekStart.getUTCDate() + 6);
+        return { startDate: isoWeekStart.toISOString().slice(0, 10), endDate: isoWeekEnd.toISOString().slice(0, 10) };
+      }
+    }
+    if (filterType === 'monthly' && filterValue) {
+      const [year, month] = filterValue.split('-').map(Number);
+      if (year && month) {
+        const end = new Date(year, month, 0);
+        return { startDate: `${year}-${String(month).padStart(2, '0')}-01`, endDate: end.toISOString().slice(0, 10) };
+      }
+    }
+    if (filterType === 'yearly' && filterValue) {
+      return { startDate: `${filterValue}-01-01`, endDate: `${filterValue}-12-31` };
+    }
+    if (filterType === 'daily' && filterValue) {
+      return { startDate: filterValue, endDate: filterValue };
+    }
+    return null;
+  };
+
   const loadMemberWeeklyMatrix = async (numWeeks = 12) => {
     setMemberWeeklyLoading(true);
     try {
-      const res = await analyticsAPI.getMemberWeeklyMatrix(numWeeks, selectedServiceId === 'all' ? 1 : selectedServiceId);
+      const range = deriveDateRange();
+      const params = { serviceId: selectedServiceId };
+      if (range) {
+        params.startDate = range.startDate;
+        params.endDate = range.endDate;
+      } else {
+        params.weeks = numWeeks;
+      }
+      const res = await analyticsAPI.getMemberWeeklyMatrix(params);
       setMemberWeeklyMatrix(res.data.matrix || []);
       setMemberWeeklyMatrixWeeks(res.data.weeks || []);
     } catch (e) { console.error('Failed to load weekly matrix:', e); setMemberWeeklyMatrix([]); }
@@ -604,7 +644,7 @@ const AttendanceReports = ({
 
   useEffect(() => {
     if (activeTab === 'members') loadMemberWeeklyMatrix();
-  }, [activeTab, selectedServiceId]);
+  }, [activeTab, selectedServiceId, filterType, filterValue]);
 
   const stats = overviewData?.stats || {};
   const leaders = overviewData?.subleaders || [];
@@ -2483,6 +2523,23 @@ const AttendanceReports = ({
                   {cat.label} · {cat.members.length}
                 </button>
               ))}
+            </div>
+          </div>
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3">
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Weekly Attendance Matrix</h4>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400">
+                {filterType ? `Filtered by ${filterType}` : 'Last'}:
+              </span>
+              <select value={memberWeeklyMatrixWeeks.length || 12} onChange={e => loadMemberWeeklyMatrix(Number(e.target.value))}
+                className="px-2 py-1 rounded-lg text-[10px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                <option value={4}>4 weeks</option>
+                <option value={8}>8 weeks</option>
+                <option value={12}>12 weeks</option>
+                <option value={16}>16 weeks</option>
+                <option value={24}>24 weeks</option>
+                <option value={52}>52 weeks</option>
+              </select>
             </div>
           </div>
           {memberWeeklyMatrix && memberWeeklyMatrix.length > 0 ? (
