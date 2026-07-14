@@ -1,5 +1,5 @@
 const express = require('express');
-const { queries, get, all } = require('../database');
+const { queries, get, all, getMultiPeriodOverall, getMultiPeriodSections, getMultiPeriodLeaders, getMultiPeriodDepartments, getMultiPeriodMembers, getAttendanceMovement } = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString, parseDateInput } = require('../utils/date');
 
@@ -933,25 +933,25 @@ router.post('/executive-comparison', async (req, res) => {
       if (!start || !end) continue;
 
       // Overall attendance stats for this period
-      const overall = await queries.getMultiPeriodOverall(start, end);
+      const overall = await getMultiPeriodOverall(start, end);
 
       // Section rankings for this period
-      const sections = await queries.getMultiPeriodSections(start, end);
+      const sections = await getMultiPeriodSections(start, end);
 
       // Leader rankings for this period
-      const leaders = await queries.getMultiPeriodLeaders(start, end);
+      const leaders = await getMultiPeriodLeaders(start, end);
 
       // Department data for this period
-      const departments = await queries.getMultiPeriodDepartments(start, end);
+      const departments = await getMultiPeriodDepartments(start, end);
 
       // Member engagement data
-      const memberEngagement = await queries.getMultiPeriodMembers(start, end);
+      const memberEngagement = await getMultiPeriodMembers(start, end);
 
       // Daily breakdown
       const daily = await queries.getHistoricalDaily(start, end);
 
       // Movement analysis
-      const movement = await queries.getAttendanceMovement(start, end);
+      const movement = await getAttendanceMovement(start, end);
 
       periodResults.push({
         id, label, start, end,
