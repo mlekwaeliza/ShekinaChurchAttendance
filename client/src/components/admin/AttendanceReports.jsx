@@ -11,6 +11,7 @@ import { adminAPI, analyticsAPI } from '../../services/api';
 import Badge from '../ui/Badge';
 import { fdate, fdatetime } from '../../utils/date';
 import ExecutiveComparison from './ExecutiveComparison';
+import ExecutiveSummary from './ExecutiveSummary';
 
 const R = v => Math.round(Number(v) || 0);
 
@@ -762,105 +763,7 @@ const AttendanceReports = ({
   };
 
   const renderOverviewTab = () => {
-    const healthScore = growthIndex.growth_index || 0;
-    const retentionRate = retention.retention_rate || 0;
-    const rateDiff = attendanceRate - prevAttendanceRate;
-    return (
-      <div className="space-y-6">
-        <div className="rounded-2xl bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center"><Heart className="w-6 h-6 text-white" /></div>
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Church Health Score</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Overall church performance indicator</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="flex items-baseline gap-2">
-                <span className={`text-3xl font-bold ${healthScore >= 75 ? 'text-emerald-600' : healthScore >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>{healthScore}</span>
-                <span className="text-xs text-slate-400">/100</span>
-              </div>
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${healthScore >= 75 ? 'bg-emerald-50 text-emerald-700' : healthScore >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>
-                {healthScore >= 75 ? 'Healthy' : healthScore >= 50 ? 'Needs Improvement' : 'Critical'}
-              </span>
-            </div>
-          </div>
-          <div className="mt-3 h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${healthScore}%`, background: healthScore >= 75 ? 'linear-gradient(90deg, #10b981, #34d399)' : healthScore >= 50 ? 'linear-gradient(90deg, #f59e0b, #fbbf24)' : 'linear-gradient(90deg, #ef4444, #f87171)' }} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <MetricCard label="Total Members" value={totalMembers} icon={Users} color="indigo" showDiff={false} />
-          <MetricCard label="Present" value={totalPresent} icon={CheckCircle2} color="emerald" showDiff={false} />
-          <MetricCard label="Absent" value={totalAbsent} icon={UserX} color="rose" showDiff={false} />
-          <MetricCard label="Excused" value={totalExcused} icon={AlertTriangle} color="amber" showDiff={false} />
-          <MetricCard label="Attendance %" value={attendanceRate} previousValue={prevAttendanceRate} suffix="%" icon={Activity} />
-          <MetricCard label="Leader Submission %" value={leaderSubmissionRate} suffix="%" icon={Target} color="sky" showDiff={false} />
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <MetricCard label="Weekly Growth" value={weeklyGrowth >= 0 ? `+${R(weeklyGrowth)}%` : `${R(weeklyGrowth)}%`} icon={TrendingUp} color={weeklyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
-          <MetricCard label="Monthly Growth" value={monthlyGrowth >= 0 ? `+${R(monthlyGrowth)}%` : `${R(monthlyGrowth)}%`} icon={TrendingUp} color={monthlyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
-          <MetricCard label="Yearly Growth" value={yearlyGrowth >= 0 ? `+${R(yearlyGrowth)}%` : `${R(yearlyGrowth)}%`} icon={TrendingUp} color={yearlyGrowth >= 0 ? 'emerald' : 'rose'} showDiff={false} />
-          <MetricCard label="Retention %" value={retentionRate} suffix="%" icon={Shield} color={retentionRate >= 80 ? 'emerald' : retentionRate >= 60 ? 'amber' : 'rose'} showDiff={false} />
-          <MetricCard label="Rate Change" value={rateDiff >= 0 ? `+${R(rateDiff)}%` : `${R(rateDiff)}%`} icon={Activity} color={rateDiff >= 0 ? 'emerald' : 'rose'} showDiff={false} />
-          <MetricCard label="Health Score" value={healthScore} suffix="/100" icon={Heart} color={healthScore >= 75 ? 'emerald' : healthScore >= 50 ? 'amber' : 'rose'} showDiff={false} />
-        </div>
-
-        {insights.length > 0 && (
-          <div className="rounded-2xl bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-5">
-            <div className="flex items-center gap-2 mb-3"><Zap className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /><h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">AI Intelligence Summary</h3></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {insights.slice(0, 4).map((insight, i) => <InsightCard key={i} insight={insight} index={i} />)}
-            </div>
-          </div>
-        )}
-
-        {sectionSummary && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Section Performance Summary</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[
-                { label: 'Sections', value: sectionSummary.totalSections, color: 'indigo' },
-                { label: 'Total Members', value: sectionSummary.totalMembers, color: 'slate' },
-                { label: 'Total Present', value: sectionSummary.totalPresent, color: 'emerald' },
-                { label: 'Total Absent', value: sectionSummary.totalAbsent, color: 'rose' },
-                { label: 'Total Excused', value: sectionSummary.totalExcused, color: 'amber' },
-                { label: 'Avg Rate', value: `${R(sectionSummary.avgRate)}%`, color: 'indigo' },
-              ].map(s => (
-                <div key={s.label} className="text-center">
-                  <p className="text-[10px] font-semibold uppercase text-slate-400">{s.label}</p>
-                  <p className="text-lg font-bold text-slate-900 dark:text-white">{s.value}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {headLeaders.length > 0 && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Head Leader Performance</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {headLeaders.slice(0, 4).map(hl => (
-                <div key={hl.leader_id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-xs">{hl.leader_name?.charAt(0)}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{hl.leader_name}</p>
-                    <p className="text-[10px] text-slate-400">{hl.section_name}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">{R(hl.overall_attendance)}%</p>
-                    <p className="text-[9px] text-slate-400">{hl.leaders_supervised || 0} leaders</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return <ExecutiveSummary days={90} />;
   };
 
   const renderComparisonTab = () => {
