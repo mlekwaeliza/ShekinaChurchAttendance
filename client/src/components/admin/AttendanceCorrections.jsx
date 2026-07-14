@@ -814,10 +814,12 @@ const AttendanceCorrections = ({ showMessage }) => {
 
               {/* Leaders List */}
               <div className="space-y-2">
-                {mlsData.leaders.length === 0 ? (
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-10 text-center text-slate-400 text-sm">No leaders found for this date.</div>
+                {mlsData.leaders.filter(l => l.status !== 'submitted').length === 0 ? (
+                  <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-10 text-center text-slate-400 text-sm">
+                    {mlsData.leaders.length === 0 ? 'No leaders found for this date.' : 'All leaders have submitted attendance for this date.'}
+                  </div>
                 ) : (
-                  mlsData.leaders.map(leader => (
+                  mlsData.leaders.filter(l => l.status !== 'submitted').map(leader => (
                     <div key={leader.leader_id}
                       className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
