@@ -546,4 +546,218 @@ router.post('/attendance', async (req, res) => {
   }
 });
 
+// GET missing leader submissions for a given date and service.
+// Returns each section leader with expected vs recorded member counts and a computed status.
+router.get('/attendance/missing-submissions', async (req, res) => {
+  try {
+    const { date, service_id = 1 } = req.query;
+    if (!date) return res.status(400).json({ error: 'Date query parameter required' });
+
+    const leaders = await all(`
+      SELECT l.id AS leader_id, u.full_name AS leader_name, s.id AS section_id, s.name AS section_name
+      FROM leaders l
+      JOIN users u ON l.user_id = u.id
+      JOIN sections s ON l.section_id = s.id
+      WHERE l.is_active = 1
+      ORDER BY s.name, u.full_name
+    `);
+
+    const serviceType = await get('SELECT id, name FROM service_types WHERE id = ?', [Number(service_id)]);
+    const serviceName = serviceType?.name || 'Main';
+
+    const result = [];
+    for (const leader of leaders) {
+      const expectedRow = await get(
+        'SELECT COUNT(*) AS cnt FROM members WHERE leader_id = ? AND is_active = 1',
+        [leader.leader_id]
+      );
+      const expected = expectedRow?.cnt || 0;
+
+      const recordedRow = await get(
+        `SELECT COUNT(*) AS cnt FROM attendance a
+         JOIN members m ON a.member_id = m.id
+         WHERE m.leader_id = ? AND a.date = ? AND a.service_type_id = ?`,
+        [leader.leader_id, date, Number(service_id)]
+      );
+      const recorded = recordedRow?.cnt || 0;
+
+      const submissionLog = await get(
+        'SELECT id, created_at FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?',
+        [leader.leader_id, date, Number(service_id)]
+      );
+
+      let status;
+      if (submissionLog && recorded >= expected) {
+        status = 'submitted';
+      } else if (recorded > 0) {
+        status = 'partial';
+      } else if (submissionLog && recorded < expected) {
+        status = 'late';
+      } else {
+        status = 'missing';
+      }
+
+      result.push({
+        leader_id: leader.leader_id,
+        leader_name: leader.leader_name,
+        section_id: leader.section_id,
+        section_name: leader.section_name,
+        service_id: Number(service_id),
+        service_name: serviceName,
+        expected_members: expected,
+        recorded_members: recorded,
+        status,
+        submitted_at: submissionLog?.created_at || null,
+      });
+    }
+
+    const summary = {
+      missing: result.filter(r => r.status === 'missing').length,
+      partial: result.filter(r => r.status === 'partial').length,
+      late: result.filter(r => r.status === 'late').length,
+      submitted: result.filter(r => r.status === 'submitted').length,
+      total_leaders: result.length,
+    };
+
+    res.json({ summary, leaders: result });
+  } catch (error) {
+    console.error('Missing submissions error:', error);
+    res.status(500).json({ error: 'Failed to fetch missing submissions' });
+  }
+});
+
+// GET all members for a leader with their current attendance status for a given date+service.
+router.get('/attendance/leader-members/:leaderId', async (req, res) => {
+  try {
+    const leaderId = parseInt(req.params.leaderId, 10);
+    if (!Number.isInteger(leaderId) || leaderId <= 0) {
+      return res.status(400).json({ error: 'Invalid leader id' });
+    }
+    const { date, service_id = 1 } = req.query;
+    if (!date) return res.status(400).json({ error: 'Date query parameter required' });
+
+    const leader = await get(
+      'SELECT l.id, u.full_name AS leader_name, s.name AS section_name FROM leaders l JOIN users u ON l.user_id = u.id JOIN sections s ON l.section_id = s.id WHERE l.id = ?',
+      [leaderId]
+    );
+    if (!leader) return res.status(404).json({ error: 'Leader not found' });
+
+    const members = await all(
+      `SELECT m.id AS member_id, m.full_name, m.membership_id,
+              a.id AS attendance_id, a.status, a.submitted_at
+       FROM members m
+       LEFT JOIN attendance a ON a.member_id = m.id AND a.date = ? AND a.service_type_id = ?
+       WHERE m.leader_id = ? AND m.is_active = 1
+       ORDER BY m.full_name`,
+      [date, Number(service_id), leaderId]
+    );
+
+    const submittedRow = await get(
+      'SELECT created_at FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?',
+      [leaderId, date, Number(service_id)]
+    );
+
+    res.json({
+      leader: { id: leaderId, name: leader.leader_name, section_name: leader.section_name },
+      date,
+      service_id: Number(service_id),
+      members,
+      previously_submitted: !!submittedRow,
+      submitted_at: submittedRow?.created_at || null,
+    });
+  } catch (error) {
+    console.error('Leader members error:', error);
+    res.status(500).json({ error: 'Failed to fetch leader members' });
+  }
+});
+
+// POST bulk attendance correction for a leader's section.
+// Handles both create (upsert) and update, with full audit logging.
+router.post('/attendance/bulk-correct', async (req, res) => {
+  try {
+    const { date, service_id = 1, leader_id, reason, records } = req.body;
+
+    if (!date || !leader_id || !Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'date, leader_id, and records array required' });
+    }
+
+    const validReasons = ['Leader forgot', 'Leader absent', 'Paper attendance', 'System recovery', 'Other'];
+    const trimmedReason = typeof reason === 'string' && validReasons.includes(reason) ? reason : 'Other';
+
+    for (const record of records) {
+      if (!record.member_id || !VALID_STATUSES.has(record.status)) {
+        return res.status(400).json({ error: `Invalid member_id or status for record` });
+      }
+    }
+
+    const leader = await get(
+      'SELECT l.id, l.section_id, u.full_name AS leader_name FROM leaders l JOIN users u ON l.user_id = u.id WHERE l.id = ?',
+      [Number(leader_id)]
+    );
+    if (!leader) return res.status(404).json({ error: 'Leader not found' });
+
+    const existingSubmission = await get(
+      'SELECT id, created_at FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?',
+      [Number(leader_id), date, Number(service_id)]
+    );
+
+    const ipAddress = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || null;
+    const userAgent = req.headers['user-agent'] || null;
+
+    await transaction(async (tx) => {
+      for (const record of records) {
+        const existing = await tx.get(
+          'SELECT id, status FROM attendance WHERE member_id = ? AND date = ? AND service_type_id = ?',
+          [record.member_id, date, Number(service_id)]
+        );
+
+        if (existing) {
+          if (existing.status !== record.status) {
+            await tx.run(
+              'UPDATE attendance SET status = ?, submitted_by = ?, submitted_at = CURRENT_TIMESTAMP WHERE id = ?',
+              [record.status, req.session.userId, existing.id]
+            );
+            queries.createAuditEntry(
+              req.session.userId, 'update', 'attendance', existing.id,
+              { status: existing.status },
+              { status: record.status, reason: trimmedReason, original_leader: leader.leader_name, corrected_by_admin: true },
+              ipAddress, userAgent
+            ).catch(e => console.error('Audit write failed:', e.message));
+          }
+        } else {
+          await tx.run(
+            'INSERT INTO attendance (member_id, date, status, submitted_by, service_type_id) VALUES (?, ?, ?, ?, ?)',
+            [record.member_id, date, record.status, req.session.userId, Number(service_id)]
+          );
+          const newRow = await tx.get('SELECT last_insert_rowid() AS id');
+          queries.createAuditEntry(
+            req.session.userId, 'create', 'attendance', newRow?.id || 0,
+            null,
+            { status: record.status, reason: trimmedReason, original_leader: leader.leader_name, corrected_by_admin: true },
+            ipAddress, userAgent
+          ).catch(e => console.error('Audit write failed:', e.message));
+        }
+      }
+
+      // Create submission_log if not exists
+      if (!existingSubmission) {
+        await tx.run(
+          'INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)',
+          [Number(leader_id), leader.section_id, date, Number(service_id)]
+        );
+      }
+    });
+
+    res.json({
+      message: 'Bulk correction saved successfully',
+      leader: leader.leader_name,
+      records_saved: records.length,
+      reason: trimmedReason,
+    });
+  } catch (error) {
+    console.error('Bulk correct error:', error);
+    res.status(500).json({ error: 'Failed to save bulk correction' });
+  }
+});
+
 module.exports = router;
