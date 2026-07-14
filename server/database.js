@@ -5002,6 +5002,201 @@ const queries = {
     if (data.morning_offering !== undefined) { SET.push('morning_offering=?'); params.push(data.morning_offering); }
     if (data.afternoon_offering !== undefined) { SET.push('afternoon_offering=?'); params.push(data.afternoon_offering); }
     if (data.total_tithes !== undefined) { SET.push('total_tithes=?'); params.push(data.total_tithes); }
+    const baptized = await get('SELECT COUNT(DISTINCT soul_won_id) as count FROM baptism_tracking WHERE status = ?', ['completed']);
+    const members = await get("SELECT COUNT(*) as count FROM souls_won WHERE follow_up_status IN ('active_member','joined_church')");
+    return { visitors: visitors.count, saved: saved.count, followed_up: followedUp.count, baptized: baptized.count, members: members.count };
+  },
+  getEvangelismMonthlyReport: (year) => all(usePostgres ? `
+    SELECT EXTRACT(MONTH FROM date_saved) as month,
+      COUNT(*) as souls_won,
+      COUNT(*) FILTER (WHERE follow_up_status IN ('joined_cell','joined_church','active_member')) as members_added
+    FROM souls_won
+    WHERE EXTRACT(YEAR FROM date_saved) = $1
+    GROUP BY month ORDER BY month
+  ` : `
+    SELECT ${monthOnly('date_saved')} as month,
+      COUNT(*) as souls_won,
+      SUM(CASE WHEN follow_up_status IN ('joined_cell','joined_church','active_member') THEN 1 ELSE 0 END) as members_added
+    FROM souls_won
+    WHERE ${yearOnly('date_saved')} = ?
+    GROUP BY month ORDER BY month
+  `, [String(year)]),
+  getEvangelismAnnualStats: (year) => get(usePostgres ? `
+    SELECT COUNT(*) as souls_won,
+      COUNT(*) FILTER (WHERE follow_up_status IN ('joined_cell','joined_church','active_member')) as members_added
+    FROM souls_won
+    WHERE EXTRACT(YEAR FROM date_saved) = $1
+  ` : `
+    SELECT COUNT(*) as souls_won,
+      SUM(CASE WHEN follow_up_status IN ('joined_cell','joined_church','active_member') THEN 1 ELSE 0 END) as members_added
+    FROM souls_won
+    WHERE ${yearOnly('date_saved')} = ?
+  `, [String(year)]),
+
+  // ── Contribution Types ──────────────────────────────────────────────────
+  getContributionTypes: () => all('SELECT * FROM contribution_types ORDER BY sort_order, name'),
+
+  getContributionTypeById: (id) => get('SELECT * FROM contribution_types WHERE id = ?', [id]),
+
+  createContributionType: ({ name, description, sort_order }) => run(
+    'INSERT INTO contribution_types (name, description, sort_order) VALUES (?, ?, ?)',
+    [name, description, sort_order]
+  ),
+
+  updateContributionType: (id, { name, description, is_active, sort_order }) => {
+    const SET = [], params = [];
+    if (name !== undefined) { SET.push('name=?'); params.push(name); }
+    if (description !== undefined) { SET.push('description=?'); params.push(description); }
+    if (is_active !== undefined) { SET.push('is_active=?'); params.push(is_active); }
+    if (sort_order !== undefined) { SET.push('sort_order=?'); params.push(sort_order); }
+    SET.push('updated_at=CURRENT_TIMESTAMP');
+    params.push(id);
+    return run(`UPDATE contribution_types SET ${SET.join(', ')} WHERE id=?`, params);
+  },
+
+  deleteContributionType: (id) => run('DELETE FROM contribution_types WHERE id = ?', [id]),
+
+  // ── Contributions ───────────────────────────────────────────────────────
+  getContributions: (filters = {}) => {
+    const WHERE = [], params = [];
+    if (filters.member_id) { WHERE.push('c.member_id=?'); params.push(filters.member_id); }
+    if (filters.leader_id) { WHERE.push('m.leader_id=?'); params.push(filters.leader_id); }
+    if (filters.contribution_type_id) {
+      if (Array.isArray(filters.contribution_type_id)) {
+        const placeholders = filters.contribution_type_id.map(() => '?').join(',');
+        WHERE.push(`c.contribution_type_id IN (${placeholders})`);
+        params.push(...filters.contribution_type_id);
+      } else {
+        WHERE.push('c.contribution_type_id=?');
+        params.push(filters.contribution_type_id);
+      }
+    }
+    if (filters.payment_method) { WHERE.push('c.payment_method=?'); params.push(filters.payment_method); }
+    if (filters.date_from) { WHERE.push('c.payment_date>=?'); params.push(filters.date_from); }
+    if (filters.date_to) { WHERE.push('c.payment_date<=?'); params.push(filters.date_to); }
+    const where = WHERE.length ? `WHERE ${WHERE.join(' AND ')}` : '';
+    return all(`
+      SELECT c.*, ct.name as contribution_type_name, m.full_name, m.email, m.phone
+      FROM contributions c
+      LEFT JOIN contribution_types ct ON ct.id = c.contribution_type_id
+      LEFT JOIN members m ON m.id = c.member_id
+      ${where}
+      ORDER BY c.payment_date DESC, c.created_at DESC
+    `, params);
+  },
+
+  getContributionById: (id) => get(`
+    SELECT c.*, ct.name as contribution_type_name, m.full_name, m.email, m.phone
+    FROM contributions c
+    LEFT JOIN contribution_types ct ON ct.id = c.contribution_type_id
+    LEFT JOIN members m ON m.id = c.member_id
+    WHERE c.id=?
+  `, [id]),
+
+  createContribution: (data) => run(`
+    INSERT INTO contributions (member_id, contribution_type_id, amount, payment_date, payment_method, reference_number, notes, recorded_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [data.member_id, data.contribution_type_id, data.amount, data.payment_date, data.payment_method, data.reference_number, data.notes, data.recorded_by]),
+
+  updateContribution: (id, data) => {
+    const SET = [], params = [];
+    if (data.member_id !== undefined) { SET.push('member_id=?'); params.push(data.member_id); }
+    if (data.contribution_type_id !== undefined) { SET.push('contribution_type_id=?'); params.push(data.contribution_type_id); }
+    if (data.amount !== undefined) { SET.push('amount=?'); params.push(data.amount); }
+    if (data.payment_date !== undefined) { SET.push('payment_date=?'); params.push(data.payment_date); }
+    if (data.payment_method !== undefined) { SET.push('payment_method=?'); params.push(data.payment_method); }
+    if (data.reference_number !== undefined) { SET.push('reference_number=?'); params.push(data.reference_number); }
+    if (data.notes !== undefined) { SET.push('notes=?'); params.push(data.notes); }
+    SET.push('updated_at=CURRENT_TIMESTAMP');
+    params.push(id);
+    return run(`UPDATE contributions SET ${SET.join(', ')} WHERE id=?`, params);
+  },
+
+  deleteContribution: (id) => run('DELETE FROM contributions WHERE id = ?', [id]),
+
+  getContributionSummary: (filters = {}) => {
+    const WHERE = [], params = [];
+    if (filters.date_from) { WHERE.push('c.payment_date>=?'); params.push(filters.date_from); }
+    if (filters.date_to) { WHERE.push('c.payment_date<=?'); params.push(filters.date_to); }
+    if (filters.contribution_type_id) {
+      if (Array.isArray(filters.contribution_type_id)) {
+        const placeholders = filters.contribution_type_id.map(() => '?').join(',');
+        WHERE.push(`c.contribution_type_id IN (${placeholders})`);
+        params.push(...filters.contribution_type_id);
+      } else {
+        WHERE.push('c.contribution_type_id=?');
+        params.push(filters.contribution_type_id);
+      }
+    }
+    if (filters.member_id) { WHERE.push('c.member_id=?'); params.push(filters.member_id); }
+    const where = WHERE.length ? `WHERE ${WHERE.join(' AND ')}` : '';
+    return all(`
+      SELECT ct.id as type_id, ct.name as type_name,
+        COUNT(c.id) as count, SUM(c.amount) as total,
+        MIN(c.amount) as min_amount, MAX(c.amount) as max_amount
+      FROM contributions c
+      JOIN contribution_types ct ON ct.id = c.contribution_type_id
+      ${where}
+      GROUP BY ct.id, ct.name
+      ORDER BY ct.sort_order, ct.name
+    `, params);
+  },
+
+  getContributionsByDateRange: (from, to) => all(`
+    SELECT c.*, ct.name as contribution_type_name, m.full_name
+    FROM contributions c
+    LEFT JOIN contribution_types ct ON ct.id = c.contribution_type_id
+    LEFT JOIN members m ON m.id = c.member_id
+    WHERE c.payment_date >= ? AND c.payment_date <= ?
+    ORDER BY c.payment_date DESC
+  `, [from, to]),
+
+  // ── Finance Daily Records ──────────────────────────────────────────────
+  getFinanceRecords: (filters = {}) => {
+    const WHERE = [], params = [];
+    if (filters.status) { WHERE.push('f.status=?'); params.push(filters.status); }
+    if (filters.created_by) { WHERE.push('f.created_by=?'); params.push(filters.created_by); }
+    if (filters.date_from) { WHERE.push('f.record_date>=?'); params.push(filters.date_from); }
+    if (filters.date_to) { WHERE.push('f.record_date<=?'); params.push(filters.date_to); }
+    const where = WHERE.length ? `WHERE ${WHERE.join(' AND ')}` : '';
+    return all(`
+      SELECT f.*,
+        (SELECT COALESCE(SUM(amount), 0) FROM finance_expenses WHERE record_id = f.id) as total_expenses,
+        u.full_name as created_by_name, sb.full_name as submitted_by_name, ap.full_name as approved_by_name
+      FROM finance_daily_records f
+      LEFT JOIN users u ON u.id = f.created_by
+      LEFT JOIN users sb ON sb.id = f.submitted_by
+      LEFT JOIN users ap ON ap.id = f.approved_by
+      ${where}
+      ORDER BY f.record_date DESC
+    `, params);
+  },
+
+  getFinanceRecordById: (id) => get(`
+    SELECT f.*,
+      (SELECT COALESCE(SUM(amount), 0) FROM finance_expenses WHERE record_id = f.id) as total_expenses,
+      u.full_name as created_by_name, sb.full_name as submitted_by_name, ap.full_name as approved_by_name
+    FROM finance_daily_records f
+    LEFT JOIN users u ON u.id = f.created_by
+    LEFT JOIN users sb ON sb.id = f.submitted_by
+    LEFT JOIN users ap ON ap.id = f.approved_by
+    WHERE f.id = ?
+  `, [id]),
+
+  createFinanceRecord: (data) => run(`
+    INSERT INTO finance_daily_records (record_date, morning_offering, afternoon_offering, total_tithes,
+      total_income, mission_fund, remaining_after_mission, bishop_fund, usable_church_funds, evangelism_offering, notes, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [data.record_date, data.morning_offering, data.afternoon_offering, data.total_tithes,
+    data.total_income, data.mission_fund, data.remaining_after_mission, data.bishop_fund, data.usable_church_funds,
+    data.evangelism_offering || 0, data.notes, data.created_by]),
+
+  updateFinanceRecord: (id, data) => {
+    const SET = [], params = [];
+    if (data.record_date !== undefined) { SET.push('record_date=?'); params.push(data.record_date); }
+    if (data.morning_offering !== undefined) { SET.push('morning_offering=?'); params.push(data.morning_offering); }
+    if (data.afternoon_offering !== undefined) { SET.push('afternoon_offering=?'); params.push(data.afternoon_offering); }
+    if (data.total_tithes !== undefined) { SET.push('total_tithes=?'); params.push(data.total_tithes); }
     if (data.total_income !== undefined) { SET.push('total_income=?'); params.push(data.total_income); }
     if (data.mission_fund !== undefined) { SET.push('mission_fund=?'); params.push(data.mission_fund); }
     if (data.remaining_after_mission !== undefined) { SET.push('remaining_after_mission=?'); params.push(data.remaining_after_mission); }
@@ -5010,18 +5205,6 @@ const queries = {
     if (data.status !== undefined) { SET.push('status=?'); params.push(data.status); }
     if (data.rejection_reason !== undefined) { SET.push('rejection_reason=?'); params.push(data.rejection_reason); }
     if (data.evangelism_offering !== undefined) { SET.push('evangelism_offering=?'); params.push(data.evangelism_offering); }
-    if (data.notes !== undefined) { SET.push('notes=?'); params.push(data.notes); }
-    if (data.bishop_receipt !== undefined) { SET.push('bishop_receipt=?'); params.push(data.bishop_receipt); }
-    if (data.evangelism_receipt !== undefined) { SET.push('evangelism_receipt=?'); params.push(data.evangelism_receipt); }
-    if (data.remaining_receipt !== undefined) { SET.push('remaining_receipt=?'); params.push(data.remaining_receipt); }
-    SET.push('updated_at=CURRENT_TIMESTAMP');
-    params.push(id);
-    return run(`UPDATE finance_daily_records SET ${SET.join(', ')} WHERE id=?`, params);
-  },
-
-  deleteFinanceRecord: (id) => run('DELETE FROM finance_daily_records WHERE id = ?', [id]),
-
-  submitFinanceRecord: (id, userId) => run(`
     UPDATE finance_daily_records SET status='submitted', submitted_at=CURRENT_TIMESTAMP, submitted_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?
   `, [userId, id]),
 
