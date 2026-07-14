@@ -7,7 +7,7 @@ const router = express.Router();
 
 // All analytics routes require authentication + admin or pastor role
 router.use(isAuthenticated);
-router.use(requireRole(['admin', 'pastor']));
+router.use(requireRole(['admin', 'pastor', 'accountant']));
 
 // GET /analytics/predictions
 // Returns moving average forecast based on last 12 weeks of attendance data

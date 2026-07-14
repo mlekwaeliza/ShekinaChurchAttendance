@@ -2,6 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import FinanceView from '../components/admin/FinanceView';
+import AnalyticsView from '../components/admin/AnalyticsView';
 import { contributionAPI, financeAPI, adminAPI } from '../services/api';
 import { Loader2, HandCoins, Building2, Calendar, Users } from 'lucide-react';
 
@@ -14,6 +15,10 @@ const AccountantDashboard = () => {
 
   if (!tab || tab === 'dashboard') {
     return <AccountantOverview showMessage={showMessage} />;
+  }
+
+  if (tab === 'analytics') {
+    return <AnalyticsView />;
   }
 
   return (

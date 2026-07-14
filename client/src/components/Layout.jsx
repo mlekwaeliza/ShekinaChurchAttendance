@@ -281,6 +281,7 @@ const Layout = ({ children, showNav = true }) => {
       { section: 'ACCOUNTING', items: [
         { path: '/accountant', label: 'Dashboard', icon: LayoutDashboard, exact: true },
         { path: '/accountant/finance', label: 'Finance Module', icon: Banknote },
+        { path: '/accountant/analytics', label: 'Analytics', icon: BarChart3 },
       ]},
       { section: 'ACCOUNT', items: [
         { path: '/change-password', label: 'Change Password', icon: Shield },
