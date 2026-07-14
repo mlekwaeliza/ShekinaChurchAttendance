@@ -205,7 +205,10 @@ const AttendanceReports = ({
   const [secHeadLeaders, setSecHeadLeaders] = useState([]);
   const [secLeaderRankings, setSecLeaderRankings] = useState([]);
   const [absentStreaks, setAbsentStreaks] = useState([]);
-  const [expandedSections, setExpandedSections] = useState({});
+  const [expandedSectionId, setExpandedSectionId] = useState(null);
+  const [showExtraKPIs, setShowExtraKPIs] = useState(false);
+  const [sectionSubTab, setSectionSubTab] = useState('overview');
+  const [showAllColumns, setShowAllColumns] = useState(false);
   const [secLoading, setSecLoading] = useState(false);
   const [secError, setSecError] = useState(null);
   const [secSearch, setSecSearch] = useState('');
@@ -1176,7 +1179,10 @@ const AttendanceReports = ({
         recommendations,
       };
     });
-    const toggleSection = id => setExpandedSections(prev => ({ ...prev, [id]: !prev[id] }));
+    const toggleSection = id => {
+      if (expandedSectionId === id) setExpandedSectionId(null);
+      else { setExpandedSectionId(id); setSectionSubTab('overview'); }
+    };
     const MiniMetric = ({ label, value, suffix = '', tone = 'slate' }) => {
       const toneMap = {
         slate: 'text-slate-900 dark:text-white',
@@ -1202,8 +1208,8 @@ const AttendanceReports = ({
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-slate-100 dark:border-slate-700">
-              {['Rank', 'Section Leader', 'Assigned', 'Active', 'Inactive', 'New', 'Visitors', 'Present', 'Absent', 'Excused', 'Att %', 'Prev %', 'Weekly', 'Monthly', 'Yearly', 'Retention', 'Consistency', 'Follow-up', 'Visits', 'Counseling', 'Score', 'Movement', 'Status', 'AI Recommendation'].map((h, i) => (
-                <th key={h} className={`py-2 px-2 text-[9px] font-bold uppercase text-slate-400 ${i === 1 || i === 23 ? 'text-left' : 'text-right'} whitespace-nowrap`}>{h}</th>
+              {['Rank', 'Section Leader', 'Active', 'Att %', 'Retention', 'Score', 'Movement', 'Status', 'AI Recommendation'].map((h, i) => (
+                <th key={h} className={`py-2 px-2 text-[9px] font-bold uppercase text-slate-400 ${i === 1 || i === 8 ? 'text-left' : 'text-right'} whitespace-nowrap`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -1221,33 +1227,18 @@ const AttendanceReports = ({
                 <tr key={leader.leader_id || leader.leader_name || i} className="border-b border-slate-50 dark:border-slate-700/50">
                   <td className="py-2 px-2 text-right font-bold text-slate-500">#{leader.rank || i + 1}</td>
                   <td className="py-2 px-2 font-bold text-slate-900 dark:text-white whitespace-nowrap">{leader.leader_name}</td>
-                  <td className="py-2 px-2 text-right">{leader.assigned_members}</td>
                   <td className="py-2 px-2 text-right text-emerald-600">{leader.active_members}</td>
-                  <td className="py-2 px-2 text-right text-rose-500">{leader.inactive_members}</td>
-                  <td className="py-2 px-2 text-right text-indigo-500">+{leader.new_members || 0}</td>
-                  <td className="py-2 px-2 text-right">{leader.visitor_conversions || 0}</td>
-                  <td className="py-2 px-2 text-right text-emerald-600">{leader.total_present}</td>
-                  <td className="py-2 px-2 text-right text-rose-500">{leader.total_absent}</td>
-                  <td className="py-2 px-2 text-right text-amber-500">{leader.total_excused}</td>
                   <td className="py-2 px-2 text-right"><Badge variant={leader.attendance_rate >= 75 ? 'success' : leader.attendance_rate >= 55 ? 'warning' : 'danger'}>{R(leader.attendance_rate)}%</Badge></td>
-                  <td className="py-2 px-2 text-right text-slate-500">{R(leader.prev_rate)}%</td>
-                  <td className="py-2 px-2 text-right">+{leader.weekly_growth}</td>
-                  <td className="py-2 px-2 text-right">+{leader.monthly_growth}</td>
-                  <td className="py-2 px-2 text-right">+{leader.yearly_growth}</td>
                   <td className="py-2 px-2 text-right font-bold">{R(leader.retention_rate)}%</td>
-                  <td className="py-2 px-2 text-right font-bold">{R(leader.consistency_score)}%</td>
-                  <td className="py-2 px-2 text-right font-bold text-indigo-600">{R(leader.follow_up_completion)}%</td>
-                  <td className="py-2 px-2 text-right">{leader.visits_completed}</td>
-                  <td className="py-2 px-2 text-right">{leader.counseling_cases}</td>
                   <td className="py-2 px-2 text-right"><Badge variant={leader.leadership_score >= 75 ? 'success' : leader.leadership_score >= 55 ? 'warning' : 'danger'}>{leader.leadership_score}/100</Badge></td>
                   <td className="py-2 px-2 text-right">{renderRankMovement(leader.rank_change)}</td>
                   <td className="py-2 px-2 text-right"><Badge variant={leader.status.variant}>{leader.status.label}</Badge></td>
-                  <td className="py-2 px-2 text-left min-w-[220px] text-slate-500">{aiText}</td>
+                  <td className="py-2 px-2 text-left min-w-[180px] text-slate-500">{aiText}</td>
                 </tr>
               );
             })}
             {leaders.length === 0 && (
-              <tr><td colSpan="24" className="py-6 text-center text-slate-400">No section leaders assigned or no leader attendance data found for this section.</td></tr>
+              <tr><td colSpan="9" className="py-6 text-center text-slate-400">No section leaders assigned or no leader attendance data found for this section.</td></tr>
             )}
           </tbody>
         </table>
@@ -1257,13 +1248,10 @@ const AttendanceReports = ({
     return (
       <div className="space-y-6">
         {/* Period Selection Controls */}
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 font-sans">Section Intelligence Period Selector</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Select comparison period or custom date ranges for intelligence reporting</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-1 bg-slate-50 dark:bg-slate-900 p-1 rounded-xl border border-slate-100 dark:border-slate-800">
+        <div className="p-3 border-b border-slate-100 dark:border-slate-700">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <p className="text-[10px] text-slate-500 font-medium">Period comparison</p>
+            <div className="flex flex-wrap items-center gap-1">
               {[
                 { id: 'week', label: 'This Week vs Last Week' },
                 { id: 'month', label: 'This Month vs Last Month' },
@@ -1355,108 +1343,102 @@ const AttendanceReports = ({
 
         {!secLoading && !secError && secRankings.length > 0 && (
           <>
-            {/* 7 Highlights & KPI Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-3">
-              {/* Card 1: Health Score */}
-              <div className={`rounded-2xl border p-4 shadow-sm ${healthColor}`}>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500/80">Roster Health</p>
-                <p className="text-2xl font-black mt-1">{avgHealthScore}<span className="text-xs font-semibold">/100</span></p>
-                <div className="mt-2.5">
-                  <Badge variant={healthBadge}>{healthStatus}</Badge>
+            {/* Key Highlights — 4 primary KPIs, 3 secondary on toggle */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className={`rounded-2xl border p-4 shadow-sm ${healthColor}`}>
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500/80">Roster Health</p>
+                  <p className="text-2xl font-black mt-1">{avgHealthScore}<span className="text-xs font-semibold">/100</span></p>
+                  <div className="mt-2"><Badge variant={healthBadge}>{healthStatus}</Badge></div>
+                  <p className="text-[10px] text-slate-400 mt-1">Average section performance across all metrics</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Performance Leader</p>
+                  <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{bestSection?.name || '—'}</p>
+                  <p className="text-xs mt-0.5" style={{ color: bestSection?.performance_score >= 75 ? '#10b981' : '#f59e0b' }}>{bestSection?.performance_score || 0} / 100 score · {R(bestSection?.attendance_rate)}% attendance</p>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Growth Leader</p>
+                  <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{fastestGrowing?.name || '—'}</p>
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">+{fastestGrowing?.new_members || 0} new members added</p>
+                </div>
+
+                <div className="rounded-2xl border border-red-200/60 bg-red-50/50 dark:bg-red-950/15 dark:border-red-900/30 p-4 shadow-sm">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-red-600/80">Requires Review</p>
+                  <p className="text-base font-bold text-red-900 dark:text-red-400 truncate mt-1">{attentionSection?.name || '—'}</p>
+                  <p className="text-xs text-red-600 dark:text-red-400/80 mt-0.5">{attentionSection?.performance_score || 0} / 100 score · {R(attentionSection?.attendance_rate)}% attendance</p>
                 </div>
               </div>
 
-              {/* Card 2: Best Performing */}
-              <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Performance Leader</p>
-                <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{bestSection?.name || '—'}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{bestSection?.performance_score || 0} performance score</p>
-              </div>
+              <button onClick={() => setShowExtraKPIs(!showExtraKPIs)}
+                className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+                {showExtraKPIs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {showExtraKPIs ? 'Hide detailed metrics' : 'Show detailed metrics (Most Improved, Retention Leader, Consistency Leader)'}
+              </button>
 
-              {/* Card 3: Fastest Growing */}
-              <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Growth Leader</p>
-                <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{fastestGrowing?.name || '—'}</p>
-                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">+{fastestGrowing?.new_members || 0} members added</p>
-              </div>
-
-              {/* Card 4: Most Improved */}
-              <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Most Improved</p>
-                <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{mostImproved?.name || '—'}</p>
-                {mostImproved && (
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
-                    +{R((mostImproved.attendance_rate || 0) - (mostImproved.prev_rate || 0))}% rate diff
-                  </p>
-                )}
-              </div>
-
-              {/* Card 5: Highest Retention */}
-              <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Retention Leader</p>
-                <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{highestRetention?.name || '—'}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{R(highestRetention?.retention_rate)}% active retention</p>
-              </div>
-
-              {/* Card 6: Most Consistent */}
-              <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Consistency Leader</p>
-                <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{mostConsistent?.name || '—'}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{mostConsistent?.consistency_score}% stability index</p>
-              </div>
-
-              {/* Card 7: Immediate Attention */}
-              <div className="rounded-2xl border border-red-200/60 bg-red-50/50 dark:bg-red-950/15 dark:border-red-900/30 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-red-600/80">Requires Review</p>
-                <p className="text-base font-bold text-red-900 dark:text-red-400 truncate mt-1">{attentionSection?.name || '—'}</p>
-                <p className="text-xs text-red-600 dark:text-red-400/80 mt-0.5">{attentionSection?.performance_score || 0} performance score</p>
-              </div>
+              {showExtraKPIs && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Most Improved</p>
+                    <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{mostImproved?.name || '—'}</p>
+                    {mostImproved && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                        +{R((mostImproved.attendance_rate || 0) - (mostImproved.prev_rate || 0))}% rate improvement
+                      </p>
+                    )}
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Retention Leader</p>
+                    <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{highestRetention?.name || '—'}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{R(highestRetention?.retention_rate)}% active retention</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Consistency Leader</p>
+                    <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">{mostConsistent?.name || '—'}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{mostConsistent?.consistency_score}% stability index</p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* AI Insights & Action Center Panel */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* AI Insights */}
-              <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-slate-750 pb-2.5">
+            {/* Decision Support — merged insights + actions */}
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10">
+                <div className="flex items-center gap-2">
                   <Brain className="w-4 h-4 text-indigo-500" />
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">AI Executive Insights</h3>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Decision Support</h3>
+                  <span className="text-[10px] text-slate-400 font-medium ml-1">· {execInsights.length} insights · {actionRecommendations.length} actions</span>
                 </div>
-                <div className="space-y-3">
-                  {execInsights.map((ins, i) => {
-                    const Icon = ins.icon || Info;
-                    const bg = ins.type === 'danger' ? 'bg-rose-50/40 dark:bg-rose-950/10' : ins.type === 'success' ? 'bg-emerald-50/40 dark:bg-emerald-950/10' : 'bg-blue-50/40 dark:bg-blue-950/10';
-                    const border = ins.type === 'danger' ? 'border-rose-100 dark:border-rose-900/20' : ins.type === 'success' ? 'border-emerald-100 dark:border-emerald-900/20' : 'border-blue-100 dark:border-blue-900/20';
-                    const textCol = ins.type === 'danger' ? 'text-rose-900 dark:text-rose-200' : ins.type === 'success' ? 'text-emerald-900 dark:text-emerald-200' : 'text-blue-900 dark:text-blue-200';
-                    return (
-                      <div key={i} className={`p-3 rounded-xl border ${bg} ${border} flex gap-2.5 items-start`}>
-                        <div className="mt-0.5"><Icon className="w-3.5 h-3.5" /></div>
-                        <p className={`text-[10px] leading-relaxed ${textCol}`} dangerouslySetInnerHTML={{
-                          __html: ins.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        }} />
-                      </div>
-                    );
-                  })}
-                </div>
+                <p className="text-[10px] text-slate-400 mt-0.5">AI-powered analysis with prioritized recommendations for leadership action</p>
               </div>
-
-              {/* Action Center */}
-              <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-3 border-b border-slate-100 dark:border-slate-750 pb-2.5">
-                  <Target className="w-4 h-4 text-indigo-500" />
-                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">Pastoral Action Center</h3>
-                </div>
-                <div className="space-y-2">
+              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                {execInsights.map((ins, i) => {
+                  const Icon = ins.icon || Info;
+                  const typeClass = ins.type === 'danger' ? 'border-l-2 border-l-rose-400 bg-rose-50/30 dark:bg-rose-950/10' : ins.type === 'success' ? 'border-l-2 border-l-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/10' : 'border-l-2 border-l-blue-400 bg-blue-50/30 dark:bg-blue-950/10';
+                  return (
+                    <div key={i} className={`p-3.5 flex items-start gap-3 ${typeClass}`}>
+                      <Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: ins.type === 'danger' ? '#f43f5e' : ins.type === 'success' ? '#10b981' : '#6366f1' }} />
+                      <p className="text-[11px] leading-relaxed text-slate-700 dark:text-slate-300" dangerouslySetInnerHTML={{ __html: ins.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                    </div>
+                  );
+                })}
+                <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
                   {actionRecommendations.map((act, i) => {
-                    const tagCol = act.priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : act.priority === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+                    const borderColor = act.priority === 'high' ? 'border-l-2 border-l-rose-400' : act.priority === 'medium' ? 'border-l-2 border-l-amber-400' : 'border-l-2 border-l-emerald-400';
                     return (
-                      <div key={i} className="p-3 rounded-xl border border-slate-100 dark:border-slate-750 bg-slate-50/50 dark:bg-slate-900/20 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${tagCol}`}>{act.priority}</span>
-                            <span className="text-[9px] font-black text-slate-400">{act.category}</span>
-                            <h4 className="text-[10px] font-bold text-slate-900 dark:text-white">{act.title}</h4>
+                      <div key={i} className={`p-3.5 flex items-start gap-3 ${borderColor}`}>
+                        <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${act.priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : act.priority === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'}`}>
+                          <span className="text-[8px] font-black">{act.priority === 'high' ? '!' : act.priority === 'medium' ? '→' : '✓'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`text-[8px] font-black uppercase px-1 py-0.5 rounded ${act.priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : act.priority === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>{act.priority}</span>
+                            <span className="text-[9px] font-semibold text-slate-400 uppercase">{act.category}</span>
+                            <span className="text-[11px] font-bold text-slate-900 dark:text-white">{act.title}</span>
                           </div>
-                          <p className="text-[9.5px] text-slate-500 dark:text-slate-400">{act.description}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{act.description}</p>
                         </div>
                       </div>
                     );
@@ -1478,7 +1460,7 @@ const AttendanceReports = ({
               <div className="divide-y divide-slate-100 dark:divide-slate-700">
                 {sectionIntelligence.map((item, idx) => {
                   const { section, headLeader, sectionLeaders, sectionStreaks } = item;
-                  const isOpen = expandedSections[section.id] ?? idx === 0;
+                  const isOpen = expandedSectionId === (section.id || section.name);
                   const diff = (section.attendance_rate || 0) - (section.prev_rate || 0);
                   const longAbsentees = item.absent3wCount + item.absent1mCount + item.absent3mCount;
                   const MovementIcon = diff > 0 ? ArrowUp : diff < 0 ? ArrowDown : Minus;
@@ -1521,83 +1503,129 @@ const AttendanceReports = ({
 
                       {isOpen && (
                         <div className="px-4 pb-5 space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <BarChart3 className="w-4 h-4 text-indigo-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Overall Section Statistics</h5>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <MiniMetric label="Registered" value={section.registered_members || 0} />
-                                <MiniMetric label="Active" value={section.member_count || 0} tone="green" />
-                                <MiniMetric label="Inactive" value={section.inactive_members || 0} tone="red" />
-                                <MiniMetric label="Visitors" value={section.visitors || 0} tone="amber" />
-                                <MiniMetric label="New Members" value={section.new_members || 0} tone="indigo" />
-                                <MiniMetric label="Excused" value={section.total_excused || 0} tone="amber" />
-                              </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Award className="w-4 h-4 text-amber-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Section Rankings</h5>
-                              </div>
-                              <div className="space-y-2 text-xs">
-                                <div className="flex justify-between"><span className="text-slate-500">Current Rank</span><span className="font-black">#{section.rank}</span></div>
-                                <div className="flex justify-between"><span className="text-slate-500">Previous Rank</span><span className="font-black">#{item.previousRank || section.rank}</span></div>
-                                <div className="flex justify-between"><span className="text-slate-500">Movement</span>{renderRankMovement(section.rank_change || 0)}</div>
-                                <div className="flex justify-between"><span className="text-slate-500">Strongest Leader</span><span className="font-semibold text-right">{item.strongestLeader?.leader_name || 'Not available'}</span></div>
-                                <div className="flex justify-between"><span className="text-slate-500">Needs Coaching</span><span className="font-semibold text-right">{item.weakestLeader?.leader_name || 'Not available'}</span></div>
-                              </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <Shield className="w-4 h-4 text-emerald-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Head Leader Performance</h5>
-                              </div>
-                              {headLeader ? (
-                                <div className="space-y-2 text-xs">
-                                  <p className="font-black text-slate-900 dark:text-white">{headLeader.leader_name}</p>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <MiniMetric label="Members Managed" value={headLeader.members_managed || 0} />
-                                    <MiniMetric label="Leaders" value={headLeader.leaders_supervised || 0} />
-                                    <MiniMetric label="Attendance" value={R(headLeader.overall_attendance)} suffix="%" tone="green" />
-                                    <MiniMetric label="Submission" value={R(headLeader.submission_rate)} suffix="%" tone="indigo" />
-                                  </div>
-                                  <p className="text-[10px] text-slate-500">Leadership effectiveness score: <span className="font-black">{headLeader.performance_score || 0}/100</span>. Team performance score: <span className="font-black">{item.avgLeaderScore}/100</span>.</p>
-                                </div>
-                              ) : (
-                                <p className="text-xs text-slate-400">No active head leader record found for this section.</p>
-                              )}
-                            </div>
-
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
-                              <div className="flex items-center gap-2 mb-3">
-                                <UserX className="w-4 h-4 text-rose-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Absence Intelligence</h5>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                <MiniMetric label="1 Week" value={item.absent1wCount} tone="indigo" />
-                                <MiniMetric label="2 Weeks" value={item.absent2wCount} tone="amber" />
-                                <MiniMetric label="3 Weeks" value={item.absent3wCount} tone="red" />
-                                <MiniMetric label="1 Month" value={item.absent1mCount} tone="red" />
-                                <MiniMetric label="3 Months" value={item.absent3mCount} tone="red" />
-                                <MiniMetric label="Follow-up Required" value={sectionStreaks.length} tone="red" />
-                              </div>
-                            </div>
+                          {/* Sub-tab navigation */}
+                          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700/50 p-0.5 rounded-xl w-fit">
+                            {['overview', 'leaders', 'members', 'insights'].map(tab => (
+                              <button key={tab} onClick={() => setSectionSubTab(tab)}
+                                className={`text-[10px] font-bold px-3 py-1.5 rounded-lg capitalize transition-all ${
+                                  sectionSubTab === tab
+                                    ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                                }`}>
+                                {tab === 'overview' && <><BarChart3 className="w-3 h-3 inline mr-1" />Overview</>}
+                                {tab === 'leaders' && <><Award className="w-3 h-3 inline mr-1" />Leaders</>}
+                                {tab === 'members' && <><UserX className="w-3 h-3 inline mr-1" />Members</>}
+                                {tab === 'insights' && <><Brain className="w-3 h-3 inline mr-1" />Insights</>}
+                              </button>
+                            ))}
                           </div>
 
-                          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-                            <div className="xl:col-span-2 rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
-                              <div className="p-3 border-b border-slate-100 dark:border-slate-700">
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Section Leader Performance Intelligence</h5>
-                                <p className="text-[10px] text-slate-400 mt-0.5">Leadership metrics are computed from assigned members, attendance history, submissions, and follow-up records.</p>
+                          {sectionSubTab === 'overview' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                              <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <BarChart3 className="w-4 h-4 text-indigo-500" />
+                                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Section Statistics</h5>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <MiniMetric label="Registered" value={section.registered_members || 0} />
+                                  <MiniMetric label="Active" value={section.member_count || 0} tone="green" />
+                                  <MiniMetric label="Inactive" value={section.inactive_members || 0} tone="red" />
+                                  <MiniMetric label="Visitors" value={section.visitors || 0} tone="amber" />
+                                  <MiniMetric label="New Members" value={section.new_members || 0} tone="indigo" />
+                                  <MiniMetric label="Excused" value={section.total_excused || 0} tone="amber" />
+                                </div>
                               </div>
-                              {renderSectionLeaderRows(sectionLeaders)}
-                            </div>
 
-                            <div className="space-y-4">
+                              <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Award className="w-4 h-4 text-amber-500" />
+                                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Rankings</h5>
+                                </div>
+                                <div className="space-y-2 text-xs">
+                                  <div className="flex justify-between"><span className="text-slate-500">Current Rank</span><span className="font-black">#{section.rank}</span></div>
+                                  <div className="flex justify-between"><span className="text-slate-500">Previous Rank</span><span className="font-black">#{item.previousRank || section.rank}</span></div>
+                                  <div className="flex justify-between"><span className="text-slate-500">Movement</span>{renderRankMovement(section.rank_change || 0)}</div>
+                                  <div className="flex justify-between"><span className="text-slate-500">Strongest Leader</span><span className="font-semibold text-right">{item.strongestLeader?.leader_name || '—'}</span></div>
+                                  <div className="flex justify-between"><span className="text-slate-500">Needs Coaching</span><span className="font-semibold text-right">{item.weakestLeader?.leader_name || '—'}</span></div>
+                                </div>
+                              </div>
+
+                              <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Shield className="w-4 h-4 text-emerald-500" />
+                                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Head Leader</h5>
+                                </div>
+                                {headLeader ? (
+                                  <div className="space-y-2 text-xs">
+                                    <p className="font-black text-slate-900 dark:text-white">{headLeader.leader_name}</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <MiniMetric label="Managed" value={headLeader.members_managed || 0} />
+                                      <MiniMetric label="Leaders" value={headLeader.leaders_supervised || 0} />
+                                      <MiniMetric label="Attendance" value={R(headLeader.overall_attendance)} suffix="%" tone="green" />
+                                      <MiniMetric label="Submission" value={R(headLeader.submission_rate)} suffix="%" tone="indigo" />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-400">No head leader record</p>
+                                )}
+                              </div>
+
+                              <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <UserX className="w-4 h-4 text-rose-500" />
+                                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Absence Intelligence</h5>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <MiniMetric label="1 Week" value={item.absent1wCount} tone="indigo" />
+                                  <MiniMetric label="2 Weeks" value={item.absent2wCount} tone="amber" />
+                                  <MiniMetric label="3 Weeks" value={item.absent3wCount} tone="red" />
+                                  <MiniMetric label="1 Month" value={item.absent1mCount} tone="red" />
+                                  <MiniMetric label="3 Months" value={item.absent3mCount} tone="red" />
+                                  <MiniMetric label="Follow-up Needed" value={sectionStreaks.length} tone="red" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {sectionSubTab === 'leaders' && (
+                            <div>
+                              <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
+                                <div className="p-3 border-b border-slate-100 dark:border-slate-700">
+                                  <h5 className="text-xs font-black text-slate-900 dark:text-white">Section Leader Performance</h5>
+                                  <p className="text-[10px] text-slate-400 mt-0.5">Metrics from assigned members, attendance, submissions, and follow-up records</p>
+                                </div>
+                                {renderSectionLeaderRows(sectionLeaders)}
+                              </div>
+                            </div>
+                          )}
+
+                          {sectionSubTab === 'members' && (
+                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                              <div className="flex items-center gap-2 mb-3">
+                                <Heart className="w-4 h-4 text-rose-500" />
+                                <h5 className="text-xs font-black text-slate-900 dark:text-white">Member Intelligence & Follow-up</h5>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                                {sectionStreaks.slice(0, 8).map(member => (
+                                  <div key={member.member_id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <p className="text-xs font-black text-slate-900 dark:text-white truncate">{member.full_name}</p>
+                                      <Badge variant={member.current_streak >= 3 ? 'danger' : member.current_streak === 2 ? 'warning' : 'info'}>{member.current_streak}w</Badge>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 mt-1">Last absent: {member.last_absent_date || 'Not recorded'}</p>
+                                    <p className="text-[10px] text-indigo-600 dark:text-indigo-300 mt-1">{member.current_streak >= 3 ? 'Assign visit or pastoral call immediately.' : 'Leader phone call and prayer request check.'}</p>
+                                  </div>
+                                ))}
+                                {sectionStreaks.length === 0 && (
+                                  <p className="text-xs text-slate-400">No active absentee streaks</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {sectionSubTab === 'insights' && (
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                               <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
                                 <div className="flex items-center gap-2 mb-3">
                                   <Brain className="w-4 h-4 text-indigo-500" />
@@ -1626,29 +1654,7 @@ const AttendanceReports = ({
                                 </div>
                               </div>
                             </div>
-                          </div>
-
-                          <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
-                            <div className="flex items-center gap-2 mb-3">
-                              <Heart className="w-4 h-4 text-rose-500" />
-                              <h5 className="text-xs font-black text-slate-900 dark:text-white">Member Intelligence & Follow-up Priorities</h5>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                              {sectionStreaks.slice(0, 8).map(member => (
-                                <div key={member.member_id} className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">{member.full_name}</p>
-                                    <Badge variant={member.current_streak >= 3 ? 'danger' : member.current_streak === 2 ? 'warning' : 'info'}>{member.current_streak}w</Badge>
-                                  </div>
-                                  <p className="text-[10px] text-slate-500 mt-1">Last absent: {member.last_absent_date || 'Not recorded'}</p>
-                                  <p className="text-[10px] text-indigo-600 dark:text-indigo-300 mt-1">{member.current_streak >= 3 ? 'Assign visit or pastoral call immediately.' : 'Leader phone call and prayer request check.'}</p>
-                                </div>
-                              ))}
-                              {sectionStreaks.length === 0 && (
-                                <p className="text-xs text-slate-400">No active absentee streaks found for this section.</p>
-                              )}
-                            </div>
-                          </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1657,22 +1663,29 @@ const AttendanceReports = ({
               </div>
             </div>
 
-            {/* 22-column sortable table */}
+            {/* Roster Rankings Table — core columns by default, toggle for extras */}
             <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/10">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Roster rankings & Advanced Comparisons</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Click column headers to sort. Click Section name to select.</p>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Roster Rankings & Comparisons</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Click column headers to sort. Click row to select section.</p>
                 </div>
-                <div className="relative w-full md:w-72">
-                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search sections..."
-                    value={secSearch}
-                    onChange={e => setSecSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                  />
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowAllColumns(!showAllColumns)}
+                    className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+                    {showAllColumns ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    {showAllColumns ? 'Fewer columns' : 'All columns'}
+                  </button>
+                  <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search sections..."
+                      value={secSearch}
+                      onChange={e => setSecSearch(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1682,26 +1695,30 @@ const AttendanceReports = ({
                     <tr className="bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700/80">
                       <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-500 text-center w-12">Rank</th>
                       {renderSortHeader('Section Name', 'name')}
-                      {renderSortHeader('Registered', 'registered_members', 'right')}
                       {renderSortHeader('Active', 'member_count', 'right')}
-                      {renderSortHeader('Inactive', 'inactive_members', 'right')}
-                      {renderSortHeader('Visitors', 'visitors', 'right')}
-                      {renderSortHeader('New', 'new_members', 'right')}
-                      {renderSortHeader('Present', 'total_present', 'right')}
-                      {renderSortHeader('Absent', 'total_absent', 'right')}
-                      {renderSortHeader('Excused', 'total_excused', 'right')}
                       {renderSortHeader('Att %', 'attendance_rate', 'right')}
-                      {renderSortHeader('Prev %', 'prev_rate', 'right')}
-                      {renderSortHeader('Diff %', 'attendance_diff', 'right')}
-                      {renderSortHeader('W.Growth', 'weekly_growth', 'right')}
-                      {renderSortHeader('M.Growth', 'monthly_growth', 'right')}
-                      {renderSortHeader('Y.Growth', 'yearly_growth', 'right')}
                       {renderSortHeader('Retention %', 'retention_rate', 'right')}
-                      {renderSortHeader('Consistency %', 'consistency_score', 'right')}
-                      {renderSortHeader('Follow-up %', 'follow_up_rate', 'right')}
                       {renderSortHeader('Score', 'performance_score', 'right')}
-                      <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-500 text-right">Prev Rank</th>
                       {renderSortHeader('Movement', 'rank_change', 'right')}
+                      {showAllColumns && (
+                        <>
+                          {renderSortHeader('Registered', 'registered_members', 'right')}
+                          {renderSortHeader('Inactive', 'inactive_members', 'right')}
+                          {renderSortHeader('Visitors', 'visitors', 'right')}
+                          {renderSortHeader('New', 'new_members', 'right')}
+                          {renderSortHeader('Present', 'total_present', 'right')}
+                          {renderSortHeader('Absent', 'total_absent', 'right')}
+                          {renderSortHeader('Excused', 'total_excused', 'right')}
+                          {renderSortHeader('Prev %', 'prev_rate', 'right')}
+                          {renderSortHeader('Diff %', 'attendance_diff', 'right')}
+                          {renderSortHeader('W.Growth', 'weekly_growth', 'right')}
+                          {renderSortHeader('M.Growth', 'monthly_growth', 'right')}
+                          {renderSortHeader('Y.Growth', 'yearly_growth', 'right')}
+                          {renderSortHeader('Consistency %', 'consistency_score', 'right')}
+                          {renderSortHeader('Follow-up %', 'follow_up_rate', 'right')}
+                          <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-500 text-right">Prev Rank</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -1725,35 +1742,18 @@ const AttendanceReports = ({
                             </span>
                           </td>
                           <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white text-xs whitespace-nowrap">{row.name}</td>
-                          <td className="px-3 py-2.5 text-right font-medium text-slate-600 dark:text-slate-400 text-xs">{row.registered_members || 0}</td>
                           <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400 text-xs">{row.member_count || 0}</td>
-                          <td className="px-3 py-2.5 text-right font-medium text-rose-500 text-xs">{row.inactive_members || 0}</td>
-                          <td className="px-3 py-2.5 text-right font-medium text-amber-600 text-xs">{row.visitors || 0}</td>
-                          <td className="px-3 py-2.5 text-right font-medium text-indigo-500 text-xs">+{row.new_members || 0}</td>
-                          <td className="px-3 py-2.5 text-right font-medium text-emerald-600 text-xs">{row.total_present?.toLocaleString() || 0}</td>
-                          <td className="px-3 py-2.5 text-right font-medium text-rose-500 text-xs">{row.total_absent?.toLocaleString() || 0}</td>
-                          <td className="px-3 py-2.5 text-right font-medium text-amber-500 text-xs">{row.total_excused || 0}</td>
                           <td className="px-3 py-2.5 text-right whitespace-nowrap text-xs">
                             <Badge variant={row.attendance_rate >= 80 ? 'success' : row.attendance_rate >= 60 ? 'warning' : 'danger'}>
                               {R(row.attendance_rate)}%
                             </Badge>
                           </td>
-                          <td className="px-3 py-2.5 text-right font-medium text-slate-400 text-xs">{row.prev_rate != null ? `${R(row.prev_rate)}%` : '—'}</td>
-                          <td className={`px-3 py-2.5 text-right font-bold text-xs whitespace-nowrap ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {diff >= 0 ? '+' : ''}{R(diff)}%
-                          </td>
-                          <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">+{row.weekly_growth || 0}</td>
-                          <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">+{row.monthly_growth || 0}</td>
-                          <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">+{row.yearly_growth || 0}</td>
                           <td className="px-3 py-2.5 text-right font-bold text-xs text-slate-700 dark:text-slate-300">{R(row.retention_rate)}%</td>
-                          <td className="px-3 py-2.5 text-right font-bold text-xs text-slate-700 dark:text-slate-300">{row.consistency_score}%</td>
-                          <td className="px-3 py-2.5 text-right font-bold text-xs text-indigo-600 dark:text-indigo-400">{row.follow_up_rate || 0}%</td>
                           <td className="px-3 py-2.5 text-right text-xs">
                             <Badge variant={row.performance_score >= 80 ? 'success' : row.performance_score >= 60 ? 'warning' : 'danger'}>
                               {row.performance_score}
                             </Badge>
                           </td>
-                          <td className="px-3 py-2.5 text-right font-semibold text-slate-400 text-xs">#{prevRank}</td>
                           <td className="px-3 py-2.5 text-right whitespace-nowrap text-xs">
                             {row.rank_change > 0 && (
                               <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
@@ -1771,6 +1771,27 @@ const AttendanceReports = ({
                               </span>
                             )}
                           </td>
+                          {showAllColumns && (
+                            <>
+                              <td className="px-3 py-2.5 text-right font-medium text-slate-600 dark:text-slate-400 text-xs">{row.registered_members || 0}</td>
+                              <td className="px-3 py-2.5 text-right font-medium text-rose-500 text-xs">{row.inactive_members || 0}</td>
+                              <td className="px-3 py-2.5 text-right font-medium text-amber-600 text-xs">{row.visitors || 0}</td>
+                              <td className="px-3 py-2.5 text-right font-medium text-indigo-500 text-xs">+{row.new_members || 0}</td>
+                              <td className="px-3 py-2.5 text-right font-medium text-emerald-600 text-xs">{row.total_present?.toLocaleString() || 0}</td>
+                              <td className="px-3 py-2.5 text-right font-medium text-rose-500 text-xs">{row.total_absent?.toLocaleString() || 0}</td>
+                              <td className="px-3 py-2.5 text-right font-medium text-amber-500 text-xs">{row.total_excused || 0}</td>
+                              <td className="px-3 py-2.5 text-right font-medium text-slate-400 text-xs">{row.prev_rate != null ? `${R(row.prev_rate)}%` : '—'}</td>
+                              <td className={`px-3 py-2.5 text-right font-bold text-xs whitespace-nowrap ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {diff >= 0 ? '+' : ''}{R(diff)}%
+                              </td>
+                              <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">+{row.weekly_growth || 0}</td>
+                              <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">+{row.monthly_growth || 0}</td>
+                              <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">+{row.yearly_growth || 0}</td>
+                              <td className="px-3 py-2.5 text-right font-bold text-xs text-slate-700 dark:text-slate-300">{row.consistency_score}%</td>
+                              <td className="px-3 py-2.5 text-right font-bold text-xs text-indigo-600 dark:text-indigo-400">{row.follow_up_rate || 0}%</td>
+                              <td className="px-3 py-2.5 text-right font-semibold text-slate-400 text-xs">#{prevRank}</td>
+                            </>
+                          )}
                         </tr>
                       );
                     })}
@@ -2046,18 +2067,9 @@ const AttendanceReports = ({
               { key: 'leader_name', label: 'Leader', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
               { key: 'section_name', label: 'Section' },
               { key: 'member_count', label: 'Members', align: 'right' },
-              { key: 'total_present', label: 'Present', align: 'right', render: v => <span className="text-emerald-600">{v || 0}</span> },
-              { key: 'total_absent', label: 'Absent', align: 'right', render: v => <span className="text-rose-500">{v || 0}</span> },
-              { key: 'total_excused', label: 'Excused', align: 'right', render: v => <span className="text-amber-500">{v || 0}</span> },
               { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
-              { key: 'prev_rate', label: 'Prev %', align: 'right', render: v => <span className="text-slate-400">{v != null ? R(v) : '—'}%</span> },
-              { key: 'rate_diff', label: 'Diff', align: 'right', render: (_, row) => {
-                const diff = (row.attendance_rate || 0) - (row.prev_rate || 0);
-                return <span className={`font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{diff >= 0 ? '+' : ''}{R(diff)}%</span>;
-              }},
               { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
               { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => <span className={`font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{v || 0}</span> },
-              { key: 'submissions_count', label: 'Submissions', align: 'right' },
               { key: 'efficiency_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
             ]}
             data={leaderRankData}
