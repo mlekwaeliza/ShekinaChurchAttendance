@@ -547,9 +547,13 @@ const ExecutiveComparison = () => {
                       <tr className="border-b border-slate-200 dark:border-slate-700">
                         <th className="text-left py-2 px-2 font-semibold text-slate-500">Rank</th>
                         <th className="text-left py-2 px-2 font-semibold text-slate-500">Name</th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('attendance_rate')}>Rate</th>
+                        {mode === 'members' ? (
+                          <th className="text-right py-2 px-2 font-semibold text-slate-500">P / A / E</th>
+                        ) : (
+                          <th className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('attendance_rate')}>Rate</th>
+                        )}
                         <th className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('members')}>Members</th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('present')}>Present</th>
+                        {mode !== 'members' && <th className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('present')}>Present</th>}
                         <th className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('submission_rate')}>Submit %</th>
                         <th className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('follow_up_completion')}>Follow-up</th>
                         <th className="text-right py-2 px-2 font-semibold text-slate-500">Trend</th>
@@ -578,9 +582,19 @@ const ExecutiveComparison = () => {
                                 {isSection && <span className="text-[10px] text-slate-400 ml-1">({entity.members || 0} members)</span>}
                                 {isLeader && <span className="text-[10px] text-slate-400 ml-1">({entity.section_name})</span>}
                               </td>
-                              <td className="py-2 px-2 text-right font-bold text-indigo-600">{pct(entity.attendance_rate)}</td>
+                              {mode === 'members' ? (
+                                <td className="py-2 px-2 text-right whitespace-nowrap">
+                                  <span className="text-emerald-600 font-bold">{entity.present_count || 0}</span>
+                                  <span className="text-slate-400 mx-0.5">/</span>
+                                  <span className="text-rose-600 font-bold">{entity.absent_count || 0}</span>
+                                  <span className="text-slate-400 mx-0.5">/</span>
+                                  <span className="text-amber-600 font-bold">{entity.excused_count || 0}</span>
+                                </td>
+                              ) : (
+                                <td className="py-2 px-2 text-right font-bold text-indigo-600">{pct(entity.attendance_rate)}</td>
+                              )}
                               <td className="py-2 px-2 text-right text-slate-900 dark:text-white">{entity.members || entity.assigned_members || '-'}</td>
-                              <td className="py-2 px-2 text-right text-slate-900 dark:text-white">{entity.present || '-'}</td>
+                              {mode !== 'members' && <td className="py-2 px-2 text-right text-slate-900 dark:text-white">{entity.present || '-'}</td>}
                               <td className="py-2 px-2 text-right">
                                 {entity.submission_rate !== undefined ? (
                                   <span className={`font-semibold ${entity.submission_rate >= 80 ? 'text-emerald-600' : entity.submission_rate >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>
