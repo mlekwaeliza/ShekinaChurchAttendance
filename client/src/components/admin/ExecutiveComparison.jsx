@@ -630,6 +630,57 @@ const ExecutiveComparison = () => {
             </div>
           )}
 
+          {view === 'rankings' && mode === 'members' && (
+            <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-indigo-500" />
+                Full Member Attendance Report
+              </h3>
+              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-left py-2 px-3 font-semibold text-slate-500">Member</th>
+                      <th className="text-left py-2 px-3 font-semibold text-slate-500">Section</th>
+                      <th className="text-right py-2 px-3 font-semibold text-emerald-600">Present</th>
+                      <th className="text-right py-2 px-3 font-semibold text-rose-600">Absent</th>
+                      <th className="text-right py-2 px-3 font-semibold text-amber-600">Excused</th>
+                      <th className="text-right py-2 px-3 font-semibold text-slate-500">Total</th>
+                      <th className="text-right py-2 px-3 font-semibold text-slate-500">Rate</th>
+                      <th className="text-right py-2 px-3 font-semibold text-slate-500">Risk</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(latestPeriod?.memberEngagement || [])
+                      .filter(e => !search || (e.full_name||'').toLowerCase().includes(search.toLowerCase()))
+                      .sort((a, b) => (b.present_count||0) - (a.present_count||0))
+                      .map(m => (
+                      <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                        <td className="py-2 px-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">{m.full_name}</td>
+                        <td className="py-2 px-3 text-slate-500">{m.section_name || '—'}</td>
+                        <td className="py-2 px-3 text-right font-bold text-emerald-600">{Number(m.present_count) || 0}</td>
+                        <td className="py-2 px-3 text-right font-bold text-rose-600">{Number(m.absent_count) || 0}</td>
+                        <td className="py-2 px-3 text-right font-bold text-amber-600">{Number(m.excused_count) || 0}</td>
+                        <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-medium">
+                          {(Number(m.present_count)||0) + (Number(m.absent_count)||0) + (Number(m.excused_count)||0)}
+                        </td>
+                        <td className="py-2 px-3 text-right font-semibold text-indigo-600">{m.attendance_rate || 0}%</td>
+                        <td className="py-2 px-3 text-right">
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            m.risk_level === 'critical' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' :
+                            m.risk_level === 'high' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                            m.risk_level === 'medium' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                          }`}>{m.risk_level || 'low'}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* ── INTELLIGENCE VIEW ────────────────────────────────────────── */}
           {view === 'intelligence' && (
             <div className="space-y-6">
