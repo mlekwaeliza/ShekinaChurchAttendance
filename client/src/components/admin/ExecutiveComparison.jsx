@@ -386,7 +386,7 @@ const ExecutiveComparison = () => {
                           mode === 'departments' ? sortFn(data.periods[data.periods.length-1]?.departments, 'attendance_rate') :
                           sortFn(data.periods[data.periods.length-1]?.memberEngagement, 'attendance_rate')
                         ).filter(e => !search || (e.name||e.leader_name||e.full_name||'').toLowerCase().includes(search.toLowerCase()))
-                        .slice(0, 50).map((entity, i) => {
+                        .map((entity, i) => {
                           const rates = data.periods.map(p => {
                             const list = mode === 'sections' ? p.sections : mode === 'leaders' ? p.leaders : mode === 'departments' ? p.departments : p.memberEngagement;
                             const found = list?.find(e2 => e2.id === entity.id || e2.name === entity.name || e2.leader_name === entity.leader_name);
@@ -892,7 +892,6 @@ const ExecutiveComparison = () => {
                             const order = { critical: 0, high: 1, medium: 2, low: 3 };
                             return (order[a.risk_level] || 99) - (order[b.risk_level] || 99);
                           })
-                          .slice(0, 20)
                           .map(m => (
                             <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
                               <td className="py-2 px-2 font-medium text-slate-700 dark:text-slate-300">{m.full_name}</td>

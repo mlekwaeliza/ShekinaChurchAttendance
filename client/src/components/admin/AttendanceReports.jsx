@@ -592,21 +592,35 @@ const AttendanceReports = ({
     finally { setAnalyticsLoading(false); }
   };
 
+  const weekRangeFromDate = (dateStr) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay();
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    return { startDate: mon.toISOString().slice(0, 10), endDate: sun.toISOString().slice(0, 10) };
+  };
+
   const deriveDateRange = () => {
     if (filterType === 'weekly' && filterValue) {
-      const [yearStr, weekPart] = String(filterValue).split('-W');
-      const year = Number(yearStr);
-      const week = Number(weekPart);
-      if (Number.isInteger(year) && Number.isInteger(week)) {
-        const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
-        const day = simple.getUTCDay();
-        const isoWeekStart = new Date(simple);
-        if (day <= 4) isoWeekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
-        else isoWeekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
-        const isoWeekEnd = new Date(isoWeekStart);
-        isoWeekEnd.setUTCDate(isoWeekStart.getUTCDate() + 6);
-        return { startDate: isoWeekStart.toISOString().slice(0, 10), endDate: isoWeekEnd.toISOString().slice(0, 10) };
+      const isISOWk = filterValue.includes('-W');
+      if (isISOWk) {
+        const [yearStr, weekPart] = filterValue.split('-W');
+        const year = Number(yearStr);
+        const week = Number(weekPart);
+        if (Number.isInteger(year) && Number.isInteger(week)) {
+          const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+          const day = simple.getUTCDay();
+          const isoWeekStart = new Date(simple);
+          if (day <= 4) isoWeekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
+          else isoWeekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+          const isoWeekEnd = new Date(isoWeekStart);
+          isoWeekEnd.setUTCDate(isoWeekStart.getUTCDate() + 6);
+          return { startDate: isoWeekStart.toISOString().slice(0, 10), endDate: isoWeekEnd.toISOString().slice(0, 10) };
+        }
       }
+      return weekRangeFromDate(filterValue);
     }
     if (filterType === 'monthly' && filterValue) {
       const [year, month] = filterValue.split('-').map(Number);
