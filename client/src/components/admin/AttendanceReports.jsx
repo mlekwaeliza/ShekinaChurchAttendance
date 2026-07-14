@@ -226,6 +226,7 @@ const AttendanceReports = ({
   const [memberWeeklyMatrix, setMemberWeeklyMatrix] = useState(null);
   const [memberWeeklyMatrixWeeks, setMemberWeeklyMatrixWeeks] = useState([]);
   const [memberWeeklyLoading, setMemberWeeklyLoading] = useState(false);
+  const [memberView, setMemberView] = useState('summary');
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, [selectedServiceId, filterType, filterValue, overviewData?.filterValue, overviewData?.requestedFilterValue, overviewData?.service_id]);
@@ -2540,23 +2541,70 @@ const AttendanceReports = ({
             </div>
           </div>
           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3">
-            <h4 className="text-xs font-bold text-slate-900 dark:text-white">Weekly Attendance Matrix</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                {memberView === 'summary' ? 'Member P/A/E Summary' : 'Weekly Attendance Matrix'}
+              </h4>
+              <button onClick={() => setMemberView(memberView === 'summary' ? 'matrix' : 'summary')}
+                className="text-[10px] text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 underline">
+                {memberView === 'summary' ? 'Switch to Weekly Matrix' : 'Switch to Summary'}
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-slate-400">
                 {filterType ? `Filtered by ${filterType}` : 'Last'}:
               </span>
-              <select value={memberWeeklyMatrixWeeks.length || 12} onChange={e => loadMemberWeeklyMatrix(Number(e.target.value))}
-                className="px-2 py-1 rounded-lg text-[10px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                <option value={4}>4 weeks</option>
-                <option value={8}>8 weeks</option>
-                <option value={12}>12 weeks</option>
-                <option value={16}>16 weeks</option>
-                <option value={24}>24 weeks</option>
-                <option value={52}>52 weeks</option>
-              </select>
+              {memberView === 'matrix' && (
+                <select value={memberWeeklyMatrixWeeks.length || 12} onChange={e => loadMemberWeeklyMatrix(Number(e.target.value))}
+                  className="px-2 py-1 rounded-lg text-[10px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                  <option value={4}>4 weeks</option>
+                  <option value={8}>8 weeks</option>
+                  <option value={12}>12 weeks</option>
+                  <option value={16}>16 weeks</option>
+                  <option value={24}>24 weeks</option>
+                  <option value={52}>52 weeks</option>
+                </select>
+              )}
             </div>
           </div>
-          {memberWeeklyMatrix && memberWeeklyMatrix.length > 0 ? (
+          {memberView === 'summary' ? (
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+                  <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500">Member</th>
+                    <th className="text-left py-2 px-3 font-semibold text-slate-500">Section</th>
+                    <th className="text-right py-2 px-3 font-semibold text-emerald-600">Present</th>
+                    <th className="text-right py-2 px-3 font-semibold text-rose-600">Absent</th>
+                    <th className="text-right py-2 px-3 font-semibold text-amber-600">Excused</th>
+                    <th className="text-right py-2 px-3 font-semibold text-slate-500">Rate</th>
+                    <th className="text-right py-2 px-3 font-semibold text-slate-500">Risk</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.map(m => (
+                    <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
+                      onClick={() => openMemberAttendanceDetails(m)}>
+                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">{m.full_name}</td>
+                      <td className="py-2 px-3 text-slate-500">{m.section_name || '—'}</td>
+                      <td className="py-2 px-3 text-right font-bold text-emerald-600">{Number(m.present_count) || 0}</td>
+                      <td className="py-2 px-3 text-right font-bold text-rose-600">{Number(m.absent_count) || 0}</td>
+                      <td className="py-2 px-3 text-right font-bold text-amber-600">{Number(m.excused_count) || 0}</td>
+                      <td className="py-2 px-3 text-right font-semibold text-indigo-600">{m.attendance_rate || 0}%</td>
+                      <td className="py-2 px-3 text-right">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          m.risk_level === 'critical' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' :
+                          m.risk_level === 'high' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                          m.risk_level === 'medium' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        }`}>{m.risk_level || 'low'}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : memberWeeklyMatrix && memberWeeklyMatrix.length > 0 ? (
             <div className="overflow-x-auto">
               <div className="min-w-max">
                 {/* Header row */}
