@@ -728,10 +728,10 @@ const FinanceTab = ({ data }) => {
 
   const totalIncome = Number(summary.total_income) || 0;
   const totalTithes = Number(summary.total_tithes) || 0;
-  const totalUsable = Number(summary.total_usable_funds) || 0;
+  const totalUsable = Number(summary.total_usable) || 0;
   const totalExpenses = Number(summary.total_expenses) || 0;
-  const totalMission = Number(summary.mission_fund) || 0;
-  const totalBishop = Number(summary.bishop_fund) || 0;
+  const totalMission = Number(summary.total_mission) || 0;
+  const totalBishop = Number(summary.total_bishop) || 0;
 
   const fmtK = v => {
     const n = Number(v) || 0;
