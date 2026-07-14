@@ -10,6 +10,7 @@ import {
 import { adminAPI, analyticsAPI } from '../../services/api';
 import Badge from '../ui/Badge';
 import { fdate, fdatetime } from '../../utils/date';
+import ExecutiveComparison from './ExecutiveComparison';
 
 const R = v => Math.round(Number(v) || 0);
 
