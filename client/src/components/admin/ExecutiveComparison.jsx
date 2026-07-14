@@ -7,7 +7,7 @@ import {
   Download, Printer, FileText, Eye, Info, Star, UserX, Clock, Target,
   DollarSign, HandCoins, Wallet, AlertTriangle, Calendar, Filter,
   ChevronDown, ChevronUp, Search, AlertCircle, Activity, ArrowUp,
-  ArrowDown, Minus, Plus, Save
+  ArrowDown, Minus, Plus, Save, RefreshCw, HelpCircle
 } from 'lucide-react';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -98,6 +98,9 @@ const ExecutiveComparison = () => {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
+  const [memberMatrix, setMemberMatrix] = useState(null);
+  const [memberMatrixWeeks, setMemberMatrixWeeks] = useState([]);
+  const [memberMatrixLoading, setMemberMatrixLoading] = useState(false);
 
   const buildPeriods = useCallback(() => {
     if (customPeriods.length > 0) return customPeriods;
@@ -156,6 +159,21 @@ const ExecutiveComparison = () => {
     };
     load();
   }, [periods, mode]);
+
+  useEffect(() => {
+    if (mode !== 'members' || view !== 'rankings') return;
+    const loadMatrix = async () => {
+      setMemberMatrixLoading(true);
+      try {
+        const numWeeks = Math.max(periods.length * 4, 4);
+        const res = await analyticsAPI.getMemberWeeklyMatrix({ weeks: numWeeks });
+        setMemberMatrix(res.data.matrix || []);
+        setMemberMatrixWeeks(res.data.weeks || []);
+      } catch (e) { console.error('Failed to load member matrix:', e); setMemberMatrix([]); }
+      finally { setMemberMatrixLoading(false); }
+    };
+    loadMatrix();
+  }, [mode, view, periods.length]);
 
   const activeSort = (key) => {
     if (sortKey === key) {
@@ -634,50 +652,40 @@ const ExecutiveComparison = () => {
             <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
               <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-indigo-500" />
-                Full Member Attendance Report
+                Weekly Member Attendance Matrix
+                <span className="text-[10px] font-normal text-slate-400 ml-1">(per week: present / absent / excused)</span>
               </h3>
-              <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                <table className="w-full text-xs">
-                  <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
-                    <tr className="border-b border-slate-200 dark:border-slate-700">
-                      <th className="text-left py-2 px-3 font-semibold text-slate-500">Member</th>
-                      <th className="text-left py-2 px-3 font-semibold text-slate-500">Section</th>
-                      <th className="text-right py-2 px-3 font-semibold text-emerald-600">Present</th>
-                      <th className="text-right py-2 px-3 font-semibold text-rose-600">Absent</th>
-                      <th className="text-right py-2 px-3 font-semibold text-amber-600">Excused</th>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-500">Total</th>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-500">Rate</th>
-                      <th className="text-right py-2 px-3 font-semibold text-slate-500">Risk</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(latestPeriod?.memberEngagement || [])
-                      .filter(e => !search || (e.full_name||'').toLowerCase().includes(search.toLowerCase()))
-                      .sort((a, b) => (b.present_count||0) - (a.present_count||0))
-                      .map(m => (
-                      <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                        <td className="py-2 px-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">{m.full_name}</td>
-                        <td className="py-2 px-3 text-slate-500">{m.section_name || '—'}</td>
-                        <td className="py-2 px-3 text-right font-bold text-emerald-600">{Number(m.present_count) || 0}</td>
-                        <td className="py-2 px-3 text-right font-bold text-rose-600">{Number(m.absent_count) || 0}</td>
-                        <td className="py-2 px-3 text-right font-bold text-amber-600">{Number(m.excused_count) || 0}</td>
-                        <td className="py-2 px-3 text-right text-slate-900 dark:text-white font-medium">
-                          {(Number(m.present_count)||0) + (Number(m.absent_count)||0) + (Number(m.excused_count)||0)}
-                        </td>
-                        <td className="py-2 px-3 text-right font-semibold text-indigo-600">{m.attendance_rate || 0}%</td>
-                        <td className="py-2 px-3 text-right">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            m.risk_level === 'critical' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' :
-                            m.risk_level === 'high' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
-                            m.risk_level === 'medium' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
-                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                          }`}>{m.risk_level || 'low'}</span>
-                        </td>
-                      </tr>
+              {memberMatrixLoading ? (
+                <div className="flex items-center justify-center py-8 text-slate-400 text-xs"><RefreshCw className="w-4 h-4 mr-2 animate-spin" />Loading...</div>
+              ) : memberMatrix && memberMatrix.length > 0 ? (
+                <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+                  <div className="min-w-max">
+                    <div className="flex bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase text-slate-500">
+                      <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900/40 w-44 shrink-0 px-3 py-2">Member</div>
+                      <div className="w-28 shrink-0 px-3 py-2">Section</div>
+                      {memberMatrixWeeks.map(w => (
+                        <div key={w} className="w-20 shrink-0 px-2 py-2 text-center">{w.replace('Week', 'Wk')}</div>
+                      ))}
+                    </div>
+                    {memberMatrix.filter(m => !search || m.full_name.toLowerCase().includes(search.toLowerCase())).map(m => (
+                      <div key={m.member_id} className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                        <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-44 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">{m.full_name}</div>
+                        <div className="w-28 shrink-0 px-3 py-2.5 text-slate-500 truncate">{m.section_name || '—'}</div>
+                        {m.weekly.map((status, wi) => (
+                          <div key={wi} className="w-20 shrink-0 px-2 py-2 text-center">
+                            {status === 'present' && <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-200 px-2 py-1 rounded-full text-[10px] font-semibold"><CheckCircle2 className="w-3 h-3" />Present</span>}
+                            {status === 'absent' && <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-200 px-2 py-1 rounded-full text-[10px] font-semibold"><XCircle className="w-3 h-3" />Absent</span>}
+                            {status === 'excused' && <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-200 px-2 py-1 rounded-full text-[10px] font-semibold"><HelpCircle className="w-3 h-3" />Excused</span>}
+                            {!status && <span className="text-slate-300 dark:text-slate-600">—</span>}
+                          </div>
+                        ))}
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center text-slate-400 text-xs">No weekly attendance data available.</div>
+              )}
             </div>
           )}
 
