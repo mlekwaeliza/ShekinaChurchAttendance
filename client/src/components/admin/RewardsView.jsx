@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Trophy, Star, Crown, Award, TrendingUp, TrendingDown, Users,
@@ -231,6 +231,7 @@ const RewardsView = () => {
   const [profileDetail, setProfileDetail] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [awarding, setAwarding] = useState(false);
+  const [memberFilter, setMemberFilter] = useState('all');
 
   const openProfile = (item, type) => setSelectedProfile({ type, item });
 
@@ -393,7 +394,17 @@ const RewardsView = () => {
   );
 
   const kpis = data?.kpis || {};
-  const members = data?.members || [];
+  const allMembers = data?.members || [];
+  const members = useMemo(() => {
+    if (memberFilter === 'all') return allMembers;
+    return allMembers.filter(m => {
+      if (memberFilter === 'men') return (m.gender || '').toLowerCase().startsWith('m');
+      if (memberFilter === 'women') return (m.gender || '').toLowerCase().startsWith('f');
+      if (memberFilter === 'youth') return (m.age_group || '').toLowerCase().includes('youth');
+      if (memberFilter === 'visitors') return (m.evCount || 0) > 0;
+      return true;
+    });
+  }, [allMembers, memberFilter]);
   const leaders = data?.leaders || [];
   const cells = data?.cells || [];
   const sections = data?.sections || [];
@@ -486,19 +497,25 @@ const RewardsView = () => {
       {activeTab === 'members' && (
         <div style={s.section}>
           <div style={s.sectionTitle}><Users size={14} /> Member Performance Ranking</div>
-          <div style={{ marginBottom: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ marginBottom: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
-              { label: '🏆 Overall', key: 'overallScore' },
-              { label: '⛪ Attendance', key: 'churchAttendance' },
-              { label: '🔥 Evangelism', key: 'evangelism' },
-              { label: '🏠 Cell', key: 'cellAttendance' },
-              { label: '⭐ Giving', key: 'contributions' },
+              { label: 'All', key: 'all' },
               { label: '👨 Men', key: 'men' },
               { label: '👩 Women', key: 'women' },
               { label: '🧒 Youth', key: 'youth' },
-              { label: '🙌 Visitors/Evangelists', key: 'visitors' },
+              { label: '🙌 Evangelists', key: 'visitors' },
             ].map(({ label, key }) => (
-              <button key={key} style={{ padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', color: '#818CF8' }}>
+              <button key={key}
+                onClick={() => setMemberFilter(key)}
+                style={{
+                  padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                  cursor: 'pointer', border: '1px solid',
+                  background: memberFilter === key ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.06)',
+                  borderColor: memberFilter === key ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.15)',
+                  color: memberFilter === key ? '#C7D2FE' : '#818CF8',
+                  transition: 'all 0.15s',
+                }}
+              >
                 {label}
               </button>
             ))}

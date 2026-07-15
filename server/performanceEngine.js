@@ -190,7 +190,7 @@ async function scoreMembers(start, end, serviceId) {
   const svcP = svc ? [serviceId] : [];
   const rows = await all(`
     SELECT
-      m.id, m.full_name, m.membership_id, s.name AS section_name,
+      m.id, m.full_name, m.membership_id, m.gender, m.age_group, s.name AS section_name,
       COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END),0) AS present,
       COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='absent' THEN 1 ELSE 0 END),0) AS absent,
       COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='excused' THEN 1 ELSE 0 END),0) AS excused,
