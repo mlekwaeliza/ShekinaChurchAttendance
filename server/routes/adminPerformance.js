@@ -15,7 +15,7 @@ router.get('/performance/dashboard', async (req, res) => {
     res.json(data);
   } catch (e) {
     console.error('Performance dashboard error:', e);
-    res.status(500).json({ error: 'Failed to load performance dashboard' });
+    res.status(500).json({ error: 'Failed to load performance dashboard', detail: e.message });
   }
 });
 

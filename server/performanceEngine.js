@@ -202,7 +202,7 @@ async function scoreMembers(start, end, serviceId) {
     LEFT JOIN sections s ON s.id = m.section_id
     LEFT JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ? ${svc}
     WHERE m.is_active = 1
-    GROUP BY m.id
+    GROUP BY m.id, m.full_name, m.membership_id, m.gender, m.age_group, s.name
   `, [start, end, ...svcP]);
 
   const outreach = await all(`
@@ -293,7 +293,7 @@ async function scoreSections(start, end, serviceId) {
     FROM sections s
     LEFT JOIN members m ON m.section_id = s.id
     LEFT JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ?
-    GROUP BY s.id
+    GROUP BY s.id, s.name
     ORDER BY s.name
   `, [start, end]);
   return rows.map(s => {
@@ -312,7 +312,7 @@ async function scoreDepartments(start, end) {
     LEFT JOIN department_members dm ON dm.department_id = d.id
     LEFT JOIN attendance a ON a.member_id = dm.member_id AND a.date BETWEEN ? AND ?
     WHERE d.is_active=1
-    GROUP BY d.id
+    GROUP BY d.id, d.name
     ORDER BY d.name
   `, [start, end]);
   return rows.map(d => {
@@ -327,7 +327,7 @@ async function scoreCells(start, end) {
       COUNT(DISTINCT hcm.church_member_id) AS members_count
     FROM home_cells hc
     LEFT JOIN home_cell_members hcm ON hcm.cell_id = hc.id
-    GROUP BY hc.id
+    GROUP BY hc.id, hc.name
     ORDER BY hc.name
   `);
   // Cells use member average attendance as a proxy

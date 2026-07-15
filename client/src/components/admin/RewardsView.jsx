@@ -272,7 +272,7 @@ const RewardsView = () => {
         setLocalWeights(flat);
       }
     } catch (e) {
-      setError('Failed to load performance data. Please try again.');
+      setError(e?.response?.data?.detail || 'Failed to load performance data. Please try again.');
     } finally {
       setLoading(false);
     }
