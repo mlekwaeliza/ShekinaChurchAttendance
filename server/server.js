@@ -84,6 +84,7 @@ const adminInsightsRoutes = require('./routes/adminInsights');
 const adminOperationsRoutes = require('./routes/adminOperations');
 const adminPeopleRoutes = require('./routes/adminPeople');
 const adminSystemRoutes = require('./routes/adminSystem');
+const adminPerformanceRoutes = require('./routes/adminPerformance');
 const adminContributionsRoutes = require('./routes/adminContributions');
 const adminFinanceRoutes = require('./routes/adminFinance');
 const leaderRoutes = require('./routes/leader');
@@ -463,6 +464,7 @@ app.use('/api/admin', adminHomeCellRoutes);
 app.use('/api/admin', adminInsightsRoutes);
 app.use('/api/admin', adminOperationsRoutes);
 app.use('/api/admin', adminSystemRoutes);
+app.use('/api/admin', adminPerformanceRoutes);
 app.use('/api/leader', leaderRoutes);
 app.use('/api/pastor', pastorRoutes);
 app.use('/api/analytics', analyticsRoutes);
@@ -861,6 +863,8 @@ async function startServer() {
     await ensureEvangelismSchema();
     await migrateUsersRoleConstraint();
     await linkUsersToMembers();
+    await require('./performanceEngine').ensurePerformanceSchema();
+    console.log('Performance & Recognition Center schema ready');
 
     // Seed default accountant user if none exists
     const bcrypt = require('bcryptjs');

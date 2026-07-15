@@ -1,0 +1,662 @@
+// Church Performance & Recognition Center - scoring engine
+// Computes transparent, weighted scores from measurable ministry activities,
+// persists every point as an auditable transaction, and exposes rankings,
+// profiles, recognition history and configurable weights.
+const { all, get, run, transaction } = require('./database');
+const { formatLocalDate, addDays, getISOWeekString, getISOWeekRange } = require('./utils/date');
+
+// ── Schema ────────────────────────────────────────────────────────────────
+async function ensurePerformanceSchema() {
+  const statements = [
+    `CREATE TABLE IF NOT EXISTS point_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER NOT NULL,
+      season_type TEXT NOT NULL,
+      season_key TEXT NOT NULL,
+      category TEXT NOT NULL,
+      points REAL NOT NULL,
+      reason TEXT,
+      reference_id INTEGER,
+      created_by INTEGER,
+      created_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_pt_entity ON point_transactions(entity_type, entity_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_pt_season ON point_transactions(season_type, season_key)`,
+    `CREATE TABLE IF NOT EXISTS recognition_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      season_type TEXT NOT NULL,
+      season_key TEXT NOT NULL,
+      category TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER NOT NULL,
+      entity_name TEXT,
+      rank INTEGER,
+      score REAL,
+      recognition_type TEXT NOT NULL,
+      awarded_at TEXT DEFAULT (datetime('now'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS achievements (
+      key TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      icon TEXT,
+      description TEXT,
+      category TEXT,
+      tier TEXT,
+      threshold_type TEXT,
+      threshold_value REAL
+    )`,
+    `CREATE TABLE IF NOT EXISTS entity_achievements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL,
+      entity_id INTEGER NOT NULL,
+      achievement_key TEXT NOT NULL,
+      season_key TEXT,
+      earned_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(entity_type, entity_id, achievement_key, season_key)
+    )`,
+    `CREATE TABLE IF NOT EXISTS performance_penalties (
+      key TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      points REAL NOT NULL,
+      description TEXT
+    )`,
+  ];
+  for (const sql of statements) {
+    try { await run(sql); } catch (e) { console.error('performance schema error:', e.message); }
+  }
+  await seedPerformanceData();
+}
+
+function seedPerformanceData() {
+  const penalties = [
+    ['deduction_absence', 'Repeated Absence', -5, 'Multiple unexplained absences in a period.'],
+    ['deduction_late', 'Late Attendance Submission', -3, 'Leader submitted attendance after the grace window.'],
+    ['deduction_incomplete_followup', 'Incomplete Follow-up', -4, 'Assigned follow-up not completed.'],
+    ['deduction_missed_service', 'Missed Leadership Responsibility', -6, 'Did not fulfil a scheduled ministry duty.'],
+  ];
+  penalties.forEach(([key, label, points, description]) => {
+    run(`INSERT OR IGNORE INTO performance_penalties (key, label, points, description) VALUES (?, ?, ?, ?)`, [key, label, points, description]);
+  });
+
+  const achievements = [
+    ['streak_4', 'Consistent Attender', '🔥', 'Attended 4+ consecutive services.', 'streak', 'bronze', 'streak', 4],
+    ['streak_12', 'Faithful Attender', '⚡', 'Attended 12+ consecutive services.', 'streak', 'silver', 'streak', 12],
+    ['streak_26', 'Devoted Attender', '🌟', 'Attended 26+ consecutive services.', 'streak', 'gold', 'streak', 26],
+    ['evangelist_1', 'Soul Winner', '🔥', 'Brought 1+ visitor or outreach this period.', 'evangelism', 'bronze', 'evangelism', 1],
+    ['evangelist_5', 'Harvest Worker', '🌾', 'Brought 5+ visitors/outreaches.', 'evangelism', 'silver', 'evangelism', 5],
+    ['contributor', 'Generous Giver', '⭐', 'Recorded a contribution this period.', 'giving', 'bronze', 'contributions', 1],
+    ['leader_submit', 'Diligent Leader', '👑', 'Submitted attendance on time all period.', 'leadership', 'silver', 'submission_rate', 95],
+    ['cell_active', 'Cell Champion', '🏠', 'Active home-cell participation.', 'cell', 'bronze', 'cell_attendance', 60],
+    ['perfect_rate', 'Excellent Servant', '🏆', 'Reached 90%+ overall performance score.', 'excellence', 'gold', 'overall', 90],
+  ];
+  achievements.forEach(([key, name, icon, description, category, tier, threshold_type, threshold_value]) => {
+    run(`INSERT OR IGNORE INTO achievements (key, name, icon, description, category, tier, threshold_type, threshold_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [key, name, icon, description, category, tier, threshold_type, threshold_value]);
+  });
+}
+
+// ── Period helpers ──────────────────────────────────────────────────────────
+function getFilterRange(filter) {
+  const today = new Date();
+  const end = formatLocalDate(today);
+  let start;
+  let seasonType = filter || 'month';
+  let seasonKey = '';
+  switch (filter) {
+    case 'week':
+      start = formatLocalDate(addDays(today, -7));
+      seasonKey = getISOWeekString(today);
+      break;
+    case 'quarter':
+      start = formatLocalDate(addDays(today, -90));
+      seasonKey = `${today.getFullYear()}-Q${Math.floor(today.getMonth() / 3) + 1}`;
+      break;
+    case 'year':
+      start = `${today.getFullYear()}-01-01`;
+      seasonKey = `${today.getFullYear()}`;
+      break;
+    case 'all':
+      seasonType = 'all_time';
+      start = '2000-01-01';
+      seasonKey = 'all_time';
+      break;
+    case 'month':
+    default:
+      start = formatLocalDate(addDays(today, -30));
+      seasonKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+      break;
+  }
+  return { start, end, seasonType, seasonKey };
+}
+
+// ── Settings / weights ────────────────────────────────────────────────────
+async function loadWeights() {
+  const rows = await all(`SELECT key, value FROM settings WHERE key LIKE 'perf_%'`);
+  const map = {};
+  rows.forEach(r => { map[r.key] = Number(r.value) || 0; });
+  const member = {
+    church_attendance: map.perf_member_church_attendance ?? 30,
+    cell_attendance: map.perf_member_cell_attendance ?? 20,
+    evangelism: map.perf_member_evangelism ?? 15,
+    contributions: map.perf_member_contributions ?? 10,
+    events: map.perf_member_events ?? 5,
+  };
+  const leader = {
+    submission_rate: map.perf_leader_submission_rate ?? 20,
+    member_attendance: map.perf_leader_member_attendance ?? 20,
+    retention: map.perf_leader_retention ?? 15,
+    cell_growth: map.perf_leader_cell_growth ?? 15,
+    evangelism: map.perf_leader_evangelism ?? 10,
+    followups: map.perf_leader_followups ?? 10,
+    reports: map.perf_leader_reports ?? 5,
+  };
+  return { member, leader, raw: map };
+}
+
+async function updateWeights(flat) {
+  for (const [key, value] of Object.entries(flat || {})) {
+    if (typeof key === 'string' && key.startsWith('perf_')) {
+      await run(`UPDATE settings SET value = ? WHERE key = ?`, [String(value), key]);
+    }
+  }
+  return loadWeights();
+}
+
+// ── Performance level from score ────────────────────────────────────────────
+function performanceLevel(score) {
+  if (score >= 90) return { name: 'Champion', tier: 6, color: '#F59E0B' };
+  if (score >= 75) return { name: 'Kingdom Builder', tier: 5, color: '#A855F7' };
+  if (score >= 60) return { name: 'Excellent', tier: 4, color: '#22C55E' };
+  if (score >= 40) return { name: 'Faithful', tier: 3, color: '#3B82F6' };
+  if (score >= 20) return { name: 'Growing', tier: 2, color: '#14B8A6' };
+  return { name: 'Seed', tier: 1, color: '#94A3B8' };
+}
+
+const clamp100 = v => Math.max(0, Math.min(100, Number(v) || 0));
+const weighted = (components, weights) => {
+  let total = 0; let wsum = 0;
+  Object.keys(components).forEach(k => {
+    const w = Number(weights[k]) || 0;
+    total += clamp100(components[k]) * w;
+    wsum += w;
+  });
+  return wsum > 0 ? Math.round(total / wsum) : 0;
+};
+
+// ── Member scoring ──────────────────────────────────────────────────────────
+async function scoreMembers(start, end, serviceId) {
+  const svc = serviceId && serviceId !== 'all' ? 'AND a.service_type_id = ?' : '';
+  const svcP = svc ? [serviceId] : [];
+  const rows = await all(`
+    SELECT
+      m.id, m.full_name, m.membership_id, s.name AS section_name,
+      COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END),0) AS present,
+      COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='absent' THEN 1 ELSE 0 END),0) AS absent,
+      COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='excused' THEN 1 ELSE 0 END),0) AS excused,
+      COUNT(a.id) AS total
+    FROM members m
+    LEFT JOIN sections s ON s.id = m.section_id
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ? ${svc}
+    WHERE m.is_active = 1
+    GROUP BY m.id
+  `, [start, end, ...svcP]);
+
+  const outreach = await all(`
+    SELECT member_id, COUNT(*) AS cnt FROM outreach_logs
+    WHERE created_at BETWEEN ? AND ? GROUP BY member_id
+  `, [start, end]);
+  const contribs = await all(`
+    SELECT member_id, COUNT(*) AS cnt FROM contributions
+    WHERE payment_date BETWEEN ? AND ? GROUP BY member_id
+  `, [start, end]);
+
+  const outMap = Object.fromEntries(outreach.map(r => [r.member_id, r.cnt]));
+  const conMap = Object.fromEntries(contribs.map(r => [r.member_id, r.cnt]));
+
+  return rows.map(m => {
+    const totalDays = Number(m.total) || 0;
+    const churchAttendance = totalDays ? Math.round((Number(m.present) / totalDays) * 100) : 0;
+    const evCount = (outMap[m.id] || 0);
+    const evangelism = Math.min(100, evCount * 25);
+    const contributions = (conMap[m.id] || 0) > 0 ? 100 : 0;
+    const cellAttendance = 0; // home-cell attendance not tracked separately
+    const events = 0;
+    const components = { church_attendance: churchAttendance, cell_attendance: cellAttendance, evangelism, contributions, events };
+    return { ...m, components, present: Number(m.present), absent: Number(m.absent), excused: Number(m.excused), totalDays, evCount, hasContribution: (conMap[m.id] || 0) > 0 };
+  });
+}
+
+// ── Leader scoring ──────────────────────────────────────────────────────────
+async function scoreLeaders(start, end, serviceId) {
+  const serviceDaysRow = await get(`SELECT COUNT(DISTINCT date) AS d FROM attendance WHERE date BETWEEN ? AND ?`, [start, end]);
+  const serviceDays = Number(serviceDaysRow?.d) || 0;
+
+  const subs = await all(`
+    SELECT leader_id, COUNT(DISTINCT date) AS submitted_days
+    FROM submission_log
+    WHERE date BETWEEN ? AND ?
+    GROUP BY leader_id
+  `, [start, end]);
+
+  const memberAtt = await all(`
+    SELECT l.id AS leader_id,
+      AVG(CASE WHEN LOWER(TRIM(a.status))='present' THEN 100.0 ELSE 0 END) AS avg_att
+    FROM leaders l
+    JOIN members m ON m.leader_id = l.id
+    JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ?
+    WHERE l.is_active = 1
+    GROUP BY l.id
+  `, [start, end]);
+
+  const ev = await all(`
+    SELECT l.id AS leader_id, COUNT(*) AS cnt FROM leaders l
+    LEFT JOIN outreach_logs o ON o.leader_id = l.id AND o.created_at BETWEEN ? AND ?
+    WHERE l.is_active = 1 GROUP BY l.id
+  `, [start, end]);
+
+  const subMap = Object.fromEntries(subs.map(r => [r.leader_id, r]));
+  const attMap = Object.fromEntries(memberAtt.map(r => [r.leader_id, r]));
+  const evMap = Object.fromEntries(ev.map(r => [r.leader_id, r]));
+
+  const rows = await all(`
+    SELECT l.id, u.full_name, s.name AS section_name
+    FROM leaders l
+    LEFT JOIN users u ON u.id = l.user_id
+    LEFT JOIN sections s ON s.id = l.section_id
+    WHERE l.is_active = 1
+  `);
+
+  return rows.map(l => {
+    const submittedDays = Number(subMap[l.id]?.submitted_days) || 0;
+    const evCount = evMap[l.id]?.cnt || 0;
+    const submission_rate = serviceDays ? Math.round((submittedDays / serviceDays) * 100) : 0;
+    const member_attendance = Math.round(Number(attMap[l.id]?.avg_att) || 0);
+    const followups = 0; // follow_ups not yet linked to leaders
+    const evangelism = Math.min(100, evCount * 25);
+    const retention = 0; const cell_growth = 0; const reports = 0;
+    const components = { submission_rate, member_attendance, retention, cell_growth, evangelism, followups, reports };
+    return { id: l.id, full_name: l.full_name, section_name: l.section_name, components, submission_rate, assigned_days: serviceDays, submitted_days: submittedDays, followups };
+  });
+}
+
+// ── Group scoring (sections / departments / cells) ──────────────────────────
+async function scoreSections(start, end, serviceId) {
+  const rows = await all(`
+    SELECT s.id, s.name,
+      COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END),0) AS present,
+      COALESCE(COUNT(a.id),0) AS total,
+      COUNT(DISTINCT m.id) AS members_count
+    FROM sections s
+    LEFT JOIN members m ON m.section_id = s.id
+    LEFT JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ?
+    GROUP BY s.id
+    ORDER BY s.name
+  `, [start, end]);
+  return rows.map(s => {
+    const attendance = (Number(s.total) || 0) ? Math.round((Number(s.present) / Number(s.total)) * 100) : 0;
+    return { id: s.id, name: s.name, full_name: s.name, section_name: s.name, members_count: Number(s.members_count) || 0, components: { attendance }, overallScore: attendance };
+  });
+}
+
+async function scoreDepartments(start, end) {
+  const rows = await all(`
+    SELECT d.id, d.name,
+      COUNT(DISTINCT a.member_id) AS members_count,
+      COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END),0) AS present,
+      COUNT(a.id) AS total
+    FROM departments d
+    LEFT JOIN department_members dm ON dm.department_id = d.id
+    LEFT JOIN attendance a ON a.member_id = dm.member_id AND a.date BETWEEN ? AND ?
+    WHERE d.is_active=1
+    GROUP BY d.id
+    ORDER BY d.name
+  `, [start, end]);
+  return rows.map(d => {
+    const attendance = (Number(d.total) || 0) ? Math.round((Number(d.present) / Number(d.total)) * 100) : 0;
+    return { id: d.id, name: d.name, full_name: d.name, section_name: d.name, members_count: Number(d.members_count) || 0, components: { attendance }, overallScore: attendance };
+  });
+}
+
+async function scoreCells(start, end) {
+  const rows = await all(`
+    SELECT hc.id, hc.name,
+      COUNT(DISTINCT hcm.church_member_id) AS members_count
+    FROM home_cells hc
+    LEFT JOIN home_cell_members hcm ON hcm.cell_id = hc.id
+    GROUP BY hc.id
+    ORDER BY hc.name
+  `);
+  // Cells use member average attendance as a proxy
+  const att = await all(`
+    SELECT hcm.cell_id, AVG(CASE WHEN LOWER(TRIM(a.status))='present' THEN 100.0 ELSE 0 END) AS avg_att
+    FROM home_cell_members hcm
+    JOIN attendance a ON a.member_id = hcm.church_member_id AND a.date BETWEEN ? AND ?
+    GROUP BY hcm.cell_id
+  `, [start, end]);
+  const attMap = Object.fromEntries(att.map(r => [r.cell_id, Math.round(Number(r.avg_att) || 0)]));
+  return rows.map(c => {
+    const attendance = attMap[c.id] || 0;
+    return { id: c.id, name: c.name, full_name: c.name, section_name: c.name, members_count: Number(c.members_count) || 0, components: { attendance }, overallScore: attendance };
+  });
+}
+
+// ── Audit transactions (idempotent per season+entity+category) ───────────────
+async function recordTransaction(entity_type, entity_id, season, category, points, reason, reference_id, created_by) {
+  await run(
+    `INSERT INTO point_transactions (entity_type, entity_id, season_type, season_key, category, points, reason, reference_id, created_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [entity_type, entity_id, season.seasonType, season.seasonKey, category, points, reason, reference_id || null, created_by || null]
+  );
+}
+
+// Build a full ranked list with scores, levels, rank movement
+async function buildRanked(scored, weights, season, prevSeason) {
+  scored.forEach(e => {
+    const w = e.components.submission_rate !== undefined ? weights.leader : weights.member;
+    e.overallScore = weighted(e.components, w);
+    e.level = performanceLevel(e.overallScore);
+  });
+  scored.sort((a, b) => b.overallScore - a.overallScore);
+  scored.forEach((e, i) => { e.rank = i + 1; });
+
+  if (prevSeason) {
+    const prevScores = await scoreForSeason(prevSeason);
+    scored.forEach(e => {
+      const prev = prevScores.find(p => p.id === e.id);
+      e.prevRank = prev ? prev.rank : null;
+      e.rankDelta = e.prevRank ? e.prevRank - e.rank : 0;
+    });
+  }
+  return scored;
+}
+
+// Previous-season scores (recompute for movement). Lightweight: only members/leaders used.
+async function scoreForSeason(season) {
+  const serviceId = 'all';
+  const members = await scoreMembers(season.start, season.end, serviceId);
+  const leaders = await scoreLeaders(season.start, season.end, serviceId);
+  const weights = await loadWeights();
+  const out = [];
+  members.forEach(m => { m.overallScore = weighted(m.components, weights.member); });
+  leaders.forEach(l => { l.overallScore = weighted(l.components, weights.leader); });
+  members.sort((a, b) => b.overallScore - a.overallScore);
+  leaders.sort((a, b) => b.overallScore - a.overallScore);
+  members.forEach((m, i) => out.push({ id: m.id, rank: i + 1 }));
+  leaders.forEach((l, i) => out.push({ id: l.id, rank: i + 1 }));
+  return out;
+}
+
+function prevSeasonOf(season) {
+  const today = new Date();
+  if (season.seasonType === 'week') {
+    const start = formatLocalDate(addDays(today, -14));
+    const end = formatLocalDate(addDays(today, -8));
+    return { start, end, seasonType: 'week', seasonKey: getISOWeekString(addDays(today, -7)) };
+  }
+  if (season.seasonType === 'month') {
+    const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const start = formatLocalDate(new Date(d.getFullYear(), d.getMonth(), 1));
+    const end = formatLocalDate(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+    return { start, end, seasonType: 'month', seasonKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` };
+  }
+  if (season.seasonType === 'quarter') {
+    const q = Math.floor(today.getMonth() / 3) - 1;
+    const yr = q < 0 ? today.getFullYear() - 1 : today.getFullYear();
+    const qq = ((q % 4) + 4) % 4;
+    const start = formatLocalDate(new Date(yr, qq * 3, 1));
+    const end = formatLocalDate(new Date(yr, qq * 3 + 3, 0));
+    return { start, end, seasonType: 'quarter', seasonKey: `${yr}-Q${qq + 1}` };
+  }
+  if (season.seasonType === 'year') {
+    const yr = today.getFullYear() - 1;
+    return { start: `${yr}-01-01`, end: `${yr}-12-31`, seasonType: 'year', seasonKey: `${yr}` };
+  }
+  return null;
+}
+
+// ── Public API ────────────────────────────────────────────────────────────
+async function getDashboard(filter, serviceId, userId) {
+  const season = getFilterRange(filter);
+  const weights = await loadWeights();
+  const members = await scoreMembers(season.start, season.end, serviceId);
+  const leaders = await scoreLeaders(season.start, season.end, serviceId);
+  const sections = await scoreSections(season.start, season.end, serviceId);
+  const departments = await scoreDepartments(season.start, season.end);
+  const cells = await scoreCells(season.start, season.end);
+
+  const prev = prevSeasonOf(season);
+  const rankedMembers = await buildRanked(members, weights, season, prev);
+  const rankedLeaders = await buildRanked(leaders, weights, season, prev);
+  const rankedSections = await buildRanked(sections, { member: { attendance: 100 }, leader: {} }, season, null);
+  const rankedDepartments = await buildRanked(departments, { member: { attendance: 100 }, leader: {} }, season, null);
+  const rankedCells = await buildRanked(cells, { member: { attendance: 100 }, leader: {} }, season, null);
+
+  // KPIs
+  const totalMembers = rankedMembers.length;
+  const avgScore = totalMembers ? Math.round(rankedMembers.reduce((s, m) => s + m.overallScore, 0) / totalMembers) : 0;
+  const champions = rankedMembers.filter(m => m.level.tier >= 6).length;
+  const consistent = rankedMembers.filter(m => (m.components.church_attendance || 0) >= 80).length;
+  const withEvangelism = rankedMembers.filter(m => (m.evCount || 0) > 0).length;
+
+  // Flatten component scores to top-level keys the UI expects
+  const flattenMember = (m) => ({
+    ...m,
+    churchAttendance: clamp100(m.components.church_attendance),
+    cellAttendance: clamp100(m.components.cell_attendance),
+    evangelism: clamp100(m.components.evangelism),
+    contributions: clamp100(m.components.contributions),
+    events: clamp100(m.components.events),
+    present: m.present, absent: m.absent, excused: m.excused,
+    consecutive_streak: m.consecutive_streak || 0,
+  });
+  const flattenLeader = (l) => ({
+    ...l,
+    leader_name: l.full_name,
+    submissionRate: clamp100(l.components.submission_rate),
+    memberAttendance: clamp100(l.components.member_attendance),
+    retention: clamp100(l.components.retention),
+    cellGrowth: clamp100(l.components.cell_growth),
+    evangelism: clamp100(l.components.evangelism),
+    followups: clamp100(l.components.followups),
+    reports: clamp100(l.components.reports),
+    memberCount: l.memberCount,
+  });
+  const flattenGroup = (g, extra = {}) => ({ ...g, visitors: 0, growth: 0, ...extra });
+
+  const outMembers = rankedMembers.map(flattenMember);
+  const outLeaders = rankedLeaders.map(flattenLeader);
+  const outSections = rankedSections.map(g => flattenGroup(g));
+  const outDepartments = rankedDepartments.map(g => flattenGroup(g));
+  const outCells = rankedCells.map(g => flattenGroup(g));
+
+  // Achievements (per member this season)
+  const achievements = await computeAchievements(rankedMembers, season);
+
+  // Insights
+  const topMover = [...rankedMembers].sort((a, b) => (b.rankDelta || 0) - (a.rankDelta || 0))[0];
+  const mostConsistent = [...rankedMembers].sort((a, b) => (b.components.church_attendance || 0) - (a.components.church_attendance || 0))[0];
+  const bestEvangelist = [...rankedMembers].sort((a, b) => (b.evCount || 0) - (a.evCount || 0))[0];
+  const bestCell = [...rankedCells].sort((a, b) => b.overallScore - a.overallScore)[0];
+  const bestSection = [...rankedSections].sort((a, b) => b.overallScore - a.overallScore)[0];
+  const bestMinistry = [...rankedDepartments].sort((a, b) => b.overallScore - a.overallScore)[0];
+
+  const insights = [];
+  if (topMover && topMover.rankDelta > 0) {
+    insights.push({ type: 'success', text: `${topMover.full_name} climbed ${topMover.rankDelta} places this ${season.seasonType} (now rank ${topMover.rank}).` });
+  }
+  insights.push({ type: 'info', text: `${consistent} members maintained 80%+ church attendance this ${season.seasonType}.` });
+  insights.push({ type: 'warning', text: `${rankedMembers.filter(m => (m.components.church_attendance || 0) < 40).length} members are below 40% attendance and need pastoral follow-up.` });
+
+  return {
+    season,
+    weights,
+    kpis: {
+      totalMembers, avgScore, champions, consistent, withEvangelism,
+      topMember: rankedMembers[0] ? { name: rankedMembers[0].full_name, score: rankedMembers[0].overallScore, section_name: rankedMembers[0].section_name } : null,
+      topLeader: rankedLeaders[0] ? { name: rankedLeaders[0].full_name, score: rankedLeaders[0].overallScore, section_name: rankedLeaders[0].section_name } : null,
+      bestCell: bestCell ? { name: bestCell.name, overallScore: bestCell.overallScore, membersCount: bestCell.members_count } : null,
+      bestEvangelist: bestEvangelist ? { full_name: bestEvangelist.full_name, evangelism: bestEvangelist.evCount } : null,
+      mostConsistentMember: mostConsistent ? { full_name: mostConsistent.full_name, churchAttendance: mostConsistent.components.church_attendance } : null,
+      mostImprovedMember: topMover && topMover.rankDelta ? { full_name: topMover.full_name, rankDelta: topMover.rankDelta } : null,
+      fastestGrowingCell: bestCell ? { name: bestCell.name, growth: 0 } : null,
+      bestAttendanceSection: bestSection ? { name: bestSection.name, attendance: bestSection.overallScore } : null,
+      mostActiveMinistry: bestMinistry ? { name: bestMinistry.name, overallScore: bestMinistry.overallScore } : null,
+    },
+    members: outMembers,
+    leaders: outLeaders,
+    sections: outSections,
+    departments: outDepartments,
+    cells: outCells,
+    insights,
+    awardsHistory: await getRecognitionHistory(season.seasonType, season.seasonKey),
+  };
+}
+
+async function computeAchievements(members, season) {
+  const defs = await all(`SELECT * FROM achievements`);
+  const earned = [];
+  for (const m of members) {
+    for (const a of defs) {
+      let met = false;
+      if (a.threshold_type === 'streak') met = (m.consecutive_streak || 0) >= a.threshold_value;
+      else if (a.threshold_type === 'evangelism') met = (m.evCount || 0) >= a.threshold_value;
+      else if (a.threshold_type === 'contributions') met = (m.hasContribution ? 1 : 0) >= a.threshold_value;
+      else if (a.threshold_type === 'overall') met = (m.overallScore || 0) >= a.threshold_value;
+      else if (a.threshold_type === 'submission_rate') met = (m.submission_rate || 0) >= a.threshold_value;
+      else if (a.threshold_type === 'cell_attendance') met = (m.components.cell_attendance || 0) >= a.threshold_value;
+      if (met) {
+        earned.push({ member_id: m.id, member_name: m.full_name, key: a.key, name: a.name, icon: a.icon, description: a.description, tier: a.tier });
+      }
+    }
+  }
+  return earned.slice(0, 60);
+}
+
+async function getProfile(entityType, entityId, filter, userId) {
+  const season = getFilterRange(filter);
+  const weights = await loadWeights();
+  let scored = [];
+  if (entityType === 'leader') scored = await scoreLeaders(season.start, season.end, 'all');
+  else scored = await scoreMembers(season.start, season.end, 'all');
+  const w = entityType === 'leader' ? weights.leader : weights.member;
+  const entity = scored.find(e => String(e.id) === String(entityId));
+  if (!entity) return null;
+  entity.overallScore = weighted(entity.components, w);
+  entity.level = performanceLevel(entity.overallScore);
+
+  // rank movement
+  const prev = prevSeasonOf(season);
+  if (prev) {
+    const prevScores = await scoreForSeason(prev);
+    const pr = prevScores.find(p => String(p.id) === String(entityId));
+    entity.prevRank = pr ? pr.rank : null;
+    entity.rankDelta = entity.prevRank ? entity.prevRank - entity.rank : 0;
+  }
+
+  const breakdown = Object.keys(entity.components).map(k => ({
+    key: k,
+    label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    score: clamp100(entity.components[k]),
+    weight: Number(w[k]) || 0,
+    points: Math.round(clamp100(entity.components[k]) * (Number(w[k]) || 0) / 100),
+    note: componentNote(k),
+  }));
+
+  const transactions = await all(
+    `SELECT * FROM point_transactions WHERE entity_type=? AND entity_id=? ORDER BY created_at DESC LIMIT 100`,
+    [entityType, entityId]
+  );
+  const achievements = await all(
+    `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,
+    [entityType, entityId]
+  );
+  const aiSummary = generateSummary(entity, season);
+
+  return { entity, breakdown, weights: w, transactions, achievements, aiSummary, season };
+}
+
+function componentNote(k) {
+  const notes = {
+    church_attendance: 'Share of church services attended (present ÷ total) this period.',
+    cell_attendance: 'Home-cell meeting participation. Not yet tracked separately.',
+    evangelism: 'Outreach logs + visitor intakes (25 points each).',
+    contributions: '100 if any contribution was recorded this period.',
+    events: 'Event/study participation. Not yet tracked separately.',
+    submission_rate: 'Share of service days the leader submitted attendance.',
+    member_attendance: 'Average church attendance of the leader’s members.',
+    retention: 'Member retention. Not yet tracked.',
+    cell_growth: 'Home-cell growth. Not yet tracked.',
+    followups: 'Share of assigned follow-ups marked complete.',
+    reports: 'Report submission. Not yet tracked.',
+  };
+  return notes[k] || '';
+}
+
+function generateSummary(entity, season) {
+  const parts = [];
+  parts.push(`${entity.full_name} achieved an overall performance score of ${entity.overallScore}/100, earning the level "${entity.level.name}".`);
+  const top = Object.entries(entity.components).sort((a, b) => b[1] - a[1])[0];
+  if (top) parts.push(`Strongest area: ${top[0].replace(/_/g, ' ')} at ${Math.round(top[1])}%.`);
+  const weak = Object.entries(entity.components).sort((a, b) => a[1] - b[1])[0];
+  if (weak && weak[1] < 60) parts.push(`Growth opportunity: ${weak[0].replace(/_/g, ' ')} at ${Math.round(weak[1])}%.`);
+  if (entity.rankDelta > 0) parts.push(`Rank improved by ${entity.rankDelta} positions this ${season.seasonType}.`);
+  else if (entity.rankDelta < 0) parts.push(`Rank dropped by ${Math.abs(entity.rankDelta)} positions — encourage consistent service.`);
+  return parts.join(' ');
+}
+
+async function getRecognitionHistory(seasonType, seasonKey) {
+  let sql = `SELECT * FROM recognition_history`;
+  const params = [];
+  if (seasonType) { sql += ` WHERE season_type = ?`; params.push(seasonType); }
+  if (seasonKey) { sql += (params.length ? ' AND' : ' WHERE') + ` season_key = ?`; params.push(seasonKey); }
+  sql += ` ORDER BY awarded_at DESC LIMIT 100`;
+  return all(sql, params);
+}
+
+async function awardRecognition(season, category, entityType, entityId, entityName, rank, score, recognitionType) {
+  await run(
+    `INSERT INTO recognition_history (season_type, season_key, category, entity_type, entity_id, entity_name, rank, score, recognition_type)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [season.seasonType, season.seasonKey, category, entityType, entityId, entityName, rank, score, recognitionType]
+  );
+}
+
+async function getAuditLog({ entityType, entityId, seasonType, limit = 200 }) {
+  let sql = `SELECT * FROM point_transactions WHERE 1=1`;
+  const params = [];
+  if (entityType) { sql += ` AND entity_type = ?`; params.push(entityType); }
+  if (entityId) { sql += ` AND entity_id = ?`; params.push(entityId); }
+  if (seasonType) { sql += ` AND season_type = ?`; params.push(seasonType); }
+  sql += ` ORDER BY created_at DESC LIMIT ?`;
+  params.push(Number(limit) || 200);
+  return all(sql, params);
+}
+
+async function getPenalties() {
+  return all(`SELECT * FROM performance_penalties ORDER BY label`);
+}
+
+async function adjustPoints({ entityType, entityId, category, points, reason, created_by }) {
+  await run(
+    `INSERT INTO point_transactions (entity_type, entity_id, season_type, season_key, category, points, reason, created_by)
+     VALUES (?, ?, 'manual', 'manual', ?, ?, ?, ?)`,
+    [entityType, entityId, category, points, reason, created_by]
+  );
+  return { ok: true };
+}
+
+module.exports = {
+  ensurePerformanceSchema,
+  getDashboard,
+  getProfile,
+  getRecognitionHistory,
+  awardRecognition,
+  getAuditLog,
+  loadWeights,
+  updateWeights,
+  getPenalties,
+  adjustPoints,
+  getFilterRange,
+  performanceLevel,
+};

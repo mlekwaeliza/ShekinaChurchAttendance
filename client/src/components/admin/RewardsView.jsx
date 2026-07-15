@@ -228,6 +228,20 @@ const RewardsView = () => {
   const [localWeights, setLocalWeights] = useState(null);
   const [savingWeights, setSavingWeights] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [profileDetail, setProfileDetail] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [awarding, setAwarding] = useState(false);
+
+  const openProfile = (item, type) => setSelectedProfile({ type, item });
+
+  useEffect(() => {
+    if (!selectedProfile) { setProfileDetail(null); return; }
+    setProfileLoading(true);
+    adminAPI.getPerformanceProfile(selectedProfile.type, selectedProfile.item.id, filter)
+      .then(res => setProfileDetail(res.data))
+      .catch(() => setProfileDetail(null))
+      .finally(() => setProfileLoading(false));
+  }, [selectedProfile, filter]);
 
   const tabs = [
     { id: 'members', label: 'Members', icon: <Users size={14} /> },
@@ -478,6 +492,11 @@ const RewardsView = () => {
               { label: '⛪ Attendance', key: 'churchAttendance' },
               { label: '🔥 Evangelism', key: 'evangelism' },
               { label: '🏠 Cell', key: 'cellAttendance' },
+              { label: '⭐ Giving', key: 'contributions' },
+              { label: '👨 Men', key: 'men' },
+              { label: '👩 Women', key: 'women' },
+              { label: '🧒 Youth', key: 'youth' },
+              { label: '🙌 Visitors/Evangelists', key: 'visitors' },
             ].map(({ label, key }) => (
               <button key={key} style={{ padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', color: '#818CF8' }}>
                 {label}
@@ -487,12 +506,12 @@ const RewardsView = () => {
           {members.length === 0 ? (
             <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No member data available for this period.</p>
           ) : (
-            members.slice(0, 20).map((m, i) => (
+            members.map((m, i) => (
               <LeaderboardRow key={m.id} item={m} rank={m.rank || i + 1}
                 nameKey="full_name" subKey="section_name"
                 scoreKey="overallScore" subLabel="Score"
                 metricColor="#6366F1"
-                onClick={setSelectedProfile}
+                onClick={(item) => openProfile(item, 'member')}
               />
             ))
           )}
@@ -510,7 +529,7 @@ const RewardsView = () => {
                 nameKey="leader_name" subKey="section_name"
                 scoreKey="overallScore" subLabel="Score"
                 metricColor="#A78BFA"
-                onClick={setSelectedProfile}
+                onClick={(item) => openProfile(item, 'leader')}
               />
             ))
           )}
@@ -526,7 +545,7 @@ const RewardsView = () => {
             cells.map((c, i) => {
               const enhanced = { ...c, rankDelta: ((c.id * 2) % 5) - 2, badges: [] };
               return (
-                <div key={c.id} onClick={() => setSelectedProfile(c)} style={{
+                <div key={c.id} onClick={() => openProfile(c, 'cell')} style={{
                   cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
                   background: i < 3 ? `linear-gradient(135deg, ${getRankMedal(i + 1).bg}, transparent)` : 'rgba(15,23,42,0.4)',
@@ -560,7 +579,7 @@ const RewardsView = () => {
             <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No section data for this period.</p>
           ) : (
             sections.map((sec, i) => (
-              <div key={sec.id} onClick={() => setSelectedProfile(sec)} style={{
+              <div key={sec.id} onClick={() => openProfile(sec, 'section')} style={{
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
                 background: i < 3 ? `linear-gradient(135deg, ${getRankMedal(i + 1).bg}, transparent)` : 'rgba(15,23,42,0.4)',
@@ -592,7 +611,7 @@ const RewardsView = () => {
             <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No ministry data for this period.</p>
           ) : (
             departments.map((d, i) => (
-              <div key={d.id} onClick={() => setSelectedProfile(d)} style={{
+              <div key={d.id} onClick={() => openProfile(d, 'department')} style={{
                 cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
                 background: i < 3 ? `linear-gradient(135deg, ${getRankMedal(i + 1).bg}, transparent)` : 'rgba(15,23,42,0.4)',
@@ -619,7 +638,16 @@ const RewardsView = () => {
 
       {activeTab === 'awards' && (
         <div style={s.section}>
-          <div style={s.sectionTitle}><Trophy size={14} /> Awards History</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+            <div style={s.sectionTitle}><Trophy size={14} /> Awards History</div>
+            <button onClick={async () => {
+              setAwarding(true);
+              try { await adminAPI.awardPerformanceSeason({ filter }); await load(); } catch (e) {} finally { setAwarding(false); }
+            }} disabled={awarding} style={{ padding: '8px 16px', borderRadius: 10, background: 'linear-gradient(135deg, #F59E0B, #D97706)', border: 'none', color: '#FFF', cursor: awarding ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, opacity: awarding ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {awarding ? <Loader2 size={14} className="animate-spin" /> : <Trophy size={14} />}
+              {awarding ? 'Recording…' : 'Award Season Champions'}
+            </button>
+          </div>
           {awards.length === 0 ? (
             <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No awards recorded yet.</p>
           ) : (
