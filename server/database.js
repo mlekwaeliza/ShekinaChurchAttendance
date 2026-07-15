@@ -5456,6 +5456,7 @@ module.exports = {
     `, [start, end, start, end, start, end, start, start, end, start, end, start, end]),
   all,
   transaction,
+  usePostgres,
   ensureHomeCellSchema,
   ensureEvangelismSchema,
   migrateUsersRoleConstraint,
