@@ -15,6 +15,17 @@ const fmt = v => `TZS ${Number(v||0).toLocaleString()}`;
 const pct = v => `${Math.round(Number(v||0)*10)/10}%`;
 const num = v => Number(v||0).toLocaleString();
 const R = v => Math.round(Number(v||0)*10)/10;
+const MONTHS_SHORT = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const weekToDate = (weekStr) => {
+  const [y, w] = String(weekStr).split('-W').map(Number);
+  if (!y || !w) return weekStr;
+  const simple = new Date(Date.UTC(y, 0, 1 + (w - 1) * 7));
+  const day = simple.getUTCDay();
+  const isoStart = new Date(simple);
+  if (day <= 4) isoStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
+  else isoStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+  return `${isoStart.getUTCDate()} ${MONTHS_SHORT[isoStart.getUTCMonth() + 1]}`;
+};
 
 const CHIP = {
   success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -166,7 +177,7 @@ const ExecutiveComparison = () => {
       setMemberMatrixLoading(true);
       try {
         const numWeeks = Math.max(periods.length * 4, 4);
-        const res = await analyticsAPI.getMemberWeeklyMatrix({ weeks: numWeeks });
+        const res = await analyticsAPI.getMemberWeeklyMatrix({ weeks: numWeeks, serviceId: 'all' });
         setMemberMatrix(res.data.matrix || []);
         setMemberMatrixWeeks(res.data.weeks || []);
       } catch (e) { console.error('Failed to load member matrix:', e); setMemberMatrix([]); }
@@ -664,7 +675,7 @@ const ExecutiveComparison = () => {
                       <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900/40 w-44 shrink-0 px-3 py-2">Member</div>
                       <div className="w-28 shrink-0 px-3 py-2">Section</div>
                       {memberMatrixWeeks.map(w => (
-                        <div key={w} className="w-20 shrink-0 px-2 py-2 text-center">{w.replace('Week', 'Wk')}</div>
+                        <div key={w} className="w-20 shrink-0 px-2 py-2 text-center">{weekToDate(w)}</div>
                       ))}
                     </div>
                     {memberMatrix.filter(m => !search || m.full_name.toLowerCase().includes(search.toLowerCase())).map(m => (
