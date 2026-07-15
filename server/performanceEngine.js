@@ -470,8 +470,10 @@ async function getDashboard(filter, serviceId, userId) {
   const outDepartments = rankedDepartments.map(g => flattenGroup(g));
   const outCells = rankedCells.map(g => flattenGroup(g));
 
-  // Achievements (per member this season)
-  const achievements = await computeAchievements(rankedMembers, season);
+  // Achievements (per member and leader this season — persisted to entity_achievements)
+  const memberAchievements = await computeAchievements(rankedMembers, season, 'member');
+  const leaderAchievements = await computeAchievements(rankedLeaders, season, 'leader');
+  const achievements = [...memberAchievements, ...leaderAchievements];
 
   // Insights
   const topMover = [...rankedMembers].sort((a, b) => (b.rankDelta || 0) - (a.rankDelta || 0))[0];
@@ -513,20 +515,26 @@ async function getDashboard(filter, serviceId, userId) {
   };
 }
 
-async function computeAchievements(members, season) {
+async function computeAchievements(entities, season, entityType = 'member') {
   const defs = await all(`SELECT * FROM achievements`);
   const earned = [];
-  for (const m of members) {
+  for (const e of entities) {
     for (const a of defs) {
       let met = false;
-      if (a.threshold_type === 'streak') met = (m.consecutive_streak || 0) >= a.threshold_value;
-      else if (a.threshold_type === 'evangelism') met = (m.evCount || 0) >= a.threshold_value;
-      else if (a.threshold_type === 'contributions') met = (m.hasContribution ? 1 : 0) >= a.threshold_value;
-      else if (a.threshold_type === 'overall') met = (m.overallScore || 0) >= a.threshold_value;
-      else if (a.threshold_type === 'submission_rate') met = (m.submission_rate || 0) >= a.threshold_value;
-      else if (a.threshold_type === 'cell_attendance') met = (m.components.cell_attendance || 0) >= a.threshold_value;
+      if (a.threshold_type === 'streak') met = (e.consecutive_streak || 0) >= a.threshold_value;
+      else if (a.threshold_type === 'evangelism') met = (e.evCount || 0) >= a.threshold_value;
+      else if (a.threshold_type === 'contributions') met = (e.hasContribution ? 1 : 0) >= a.threshold_value;
+      else if (a.threshold_type === 'overall') met = (e.overallScore || 0) >= a.threshold_value;
+      else if (a.threshold_type === 'submission_rate') met = (e.submission_rate || 0) >= a.threshold_value;
+      else if (a.threshold_type === 'cell_attendance') met = (e.components.cell_attendance || 0) >= a.threshold_value;
       if (met) {
-        earned.push({ member_id: m.id, member_name: m.full_name, key: a.key, name: a.name, icon: a.icon, description: a.description, tier: a.tier });
+        earned.push({ entity_id: e.id, entity_name: e.full_name, key: a.key, name: a.name, icon: a.icon, description: a.description, tier: a.tier });
+        try {
+          await run(
+            `INSERT OR IGNORE INTO entity_achievements (entity_type, entity_id, achievement_key, season_key) VALUES (?, ?, ?, ?)`,
+            [entityType, e.id, a.key, season.seasonKey]
+          );
+        } catch (_) { /* duplicate or schema issue — ignore */ }
       }
     }
   }
