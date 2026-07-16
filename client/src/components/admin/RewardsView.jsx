@@ -795,122 +795,308 @@ const RewardsView = () => {
 
       {/* ── Profile Modal ── */}
       {selectedProfile && createPortal((() => {
-        const profile = selectedProfile.item;
-        const isAggregate = profile.churchAttendance == null && profile.submissionRate == null;
-        const isLeader = profile.submissionRate != null;
-        const metricDefs = isAggregate ? AGG_METRICS : SCORE_METRICS;
-        const weights = isAggregate ? null : (isLeader ? data.weights?.leader : data.weights?.member);
-        const rows = metricDefs
-          .filter(m => profile[m.key] != null)
-          .map(m => {
-            const value = profile[m.key];
-            const weight = weights ? (weights[m.weightKey] ?? 0) : null;
-            const contribution = weight != null ? Math.round((value * weight) / 100) : null;
-            return { ...m, value, weight, contribution };
-          });
-        const profileName = profile.full_name || profile.leader_name || profile.name || '—';
+        const item = selectedProfile.item;
+        const entityType = selectedProfile.type;
+        const d = profileDetail;
+        const isLoading = profileLoading;
+        const isGroup = entityType === 'section' || entityType === 'department' || entityType === 'cell';
 
-        const infoFields = [];
-        if (!isAggregate && !isLeader) {
-          if (profile.membership_id) infoFields.push({ label: 'Membership ID', value: profile.membership_id });
-          if (profile.section_name) infoFields.push({ label: 'Section', value: profile.section_name });
-          if (profile.leader_name) infoFields.push({ label: 'Leader', value: profile.leader_name });
-          if (profile.gender) infoFields.push({ label: 'Gender', value: profile.gender });
-          if (profile.age_group) infoFields.push({ label: 'Age Group', value: profile.age_group });
-        } else if (isLeader) {
-          if (profile.section_name) infoFields.push({ label: 'Section', value: profile.section_name });
-          if (profile.memberCount != null) infoFields.push({ label: 'Members', value: profile.memberCount });
-        } else {
-          if (profile.name) infoFields.push({ label: 'Name', value: profile.name });
-          if (profile.membersCount != null) infoFields.push({ label: 'Members', value: profile.membersCount });
+        if (isLoading || !d) {
+          return (
+            <div style={s.modal} onClick={e => { if (e.target === e.currentTarget) setSelectedProfile(null); }}>
+              <div style={s.modalBox}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#F1F5F9' }}>{item.full_name || item.name || 'Profile'}</h3>
+                  <button onClick={() => setSelectedProfile(null)} style={{ background: 'rgba(71,85,105,0.3)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}><X size={16} /></button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, gap: 12 }}>
+                  <div style={{ width: 36, height: 36, border: '3px solid rgba(99,102,241,0.3)', borderTopColor: '#6366F1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <p style={{ color: '#64748B', fontSize: 13 }}>Loading profile…</p>
+                </div>
+              </div>
+            </div>
+          );
         }
 
+        const e = d.entity;
+        const ai = d.attendanceIntelligence || {};
+        const tl = d.timeline || [];
+        const tlStats = d.timelineStats || {};
+        const rel = d.reliability || {};
+        const cmp = d.comparison || {};
+        const ach = d.achievements || [];
+        const pred = d.predictions || {};
+        const bk = d.breakdown || [];
+        const insight = d.aiInsight || '';
+
+        const sectionTitle = { fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B', marginBottom: 10 };
+        const card = { background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: 10, padding: '10px 12px' };
+        const statLabel = { margin: 0, fontSize: 10, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' };
+        const statValue = { margin: '2px 0 0', fontSize: 15, fontWeight: 800, color: '#F1F5F9' };
+        const miniLabel = { margin: 0, fontSize: 9, fontWeight: 600, color: '#64748B' };
+        const miniValue = { margin: '1px 0 0', fontSize: 13, fontWeight: 700, color: '#CBD5E1' };
+
+        const MetricRow = ({ label, value, sub, color }) => (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+            <span style={{ fontSize: 12, color: '#CBD5E1' }}>{label}</span>
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: color || '#F1F5F9' }}>{value}</span>
+              {sub && <span style={{ fontSize: 10, color: '#64748B', marginLeft: 6 }}>{sub}</span>}
+            </div>
+          </div>
+        );
+
+        const ScoreBarSmall = ({ value, color = '#6366F1' }) => (
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden', width: '100%', marginTop: 4 }}>
+            <div style={{ height: '100%', width: `${Math.min(100, value)}%`, background: color, borderRadius: 2 }} />
+          </div>
+        );
+
         return (
-          <div style={s.modal} onClick={e => { if (e.target === e.currentTarget) setSelectedProfile(null); }}>
-            <div style={s.modalBox}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#F1F5F9' }}>
-                    {profileName}
-                  </h3>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748B' }}>
-                    {profile.overallScore != null ? `Overall Score: ${profile.overallScore}%` : ''}
-                  </p>
+          <div style={s.modal} onClick={ev => { if (ev.target === ev.currentTarget) setSelectedProfile(null); }}>
+            <div style={{ ...s.modalBox, maxWidth: 700 }}>
+
+              {/* ── 1. Executive Profile ── */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1, #818CF8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#FFF' }}>
+                      {(e.full_name || '?')[0]}
+                    </div>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#F1F5F9', lineHeight: 1.2 }}>{e.full_name || e.name || '—'}</h3>
+                      <p style={{ margin: '2px 0 0', fontSize: 11, color: e.level?.color || '#818CF8', fontWeight: 700 }}>
+                        {e.level?.name || 'Member'} {e.grade && `• Grade ${e.grade}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 6, marginTop: 8 }}>
+                    {e.section_name && <div style={miniLabel}><span style={{ color: '#64748B' }}>Section: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.section_name}</span></div>}
+                    {e.leader_name && entityType === 'member' && <div style={miniLabel}><span style={{ color: '#64748B' }}>Leader: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.leader_name}</span></div>}
+                    {e.membership_id && <div style={miniLabel}><span style={{ color: '#64748B' }}>ID: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.membership_id}</span></div>}
+                    {e.gender && <div style={miniLabel}><span style={{ color: '#64748B' }}>Gender: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.gender}</span></div>}
+                    {e.age_group && <div style={miniLabel}><span style={{ color: '#64748B' }}>Age: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.age_group}</span></div>}
+                  </div>
                 </div>
-                <button onClick={() => setSelectedProfile(null)} style={{ background: 'rgba(71,85,105,0.3)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}>
-                  <X size={16} />
-                </button>
+                <div style={{ textAlign: 'right', minWidth: 120 }}>
+                  <div style={{ fontSize: 32, fontWeight: 800, color: e.gradeColor || '#818CF8', lineHeight: 1 }}>{e.overallScore}</div>
+                  <div style={{ fontSize: 10, color: '#64748B', marginBottom: 4 }}>out of 100</div>
+                  {e.rank && <div style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9' }}>Rank #{e.rank}{e.totalEntities ? ` of ${e.totalEntities}` : ''}</div>}
+                  {e.prevRank && <div style={{ fontSize: 11, color: e.rankDelta > 0 ? '#34D399' : e.rankDelta < 0 ? '#F87171' : '#64748B' }}>
+                    {e.rankDelta > 0 ? `↑ +${e.rankDelta}` : e.rankDelta < 0 ? `↓ ${e.rankDelta}` : '—'}
+                    <span style={{ color: '#64748B', marginLeft: 4 }}>from #{e.prevRank}</span>
+                  </div>}
+                  <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>
+                    {e.riskLevel === 'Low' ? '🟢 Low Risk' : e.riskLevel === 'Medium' ? '🟡 Medium Risk' : '🔴 High Risk'}
+                  </div>
+                </div>
               </div>
 
-              {/* Info fields */}
-              {infoFields.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8, marginBottom: 16 }}>
-                  {infoFields.map((f, i) => (
-                    <div key={i} style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: 10, padding: '10px 12px' }}>
-                      <p style={{ margin: 0, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748B' }}>{f.label}</p>
-                      <p style={{ margin: '3px 0 0', fontSize: 14, fontWeight: 700, color: '#F1F5F9' }}>{f.value}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Badges */}
-              {profile.badges?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                  {profile.badges.map((b, i) => <Badge key={i} badge={b} />)}
-                </div>
-              )}
-
-              {/* Quick stat cards for individual profiles */}
-              {!isAggregate && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8, marginBottom: 16 }}>
-                  {[
-                    { label: 'Attendance', value: profile.churchAttendance, color: '#6366F1' },
-                    { label: 'Cell', value: profile.cellAttendance, color: '#A78BFA' },
-                    { label: 'Evangelism', value: profile.evangelism, color: '#F97316' },
-                    { label: 'Contributions', value: profile.contributions, color: '#FBBF24' },
-                    { label: 'Events', value: profile.eventParticipation, color: '#38BDF8' },
-                    isLeader ? { label: 'Submission', value: profile.submissionRate, color: '#6366F1' } : null,
-                    isLeader ? { label: 'Follow-ups', value: profile.followupCompletion, color: '#34D399' } : null,
-                  ].filter(Boolean).map((stat, i) => (
-                    <div key={i} style={{ background: `${stat.color}10`, border: `1px solid ${stat.color}20`, borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
-                      <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: stat.color, lineHeight: 1 }}>{stat.value != null ? stat.value : '—'}</p>
-                      <p style={{ margin: '3px 0 0', fontSize: 10, fontWeight: 600, color: '#64748B' }}>{stat.label}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Score breakdown */}
-              <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 12, padding: '14px 16px' }}>
-                <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: '#64748B', letterSpacing: '0.07em' }}>
-                  Score Breakdown {weights ? '(value × weight = contribution)' : '(group metrics)'}
-                </p>
-                {rows.map((r, i) => (
-                  <div key={i} style={{ marginBottom: 14 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, color: '#CBD5E1' }}>
-                        {r.label}
-                        {r.key === 'speedScore' && profile.avgSubmissionTime && (
-                          <span style={{ fontSize: 11, color: '#64748B', marginLeft: 6 }}>(Avg time: {profile.avgSubmissionTime})</span>
-                        )}
-                      </span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: r.color }}>
-                        {r.value}{r.key === 'membersCount' || r.key === 'visitors' ? '' : '%'}
-                        {r.weight != null && <span style={{ fontWeight: 400, color: '#64748B', marginLeft: 6 }}>× {r.weight}%</span>}
-                        {r.contribution != null && <span style={{ fontWeight: 700, color: '#94A3B8', marginLeft: 6 }}>+{r.contribution}</span>}
-                      </span>
-                    </div>
-                    <ScoreBar value={r.key === 'membersCount' || r.key === 'visitors' ? 100 : r.value} color={r.color} />
-                    {r.note && <p style={{ margin: '5px 0 0', fontSize: 11, color: '#64748B', lineHeight: 1.4 }}>{r.note}</p>}
+              {/* ── 2. Ministry Health Cards ── */}
+              {!isGroup && (
+                <>
+                  <p style={sectionTitle}>Ministry Health</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginBottom: 18 }}>
+                    {[
+                      { label: 'Attendance', value: `${ai.lifetimeAttendance || e.churchAttendance || 0}%`, sub: ai.currentStreak ? `${ai.currentStreak} streak` : '', color: '#6366F1' },
+                      { label: 'Last Present', value: ai.lastPresent || '—', sub: '', color: '#34D399' },
+                      { label: 'Consec. Absent', value: ai.total && ai.absent ? `${ai.absent}` : '0', sub: '', color: ai.absent > 2 ? '#F87171' : '#34D399' },
+                      { label: 'Lifetime', value: `${ai.presentCount || 0}`, sub: `of ${ai.total || 0} services`, color: '#818CF8' },
+                      { label: 'Ministries', value: `${e.ministryCount || 0}`, sub: (e.departments || []).join(', ') || 'None', color: '#A78BFA' },
+                      { label: 'Evangelism', value: `${e.evCount || 0}`, sub: 'souls invited', color: '#F97316' },
+                      { label: 'Giving', value: e.hasContribution ? 'Regular' : 'None', sub: '', color: '#FBBF24' },
+                      { label: 'Leadership', value: e.leadershipPotential || 'Low', sub: '', color: e.leadershipPotential === 'High' ? '#22C55E' : '#94A3B8' },
+                      { label: 'Follow-up', value: e.followUpNeeded ? 'YES' : 'NO', sub: '', color: e.followUpNeeded ? '#F87171' : '#34D399' },
+                    ].map((c, i) => (
+                      <div key={i} style={{ ...card, borderLeft: `3px solid ${c.color}` }}>
+                        <p style={statLabel}>{c.label}</p>
+                        <p style={{ ...statValue, color: c.color, fontSize: 14 }}>{c.value}</p>
+                        {c.sub && <p style={{ margin: '1px 0 0', fontSize: 9, color: '#64748B' }}>{c.sub}</p>}
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {weights && (
-                  <div style={{ marginTop: 8, paddingTop: 10, borderTop: '1px solid rgba(99,102,241,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#94A3B8' }}>Sum of contributions → Overall</span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: '#818CF8' }}>{profile.overallScore}%</span>
+                </>
+              )}
+
+              {/* ── 3. Performance Timeline ── */}
+              {tl.length > 0 && (
+                <>
+                  <p style={sectionTitle}>Performance Timeline</p>
+                  <div style={{ ...card, marginBottom: 18 }}>
+                    <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 60, marginBottom: 8 }}>
+                      {tl.map((m, i) => (
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                          <div style={{ width: '100%', height: m.attendance != null ? `${m.attendance * 0.55}px` : '2px', background: m.attendance != null ? (m.attendance >= 80 ? '#34D399' : m.attendance >= 50 ? '#FBBF24' : '#F87171') : 'rgba(255,255,255,0.06)', borderRadius: 3, minHeight: 2 }} />
+                          <span style={{ fontSize: 8, color: '#64748B' }}>{m.month}</span>
+                          <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>{m.attendance != null ? `${m.attendance}%` : '—'}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, fontSize: 11, color: '#94A3B8' }}>
+                      <span>Avg: <b style={{ color: '#F1F5F9' }}>{tlStats.avg}%</b></span>
+                      <span>Best: <b style={{ color: '#34D399' }}>{tlStats.bestMonth || '—'}</b></span>
+                      <span>Worst: <b style={{ color: '#F87171' }}>{tlStats.worstMonth || '—'}</b></span>
+                      <span>Trend: <b style={{ color: tlStats.trend === 'Improving' ? '#34D399' : tlStats.trend === 'Declining' ? '#F87171' : '#FBBF24' }}>{tlStats.trend || '—'}</b></span>
+                    </div>
                   </div>
-                )}
+                </>
+              )}
+
+              {/* ── 4. Reliability Analysis ── */}
+              {rel.overall != null && (
+                <>
+                  <p style={sectionTitle}>Reliability Analysis</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
+                    <div style={{ ...card, gridColumn: 'span 1' }}>
+                      {[
+                        { label: 'Attendance', value: rel.attendance },
+                        { label: 'Consistency', value: rel.consistency },
+                        { label: 'Participation', value: rel.participation },
+                        { label: 'Leadership', value: rel.leadership },
+                        { label: 'Evangelism', value: rel.evangelism },
+                        { label: 'Giving', value: rel.giving },
+                        { label: 'Cell', value: rel.cell },
+                      ].map((r, i) => (
+                        <div key={i} style={{ marginBottom: 8 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 11, color: '#CBD5E1' }}>{r.label}</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: r.value >= 80 ? '#34D399' : r.value >= 50 ? '#FBBF24' : '#F87171' }}>{r.value}/100</span>
+                          </div>
+                          <ScoreBarSmall value={r.value} color={r.value >= 80 ? '#34D399' : r.value >= 50 ? '#FBBF24' : '#F87171'} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ ...card, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ fontSize: 36, fontWeight: 800, color: rel.gradeColor || '#818CF8', lineHeight: 1 }}>{rel.overall}</div>
+                      <div style={{ fontSize: 10, color: '#64748B', marginTop: 4 }}>Overall Reliability</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: rel.gradeColor || '#818CF8', marginTop: 4 }}>Grade {rel.grade}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ── 5. Attendance Intelligence ── */}
+              {!isGroup && ai.present != null && (
+                <>
+                  <p style={sectionTitle}>Attendance Intelligence</p>
+                  <div style={{ ...card, marginBottom: 18 }}>
+                    <MetricRow label="Church Services" value={`${ai.present} / ${ai.total || '?'}`} sub="present / total" />
+                    <MetricRow label="Present" value={ai.present} color="#34D399" />
+                    <MetricRow label="Absent" value={ai.absent} color={ai.absent > 2 ? '#F87171' : '#CBD5E1'} />
+                    <MetricRow label="Excused" value={ai.excused || 0} color="#FBBF24" />
+                    <MetricRow label="Current Streak" value={`${ai.currentStreak || 0} services`} color="#818CF8" />
+                    <MetricRow label="Longest Streak" value={`${ai.longestStreak || 0} services`} />
+                    <MetricRow label="Lifetime Attendance" value={`${ai.lifetimeAttendance || 0}%`} color="#6366F1" />
+                    <MetricRow label="Last Absent" value={ai.lastAbsent || 'Never'} />
+                    <MetricRow label="Trend" value={ai.trend || '—'} color={ai.trend === 'Improving' ? '#34D399' : ai.trend === 'Declining' ? '#F87171' : '#FBBF24'} />
+                    <MetricRow label="Attendance Rank" value={e.rank ? `#${e.rank} of ${e.totalEntities || '?'}` : '—'} />
+                  </div>
+                </>
+              )}
+
+              {/* ── 6. Ministry Intelligence (leaders) ── */}
+              {entityType === 'leader' && (
+                <>
+                  <p style={sectionTitle}>Ministry Intelligence</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginBottom: 18 }}>
+                    {[
+                      { label: 'Submission Rate', value: `${e.submissionRate || 0}%` },
+                      { label: 'Member Attendance', value: `${e.memberAttendance || 0}%` },
+                      { label: 'Follow-ups', value: `${e.followups || 0}` },
+                      { label: 'Evangelism', value: `${e.evangelism || 0}` },
+                      { label: 'Retention', value: `${e.retention || 0}%` },
+                      { label: 'Cell Growth', value: `${e.cellGrowth || 0}%` },
+                    ].map((c, i) => (
+                      <div key={i} style={card}>
+                        <p style={statLabel}>{c.label}</p>
+                        <p style={statValue}>{c.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* ── 7. Achievements ── */}
+              {ach.length > 0 && (
+                <>
+                  <p style={sectionTitle}>Achievements</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                    {ach.map((a, i) => (
+                      <div key={i} style={{ background: a.tier === 'gold' ? 'rgba(245,158,11,0.12)' : a.tier === 'silver' ? 'rgba(148,163,184,0.12)' : 'rgba(99,102,241,0.08)', border: `1px solid ${a.tier === 'gold' ? 'rgba(245,158,11,0.3)' : a.tier === 'silver' ? 'rgba(148,163,184,0.3)' : 'rgba(99,102,241,0.2)'}`, borderRadius: 8, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 14 }}>{a.icon || '🏅'}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: '#F1F5F9' }}>{a.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* ── 8. Performance Breakdown (replaces old Score Breakdown) ── */}
+              {bk.length > 0 && (
+                <>
+                  <p style={sectionTitle}>Performance Breakdown</p>
+                  <div style={{ ...card, marginBottom: 18 }}>
+                    {bk.map((r, i) => (
+                      <div key={i} style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                          <span style={{ fontSize: 12, color: '#CBD5E1' }}>{r.label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: r.score >= 80 ? '#34D399' : r.score >= 50 ? '#FBBF24' : '#F87171' }}>{r.score}/100</span>
+                        </div>
+                        <ScoreBarSmall value={r.score} color={r.score >= 80 ? '#34D399' : r.score >= 50 ? '#FBBF24' : '#F87171'} />
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(99,102,241,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#94A3B8' }}>Total Score</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: e.gradeColor || '#818CF8' }}>{e.overallScore}/100 • Grade {e.grade}</span>
+                    </div>
+                    {cmp.churchAvg != null && (
+                      <div style={{ marginTop: 6, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 11 }}>
+                        <div style={{ textAlign: 'center' }}><span style={{ color: '#64748B' }}>Church Avg</span><br /><b style={{ color: '#F1F5F9' }}>{cmp.churchAvg}%</b></div>
+                        <div style={{ textAlign: 'center' }}><span style={{ color: '#64748B' }}>Section Avg</span><br /><b style={{ color: '#F1F5F9' }}>{cmp.sectionAvg}%</b></div>
+                        <div style={{ textAlign: 'center' }}><span style={{ color: '#64748B' }}>Difference</span><br /><b style={{ color: (e.overallScore - cmp.churchAvg) >= 0 ? '#34D399' : '#F87171' }}>{e.overallScore - cmp.churchAvg >= 0 ? '+' : ''}{e.overallScore - cmp.churchAvg}</b></div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {/* ── 9. AI Pastoral Insight ── */}
+              {insight && (
+                <>
+                  <p style={sectionTitle}>Pastoral Insight</p>
+                  <div style={{ ...card, borderLeft: '3px solid #818CF8', marginBottom: 18 }}>
+                    <p style={{ margin: 0, fontSize: 12, color: '#CBD5E1', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{insight}</p>
+                  </div>
+                </>
+              )}
+
+              {/* ── 10. Predictions ── */}
+              {pred.attendanceNextMonth != null && (
+                <>
+                  <p style={sectionTitle}>Predictions</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8, marginBottom: 8 }}>
+                    {[
+                      { label: 'Attendance Next Month', value: `${pred.attendanceNextMonth}%` },
+                      { label: 'Leadership Readiness', value: `${pred.leadershipReadiness}%` },
+                      { label: 'Inactive Risk', value: `${pred.riskOfBecomingInactive}%`, color: pred.riskOfBecomingInactive > 30 ? '#F87171' : '#34D399' },
+                      { label: 'Volunteer Potential', value: pred.volunteerPotential || '—' },
+                      { label: 'Promotion', value: pred.promotionRecommendation ? 'YES' : 'NO', color: pred.promotionRecommendation ? '#34D399' : '#94A3B8' },
+                      { label: 'Follow-up Priority', value: pred.followUpPriority || 'LOW', color: pred.followUpPriority === 'High' ? '#F87171' : '#34D399' },
+                    ].map((p, i) => (
+                      <div key={i} style={card}>
+                        <p style={statLabel}>{p.label}</p>
+                        <p style={{ ...statValue, color: p.color || '#F1F5F9', fontSize: 14 }}>{p.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Close button */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                <button onClick={() => setSelectedProfile(null)} style={{ padding: '8px 20px', borderRadius: 8, background: 'rgba(71,85,105,0.3)', border: '1px solid rgba(71,85,105,0.3)', color: '#94A3B8', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                  Close
+                </button>
               </div>
             </div>
           </div>

@@ -563,35 +563,202 @@ async function getProfile(entityType, entityId, filter, userId) {
   entity.overallScore = weighted(entity.components, w);
   entity.level = performanceLevel(entity.overallScore);
 
-  // rank movement
+  // rank + rank movement
+  const allScores = scored.map(e => ({ id: e.id, score: weighted(e.components, w) }));
+  allScores.sort((a, b) => b.score - a.score);
+  allScores.forEach((e, i) => { e.rank = i + 1; });
+  const rankEntry = allScores.find(e => String(e.id) === String(entityId));
+  entity.rank = rankEntry ? rankEntry.rank : null;
+  entity.totalEntities = allScores.length;
   const prev = prevSeasonOf(season);
   if (prev) {
     const prevScores = await scoreForSeason(prev);
     const pr = prevScores.find(p => String(p.id) === String(entityId));
     entity.prevRank = pr ? pr.rank : null;
     entity.rankDelta = entity.prevRank ? entity.prevRank - entity.rank : 0;
+  } else {
+    entity.prevRank = null;
+    entity.rankDelta = 0;
   }
 
+  // ── Attendance intelligence ──
+  const attRows = await all(
+    `SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`,
+    [entityId]
+  );
+  const presentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'present').length;
+  const absentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'absent').length;
+  const excusedCount = attRows.filter(r => (r.status || '').toLowerCase() === 'excused').length;
+  const totalLifetime = attRows.length;
+  const lifetimeAttendance = totalLifetime ? Math.round((presentCount / totalLifetime) * 100) : 0;
+
+  // Current streak (consecutive present from most recent)
+  let currentStreak = 0;
+  for (let i = attRows.length - 1; i >= 0; i--) {
+    if ((attRows[i].status || '').toLowerCase() === 'present') currentStreak++;
+    else break;
+  }
+  // Longest streak
+  let longestStreak = 0, streak = 0;
+  for (const r of attRows) {
+    if ((r.status || '').toLowerCase() === 'present') { streak++; longestStreak = Math.max(longestStreak, streak); }
+    else streak = 0;
+  }
+  // Last absent date
+  const lastAbsentRow = [...attRows].reverse().find(r => (r.status || '').toLowerCase() === 'absent');
+  const lastAbsent = lastAbsentRow ? lastAbsentRow.date : null;
+  // Last present date
+  const lastPresentRow = [...attRows].reverse().find(r => (r.status || '').toLowerCase() === 'present');
+  const lastPresent = lastPresentRow ? lastPresentRow.date : null;
+
+  // ── Department memberships ──
+  const departments = await all(
+    `SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`,
+    [entityId]
+  );
+
+  // ── Church-wide averages for comparison ──
+  const churchAvgRow = await get(`
+    SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
+    FROM (
+      SELECT member_id, COUNT(*) AS total,
+        SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
+      FROM attendance WHERE date BETWEEN ? AND ?
+      GROUP BY member_id
+    )
+  `, [season.start, season.end]);
+  const churchAvg = Math.round(Number(churchAvgRow?.avg_att) || 0);
+
+  // Section average
+  let sectionAvg = churchAvg;
+  if (entity.section_name) {
+    const secRow = await get(`
+      SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
+      FROM (
+        SELECT a.member_id, COUNT(*) AS total,
+          SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END) AS present
+        FROM attendance a
+        JOIN members m ON m.id = a.member_id
+        JOIN sections s ON s.id = m.section_id
+        WHERE a.date BETWEEN ? AND ? AND s.name = ?
+        GROUP BY a.member_id
+      )
+    `, [season.start, season.end, entity.section_name]);
+    sectionAvg = Math.round(Number(secRow?.avg_att) || 0);
+  }
+
+  // ── Monthly timeline (last 12 months) ──
+  const timeline = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    const mEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+    const mLabel = d.toLocaleString('default', { month: 'short' });
+    const mRow = await get(
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
+       FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ?`,
+      [entityId, mStart, mEnd]
+    );
+    const mTotal = Number(mRow?.total) || 0;
+    const mPresent = Number(mRow?.present) || 0;
+    timeline.push({ month: mLabel, attendance: mTotal ? Math.round((mPresent / mTotal) * 100) : null, total: mTotal });
+  }
+  const validMonths = timeline.filter(m => m.attendance !== null);
+  const avgTimeline = validMonths.length ? Math.round(validMonths.reduce((s, m) => s + m.attendance, 0) / validMonths.length) : 0;
+  const bestMonth = validMonths.length ? validMonths.reduce((a, b) => a.attendance > b.attendance ? a : b) : null;
+  const worstMonth = validMonths.length ? validMonths.reduce((a, b) => a.attendance < b.attendance ? a : b) : null;
+  // Trend: compare last 3 months avg vs prior 3 months avg
+  const recent3 = validMonths.slice(-3);
+  const prior3 = validMonths.slice(-6, -3);
+  const recentAvg = recent3.length ? recent3.reduce((s, m) => s + m.attendance, 0) / recent3.length : 0;
+  const priorAvg = prior3.length ? prior3.reduce((s, m) => s + m.attendance, 0) / prior3.length : 0;
+  const trend = recentAvg > priorAvg + 3 ? 'Improving' : recentAvg < priorAvg - 3 ? 'Declining' : 'Stable';
+
+  // ── Reliability scores (0-100) ──
+  const reliability = {
+    attendance: clamp100(entity.components.church_attendance || 0),
+    consistency: longestStreak >= 12 ? 95 : longestStreak >= 6 ? 80 : longestStreak >= 3 ? 60 : 30,
+    participation: clamp100((entity.components.church_attendance || 0) * 0.5 + (entity.components.cell_attendance || 0) * 0.3 + (entity.components.events || 0) * 0.2),
+    leadership: entityType === 'leader' ? clamp100(entity.components.submission_rate || 0) : clamp100(entity.components.church_attendance || 0),
+    evangelism: clamp100(entity.components.evangelism || 0),
+    giving: clamp100(entity.components.contributions || 0),
+    cell: clamp100(entity.components.cell_attendance || 0),
+  };
+  const reliabilityValues = Object.values(reliability);
+  const overallReliability = reliabilityValues.length ? Math.round(reliabilityValues.reduce((s, v) => s + v, 0) / reliabilityValues.length) : 0;
+
+  // ── Leadership potential & risk ──
+  const leadershipPotential = overallReliability >= 85 && (entity.evCount || 0) >= 3 ? 'High'
+    : overallReliability >= 65 ? 'Medium' : 'Low';
+  const riskLevel = (entity.components.church_attendance || 0) < 40 ? 'High'
+    : (entity.components.church_attendance || 0) < 60 ? 'Medium' : 'Low';
+  const followUpNeeded = riskLevel === 'High';
+
+  // ── Performance breakdown (score per component) ──
   const breakdown = Object.keys(entity.components).map(k => ({
     key: k,
     label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     score: clamp100(entity.components[k]),
     weight: Number(w[k]) || 0,
     points: Math.round(clamp100(entity.components[k]) * (Number(w[k]) || 0) / 100),
-    note: componentNote(k),
   }));
 
-  const transactions = await all(
-    `SELECT * FROM point_transactions WHERE entity_type=? AND entity_id=? ORDER BY created_at DESC LIMIT 100`,
-    [entityType, entityId]
-  );
+  // ── Achievements ──
   const achievements = await all(
     `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,
     [entityType, entityId]
   );
-  const aiSummary = generateSummary(entity, season);
 
-  return { entity, breakdown, weights: w, transactions, achievements, aiSummary, season };
+  // ── AI Pastoral Insight ──
+  const aiInsight = generateInsight(entity, {
+    presentCount, absentCount, excusedCount, totalLifetime, lifetimeAttendance,
+    currentStreak, longestStreak, trend, overallReliability, leadershipPotential,
+    riskLevel, followUpNeeded, departments, timeline, season,
+  });
+
+  // ── Predictions ──
+  const predictions = {
+    attendanceNextMonth: validMonths.length >= 3
+      ? Math.round(recentAvg)
+      : avgTimeline,
+    leadershipReadiness: leadershipPotential === 'High' ? 89 : leadershipPotential === 'Medium' ? 65 : 35,
+    riskOfBecomingInactive: riskLevel === 'High' ? 45 : riskLevel === 'Medium' ? 15 : 2,
+    volunteerPotential: leadershipPotential,
+    promotionRecommendation: overallReliability >= 80 && riskLevel === 'Low',
+    followUpPriority: riskLevel,
+  };
+
+  const grade = overallReliability >= 90 ? 'A' : overallReliability >= 80 ? 'B' : overallReliability >= 70 ? 'C' : overallReliability >= 60 ? 'D' : 'F';
+  const gradeColor = grade === 'A' ? '#22C55E' : grade === 'B' ? '#3B82F6' : grade === 'C' ? '#F59E0B' : grade === 'D' ? '#F97316' : '#EF4444';
+
+  return {
+    entity: {
+      ...entity,
+      grade, gradeColor,
+      departments: departments.map(d => d.name),
+      ministryCount: departments.length,
+      leadershipPotential, riskLevel, followUpNeeded,
+      overallReliability,
+    },
+    attendanceIntelligence: {
+      present: presentCount, absent: absentCount, excused: excusedCount,
+      total: totalLifetime, lifetimeAttendance,
+      currentStreak, longestStreak,
+      lastPresent, lastAbsent,
+      trend, avgAttendance: avgTimeline,
+    },
+    timeline: timeline.map(m => ({ month: m.month, attendance: m.attendance, total: m.total })),
+    timelineStats: { avg: avgTimeline, bestMonth: bestMonth?.month, worstMonth: worstMonth?.month, trend },
+    reliability: { ...reliability, overall: overallReliability, grade, gradeColor },
+    comparison: { churchAvg, sectionAvg, entityAvg: entity.overallScore },
+    achievements,
+    aiInsight,
+    predictions,
+    breakdown,
+    weights: w,
+    season,
+  };
 }
 
 function componentNote(k) {
@@ -611,15 +778,66 @@ function componentNote(k) {
   return notes[k] || '';
 }
 
-function generateSummary(entity, season) {
+function generateInsight(entity, data) {
   const parts = [];
-  parts.push(`${entity.full_name} achieved an overall performance score of ${entity.overallScore}/100, earning the level "${entity.level.name}".`);
-  const top = Object.entries(entity.components).sort((a, b) => b[1] - a[1])[0];
-  if (top) parts.push(`Strongest area: ${top[0].replace(/_/g, ' ')} at ${Math.round(top[1])}%.`);
-  const weak = Object.entries(entity.components).sort((a, b) => a[1] - b[1])[0];
-  if (weak && weak[1] < 60) parts.push(`Growth opportunity: ${weak[0].replace(/_/g, ' ')} at ${Math.round(weak[1])}%.`);
-  if (entity.rankDelta > 0) parts.push(`Rank improved by ${entity.rankDelta} positions this ${season.seasonType}.`);
-  else if (entity.rankDelta < 0) parts.push(`Rank dropped by ${Math.abs(entity.rankDelta)} positions — encourage consistent service.`);
+  const name = entity.full_name || 'This member';
+
+  // Attendance behavior
+  if (data.totalLifetime > 0) {
+    parts.push(`${name} has attended ${data.presentCount} of ${data.totalLifetime} services (${data.lifetimeAttendance}% lifetime attendance).`);
+  }
+  if (data.currentStreak >= 4) {
+    parts.push(`Currently on a ${data.currentStreak}-service attendance streak.`);
+  }
+  if (data.absentCount === 0 && data.totalLifetime > 0) {
+    parts.push('Has never missed a service this period.');
+  } else if (data.absentCount > 0) {
+    parts.push(`Missed ${data.absentCount} service${data.absentCount > 1 ? 's' : ''} this period.`);
+  }
+
+  // Improvement trend
+  if (data.trend === 'Improving') {
+    parts.push('Attendance is trending upward — showing consistent improvement.');
+  } else if (data.trend === 'Declining') {
+    parts.push('Attendance has been declining recently — may need encouragement.');
+  }
+
+  // Strengths
+  const strengths = [];
+  if ((entity.components.church_attendance || 0) >= 90) strengths.push('excellent church attendance');
+  if ((entity.components.evangelism || 0) >= 75) strengths.push('active evangelism');
+  if ((entity.components.contributions || 0) >= 100) strengths.push('faithful giving');
+  if (data.currentStreak >= 12) strengths.push('outstanding consistency');
+  if (strengths.length > 0) {
+    parts.push(`Key strengths: ${strengths.join(', ')}.`);
+  }
+
+  // Ministry involvement
+  if (data.departments.length > 0) {
+    parts.push(`Actively serves in ${data.departments.length} minist${data.departments.length > 1 ? 'ries' : 'y'}: ${data.departments.join(', ')}.`);
+  }
+
+  // Risks
+  if (data.riskLevel === 'High') {
+    parts.push('Risk level is HIGH — pastoral follow-up recommended.');
+  } else if (data.riskLevel === 'Medium') {
+    parts.push('Moderate risk — monitor attendance closely.');
+  } else {
+    parts.push('Risk level is LOW — member is stable and engaged.');
+  }
+
+  // Leadership recommendation
+  if (data.leadershipPotential === 'High') {
+    parts.push('Recommendation: Consider for leadership training or home cell leader role.');
+  } else if (data.leadershipPotential === 'Medium') {
+    parts.push('Recommendation: Encourage deeper ministry involvement for leadership readiness.');
+  }
+
+  // Follow-up
+  if (data.followUpNeeded) {
+    parts.push('Follow-up action: Schedule a pastoral visit or check-in call.');
+  }
+
   return parts.join(' ');
 }
 
