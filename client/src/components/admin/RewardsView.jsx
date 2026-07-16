@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Trophy, Star, Crown, Award, TrendingUp, TrendingDown, Users,
@@ -395,7 +395,7 @@ const RewardsView = () => {
 
   const kpis = data?.kpis || {};
   const allMembers = data?.members || [];
-  const members = useMemo(() => {
+  const members = (() => {
     if (memberFilter === 'all') return allMembers;
     return allMembers.filter(m => {
       if (memberFilter === 'men') return (m.gender || '').toLowerCase().startsWith('m');
@@ -404,7 +404,7 @@ const RewardsView = () => {
       if (memberFilter === 'visitors') return (m.evCount || 0) > 0;
       return true;
     });
-  }, [allMembers, memberFilter]);
+  })();
   const leaders = data?.leaders || [];
   const cells = data?.cells || [];
   const sections = data?.sections || [];
