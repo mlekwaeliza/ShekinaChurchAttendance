@@ -795,7 +795,7 @@ const RewardsView = () => {
 
       {/* ── Profile Modal ── */}
       {selectedProfile && createPortal((() => {
-        const profile = selectedProfile;
+        const profile = selectedProfile.item;
         const isAggregate = profile.churchAttendance == null && profile.submissionRate == null;
         const isLeader = profile.submissionRate != null;
         const metricDefs = isAggregate ? AGG_METRICS : SCORE_METRICS;

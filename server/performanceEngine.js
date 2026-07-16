@@ -465,7 +465,14 @@ async function getDashboard(filter, serviceId, userId) {
     reports: clamp100(l.components.reports),
     memberCount: l.memberCount,
   });
-  const flattenGroup = (g, extra = {}) => ({ ...g, visitors: 0, growth: 0, ...extra });
+  const flattenGroup = (g, extra = {}) => ({
+    ...g,
+    visitors: 0,
+    growth: 0,
+    attendance: g.components?.attendance ?? 0,
+    membersCount: g.members_count ?? 0,
+    ...extra,
+  });
 
   const outMembers = rankedMembers.map(flattenMember);
   const outLeaders = rankedLeaders.map(flattenLeader);
