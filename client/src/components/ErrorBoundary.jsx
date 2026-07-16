@@ -25,6 +25,11 @@ class ErrorBoundary extends React.Component {
               </svg>
             </div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Something went wrong</h2>
+            {this.state.error && (
+              <pre className="text-xs text-rose-500 dark:text-rose-400 mb-4 text-left bg-rose-50 dark:bg-rose-900/20 p-3 rounded-lg overflow-auto max-h-40 font-mono whitespace-pre-wrap break-all">
+                {this.state.error.toString()}
+              </pre>
+            )}
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">An unexpected error occurred. Please try refreshing the page.</p>
             <button
               onClick={() => window.location.reload()}
