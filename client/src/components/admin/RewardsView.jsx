@@ -18,33 +18,6 @@ const getRankMedal = (rank) => {
   return { icon: String(rank), color: '#64748B', bg: 'rgba(100,116,139,0.08)' };
 };
 
-// Descriptors for the score-breakdown modal. `weightKey` maps to the
-// matching entry in data.weights.{member,leader}. `note` explains in plain
-// language what each metric is and where it comes from (so e.g. Ministry and
-// Volunteer are no longer mysterious).
-const SCORE_METRICS = [
-  { key: 'churchAttendance', label: '⛪ Church Attendance', color: '#6366F1', weightKey: 'perf_member_church_attendance', note: 'Share of services attended (present ÷ total) this period.' },
-  { key: 'cellAttendance', label: '🏠 Cell Attendance', color: '#A78BFA', weightKey: 'perf_member_cell_attendance', note: 'Home-cell meeting attendance. No separate tracking exists yet, so it shows 0.' },
-  { key: 'evangelism', label: '🔥 Evangelism', color: '#F97316', weightKey: 'perf_member_evangelism', note: 'From outreach logs + visitor intakes this period (25 points each).' },
-  { key: 'contributions', label: '⭐ Contributions', color: '#FBBF24', weightKey: 'perf_member_contributions', note: '100 if any contribution was recorded this period, else 0.' },
-  { key: 'eventParticipation', label: '📅 Event', color: '#38BDF8', weightKey: 'perf_member_events', note: 'Event/study participation. Not tracked separately, so 0.' },
-  { key: 'submissionRate', label: '📋 Submission Consistency', color: '#6366F1', weightKey: 'perf_leader_submission_rate', note: 'Share of service days the leader submitted attendance (70% weight of submission score).' },
-  { key: 'speedScore', label: '⚡ Submission Speed', color: '#F97316', note: 'How early the leader submits attendance. Submissions before 11:00 AM get 100 points, scaling down to 0 points at 02:00 PM (30% weight of submission score).' },
-  { key: 'memberAttendance', label: '👥 Member Attendance', color: '#818CF8', weightKey: 'perf_leader_member_attendance', note: 'Average church attendance of the leader’s members.' },
-  { key: 'retentionRate', label: '🔒 Retention', color: '#94A3B8', weightKey: 'perf_leader_retention', note: 'Member retention. Not tracked yet, so 0.' },
-  { key: 'cellGrowth', label: '📈 Cell Growth', color: '#F97316', weightKey: 'perf_leader_cell_growth', note: 'Home-cell growth. Not tracked yet, so 0.' },
-  { key: 'followupCompletion', label: '📞 Follow-up', color: '#34D399', weightKey: 'perf_leader_followups', note: 'Share of the leader’s assigned absent-follow-ups marked contacted.' },
-  { key: 'reportSubmission', label: '📝 Reports', color: '#64748B', weightKey: 'perf_leader_reports', note: 'Report submission. Not tracked yet, so 0.' },
-];
-
-const AGG_METRICS = [
-  { key: 'overallScore', label: '🏆 Overall Score', color: '#818CF8', note: 'Average of the members’ overall scores within this group.' },
-  { key: 'attendance', label: '⛪ Attendance', color: '#34D399', note: 'Average church attendance of members in this group.' },
-  { key: 'visitors', label: '🙌 Visitors', color: '#F97316', note: 'Members in this group with high evangelism this period.' },
-  { key: 'growth', label: '📈 Growth', color: '#A78BFA', note: 'Group growth. Not tracked yet, so 0.' },
-  { key: 'membersCount', label: '👥 Members', color: '#94A3B8', note: 'Number of members in this group.' },
-];
-
 const ScoreBar = ({ value, max = 100, color = '#6366F1' }) => (
   <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', width: '100%' }}>
     <div style={{
@@ -243,6 +216,18 @@ const RewardsView = () => {
       .catch(() => setProfileDetail(null))
       .finally(() => setProfileLoading(false));
   }, [selectedProfile, filter]);
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (selectedProfile) setSelectedProfile(null);
+        else if (showSettings) setShowSettings(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedProfile, showSettings]);
 
   const tabs = [
     { id: 'members', label: 'Members', icon: <Users size={14} /> },

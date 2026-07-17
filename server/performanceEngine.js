@@ -551,8 +551,160 @@ async function computeAchievements(entities, season, entityType = 'member') {
   return earned.slice(0, 60);
 }
 
+async function getGroupProfile(entityType, entityId, season) {
+  let group, members, memberScores;
+
+  if (entityType === 'section') {
+    group = await get(`SELECT id, name FROM sections WHERE id = ?`, [entityId]);
+    if (!group) return null;
+    members = await all(
+      `SELECT m.id, m.full_name, m.membership_id, m.gender, m.age_group, s.name AS section_name
+       FROM members m LEFT JOIN sections s ON s.id = m.section_id
+       WHERE m.section_id = ? AND m.is_active = 1`, [entityId]
+    );
+  } else if (entityType === 'department') {
+    group = await get(`SELECT id, name FROM departments WHERE id = ?`, [entityId]);
+    if (!group) return null;
+    members = await all(
+      `SELECT m.id, m.full_name, m.membership_id, m.gender, m.age_group
+       FROM members m JOIN department_members dm ON dm.member_id = m.id
+       WHERE dm.department_id = ? AND m.is_active = 1`, [entityId]
+    );
+  } else if (entityType === 'cell') {
+    group = await get(`SELECT id, name FROM home_cells WHERE id = ?`, [entityId]);
+    if (!group) return null;
+    members = await all(
+      `SELECT m.id, m.full_name, m.membership_id, m.gender, m.age_group
+       FROM members m JOIN home_cell_members hcm ON hcm.church_member_id = m.id
+       WHERE hcm.cell_id = ? AND m.is_active = 1`, [entityId]
+    );
+  }
+
+  // Score each member in the group
+  const weights = await loadWeights();
+  const w = weights.member;
+  memberScores = await scoreMembers(season.start, season.end, 'all');
+  const groupMemberScores = memberScores.filter(m => members.some(mem => String(mem.id) === String(m.id)));
+  groupMemberScores.forEach(m => {
+    m.overallScore = weighted(m.components, w);
+    m.level = performanceLevel(m.overallScore);
+  });
+  groupMemberScores.sort((a, b) => b.overallScore - a.overallScore);
+  groupMemberScores.forEach((m, i) => { m.rank = i + 1; });
+
+  const memberCount = groupMemberScores.length;
+  const avgScore = memberCount ? Math.round(groupMemberScores.reduce((s, m) => s + m.overallScore, 0) / memberCount) : 0;
+
+  // Attendance intelligence for group
+  const attRows = await all(
+    `SELECT a.date, a.status FROM attendance a
+     JOIN members m ON m.id = a.member_id
+     WHERE m.${entityType === 'section' ? 'section_id' : entityType === 'department' ? 'id IN (SELECT member_id FROM department_members WHERE department_id = ?)' : 'id IN (SELECT church_member_id FROM home_cell_members WHERE cell_id = ?)'}
+     AND a.date BETWEEN ? AND ?`,
+    entityType === 'section' ? [entityId, season.start, season.end] : [entityId, season.start, season.end]
+  );
+  const presentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'present').length;
+  const totalRecords = attRows.length;
+  const groupAttendance = totalRecords ? Math.round((presentCount / totalRecords) * 100) : 0;
+
+  // Timeline (monthly attendance for the group)
+  const timeline = [];
+  const now = new Date();
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+    const mEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+    const mLabel = d.toLocaleString('default', { month: 'short' });
+    const mRow = await get(
+      `SELECT COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END) AS present
+       FROM attendance a
+       JOIN members m ON m.id = a.member_id
+       WHERE m.${entityType === 'section' ? 'section_id' : entityType === 'department' ? 'id IN (SELECT member_id FROM department_members WHERE department_id = ?)' : 'id IN (SELECT church_member_id FROM home_cell_members WHERE cell_id = ?)'}
+       AND a.date BETWEEN ? AND ?`,
+      entityType === 'section' ? [entityId, mStart, mEnd] : [entityId, mStart, mEnd]
+    );
+    const mTotal = Number(mRow?.total) || 0;
+    const mPresent = Number(mRow?.present) || 0;
+    timeline.push({ month: mLabel, attendance: mTotal ? Math.round((mPresent / mTotal) * 100) : null, total: mTotal });
+  }
+  const validMonths = timeline.filter(m => m.attendance !== null);
+  const avgTimeline = validMonths.length ? Math.round(validMonths.reduce((s, m) => s + m.attendance, 0) / validMonths.length) : 0;
+
+  // Church average for comparison
+  const churchAvgRow = await get(`
+    SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
+    FROM (
+      SELECT member_id, COUNT(*) AS total,
+        SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
+      FROM attendance WHERE date BETWEEN ? AND ?
+      GROUP BY member_id
+    )
+  `, [season.start, season.end]);
+  const churchAvg = Math.round(Number(churchAvgRow?.avg_att) || 0);
+
+  const level = performanceLevel(avgScore);
+  const grade = avgScore >= 90 ? 'A' : avgScore >= 80 ? 'B' : avgScore >= 70 ? 'C' : avgScore >= 60 ? 'D' : 'F';
+  const gradeColor = grade === 'A' ? '#22C55E' : grade === 'B' ? '#3B82F6' : grade === 'C' ? '#F59E0B' : grade === 'D' ? '#F97316' : '#EF4444';
+
+  // Breakdown of top-level component averages
+  const componentKeys = ['church_attendance', 'cell_attendance', 'evangelism', 'contributions', 'events'];
+  const breakdown = componentKeys.map(k => {
+    const vals = groupMemberScores.map(m => clamp100(m.components[k] || 0));
+    const avg = vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+    return { key: k, label: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), score: avg, weight: Number(w[k]) || 0 };
+  });
+
+  // Achievements
+  const achievements = await all(
+    `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,
+    [entityType, entityId]
+  );
+
+  // AI Insight for group
+  const aiInsight = `This ${entityType} has ${memberCount} active members with an average score of ${avgScore}/100. Group attendance is ${groupAttendance}% for this period. ${avgScore >= 80 ? 'Overall performance is strong.' : avgScore >= 60 ? 'Performance is satisfactory with room for improvement.' : 'Performance needs attention — consider targeted engagement.'}`;
+
+  return {
+    entity: {
+      id: group.id,
+      full_name: group.name,
+      name: group.name,
+      overallScore: avgScore,
+      level,
+      grade, gradeColor,
+      section_name: group.name,
+      memberCount,
+      members: groupMemberScores,
+      departments: [],
+      ministryCount: 0,
+    },
+    attendanceIntelligence: {
+      present: presentCount, absent: totalRecords - presentCount, excused: 0,
+      total: totalRecords, lifetimeAttendance: groupAttendance,
+      currentStreak: 0, longestStreak: 0,
+      lastPresent: null, lastAbsent: null,
+      trend: 'Stable', avgAttendance: avgTimeline,
+    },
+    timeline: timeline.map(m => ({ month: m.month, attendance: m.attendance, total: m.total })),
+    timelineStats: { avg: avgTimeline, bestMonth: validMonths.length ? validMonths.reduce((a, b) => a.attendance > b.attendance ? a : b).month : null, worstMonth: validMonths.length ? validMonths.reduce((a, b) => a.attendance < b.attendance ? a : b).month : null, trend: 'Stable' },
+    reliability: { attendance: groupAttendance, consistency: 0, participation: groupAttendance, leadership: 0, evangelism: 0, giving: 0, cell: 0, overall: avgScore, grade, gradeColor },
+    comparison: { churchAvg, sectionAvg: avgScore, entityAvg: avgScore },
+    achievements,
+    aiInsight,
+    predictions: { attendanceNextMonth: avgTimeline, leadershipReadiness: 0, riskOfBecomingInactive: avgScore < 50 ? 30 : 10, volunteerPotential: avgScore >= 70 ? 'High' : 'Medium', promotionRecommendation: false, followUpPriority: avgScore < 50 ? 'Medium' : 'Low' },
+    breakdown,
+    weights: w,
+    season,
+  };
+}
+
 async function getProfile(entityType, entityId, filter, userId) {
   const season = getFilterRange(filter);
+
+  // ── Group profile (section / department / cell) ──
+  if (entityType === 'section' || entityType === 'department' || entityType === 'cell') {
+    return await getGroupProfile(entityType, entityId, season);
+  }
+
   const weights = await loadWeights();
   let scored = [];
   if (entityType === 'leader') scored = await scoreLeaders(season.start, season.end, 'all');
