@@ -13,18 +13,17 @@ import Badge from '../ui/Badge';
 import { fdate, fdatetime } from '../../utils/date';
 import ExecutiveComparison from './ExecutiveComparison';
 import ExecutiveSummary from './ExecutiveSummary';
+import { KpiCard, QuickActionsPanel, STATUS, statusForScore, TrendIcon, R as RShared } from './ReportShared';
 
 const R = v => Math.round(Number(v) || 0);
 
 const TABS = [
-  { id: 'overview', label: 'Executive Summary', icon: Eye },
-  { id: 'comparison', label: 'Comparison Center', icon: ArrowUp },
-  { id: 'sections', label: 'Section Performance', icon: Layers },
-  { id: 'departments', label: 'Department Report', icon: Building2 },
-  { id: 'members', label: 'Member Intelligence', icon: UserCheck },
-  { id: 'historical', label: 'Historical Reports', icon: Calendar },
-  { id: 'insights', label: 'AI Insights', icon: Zap },
-  { id: 'actions', label: 'Action Center', icon: Target },
+  { id: 'overview', label: 'Overview', icon: Eye },
+  { id: 'compare', label: 'Compare', icon: ArrowUp },
+  { id: 'performance', label: 'Performance', icon: Layers },
+  { id: 'members', label: 'Members', icon: UserCheck },
+  { id: 'history', label: 'History', icon: Calendar },
+  { id: 'ai', label: 'AI Insights', icon: Zap },
 ];
 
 const formatPeriodLabel = (filterType, filterValue) => {
@@ -827,13 +826,11 @@ const AttendanceReports = ({
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview': return renderOverviewTab();
-      case 'comparison': return renderComparisonTab();
-      case 'sections': return renderSectionsTab();
-      case 'departments': return renderDepartmentsTab();
+      case 'compare': return renderComparisonTab();
+      case 'performance': return renderPerformanceTab();
       case 'members': return renderMembersTab();
-      case 'historical': return renderHistoricalTab();
-      case 'insights': return renderInsightsTab();
-      case 'actions': return renderActionsTab();
+      case 'history': return renderHistoricalTab();
+      case 'ai': return renderInsightsTab();
       default: return renderOverviewTab();
     }
   };
@@ -844,6 +841,15 @@ const AttendanceReports = ({
 
   const renderComparisonTab = () => {
     return <ExecutiveComparison />;
+  };
+
+  const renderPerformanceTab = () => {
+    return (
+      <div className="space-y-4">
+        {renderSectionsTab()}
+        {renderDepartmentsTab()}
+      </div>
+    );
   };
 
   const renderSectionsTab = () => {
@@ -2070,103 +2076,6 @@ const AttendanceReports = ({
     );
   };
 
-  const renderHeadLeadersTab = () => {
-    if (!headLeaders.length) return <div className="text-center py-12 text-slate-400 text-sm"><Award className="w-8 h-8 mx-auto mb-2 text-slate-300" />No head leader data available</div>;
-    return (
-      <div className="space-y-6">
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Head Leader Performance Report</h3>
-          </div>
-          <IntelligenceTable
-            columns={[
-              { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span> },
-              { key: 'leader_name', label: 'Head Leader', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
-              { key: 'section_name', label: 'Section' },
-              { key: 'leaders_supervised', label: 'Leaders', align: 'right' },
-              { key: 'members_managed', label: 'Members', align: 'right' },
-              { key: 'overall_attendance', label: 'Attendance %', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
-              { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
-              { key: 'growth_rate', label: 'Growth %', align: 'right', render: v => <span className={v >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{v >= 0 ? '+' : ''}{R(v)}%</span> },
-              { key: 'submission_rate', label: 'Submission %', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
-              { key: 'performance_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
-              { key: 'current_rank', label: 'Rank', align: 'right', render: (v, row) => <span className="font-bold">#{v || 0}</span> },
-              { key: 'prev_rank', label: 'Prev Rank', align: 'right', render: v => <span className="text-slate-400">#{v || '—'}</span> },
-              { key: 'rank_change', label: 'Change', align: 'right', render: (v) => {
-                if (v > 0) return <span className="text-emerald-600 font-bold flex items-center justify-end gap-0.5"><ArrowUp className="w-3 h-3" />{v}</span>;
-                if (v < 0) return <span className="text-rose-600 font-bold flex items-center justify-end gap-0.5"><ArrowDown className="w-3 h-3" />{Math.abs(v)}</span>;
-                return <span className="text-slate-400">—</span>;
-              }},
-            ]}
-            data={headLeaders}
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const renderLeadersTab = () => (
-    <div className="space-y-6">
-      {selectedLeader && (
-        <div className="rounded-2xl bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5 border border-indigo-200/40 dark:border-indigo-800/30 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold">{selectedLeader.leader_name?.charAt(0)}</div>
-              <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{selectedLeader.leader_name}</h3>
-                <p className="text-xs text-slate-500">{selectedLeader.section_name} Section Leader</p>
-              </div>
-            </div>
-            <button onClick={() => setSelectedLeader(null)} className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700"><X className="w-4 h-4" /></button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard label="Attendance Rate" value={selectedLeader.attendance_rate || 0} suffix="%" icon={Activity} color="indigo" showDiff={false} />
-            <MetricCard label="Members" value={selectedLeader.member_count || 0} icon={Users} color="sky" showDiff={false} />
-            <MetricCard label="Submissions" value={selectedLeader.submissions_count || 0} icon={FileText} color="emerald" showDiff={false} />
-            <MetricCard label="Performance Score" value={selectedLeader.performance_score || 0} icon={Award} color="amber" showDiff={false} />
-          </div>
-        </div>
-      )}
-
-      {leaderRankData.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Section Leader Performance Report</h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">Detailed performance metrics for all section leaders</p>
-          </div>
-          <IntelligenceTable
-            columns={[
-              { key: 'rank', label: '#', render: (_, __, i) => <span className={`text-xs font-bold w-6 h-6 inline-flex items-center justify-center rounded-full ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'text-slate-400'}`}>{i + 1}</span> },
-              { key: 'leader_name', label: 'Leader', render: v => <span className="font-medium text-slate-900 dark:text-white">{v}</span> },
-              { key: 'section_name', label: 'Section' },
-              { key: 'member_count', label: 'Members', align: 'right' },
-              { key: 'attendance_rate', label: 'Rate', align: 'right', render: v => <Badge variant={v >= 80 ? 'success' : v >= 60 ? 'warning' : 'danger'}>{R(v)}%</Badge> },
-              { key: 'retention_rate', label: 'Retention', align: 'right', render: v => <span className="font-bold">{R(v)}%</span> },
-              { key: 'consistency_score', label: 'Consistency', align: 'right', render: v => <span className={`font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{v || 0}</span> },
-              { key: 'efficiency_score', label: 'Score', align: 'right', render: v => <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>{v || 0}</Badge> },
-            ]}
-            data={leaderRankData}
-            onRowClick={(row) => setSelectedLeader(row)}
-          />
-        </div>
-      )}
-
-      {analytics.anomalies?.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-500" />Section Anomalies</h3>
-          <div className="space-y-2">
-            {analytics.anomalies.map((a, i) => (
-              <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20">
-                <span className="text-xs font-medium text-slate-900 dark:text-white">{a.section_name}</span>
-                <span className="text-xs font-bold text-rose-600">-{R(a.drop_amount)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
   const renderDepartmentsTab = () => {
     const depts = departmentsData;
     return (
@@ -2845,112 +2754,61 @@ const AttendanceReports = ({
     </div>
   );
 
-  const renderActionsTab = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Executive Action Center</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Prioritized tasks based on attendance intelligence</p>
-        </div>
-      </div>
-
-      {actions.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 text-sm">
-          <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-400" />
-          All actions completed. No pending tasks.
-        </div>
-      ) : (
-        <>
-          {actions.filter(a => a.priority === 'high').length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold uppercase text-rose-600 mb-2 flex items-center gap-1"><Flame className="w-3 h-3" /> High Priority ({actions.filter(a => a.priority === 'high').length})</h4>
-              <div className="space-y-2">{actions.filter(a => a.priority === 'high').map((a, i) => <ActionCard key={i} action={a} />)}</div>
-            </div>
-          )}
-          {actions.filter(a => a.priority === 'medium').length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold uppercase text-amber-600 mb-2 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Medium Priority ({actions.filter(a => a.priority === 'medium').length})</h4>
-              <div className="space-y-2">{actions.filter(a => a.priority === 'medium').map((a, i) => <ActionCard key={i} action={a} />)}</div>
-            </div>
-          )}
-          {actions.filter(a => a.priority === 'low').length > 0 && (
-            <div>
-              <h4 className="text-xs font-semibold uppercase text-emerald-600 mb-2 flex items-center gap-1"><Award className="w-3 h-3" /> Recognition & Low Priority ({actions.filter(a => a.priority === 'low').length})</h4>
-              <div className="space-y-2">{actions.filter(a => a.priority === 'low').map((a, i) => <ActionCard key={i} action={a} />)}</div>
-            </div>
-          )}
-        </>
-      )}
-
-      <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Export Center</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[
-            { label: 'Executive Report', icon: Eye, action: () => { setActiveTab('overview'); }, color: 'indigo' },
-            { label: 'Section Report', icon: Layers, action: () => { setActiveTab('sections'); }, color: 'sky' },
-            { label: 'Leader Report', icon: Users, action: () => { setActiveTab('leaders'); }, color: 'emerald' },
-            { label: 'Department Report', icon: Building2, action: () => { setActiveTab('departments'); }, color: 'violet' },
-            { label: 'PDF Export', icon: FileText, action: handleExportPDF, color: 'rose' },
-            { label: 'CSV Export', icon: Download, action: handleCSVExport, color: 'emerald' },
-            { label: 'Print View', icon: Printer, action: handlePrint, color: 'sky' },
-            { label: 'Weekly Report', icon: Calendar, action: () => { setCompPeriod('week'); setActiveTab('comparison'); }, color: 'amber' },
-            { label: 'Monthly Report', icon: Calendar, action: () => { setCompPeriod('month'); setActiveTab('comparison'); }, color: 'indigo' },
-            { label: 'Refresh Data', icon: RefreshCw, action: () => { loadOverview(); loadAnalytics(); loadDepartments(); loadComparisonData(); loadHistoricalData(historicalPeriod); }, color: 'indigo' },
-          ].map(exp => (
-            <button key={exp.label} onClick={exp.action}
-              className="flex items-center gap-2 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all text-left">
-              <exp.icon className="w-4 h-4 text-slate-500" />
-              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{exp.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-5 text-white shadow-xl">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" />
-        <div className="relative z-10 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><Eye className="w-5 h-5" /></div>
-            <div>
-              <h2 className="text-lg font-bold">Executive Attendance Intelligence</h2>
-              <p className="text-white/80 text-xs">Numbers-first business intelligence for strategic decisions</p>
-            </div>
+    <div className="space-y-3 animate-fade-in">
+      {/* ── Single Compact Header ── */}
+      <div className="flex items-center justify-between flex-wrap gap-3 px-1">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+            <Eye className="w-4.5 h-4.5 text-slate-600 dark:text-slate-300" />
           </div>
-          <div className="flex items-center gap-2">
-            <select value={filterType} onChange={e => { setFilterType(e.target.value); setFilterValue(''); }}
-              className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none">
-              <option value="weekly" className="text-slate-900">This Week</option>
-              <option value="monthly" className="text-slate-900">This Month</option>
-              <option value="yearly" className="text-slate-900">This Year</option>
-              <option value="last7" className="text-slate-900">Last 7 Days</option>
-              <option value="last30" className="text-slate-900">Last 30 Days</option>
-              <option value="last90" className="text-slate-900">Last 90 Days</option>
-              <option value="custom" className="text-slate-900">Custom Date</option>
-            </select>
-            {filterType !== 'custom' ? (
-              <input type="date" value={filterValue || ''} onChange={e => setFilterValue(e.target.value)}
-                className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none" />
-            ) : (
-              <div className="flex items-center gap-1">
-                <input type="date" value={customDate1} onChange={e => setCustomDate1(e.target.value)}
-                  className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none w-32" />
-                <span className="text-white/60 text-xs">to</span>
-                <input type="date" value={customDate2} onChange={e => setCustomDate2(e.target.value)}
-                  className="bg-white/20 border border-white/30 rounded-xl px-2 py-1.5 text-xs text-white focus:outline-none w-32" />
-              </div>
-            )}
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Executive Attendance Intelligence</h2>
+            <p className="text-[11px] text-slate-400">Numbers-first business intelligence for strategic decisions</p>
           </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => window.print()} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+            <Printer className="w-3.5 h-3.5" /> Print
+          </button>
+          <button onClick={loadAnalytics} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </button>
         </div>
       </div>
 
+      {/* ── Single Filter Toolbar ── */}
+      <div className="flex items-center gap-2 flex-wrap px-1">
+        <select value={filterType} onChange={e => { setFilterType(e.target.value); setFilterValue(''); }}
+          className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+          <option value="weekly">This Week</option>
+          <option value="monthly">This Month</option>
+          <option value="yearly">This Year</option>
+          <option value="last7">Last 7 Days</option>
+          <option value="last30">Last 30 Days</option>
+          <option value="last90">Last 90 Days</option>
+          <option value="custom">Custom Date</option>
+        </select>
+        {filterType !== 'custom' ? (
+          <input type="date" value={filterValue || ''} onChange={e => setFilterValue(e.target.value)}
+            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+        ) : (
+          <div className="flex items-center gap-1">
+            <input type="date" value={customDate1} onChange={e => setCustomDate1(e.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none w-32" />
+            <span className="text-slate-400 text-xs">to</span>
+            <input type="date" value={customDate2} onChange={e => setCustomDate2(e.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none w-32" />
+          </div>
+        )}
+        <div className="flex-1" />
+      </div>
+
+      {/* ── Primary Navigation (6 tabs) ── */}
       <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium whitespace-nowrap transition-all ${activeTab === t.id ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium whitespace-nowrap transition-all ${activeTab === t.id ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}>
             <t.icon className="w-3 h-3" />{t.label}
           </button>
         ))}
@@ -2958,10 +2816,21 @@ const AttendanceReports = ({
 
       {(analyticsLoading || overviewLoading) ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        renderTabContent()
+        <div className="flex gap-4">
+          <div className="flex-1 min-w-0">{renderTabContent()}</div>
+          <div className="hidden xl:block w-64 shrink-0">
+            <QuickActionsPanel
+              onExport={() => window.print()}
+              onPrint={() => window.print()}
+              onNotifyLeaders={() => {}}
+              onScheduleFollowup={() => {}}
+              onGenerateReport={() => setActiveTab('ai')}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

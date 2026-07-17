@@ -5,10 +5,12 @@ import {
   BarChart3, TrendingUp, TrendingDown, Users, Building2, Heart,
   Shield, Brain, Layers, UserCheck, Award, CheckCircle2, XCircle,
   Download, Printer, FileText, Eye, Info, Star, UserX, Clock, Target,
-  DollarSign, HandCoins, Wallet, AlertTriangle, Calendar, Filter,
+  AlertTriangle, Calendar, Filter,
   ChevronDown, ChevronUp, Search, AlertCircle, Activity, ArrowUp,
-  ArrowDown, Minus, Plus, Save, RefreshCw, HelpCircle
+  ArrowDown, Minus, Plus, RefreshCw, HelpCircle, Bell, CalendarClock,
+  Sparkles
 } from 'lucide-react';
+import { KpiCard as SharedKpiCard, AIExecutiveSummary, STATUS, statusForScore, TrendIcon, R as RShared } from './ReportShared';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const fmt = v => `TZS ${Number(v||0).toLocaleString()}`;
@@ -218,76 +220,57 @@ const ExecutiveComparison = () => {
   const ratePct = prevOverall.attendance_rate ? R(rateDiff / prevOverall.attendance_rate * 100) : 0;
 
   return (
-    <div className="space-y-6">
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-6 text-white shadow-xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
-        <div className="relative z-10">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h2 className="text-xl font-bold">Executive Attendance Intelligence</h2>
-              <p className="text-white/80 text-sm">Multi-period comparison & decision support system</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => {/* export */}}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors">
-                <Download className="w-3.5 h-3.5" /> Export
-              </button>
-              <button onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors">
-                <Printer className="w-3.5 h-3.5" /> Print
-              </button>
-            </div>
+    <div className="space-y-4">
+      {/* ── Compact Filter Bar ─────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 flex-wrap rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
+        <div className="flex items-center gap-1.5">
+          <Filter className="w-3.5 h-3.5 text-slate-400" />
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Compare</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex flex-col">
+            <label className="text-[9px] font-medium text-slate-400 mb-0.5">Entity</label>
+            <select value={mode} onChange={e => setMode(e.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+              {MODES.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+            </select>
           </div>
-
-          {/* ── Controls ────────────────────────────────────────────────── */}
-          <div className="flex flex-wrap items-center gap-3 mt-4">
-            <div className="flex gap-1 bg-white/10 rounded-xl p-1">
-              {MODES.map(m => (
-                <button key={m.key} onClick={() => setMode(m.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
-                    mode === m.key ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/70 hover:text-white'
-                  }`}>
-                  <m.icon className="w-3 h-3" /> {m.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-1 bg-white/10 rounded-xl p-1">
-              {['week','month','quarter','year'].map(pt => (
-                <button key={pt} onClick={() => setPeriodType(pt)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
-                    periodType === pt ? 'bg-white text-indigo-600 shadow-sm' : 'text-white/70 hover:text-white'
-                  }`}>
-                  {pt === 'week' ? 'Weekly' : pt === 'month' ? 'Monthly' : pt === 'quarter' ? 'Quarterly' : 'Yearly'}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-1.5">
-              <span className="text-[10px] font-semibold text-white/70">Periods:</span>
-              <button onClick={() => setPeriodCount(Math.max(2, periodCount - 1))}
-                className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white text-xs hover:bg-white/30">-</button>
-              <span className="text-sm font-bold text-white min-w-[1.5rem] text-center">{periodCount}</span>
-              <button onClick={() => setPeriodCount(Math.min(24, periodCount + 1))}
-                className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white text-xs hover:bg-white/30">+</button>
-            </div>
+          <div className="flex flex-col">
+            <label className="text-[9px] font-medium text-slate-400 mb-0.5">Period</label>
+            <select value={periodType} onChange={e => setPeriodType(e.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+              <option value="week">Weekly</option>
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly</option>
+              <option value="year">Yearly</option>
+            </select>
           </div>
-
-          {/* ── View tabs ────────────────────────────────────────────────── */}
-          <div className="flex gap-1 mt-3">
-            {VIEWS.map(v => (
-              <button key={v.key} onClick={() => setView(v.key)}
-                className={`px-3 py-1 rounded-lg text-[10px] font-medium transition-all ${
-                  view === v.key ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white'
-                }`}>{v.label}</button>
-            ))}
+          <div className="flex flex-col">
+            <label className="text-[9px] font-medium text-slate-400 mb-0.5">Compare Last</label>
+            <select value={periodCount} onChange={e => setPeriodCount(Number(e.target.value))}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+              {[2,3,4,6,12].map(n => <option key={n} value={n}>{n} periods</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[9px] font-medium text-slate-400 mb-0.5">View</label>
+            <select value={view} onChange={e => setView(e.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+              {VIEWS.map(v => <option key={v.key} value={v.key}>{v.label}</option>)}
+            </select>
           </div>
         </div>
+        <div className="flex-1" />
+        <button onClick={() => window.print()}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+          <Printer className="w-3.5 h-3.5" /> Print
+        </button>
       </div>
 
       {/* ── Loading / Error ─────────────────────────────────────────────── */}
       {loading && (
         <div className="flex justify-center py-20">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
       {error && (
@@ -301,43 +284,45 @@ const ExecutiveComparison = () => {
         <>
           {/* ── SUMMARY VIEW ────────────────────────────────────────────── */}
           {view === 'summary' && (
-            <div className="space-y-6">
-              {/* Executive KPI Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                <KpiCard label="Church Health Score" value={`${kpis?.church_health_score || 0}%`}
+            <div className="space-y-4">
+              {/* AI Executive Summary */}
+              <AIExecutiveSummary insights={trends} actions={actions} />
+
+              {/* Executive KPI Cards — 6 meaningful metrics */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                <KpiCard label="Church Health" value={`${kpis?.church_health_score || 0}%`}
                   diff={kpis?.rate_change} status="above_target" icon={Heart} />
                 <KpiCard label="Attendance Rate" value={pct(latestOverall.attendance_rate)}
                   prev={pct(prevOverall.attendance_rate)} diff={rateDiff} pctChg={pct(ratePct)}
                   status={rateDiff >= 0 ? 'above_target' : 'below_target'} icon={Activity} />
                 <KpiCard label="Growth Index" value={kpis?.attendance_growth_index || 0}
                   status={kpis?.attendance_growth_index >= 0 ? 'above_target' : 'below_target'} icon={TrendingUp} />
-                <KpiCard label="Stability" value={`${kpis?.stability_index || 0}%`}
-                  status={kpis?.stability_index >= 70 ? 'above_target' : kpis?.stability_index >= 50 ? 'on_target' : 'below_target'} icon={Shield} />
                 <KpiCard label="Retention" value={pct(kpis?.retention_index)}
                   status={kpis?.retention_index >= 70 ? 'above_target' : kpis?.retention_index >= 50 ? 'on_target' : 'below_target'} icon={UserCheck} />
-                <KpiCard label="Engagement" value={`${kpis?.engagement_score || 0}%`}
-                  status={kpis?.engagement_score >= 60 ? 'above_target' : kpis?.engagement_score >= 40 ? 'on_target' : 'below_target'} icon={Star} />
-                <KpiCard label="Leader Performance" value={`${kpis?.leader_performance_index || 0}%`}
-                  status={kpis?.leader_performance_index >= 70 ? 'above_target' : 'on_target'} icon={Award} />
-                <KpiCard label="Forecast" value={pct(kpis?.attendance_forecast)}
-                  status={kpis?.attendance_forecast >= (kpis?.current_rate || 0) ? 'above_target' : 'below_target'} icon={Brain} />
+                <KpiCard label="Leaders Submitted" value={`${latestOverall.leaders_submitted || 0}/${latestOverall.active_sections || 0}`}
+                  status={(latestOverall.leaders_submitted || 0) >= (latestOverall.active_sections || 1) ? 'above_target' : 'below_target'} icon={Award} />
+                <KpiCard label="Follow-up Needed" value={kpis?.followup_count || (latestOverall.absent || 0)}
+                  status={(kpis?.followup_count || (latestOverall.absent || 0)) > 20 ? 'below_target' : 'on_target'} icon={AlertTriangle} />
               </div>
 
-              {/* Period Comparison Matrix */}
+              {/* Executive Comparison Table */}
               <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-indigo-500" />
-                  Multi-Period Overall Comparison
+                  <BarChart3 className="w-4 h-4 text-blue-500" />
+                  Executive Comparison Table
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-2 px-2 font-semibold text-slate-500 sticky left-0 bg-white dark:bg-slate-800">Metric</th>
-                        {data.periods.map(p => (
-                          <th key={p.id} className="text-right py-2 px-2 font-semibold text-slate-500 min-w-[80px]">{p.label}</th>
-                        ))}
-                        {data.periods.length > 1 && <th className="text-right py-2 px-2 font-semibold text-slate-500 min-w-[60px]">Trend</th>}
+                        <th className="text-left py-2 px-3 font-semibold text-slate-500">Metric</th>
+                        <th className="text-right py-2 px-3 font-semibold text-slate-500">Current</th>
+                        <th className="text-right py-2 px-3 font-semibold text-slate-500">Previous</th>
+                        <th className="text-right py-2 px-3 font-semibold text-slate-500">Average</th>
+                        <th className="text-right py-2 px-3 font-semibold text-slate-500">Highest</th>
+                        <th className="text-right py-2 px-3 font-semibold text-slate-500">Lowest</th>
+                        <th className="text-right py-2 px-3 font-semibold text-slate-500">Difference</th>
+                        <th className="text-center py-2 px-3 font-semibold text-slate-500">Trend</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -349,31 +334,38 @@ const ExecutiveComparison = () => {
                         { key: 'service_days', label: 'Service Days', fmt: num },
                         { key: 'active_sections', label: 'Active Sections', fmt: num },
                         { key: 'leaders_submitted', label: 'Leaders Submitted', fmt: num },
-                        { key: 'total_records', label: 'Total Records', fmt: num },
                         { key: 'new_members', label: 'New Members', fmt: num },
                         { key: 'retention_rate', label: 'Retention Rate', fmt: pct },
-                        { key: 'engagement_score', label: 'Engagement Score', fmt: pct },
                         { key: 'net_growth', label: 'Net Growth', fmt: num },
                       ].map(row => {
                         const vals = data.periods.map(p => p.overall?.[row.key]);
-                        const nums = vals.map(v => Number(v) || 0);
-                        const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
+                        const numsArr = vals.map(v => Number(v) || 0);
+                        const current = numsArr[numsArr.length - 1] || 0;
+                        const previous = numsArr.length > 1 ? numsArr[numsArr.length - 2] : current;
+                        const avg = numsArr.reduce((a, b) => a + b, 0) / numsArr.length;
+                        const highest = Math.max(...numsArr);
+                        const lowest = Math.min(...numsArr);
+                        const diff = current - previous;
                         const positive = ['absent','excused'].includes(row.key) ? 'down' : 'up';
+                        const isGoodTrend = positive === 'up' ? current >= previous : current <= previous;
                         return (
                           <tr key={row.key} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                            <td className="py-2 px-2 font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800">{row.label}</td>
-                            {vals.map((v, i) => (
-                              <td key={i} className="py-2 px-2 text-right font-semibold text-slate-900 dark:text-white">{row.fmt(v)}</td>
-                            ))}
-                            {data.periods.length > 1 && (
-                              <td className="py-2 px-2 text-right">
-                                {avg > 0 ? (
-                                  nums[nums.length - 1] > nums[0]
-                                    ? <Badge variant={positive === 'up' ? 'success' : 'danger'}>{nums[nums.length-1] > nums[0] ? '↑' : '↓'}</Badge>
-                                    : <Badge variant={positive === 'up' ? 'danger' : 'success'}>{nums[nums.length-1] > nums[0] ? '↑' : '↓'}</Badge>
-                                ) : <span className="text-slate-300">—</span>}
-                              </td>
-                            )}
+                            <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">{row.label}</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-white">{row.fmt(current)}</td>
+                            <td className="py-2.5 px-3 text-right text-slate-500">{row.fmt(previous)}</td>
+                            <td className="py-2.5 px-3 text-right text-slate-600 dark:text-slate-400">{row.fmt(Math.round(avg))}</td>
+                            <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">{row.fmt(highest)}</td>
+                            <td className="py-2.5 px-3 text-right text-rose-600 dark:text-rose-400 font-medium">{row.fmt(lowest)}</td>
+                            <td className={`py-2.5 px-3 text-right font-semibold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {diff >= 0 ? '+' : ''}{row.fmt(diff)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {current !== previous ? (
+                                <span className={`inline-flex items-center justify-center ${isGoodTrend ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                  {current > previous ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
+                                </span>
+                              ) : <Minus className="w-3.5 h-3.5 text-slate-300 mx-auto" />}
+                            </td>
                           </tr>
                         );
                       })}
@@ -386,7 +378,7 @@ const ExecutiveComparison = () => {
               {mode !== 'overall' && (
                 <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-indigo-500" />
+                    <Layers className="w-4 h-4 text-blue-500" />
                     {mode === 'sections' ? 'Section' : mode === 'leaders' ? 'Leader' : mode === 'departments' ? 'Department' : 'Member'} Rankings
                   </h3>
                   <div className="flex items-center gap-2 mb-3">
