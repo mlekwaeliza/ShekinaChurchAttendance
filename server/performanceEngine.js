@@ -63,6 +63,22 @@ async function ensurePerformanceSchema() {
       points REAL NOT NULL,
       description TEXT
     )`,
+    `CREATE TABLE IF NOT EXISTS families (
+      id ${idType},
+      name TEXT NOT NULL,
+      head_member_id INTEGER,
+      created_at TEXT DEFAULT ${tsDefault}
+    )`,
+    `CREATE TABLE IF NOT EXISTS family_members (
+      id ${idType},
+      family_id INTEGER NOT NULL,
+      member_id INTEGER NOT NULL,
+      role TEXT DEFAULT 'member',
+      created_at TEXT DEFAULT ${tsDefault},
+      UNIQUE(family_id, member_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_fm_member ON family_members(member_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_fm_family ON family_members(family_id)`,
   ];
   for (const sql of statements) {
     try { await run(sql); } catch (e) { console.error('performance schema error:', e.message); }
@@ -506,6 +522,25 @@ async function getDashboard(filter, serviceId, userId) {
   outMembers.forEach(m => { m.badges = achByEntity[m.id] || []; });
   outLeaders.forEach(l => { l.badges = achByEntity[l.id] || []; });
 
+  // Families — attach family info to members and return list for filtering
+  const familyRows = await all(
+    `SELECT fm.member_id, fm.role, f.id AS family_id, f.name AS family_name
+     FROM family_members fm
+     JOIN families f ON f.id = fm.family_id`
+  );
+  const memberFamilyMap = {};
+  const familiesList = {};
+  familyRows.forEach(r => {
+    memberFamilyMap[r.member_id] = { family_id: r.family_id, family_name: r.family_name, family_role: r.role };
+    if (!familiesList[r.family_id]) familiesList[r.family_id] = { id: r.family_id, name: r.family_name, memberCount: 0 };
+    familiesList[r.family_id].memberCount++;
+  });
+  outMembers.forEach(m => {
+    const fam = memberFamilyMap[m.id];
+    if (fam) { m.family_id = fam.family_id; m.family_name = fam.family_name; m.family_role = fam.family_role; }
+  });
+  const families = Object.values(familiesList).sort((a, b) => a.name.localeCompare(b.name));
+
   // Insights
   const topMover = [...rankedMembers].sort((a, b) => (b.rankDelta || 0) - (a.rankDelta || 0))[0];
   const mostConsistent = [...rankedMembers].sort((a, b) => (b.components.church_attendance || 0) - (a.components.church_attendance || 0))[0];
@@ -541,6 +576,7 @@ async function getDashboard(filter, serviceId, userId) {
     sections: outSections,
     departments: outDepartments,
     cells: outCells,
+    families,
     insights,
     awardsHistory: await getRecognitionHistory(season.seasonType, season.seasonKey),
   };

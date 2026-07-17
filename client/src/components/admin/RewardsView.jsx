@@ -6,7 +6,7 @@ import {
   Calendar, Zap, Medal, BarChart2, Shield, GitMerge, Globe, 
   CheckCircle2, AlertCircle, Info, Loader2, RefreshCw, X,
   ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus,
-  Sparkles, Building2
+  Sparkles, Building2, Home, UserPlus, Trash2
 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 
@@ -190,6 +190,154 @@ const LeaderboardRow = ({ item, rank, onClick, nameKey, subKey, scoreKey = 'over
   );
 };
 
+// ─── Family Manager ───────────────────────────────────────────────────────
+const FamilyManager = ({ families, allMembers, onRefresh }) => {
+  const [newName, setNewName] = useState('');
+  const [newHead, setNewHead] = useState('');
+  const [addMemberFamily, setAddMemberFamily] = useState('');
+  const [addMemberId, setAddMemberId] = useState('');
+  const [addMemberRole, setAddMemberRole] = useState('member');
+  const [busy, setBusy] = useState(false);
+  const [expandedFamily, setExpandedFamily] = useState(null);
+
+  const toggleFamily = (familyId) => {
+    setExpandedFamily(expandedFamily === familyId ? null : familyId);
+  };
+
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setBusy(true);
+    try {
+      await adminAPI.createFamily(newName.trim(), newHead || null);
+      setNewName('');
+      setNewHead('');
+      onRefresh();
+    } catch (e) { console.error('Create family error:', e); }
+    setBusy(false);
+  };
+
+  const handleAddMember = async () => {
+    if (!addMemberFamily || !addMemberId) return;
+    setBusy(true);
+    try {
+      await adminAPI.addFamilyMember(addMemberFamily, addMemberId, addMemberRole);
+      setAddMemberId('');
+      setAddMemberRole('member');
+      onRefresh();
+    } catch (e) { console.error('Add family member error:', e); }
+    setBusy(false);
+  };
+
+  const handleRemoveMember = async (familyId, memberId) => {
+    setBusy(true);
+    try {
+      await adminAPI.removeFamilyMember(familyId, memberId);
+      onRefresh();
+    } catch (e) { console.error('Remove family member error:', e); }
+    setBusy(false);
+  };
+
+  const handleDelete = async (familyId) => {
+    if (!confirm('Delete this family? Members will be unlinked.')) return;
+    setBusy(true);
+    try {
+      await adminAPI.deleteFamily(familyId);
+      onRefresh();
+    } catch (e) { console.error('Delete family error:', e); }
+    setBusy(false);
+  };
+
+  const inputStyle = {
+    padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(71,85,105,0.3)',
+    background: 'rgba(15,23,42,0.6)', color: '#F1F5F9', fontSize: 13, outline: 'none',
+  };
+  const btnStyle = {
+    padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+    background: '#6366F1', color: '#FFF', fontSize: 13, fontWeight: 600,
+  };
+
+  return (
+    <div style={s.section}>
+      <div style={s.sectionTitle}><Home size={14} /> Family Management</div>
+
+      {/* Create new family */}
+      <div style={{ marginBottom: 16, padding: 16, background: 'rgba(15,23,42,0.5)', borderRadius: 12, border: '1px solid rgba(71,85,105,0.25)' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#C7D2FE', marginBottom: 10 }}>Create New Family</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="Family name (e.g. The Wael Family)"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            style={{ ...inputStyle, flex: 1, minWidth: 200 }}
+          />
+          <select value={newHead} onChange={e => setNewHead(e.target.value)} style={{ ...inputStyle, minWidth: 180 }}>
+            <option value="">Head of family (optional)</option>
+            {allMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+          </select>
+          <button onClick={handleCreate} disabled={busy || !newName.trim()} style={{ ...btnStyle, opacity: busy || !newName.trim() ? 0.5 : 1 }}>
+            <Home size={14} style={{ display: 'inline', marginRight: 4 }} /> Create
+          </button>
+        </div>
+      </div>
+
+      {/* Add member to family */}
+      <div style={{ marginBottom: 16, padding: 16, background: 'rgba(15,23,42,0.5)', borderRadius: 12, border: '1px solid rgba(71,85,105,0.25)' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#C7D2FE', marginBottom: 10 }}>Assign Member to Family</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={addMemberFamily} onChange={e => setAddMemberFamily(e.target.value)} style={{ ...inputStyle, minWidth: 180 }}>
+            <option value="">Select family</option>
+            {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+          <select value={addMemberId} onChange={e => setAddMemberId(e.target.value)} style={{ ...inputStyle, minWidth: 180 }}>
+            <option value="">Select member</option>
+            {allMembers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+          </select>
+          <select value={addMemberRole} onChange={e => setAddMemberRole(e.target.value)} style={{ ...inputStyle, minWidth: 120 }}>
+            <option value="head">Head</option>
+            <option value="spouse">Spouse</option>
+            <option value="child">Child</option>
+            <option value="member">Member</option>
+          </select>
+          <button onClick={handleAddMember} disabled={busy || !addMemberFamily || !addMemberId} style={{ ...btnStyle, opacity: busy || !addMemberFamily || !addMemberId ? 0.5 : 1 }}>
+            <UserPlus size={14} style={{ display: 'inline', marginRight: 4 }} /> Assign
+          </button>
+        </div>
+      </div>
+
+      {/* Family list */}
+      {families.length === 0 ? (
+        <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No families created yet. Create one above to get started.</p>
+      ) : (
+        families.map(f => (
+          <div key={f.id} style={{
+            marginBottom: 8, padding: '14px 16px',
+            background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(71,85,105,0.25)',
+            borderRadius: 12,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Home size={16} color="#818CF8" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 700, color: '#F1F5F9', fontSize: 14 }}>{f.name}</p>
+                <p style={{ margin: 0, fontSize: 11, color: '#64748B' }}>{f.memberCount} member{f.memberCount !== 1 ? 's' : ''}</p>
+              </div>
+              <button
+                onClick={() => handleDelete(f.id)}
+                disabled={busy}
+                style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid rgba(239,68,68,0.25)', background: 'rgba(239,68,68,0.08)', color: '#F87171', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}
+              >
+                <Trash2 size={12} style={{ display: 'inline', marginRight: 4 }} /> Delete
+              </button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+};
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 const RewardsView = () => {
   const [activeTab, setActiveTab] = useState('members');
@@ -205,6 +353,7 @@ const RewardsView = () => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [awarding, setAwarding] = useState(false);
   const [memberFilter, setMemberFilter] = useState('all');
+  const [familyFilter, setFamilyFilter] = useState('all');
 
   const openProfile = (item, type) => setSelectedProfile({ type, item });
 
@@ -235,6 +384,7 @@ const RewardsView = () => {
     { id: 'cells', label: 'Home Cells', icon: <Heart size={14} /> },
     { id: 'sections', label: 'Sections', icon: <Building2 size={14} /> },
     { id: 'departments', label: 'Ministries', icon: <Shield size={14} /> },
+    { id: 'families', label: 'Families', icon: <Home size={14} /> },
     { id: 'awards', label: 'Awards', icon: <Trophy size={14} /> },
     { id: 'insights', label: 'Insights', icon: <Sparkles size={14} /> },
   ];
@@ -380,9 +530,11 @@ const RewardsView = () => {
 
   const kpis = data?.kpis || {};
   const allMembers = data?.members || [];
+  const families = data?.families || [];
   const members = (() => {
-    if (memberFilter === 'all') return allMembers;
+    if (memberFilter === 'all' && familyFilter === 'all') return allMembers;
     return allMembers.filter(m => {
+      if (familyFilter !== 'all' && String(m.family_id) !== String(familyFilter)) return false;
       if (memberFilter === 'men') return (m.gender || '').toLowerCase().startsWith('m');
       if (memberFilter === 'women') return (m.gender || '').toLowerCase().startsWith('f');
       if (memberFilter === 'youth') return (m.age_group || '').toLowerCase().includes('youth');
@@ -482,7 +634,7 @@ const RewardsView = () => {
       {activeTab === 'members' && (
         <div style={s.section}>
           <div style={s.sectionTitle}><Users size={14} /> Member Performance Ranking</div>
-          <div style={{ marginBottom: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ marginBottom: 6, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {[
               { label: 'All', key: 'all' },
               { label: '👨 Men', key: 'men' },
@@ -504,18 +656,41 @@ const RewardsView = () => {
                 {label}
               </button>
             ))}
+            {families.length > 0 && (
+              <select
+                value={familyFilter}
+                onChange={(e) => setFamilyFilter(e.target.value)}
+                style={{
+                  padding: '4px 10px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                  cursor: 'pointer', border: '1px solid rgba(99,102,241,0.25)',
+                  background: familyFilter !== 'all' ? 'rgba(99,102,241,0.25)' : 'rgba(99,102,241,0.06)',
+                  color: familyFilter !== 'all' ? '#C7D2FE' : '#818CF8',
+                  outline: 'none',
+                }}
+              >
+                <option value="all">👨‍👩‍👧 All Families</option>
+                {families.map(f => (
+                  <option key={f.id} value={f.id}>🏠 {f.name} ({f.memberCount})</option>
+                ))}
+              </select>
+            )}
           </div>
           {members.length === 0 ? (
             <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No member data available for this period.</p>
           ) : (
-            members.map((m, i) => (
-              <LeaderboardRow key={m.id} item={m} rank={m.rank || i + 1}
-                nameKey="full_name" subKey="section_name"
-                scoreKey="overallScore" subLabel="Score"
-                metricColor="#6366F1"
-                onClick={(item) => openProfile(item, 'member')}
-              />
-            ))
+            members.map((m, i) => {
+              const item = m.family_name
+                ? { ...m, section_name: `${m.section_name || ''} • 🏠 ${m.family_name}` }
+                : m;
+              return (
+                <LeaderboardRow key={m.id} item={item} rank={m.rank || i + 1}
+                  nameKey="full_name" subKey="section_name"
+                  scoreKey="overallScore" subLabel="Score"
+                  metricColor="#6366F1"
+                  onClick={() => openProfile(m, 'member')}
+                />
+              );
+            })
           )}
         </div>
       )}
@@ -638,6 +813,10 @@ const RewardsView = () => {
             ))
           )}
         </div>
+      )}
+
+      {activeTab === 'families' && (
+        <FamilyManager families={families} allMembers={allMembers} onRefresh={load} />
       )}
 
       {activeTab === 'awards' && (

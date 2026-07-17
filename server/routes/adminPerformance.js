@@ -1,5 +1,6 @@
 const express = require('express');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
+const { all, get, run, usePostgres } = require('../database');
 const engine = require('../performanceEngine');
 
 const router = express.Router();
@@ -110,6 +111,68 @@ router.post('/performance/award-season', async (req, res) => {
     console.error('Award season error:', e);
     res.status(500).json({ error: 'Failed to award season' });
   }
+});
+
+// Families CRUD
+router.get('/performance/families', async (req, res) => {
+  try {
+    const families = await all(
+      `SELECT f.*, COUNT(fm.member_id) AS member_count
+       FROM families f
+       LEFT JOIN family_members fm ON fm.family_id = f.id
+       GROUP BY f.id, f.name, f.head_member_id, f.created_at
+       ORDER BY f.name`
+    );
+    res.json(families);
+  } catch (e) { res.status(500).json({ error: 'Failed to load families' }); }
+});
+
+router.post('/performance/families', async (req, res) => {
+  try {
+    const { name, head_member_id } = req.body;
+    if (!name) return res.status(400).json({ error: 'Family name is required' });
+    const result = await run(
+      `INSERT INTO families (name, head_member_id) VALUES (?, ?)`,
+      [name, head_member_id || null]
+    );
+    if (head_member_id) {
+      await run(
+        `INSERT INTO family_members (family_id, member_id, role) VALUES (?, ?, 'head')`,
+        [result.lastID || result.insertId, head_member_id]
+      );
+    }
+    res.json({ id: result.lastID || result.insertId, message: 'Family created' });
+  } catch (e) { res.status(500).json({ error: 'Failed to create family' }); }
+});
+
+router.post('/performance/families/:id/members', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { member_id, role = 'member' } = req.body;
+    if (!member_id) return res.status(400).json({ error: 'Member ID is required' });
+    const sql = usePostgres
+      ? `INSERT INTO family_members (family_id, member_id, role) VALUES (?, ?, ?) ON CONFLICT (family_id, member_id) DO NOTHING`
+      : `INSERT OR IGNORE INTO family_members (family_id, member_id, role) VALUES (?, ?, ?)`;
+    await run(sql, [id, member_id, role]);
+    res.json({ message: 'Member added to family' });
+  } catch (e) { res.status(500).json({ error: 'Failed to add member to family' }); }
+});
+
+router.delete('/performance/families/:id/members/:memberId', async (req, res) => {
+  try {
+    const { id, memberId } = req.params;
+    await run(`DELETE FROM family_members WHERE family_id = ? AND member_id = ?`, [id, memberId]);
+    res.json({ message: 'Member removed from family' });
+  } catch (e) { res.status(500).json({ error: 'Failed to remove member from family' }); }
+});
+
+router.delete('/performance/families/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await run(`DELETE FROM family_members WHERE family_id = ?`, [id]);
+    await run(`DELETE FROM families WHERE id = ?`, [id]);
+    res.json({ message: 'Family deleted' });
+  } catch (e) { res.status(500).json({ error: 'Failed to delete family' }); }
 });
 
 module.exports = router;
