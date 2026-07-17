@@ -599,9 +599,9 @@ async function getGroupProfile(entityType, entityId, season) {
   const attRows = await all(
     `SELECT a.date, a.status FROM attendance a
      JOIN members m ON m.id = a.member_id
-     WHERE m.${entityType === 'section' ? 'section_id' : entityType === 'department' ? 'id IN (SELECT member_id FROM department_members WHERE department_id = ?)' : 'id IN (SELECT church_member_id FROM home_cell_members WHERE cell_id = ?)'}
+     WHERE m.${entityType === 'section' ? 'section_id = ?' : entityType === 'department' ? 'id IN (SELECT member_id FROM department_members WHERE department_id = ?)' : 'id IN (SELECT church_member_id FROM home_cell_members WHERE cell_id = ?)'}
      AND a.date BETWEEN ? AND ?`,
-    entityType === 'section' ? [entityId, season.start, season.end] : [entityId, season.start, season.end]
+    [entityId, season.start, season.end]
   );
   const presentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'present').length;
   const totalRecords = attRows.length;
@@ -619,9 +619,9 @@ async function getGroupProfile(entityType, entityId, season) {
       `SELECT COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END) AS present
        FROM attendance a
        JOIN members m ON m.id = a.member_id
-       WHERE m.${entityType === 'section' ? 'section_id' : entityType === 'department' ? 'id IN (SELECT member_id FROM department_members WHERE department_id = ?)' : 'id IN (SELECT church_member_id FROM home_cell_members WHERE cell_id = ?)'}
+       WHERE m.${entityType === 'section' ? 'section_id = ?' : entityType === 'department' ? 'id IN (SELECT member_id FROM department_members WHERE department_id = ?)' : 'id IN (SELECT church_member_id FROM home_cell_members WHERE cell_id = ?)'}
        AND a.date BETWEEN ? AND ?`,
-      entityType === 'section' ? [entityId, mStart, mEnd] : [entityId, mStart, mEnd]
+      [entityId, mStart, mEnd]
     );
     const mTotal = Number(mRow?.total) || 0;
     const mPresent = Number(mRow?.present) || 0;
