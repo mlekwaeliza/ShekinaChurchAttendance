@@ -820,32 +820,81 @@ async function getProfile(entityType, entityId, filter, userId) {
     sectionAvg = Math.round(Number(secRow?.avg_att) || 0);
   }
 
-  // ── Monthly timeline (last 12 months) ──
+  // ── Monthly timeline (last 12 months — overall weighted scores) ──
   const timeline = [];
   const now = new Date();
+  const months = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const mStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-    const mEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
-    const mLabel = d.toLocaleString('default', { month: 'short' });
-    const mRow = await get(
-      `SELECT COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
-       FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ?`,
-      [entityId, mStart, mEnd]
-    );
-    const mTotal = Number(mRow?.total) || 0;
-    const mPresent = Number(mRow?.present) || 0;
-    timeline.push({ month: mLabel, attendance: mTotal ? Math.round((mPresent / mTotal) * 100) : null, total: mTotal });
+    months.push({
+      label: d.toLocaleString('default', { month: 'short' }),
+      start: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`,
+      end: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`,
+    });
   }
-  const validMonths = timeline.filter(m => m.attendance !== null);
-  const avgTimeline = validMonths.length ? Math.round(validMonths.reduce((s, m) => s + m.attendance, 0) / validMonths.length) : 0;
-  const bestMonth = validMonths.length ? validMonths.reduce((a, b) => a.attendance > b.attendance ? a : b) : null;
-  const worstMonth = validMonths.length ? validMonths.reduce((a, b) => a.attendance < b.attendance ? a : b) : null;
+  const yearStart = months[0].start;
+  const yearEnd = months[11].end;
+
+  const ymFn = usePostgres ? "TO_CHAR(date, 'YYYY-MM')" : "strftime('%Y-%m', date)";
+  const ymCreated = usePostgres ? "TO_CHAR(created_at, 'YYYY-MM')" : "strftime('%Y-%m', created_at)";
+  const ymPayment = usePostgres ? "TO_CHAR(payment_date, 'YYYY-MM')" : "strftime('%Y-%m', payment_date)";
+
+  // Batch query attendance per month
+  const attRows = await all(
+    `SELECT ${ymFn} AS ym,
+       COUNT(*) AS total,
+       SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
+     FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ?
+     GROUP BY ym`,
+    [entityId, yearStart, yearEnd]
+  );
+  const attByMonth = {};
+  attRows.forEach(r => { attByMonth[r.ym] = { total: Number(r.total), present: Number(r.present) }; });
+
+  // Batch query outreach per month
+  const outRows = await all(
+    `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt
+     FROM outreach_logs WHERE member_id = ? AND created_at BETWEEN ? AND ?
+     GROUP BY ym`,
+    [entityId, yearStart, yearEnd]
+  );
+  const outByMonth = {};
+  outRows.forEach(r => { outByMonth[r.ym] = Number(r.cnt); });
+
+  // Batch query contributions per month
+  const conRows = await all(
+    `SELECT ${ymPayment} AS ym, COUNT(*) AS cnt
+     FROM contributions WHERE member_id = ? AND payment_date BETWEEN ? AND ?
+     GROUP BY ym`,
+    [entityId, yearStart, yearEnd]
+  );
+  const conByMonth = {};
+  conRows.forEach(r => { conByMonth[r.ym] = Number(r.cnt); });
+
+  // Compute monthly overall scores
+  const w = entityType === 'leader' ? weights.leader : weights.member;
+  for (const m of months) {
+    const ym = m.start.slice(0, 7);
+    const att = attByMonth[ym] || { total: 0, present: 0 };
+    const monthlyPresent = att.present;
+    const monthlyTotal = att.total;
+    const churchAttendance = monthlyTotal ? Math.round((monthlyPresent / monthlyTotal) * 100) : 0;
+    const evCount = outByMonth[ym] || 0;
+    const evangelism = Math.min(100, evCount * 25);
+    const contributions = (conByMonth[ym] || 0) > 0 ? 100 : 0;
+    const components = { church_attendance: churchAttendance, cell_attendance: 0, evangelism, contributions, events: 0 };
+    const overallScore = weighted(components, w);
+    timeline.push({ month: m.label, attendance: churchAttendance, overallScore: monthlyTotal > 0 ? overallScore : null, total: monthlyTotal });
+  }
+  const validMonths = timeline.filter(m => m.overallScore !== null);
+  const avgTimeline = validMonths.length ? Math.round(validMonths.reduce((s, m) => s + m.overallScore, 0) / validMonths.length) : 0;
+  const bestMonth = validMonths.length ? validMonths.reduce((a, b) => a.overallScore > b.overallScore ? a : b) : null;
+  const worstMonth = validMonths.length ? validMonths.reduce((a, b) => a.overallScore < b.overallScore ? a : b) : null;
   // Trend: compare last 3 months avg vs prior 3 months avg
   const recent3 = validMonths.slice(-3);
   const prior3 = validMonths.slice(-6, -3);
-  const recentAvg = recent3.length ? recent3.reduce((s, m) => s + m.attendance, 0) / recent3.length : 0;
-  const priorAvg = prior3.length ? prior3.reduce((s, m) => s + m.attendance, 0) / prior3.length : 0;
+  const recentAvg = recent3.length ? recent3.reduce((s, m) => s + m.overallScore, 0) / recent3.length : 0;
+  const priorAvg = prior3.length ? prior3.reduce((s, m) => s + m.overallScore, 0) / prior3.length : 0;
   const trend = recentAvg > priorAvg + 3 ? 'Improving' : recentAvg < priorAvg - 3 ? 'Declining' : 'Stable';
 
   // ── Reliability scores (0-100) ──

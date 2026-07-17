@@ -916,16 +916,16 @@ const RewardsView = () => {
               )}
 
               {/* ── 3. Performance Timeline ── */}
-              {tl.filter(m => m.attendance != null).length > 1 && (
+              {tl.filter(m => m.overallScore != null).length > 1 && (
                 <>
                   <p style={sectionTitle}>Performance Timeline</p>
                   <div style={{ ...card, marginBottom: 18 }}>
                     <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 60, marginBottom: 8 }}>
-                      {tl.filter(m => m.attendance != null).map((m, i) => (
+                      {tl.filter(m => m.overallScore != null).map((m, i) => (
                         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                          <div style={{ width: '100%', height: `${Math.max(2, m.attendance * 0.55)}px`, background: m.attendance >= 80 ? '#34D399' : m.attendance >= 50 ? '#FBBF24' : '#F87171', borderRadius: 3 }} />
+                          <div style={{ width: '100%', height: `${Math.max(2, m.overallScore * 0.55)}px`, background: m.overallScore >= 80 ? '#34D399' : m.overallScore >= 50 ? '#FBBF24' : '#F87171', borderRadius: 3 }} />
                           <span style={{ fontSize: 8, color: '#64748B' }}>{m.month}</span>
-                          <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>{m.attendance}%</span>
+                          <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>{m.overallScore}%</span>
                         </div>
                       ))}
                     </div>
