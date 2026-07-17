@@ -840,7 +840,7 @@ async function getProfile(entityType, entityId, filter, userId) {
   const ymPayment = usePostgres ? "TO_CHAR(payment_date, 'YYYY-MM')" : "strftime('%Y-%m', payment_date)";
 
   // Batch query attendance per month
-  const attRows = await all(
+  const attRowsByMonth = await all(
     `SELECT ${ymFn} AS ym,
        COUNT(*) AS total,
        SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
@@ -849,7 +849,7 @@ async function getProfile(entityType, entityId, filter, userId) {
     [entityId, yearStart, yearEnd]
   );
   const attByMonth = {};
-  attRows.forEach(r => { attByMonth[r.ym] = { total: Number(r.total), present: Number(r.present) }; });
+  attRowsByMonth.forEach(r => { attByMonth[r.ym] = { total: Number(r.total), present: Number(r.present) }; });
 
   // Batch query outreach per month
   const outRows = await all(
@@ -872,7 +872,7 @@ async function getProfile(entityType, entityId, filter, userId) {
   conRows.forEach(r => { conByMonth[r.ym] = Number(r.cnt); });
 
   // Compute monthly overall scores
-  const w = entityType === 'leader' ? weights.leader : weights.member;
+  const monthlyWeights = entityType === 'leader' ? weights.leader : weights.member;
   for (const m of months) {
     const ym = m.start.slice(0, 7);
     const att = attByMonth[ym] || { total: 0, present: 0 };
@@ -883,7 +883,7 @@ async function getProfile(entityType, entityId, filter, userId) {
     const evangelism = Math.min(100, evCount * 25);
     const contributions = (conByMonth[ym] || 0) > 0 ? 100 : 0;
     const components = { church_attendance: churchAttendance, cell_attendance: 0, evangelism, contributions, events: 0 };
-    const overallScore = weighted(components, w);
+    const overallScore = weighted(components, monthlyWeights);
     timeline.push({ month: m.label, attendance: churchAttendance, overallScore: monthlyTotal > 0 ? overallScore : null, total: monthlyTotal });
   }
   const validMonths = timeline.filter(m => m.overallScore !== null);
