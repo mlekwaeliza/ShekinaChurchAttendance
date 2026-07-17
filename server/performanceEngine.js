@@ -483,7 +483,16 @@ async function getDashboard(filter, serviceId, userId) {
   // Achievements (per member and leader this season — persisted to entity_achievements)
   const memberAchievements = await computeAchievements(rankedMembers, season, 'member');
   const leaderAchievements = await computeAchievements(rankedLeaders, season, 'leader');
-  const achievements = [...memberAchievements, ...leaderAchievements];
+  const allAchievements = [...memberAchievements, ...leaderAchievements];
+
+  // Attach badges to flattened entities
+  const achByEntity = {};
+  allAchievements.forEach(a => {
+    if (!achByEntity[a.entity_id]) achByEntity[a.entity_id] = [];
+    achByEntity[a.entity_id].push({ icon: a.icon, name: a.name, tier: a.tier, key: a.key, desc: a.description });
+  });
+  outMembers.forEach(m => { m.badges = achByEntity[m.id] || []; });
+  outLeaders.forEach(l => { l.badges = achByEntity[l.id] || []; });
 
   // Insights
   const topMover = [...rankedMembers].sort((a, b) => (b.rankDelta || 0) - (a.rankDelta || 0))[0];

@@ -844,8 +844,14 @@ const RewardsView = () => {
               {/* ── 1. Executive Profile ── */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1, #818CF8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#FFF' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+                    <div style={{
+                      width: 56, height: 56, borderRadius: '50%', position: 'relative',
+                      background: `linear-gradient(135deg, ${e.gradeColor || '#6366F1'}, ${e.level?.color || '#818CF8'})`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 22, fontWeight: 800, color: '#FFF',
+                      boxShadow: `0 0 0 3px rgba(255,255,255,0.08), 0 0 20px ${e.gradeColor || '#6366F1'}40`,
+                    }}>
                       {(e.full_name || '?')[0]}
                     </div>
                     <div>
@@ -853,6 +859,9 @@ const RewardsView = () => {
                       <p style={{ margin: '2px 0 0', fontSize: 11, color: e.level?.color || '#818CF8', fontWeight: 700 }}>
                         {e.level?.name || 'Member'} {e.grade && `• Grade ${e.grade}`}
                       </p>
+                      {isGroup && e.memberCount != null && (
+                        <p style={{ margin: '1px 0 0', fontSize: 10, color: '#64748B' }}>{e.memberCount} member{e.memberCount !== 1 ? 's' : ''}</p>
+                      )}
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 6, marginTop: 8 }}>
@@ -861,13 +870,14 @@ const RewardsView = () => {
                     {e.membership_id && <div style={miniLabel}><span style={{ color: '#64748B' }}>ID: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.membership_id}</span></div>}
                     {e.gender && <div style={miniLabel}><span style={{ color: '#64748B' }}>Gender: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.gender}</span></div>}
                     {e.age_group && <div style={miniLabel}><span style={{ color: '#64748B' }}>Age: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.age_group}</span></div>}
+                    {isGroup && e.members != null && <div style={miniLabel}><span style={{ color: '#64748B' }}>Members: </span><span style={{ color: '#CBD5E1', fontWeight: 600 }}>{e.members.length}</span></div>}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right', minWidth: 120 }}>
                   <div style={{ fontSize: 32, fontWeight: 800, color: e.gradeColor || '#818CF8', lineHeight: 1 }}>{e.overallScore}</div>
                   <div style={{ fontSize: 10, color: '#64748B', marginBottom: 4 }}>out of 100</div>
                   {e.rank && <div style={{ fontSize: 12, fontWeight: 700, color: '#F1F5F9' }}>Rank #{e.rank}{e.totalEntities ? ` of ${e.totalEntities}` : ''}</div>}
-                  {e.prevRank && <div style={{ fontSize: 11, color: e.rankDelta > 0 ? '#34D399' : e.rankDelta < 0 ? '#F87171' : '#64748B' }}>
+                  {e.prevRank != null && <div style={{ fontSize: 11, color: e.rankDelta > 0 ? '#34D399' : e.rankDelta < 0 ? '#F87171' : '#64748B' }}>
                     {e.rankDelta > 0 ? `↑ +${e.rankDelta}` : e.rankDelta < 0 ? `↓ ${e.rankDelta}` : '—'}
                     <span style={{ color: '#64748B', marginLeft: 4 }}>from #{e.prevRank}</span>
                   </div>}
@@ -904,16 +914,16 @@ const RewardsView = () => {
               )}
 
               {/* ── 3. Performance Timeline ── */}
-              {tl.length > 0 && (
+              {tl.filter(m => m.attendance != null).length > 1 && (
                 <>
                   <p style={sectionTitle}>Performance Timeline</p>
                   <div style={{ ...card, marginBottom: 18 }}>
                     <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 60, marginBottom: 8 }}>
-                      {tl.map((m, i) => (
+                      {tl.filter(m => m.attendance != null).map((m, i) => (
                         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                          <div style={{ width: '100%', height: m.attendance != null ? `${m.attendance * 0.55}px` : '2px', background: m.attendance != null ? (m.attendance >= 80 ? '#34D399' : m.attendance >= 50 ? '#FBBF24' : '#F87171') : 'rgba(255,255,255,0.06)', borderRadius: 3, minHeight: 2 }} />
+                          <div style={{ width: '100%', height: `${Math.max(2, m.attendance * 0.55)}px`, background: m.attendance >= 80 ? '#34D399' : m.attendance >= 50 ? '#FBBF24' : '#F87171', borderRadius: 3 }} />
                           <span style={{ fontSize: 8, color: '#64748B' }}>{m.month}</span>
-                          <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>{m.attendance != null ? `${m.attendance}%` : '—'}</span>
+                          <span style={{ fontSize: 8, color: '#94A3B8', fontWeight: 600 }}>{m.attendance}%</span>
                         </div>
                       ))}
                     </div>
@@ -1062,12 +1072,12 @@ const RewardsView = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8, marginBottom: 8 }}>
                     {[
                       { label: 'Attendance Next Month', value: `${pred.attendanceNextMonth}%` },
-                      { label: 'Leadership Readiness', value: `${pred.leadershipReadiness}%` },
+                      !isGroup && pred.leadershipReadiness > 0 && { label: 'Leadership Readiness', value: `${pred.leadershipReadiness}%` },
                       { label: 'Inactive Risk', value: `${pred.riskOfBecomingInactive}%`, color: pred.riskOfBecomingInactive > 30 ? '#F87171' : '#34D399' },
-                      { label: 'Volunteer Potential', value: pred.volunteerPotential || '—' },
+                      pred.volunteerPotential && pred.volunteerPotential !== 'Low' && { label: 'Volunteer Potential', value: pred.volunteerPotential },
                       { label: 'Promotion', value: pred.promotionRecommendation ? 'YES' : 'NO', color: pred.promotionRecommendation ? '#34D399' : '#94A3B8' },
                       { label: 'Follow-up Priority', value: pred.followUpPriority || 'LOW', color: pred.followUpPriority === 'High' ? '#F87171' : '#34D399' },
-                    ].map((p, i) => (
+                    ].filter(Boolean).map((p, i) => (
                       <div key={i} style={card}>
                         <p style={statLabel}>{p.label}</p>
                         <p style={{ ...statValue, color: p.color || '#F1F5F9', fontSize: 14 }}>{p.value}</p>
