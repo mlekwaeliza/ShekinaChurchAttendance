@@ -374,19 +374,31 @@ async function buildRanked(scored, weights, season, prevSeason) {
   return scored;
 }
 
-// Previous-season scores (recompute for movement). Lightweight: only members/leaders used.
+// Previous-season scores (recompute for movement).
 async function scoreForSeason(season) {
   const serviceId = 'all';
   const members = await scoreMembers(season.start, season.end, serviceId);
   const leaders = await scoreLeaders(season.start, season.end, serviceId);
+  const sections = await scoreSections(season.start, season.end, serviceId);
+  const departments = await scoreDepartments(season.start, season.end);
+  const cells = await scoreCells(season.start, season.end);
   const weights = await loadWeights();
   const out = [];
   members.forEach(m => { m.overallScore = weighted(m.components, weights.member); });
   leaders.forEach(l => { l.overallScore = weighted(l.components, weights.leader); });
+  sections.forEach(s => { s.overallScore = s.components.attendance || 0; });
+  departments.forEach(d => { d.overallScore = d.components.attendance || 0; });
+  cells.forEach(c => { c.overallScore = c.components.attendance || 0; });
   members.sort((a, b) => b.overallScore - a.overallScore);
   leaders.sort((a, b) => b.overallScore - a.overallScore);
+  sections.sort((a, b) => b.overallScore - a.overallScore);
+  departments.sort((a, b) => b.overallScore - a.overallScore);
+  cells.sort((a, b) => b.overallScore - a.overallScore);
   members.forEach((m, i) => out.push({ id: m.id, rank: i + 1 }));
   leaders.forEach((l, i) => out.push({ id: l.id, rank: i + 1 }));
+  sections.forEach((s, i) => out.push({ id: s.id, rank: i + 1 }));
+  departments.forEach((d, i) => out.push({ id: d.id, rank: i + 1 }));
+  cells.forEach((c, i) => out.push({ id: c.id, rank: i + 1 }));
   return out;
 }
 
@@ -431,9 +443,9 @@ async function getDashboard(filter, serviceId, userId) {
   const prev = prevSeasonOf(season);
   const rankedMembers = await buildRanked(members, weights, season, prev);
   const rankedLeaders = await buildRanked(leaders, weights, season, prev);
-  const rankedSections = await buildRanked(sections, { member: { attendance: 100 }, leader: {} }, season, null);
-  const rankedDepartments = await buildRanked(departments, { member: { attendance: 100 }, leader: {} }, season, null);
-  const rankedCells = await buildRanked(cells, { member: { attendance: 100 }, leader: {} }, season, null);
+  const rankedSections = await buildRanked(sections, { member: { attendance: 100 }, leader: {} }, season, prev);
+  const rankedDepartments = await buildRanked(departments, { member: { attendance: 100 }, leader: {} }, season, prev);
+  const rankedCells = await buildRanked(cells, { member: { attendance: 100 }, leader: {} }, season, prev);
 
   // KPIs
   const totalMembers = rankedMembers.length;

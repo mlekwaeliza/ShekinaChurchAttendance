@@ -545,7 +545,7 @@ const RewardsView = () => {
             <p style={{ color: '#64748B', textAlign: 'center', padding: 40 }}>No home cell data for this period.</p>
           ) : (
             cells.map((c, i) => {
-              const enhanced = { ...c, rankDelta: ((c.id * 2) % 5) - 2, badges: [] };
+              const enhanced = { ...c, badges: [] };
               return (
                 <div key={c.id} onClick={() => openProfile(c, 'cell')} style={{
                   cursor: 'pointer',
@@ -561,7 +561,7 @@ const RewardsView = () => {
                     <p style={{ margin: 0, fontWeight: 700, color: '#F1F5F9', fontSize: 14 }}>{c.name}</p>
                     <p style={{ margin: 0, fontSize: 11, color: '#64748B' }}>{c.membersCount} members · {c.visitors} visitors this period</p>
                   </div>
-                  <RankDelta delta={enhanced.rankDelta} />
+                  <RankDelta delta={enhanced.rankDelta || c.rankDelta || 0} />
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, minWidth: 80 }}>
                     <span style={{ fontSize: 18, fontWeight: 800, color: '#F472B6', lineHeight: 1 }}>{c.overallScore}</span>
                     <div style={{ width: 70 }}><ScoreBar value={c.attendance} color="#34D399" /></div>
@@ -595,6 +595,7 @@ const RewardsView = () => {
                   <p style={{ margin: 0, fontWeight: 700, color: '#F1F5F9', fontSize: 14 }}>{sec.name}</p>
                   <p style={{ margin: 0, fontSize: 11, color: '#64748B' }}>{sec.visitors} visitors · {sec.growth}% growth</p>
                 </div>
+                <RankDelta delta={sec.rankDelta || 0} />
                 <div style={{ minWidth: 90, textAlign: 'right' }}>
                   <span style={{ fontSize: 18, fontWeight: 800, color: '#38BDF8', lineHeight: 1, display: 'block' }}>{sec.overallScore}</span>
                   <div style={{ width: 80, marginLeft: 'auto', marginTop: 4 }}><ScoreBar value={sec.attendance} color="#38BDF8" /></div>
@@ -627,6 +628,7 @@ const RewardsView = () => {
                   <p style={{ margin: 0, fontWeight: 700, color: '#F1F5F9', fontSize: 14 }}>{d.name}</p>
                   <p style={{ margin: 0, fontSize: 11, color: '#64748B' }}>{d.membersCount} members · {d.attendance}% attendance</p>
                 </div>
+                <RankDelta delta={d.rankDelta || 0} />
                 <div style={{ minWidth: 90, textAlign: 'right' }}>
                   <span style={{ fontSize: 18, fontWeight: 800, color: '#F472B6', lineHeight: 1, display: 'block' }}>{d.overallScore}</span>
                   <div style={{ width: 80, marginLeft: 'auto', marginTop: 4 }}><ScoreBar value={d.overallScore} color="#F472B6" /></div>
