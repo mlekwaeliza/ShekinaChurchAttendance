@@ -274,7 +274,7 @@ const RewardsView = () => {
     try {
       await adminAPI.updatePerformanceWeights(localWeights);
       await load();
-    } catch (e) {}
+    } catch (e) { setError('Failed to save weights: ' + (e?.response?.data?.error || e.message)); }
     setSavingWeights(false);
     setShowSettings(false);
   };
@@ -644,7 +644,7 @@ const RewardsView = () => {
             <div style={s.sectionTitle}><Trophy size={14} /> Awards History</div>
             <button onClick={async () => {
               setAwarding(true);
-              try { await adminAPI.awardPerformanceSeason({ filter }); await load(); } catch (e) {} finally { setAwarding(false); }
+              try { await adminAPI.awardPerformanceSeason({ filter }); await load(); } catch (e) { setError('Failed to record awards: ' + (e?.response?.data?.error || e.message)); } finally { setAwarding(false); }
             }} disabled={awarding} style={{ padding: '8px 16px', borderRadius: 10, background: 'linear-gradient(135deg, #F59E0B, #D97706)', border: 'none', color: '#FFF', cursor: awarding ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, opacity: awarding ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
               {awarding ? <Loader2 size={14} className="animate-spin" /> : <Trophy size={14} />}
               {awarding ? 'Recording…' : 'Award Season Champions'}
