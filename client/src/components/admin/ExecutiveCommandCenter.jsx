@@ -15,6 +15,7 @@ const R = (v) => Math.round(Number(v) || 0);
 const pct = (v) => `${R(Number(v || 0) * 10) / 10}%`;
 const num = (v) => Number(v || 0).toLocaleString();
 const fmtDate = (d) => { try { return new Date(d).toLocaleDateString(); } catch { return '—'; } };
+const asArray = (v) => Array.isArray(v) ? v : [];
 
 const INSUFFICIENT = 'Insufficient Data';
 
@@ -155,12 +156,12 @@ const ExecutiveCommandCenter = (props) => {
       ]);
       if (sumRes.status === 'fulfilled') setSummary(sumRes.value.data);
       if (compRes.status === 'fulfilled') setComparison(compRes.value.data);
-      if (aiRes.status === 'fulfilled') setAiInsights(aiRes.value.data || []);
-      if (cellRes.status === 'fulfilled') setHomeCells(cellRes.value.data || []);
-      if (deptRes.status === 'fulfilled') setDepartments(deptRes.value.data || []);
-      if (bdayRes.status === 'fulfilled') setBirthdays(bdayRes.value.data || []);
-      if (alertRes.status === 'fulfilled') setAlerts(alertRes.value.data || []);
-      if (auditRes.status === 'fulfilled') setAudit(auditRes.value.data || []);
+      if (aiRes.status === 'fulfilled') setAiInsights(asArray(aiRes.value.data));
+      if (cellRes.status === 'fulfilled') setHomeCells(asArray(cellRes.value.data));
+      if (deptRes.status === 'fulfilled') setDepartments(asArray(deptRes.value.data?.departments ?? deptRes.value.data));
+      if (bdayRes.status === 'fulfilled') setBirthdays(asArray(bdayRes.value.data));
+      if (alertRes.status === 'fulfilled') setAlerts(asArray(alertRes.value.data));
+      if (auditRes.status === 'fulfilled') setAudit(asArray(auditRes.value.data));
       if (perfRes.status === 'fulfilled') setHallOfFame(perfRes.value.data);
       if (backupRes.status === 'fulfilled') setBackup(backupRes.value.data);
       if (healthRes.status === 'fulfilled') setHealth(healthRes.value.data);
@@ -288,9 +289,9 @@ const ExecutiveCommandCenter = (props) => {
 
       {/* ── Critical Alerts & Needs Attention ── */}
       <SectionCard title="Critical Alerts & Needs Attention" icon={AlertTriangle} to="/admin/follow-ups" navigate={navigate}
-        action={<span className="text-[10px] font-bold text-rose-600">{(summary?.alerts || []).length + alerts.length} items</span>}>
+        action={<span className="text-[10px] font-bold text-rose-600">{asArray(summary?.alerts).length + alerts.length} items</span>}>
         <div className="space-y-2">
-          {(summary?.alerts || []).filter(a => a.priority === 'high' || a.priority === 'medium').slice(0, 6).map((a, i) => (
+          {asArray(summary?.alerts).filter(a => a.priority === 'high' || a.priority === 'medium').slice(0, 6).map((a, i) => (
             <button key={i} type="button" onClick={() => navigate('/admin/follow-ups')}
               className="group w-full text-left flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/20 hover:ring-1 hover:ring-rose-300 dark:hover:ring-rose-700 transition-all cursor-pointer">
               <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
@@ -312,7 +313,7 @@ const ExecutiveCommandCenter = (props) => {
               <ArrowUpRight className="w-3.5 h-3.5 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
             </button>
           ))}
-          {(summary?.alerts || []).length === 0 && alerts.length === 0 && (
+          {asArray(summary?.alerts).length === 0 && alerts.length === 0 && (
             <p className="text-xs text-slate-400 text-center py-3">No critical alerts at this time.</p>
           )}
         </div>
@@ -347,7 +348,7 @@ const ExecutiveCommandCenter = (props) => {
         <SectionCard title="Leadership Intelligence" icon={Crown}
           action={<button onClick={() => navigate('/admin/leaders')} className="text-[10px] text-blue-600 font-semibold">View all</button>}>
           <div className="space-y-2">
-            {(summary?.leaderRankings || []).slice(0, 6).map((l, i) => (
+            {asArray(summary?.leaderRankings).slice(0, 6).map((l, i) => (
               <Row key={l.id || i} to="/admin/leaders" navigate={navigate}>
                 <span className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}>{i + 1}</span>
                 <div className="flex-1 min-w-0">
@@ -360,7 +361,7 @@ const ExecutiveCommandCenter = (props) => {
                 </div>
               </Row>
             ))}
-            {(summary?.leaderRankings || []).length === 0 && <InsufficientData />}
+            {asArray(summary?.leaderRankings).length === 0 && <InsufficientData />}
           </div>
         </SectionCard>
 
@@ -368,7 +369,7 @@ const ExecutiveCommandCenter = (props) => {
         <SectionCard title="Section Intelligence" icon={Layers}
           action={<button onClick={() => navigate('/admin/sections')} className="text-[10px] text-blue-600 font-semibold">View all</button>}>
           <div className="space-y-2">
-            {(summary?.sectionRankings || []).slice(0, 6).map((s, i) => {
+            {asArray(summary?.sectionRankings).slice(0, 6).map((s, i) => {
               const st = s.status === 'strong' ? 'excellent' : s.status === 'average' ? 'good' : 'attention';
               return (
                 <Row key={s.id || i} to="/admin/sections" navigate={navigate}>
@@ -384,7 +385,7 @@ const ExecutiveCommandCenter = (props) => {
                 </Row>
               );
             })}
-            {(summary?.sectionRankings || []).length === 0 && <InsufficientData />}
+            {asArray(summary?.sectionRankings).length === 0 && <InsufficientData />}
           </div>
         </SectionCard>
       </div>
@@ -583,13 +584,13 @@ const ExecutiveCommandCenter = (props) => {
               <p className="text-xs text-slate-600 dark:text-slate-300">{ins.text}</p>
             </div>
           ))}
-          {(summary?.recommendations || []).slice(0, 3).map((r, i) => (
+          {asArray(summary?.recommendations).slice(0, 3).map((r, i) => (
             <div key={`r${i}`} className="flex items-start gap-2">
               <Zap className="w-3.5 h-3.5 text-violet-500 mt-0.5 shrink-0" />
               <p className="text-xs text-slate-600 dark:text-slate-300"><span className="font-semibold">Recommend:</span> {r.recommendation}</p>
             </div>
           ))}
-          {aiInsights.length === 0 && (summary?.recommendations || []).length === 0 && <InsufficientData />}
+          {aiInsights.length === 0 && asArray(summary?.recommendations).length === 0 && <InsufficientData />}
         </div>
       </SectionCard>
 
