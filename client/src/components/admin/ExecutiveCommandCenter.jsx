@@ -6,6 +6,7 @@ import {
   AlertTriangle, TrendingUp, TrendingDown, Minus, Sparkles, Church,
   Home, Building2, Star, Award, Zap, Clock, Database, RefreshCw,
   ArrowUpRight, ChevronDown, ChevronRight, Calendar, Gift, Crown, Target,
+  UserX,
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
 import { STATUS, statusForScore, TrendIcon, R as Rn } from './ReportShared';
@@ -29,30 +30,70 @@ const StatusPill = ({ status, label }) => {
 };
 
 // Compact Church Pulse indicator
-const PulseItem = ({ icon: Icon, label, value, status }) => {
+const PulseItem = ({ icon: Icon, label, value, status, to, navigate }) => {
   const s = STATUS[status] || STATUS.neutral;
-  return (
-    <div className="flex flex-col items-center justify-center px-2 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 min-w-[88px]">
+  const inner = (
+    <>
       <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1" style={{ background: `${s.color}15` }}>
         <Icon className="w-3.5 h-3.5" style={{ color: s.color }} />
       </div>
       <span className="text-sm font-bold text-slate-900 dark:text-white leading-none">{value}</span>
       <span className="text-[9px] text-slate-400 mt-1 text-center leading-tight">{label}</span>
+    </>
+  );
+  if (to && navigate) {
+    return (
+      <button type="button" onClick={() => navigate(to)}
+        className="relative flex flex-col items-center justify-center px-2 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 min-w-[88px] hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-sm transition-all cursor-pointer group">
+        {inner}
+        <ArrowUpRight className="w-3 h-3 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity absolute top-1 right-1" />
+      </button>
+    );
+  }
+  return (
+    <div className="relative flex flex-col items-center justify-center px-2 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 min-w-[88px]">
+      {inner}
     </div>
   );
 };
 
-const SectionCard = ({ title, icon: Icon, children, action }) => (
-  <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
-      <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
-        <Icon className="w-4 h-4 text-slate-400" /> {title}
-      </h3>
-      {action}
+const SectionCard = ({ title, icon: Icon, children, action, to, navigate }) => {
+  const viewBtn = to && navigate ? (
+    <button type="button" onClick={() => navigate(to)}
+      className="inline-flex items-center gap-0.5 text-[10px] text-blue-600 dark:text-blue-400 font-semibold hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+      View <ArrowUpRight className="w-3 h-3" />
+    </button>
+  ) : null;
+  return (
+    <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
+        <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+          <Icon className="w-4 h-4 text-slate-400" /> {title}
+        </h3>
+        <div className="flex items-center gap-3">{action}{viewBtn}</div>
+      </div>
+      <div className="p-4">{children}</div>
     </div>
-    <div className="p-4">{children}</div>
-  </div>
-);
+  );
+};
+
+// Clickable list row wrapper. Renders children inside a button when `to` is set.
+const Row = ({ to, navigate, children, className = '', ...rest }) => {
+  if (to && navigate) {
+    return (
+      <button type="button" onClick={() => navigate(to)}
+        className={`group w-full text-left flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-700/30 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer ${className}`}
+        {...rest}>
+        {children}
+      </button>
+    );
+  }
+  return (
+    <div className={`flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-700/30 ${className}`} {...rest}>
+      {children}
+    </div>
+  );
+};
 
 const Metric = ({ label, value, sub, status, trend }) => (
   <div className="flex flex-col">
@@ -145,20 +186,20 @@ const ExecutiveCommandCenter = (props) => {
 
   // Church Pulse derived indicators
   const pulse = [
-    { icon: Activity, label: 'Attendance', value: pct(kpis.attendanceRate?.current), status: statusForScore(kpis.attendanceRate?.current || 0) },
-    { icon: ShieldCheck, label: 'Leadership', value: pct(kpis.leaderPerfIndex?.current), status: statusForScore(kpis.leaderPerfIndex?.current || 0) },
-    { icon: Layers, label: 'Sections', value: pct(kpis.sectionPerfIndex?.current), status: statusForScore(kpis.sectionPerfIndex?.current || 0) },
-    { icon: UserCheck, label: 'Retention', value: pct(kpis.retentionRate?.current), status: statusForScore(kpis.retentionRate?.current || 0) },
-    { icon: Send, label: 'Visitor FU', value: pct(kpis.visitorConversion?.current), status: statusForScore(kpis.visitorConversion?.current || 0) },
-    { icon: Sparkles, label: 'Engagement', value: pct(kpis.engagementScore?.current), status: statusForScore(kpis.engagementScore?.current || 0) },
-    { icon: Home, label: 'Home Cells', value: homeCells.length ? `${homeCells.length}` : '—', status: homeCells.length ? 'good' : 'neutral' },
-    { icon: Building2, label: 'Ministry', value: departments.length ? `${departments.length}` : '—', status: departments.length ? 'good' : 'neutral' },
-    { icon: Gift, label: 'Contrib.', value: kpis.contributionsIndex?.current != null ? pct(kpis.contributionsIndex.current) : '—', status: kpis.contributionsIndex?.current != null ? statusForScore(kpis.contributionsIndex.current) : 'neutral' },
+    { icon: Activity, label: 'Attendance', value: pct(kpis.attendanceRate?.current), status: statusForScore(kpis.attendanceRate?.current || 0), to: '/admin/reports' },
+    { icon: ShieldCheck, label: 'Leadership', value: pct(kpis.leaderPerfIndex?.current), status: statusForScore(kpis.leaderPerfIndex?.current || 0), to: '/admin/leaders' },
+    { icon: Layers, label: 'Sections', value: pct(kpis.sectionPerfIndex?.current), status: statusForScore(kpis.sectionPerfIndex?.current || 0), to: '/admin/sections' },
+    { icon: UserCheck, label: 'Retention', value: pct(kpis.retentionRate?.current), status: statusForScore(kpis.retentionRate?.current || 0), to: '/admin/analytics' },
+    { icon: Send, label: 'Visitor FU', value: pct(kpis.visitorConversion?.current), status: statusForScore(kpis.visitorConversion?.current || 0), to: '/admin/follow-ups' },
+    { icon: Sparkles, label: 'Engagement', value: pct(kpis.engagementScore?.current), status: statusForScore(kpis.engagementScore?.current || 0), to: '/admin/analytics' },
+    { icon: Home, label: 'Home Cells', value: homeCells.length ? `${homeCells.length}` : '—', status: homeCells.length ? 'good' : 'neutral', to: '/admin/home-cells' },
+    { icon: Building2, label: 'Ministry', value: departments.length ? `${departments.length}` : '—', status: departments.length ? 'good' : 'neutral', to: '/admin/departments' },
+    { icon: Gift, label: 'Contrib.', value: kpis.contributionsIndex?.current != null ? pct(kpis.contributionsIndex.current) : '—', status: kpis.contributionsIndex?.current != null ? statusForScore(kpis.contributionsIndex.current) : 'neutral', to: '/admin/contributions' },
   ];
 
   const actionButtons = [
     { label: 'Record Attendance', icon: Activity, to: '/admin/reports' },
-    { label: 'Register Visitor', icon: UserPlus, to: '/admin/visitors' },
+    { label: 'Register Visitor', icon: UserPlus, to: '/admin/new-members' },
     { label: 'Add Member', icon: Users, to: '/admin/members' },
     { label: 'Schedule Follow-up', icon: CalendarDays, to: '/admin/follow-ups' },
     { label: 'Create Announcement', icon: Bell, to: '/admin/announcements' },
@@ -192,7 +233,8 @@ const ExecutiveCommandCenter = (props) => {
   return (
     <div className="space-y-5 animate-fade-in pb-12">
       {/* ── Church Health Score Hero ── */}
-      <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+      <button type="button" onClick={() => navigate('/admin/reports')}
+        className="w-full text-left rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all cursor-pointer group">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: `${scoreColor}15` }}>
@@ -219,14 +261,15 @@ const ExecutiveCommandCenter = (props) => {
             {churchScore?.target != null && (
               <div className="text-center"><p className="text-xl font-bold text-slate-900 dark:text-white">{R(churchScore.target)}</p><p className="text-[9px] text-slate-400 uppercase">Target</p></div>
             )}
+            <ArrowUpRight className="w-5 h-5 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
-      </div>
+      </button>
 
       {/* ── Church Pulse Row ── */}
       <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-3">
         <div className="flex items-center gap-2 overflow-x-auto">
-          {pulse.map((p, i) => <PulseItem key={i} {...p} />)}
+          {pulse.map((p, i) => <PulseItem key={i} {...p} navigate={navigate} />)}
         </div>
       </div>
 
@@ -244,27 +287,30 @@ const ExecutiveCommandCenter = (props) => {
       </SectionCard>
 
       {/* ── Critical Alerts & Needs Attention ── */}
-      <SectionCard title="Critical Alerts & Needs Attention" icon={AlertTriangle}
+      <SectionCard title="Critical Alerts & Needs Attention" icon={AlertTriangle} to="/admin/follow-ups" navigate={navigate}
         action={<span className="text-[10px] font-bold text-rose-600">{(summary?.alerts || []).length + alerts.length} items</span>}>
         <div className="space-y-2">
           {(summary?.alerts || []).filter(a => a.priority === 'high' || a.priority === 'medium').slice(0, 6).map((a, i) => (
-            <div key={i} className="flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/20">
+            <button key={i} type="button" onClick={() => navigate('/admin/follow-ups')}
+              className="group w-full text-left flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/20 hover:ring-1 hover:ring-rose-300 dark:hover:ring-rose-700 transition-all cursor-pointer">
               <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
               <div className="flex-1">
                 <p className="text-xs font-semibold text-slate-900 dark:text-white">{a.title || a.category}</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">{a.message || a.text}</p>
               </div>
               <StatusPill status={a.priority === 'high' ? 'critical' : 'attention'} />
-            </div>
+            </button>
           ))}
           {alerts.slice(0, 4).map((a, i) => (
-            <div key={`c${i}`} className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20">
+            <button key={`c${i}`} type="button" onClick={() => navigate('/admin/follow-ups')}
+              className="group w-full text-left flex items-start gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 hover:ring-1 hover:ring-amber-300 dark:hover:ring-amber-700 transition-all cursor-pointer">
               <UserX className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
               <div className="flex-1">
                 <p className="text-xs font-semibold text-slate-900 dark:text-white">{a.full_name}</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">Absent {a.consecutive_absences} consecutive services · {a.section_name}</p>
               </div>
-            </div>
+              <ArrowUpRight className="w-3.5 h-3.5 text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5" />
+            </button>
           ))}
           {(summary?.alerts || []).length === 0 && alerts.length === 0 && (
             <p className="text-xs text-slate-400 text-center py-3">No critical alerts at this time.</p>
@@ -273,7 +319,7 @@ const ExecutiveCommandCenter = (props) => {
       </SectionCard>
 
       {/* ── Attendance Intelligence ── */}
-      <SectionCard title="Attendance Intelligence" icon={Activity}>
+      <SectionCard title="Attendance Intelligence" icon={Activity} to="/admin/reports" navigate={navigate}>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           <Metric label="Total Members" value={num(snap.attendance?.totalEligible || allMembers.length)} />
           <Metric label="Present" value={num(snap.attendance?.present)} status="excellent" />
@@ -302,7 +348,7 @@ const ExecutiveCommandCenter = (props) => {
           action={<button onClick={() => navigate('/admin/leaders')} className="text-[10px] text-blue-600 font-semibold">View all</button>}>
           <div className="space-y-2">
             {(summary?.leaderRankings || []).slice(0, 6).map((l, i) => (
-              <div key={l.id || i} className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-700/30">
+              <Row key={l.id || i} to="/admin/leaders" navigate={navigate}>
                 <span className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}>{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{l.name || l.leader_name}</p>
@@ -312,7 +358,7 @@ const ExecutiveCommandCenter = (props) => {
                   <p className="text-sm font-bold" style={{ color: (l.attendance_rate || l.attendanceRate) >= 75 ? '#10b981' : (l.attendance_rate || l.attendanceRate) >= 50 ? '#f59e0b' : '#ef4444' }}>{R(l.attendance_rate || l.attendanceRate)}%</p>
                   <p className="text-[9px] text-slate-400">sub {R(l.submissionRate ?? l.leader_submission_rate ?? 0)}%</p>
                 </div>
-              </div>
+              </Row>
             ))}
             {(summary?.leaderRankings || []).length === 0 && <InsufficientData />}
           </div>
@@ -325,7 +371,7 @@ const ExecutiveCommandCenter = (props) => {
             {(summary?.sectionRankings || []).slice(0, 6).map((s, i) => {
               const st = s.status === 'strong' ? 'excellent' : s.status === 'average' ? 'good' : 'attention';
               return (
-                <div key={s.id || i} className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-700/30">
+                <Row key={s.id || i} to="/admin/sections" navigate={navigate}>
                   <span className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}>{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{s.name}</p>
@@ -335,7 +381,7 @@ const ExecutiveCommandCenter = (props) => {
                     <p className="text-sm font-bold" style={{ color: s.attendanceRate >= 75 ? '#10b981' : s.attendanceRate >= 50 ? '#f59e0b' : '#ef4444' }}>{R(s.attendanceRate)}%</p>
                     <StatusPill status={st} />
                   </div>
-                </div>
+                </Row>
               );
             })}
             {(summary?.sectionRankings || []).length === 0 && <InsufficientData />}
@@ -344,7 +390,7 @@ const ExecutiveCommandCenter = (props) => {
       </div>
 
       {/* ── Member Intelligence ── */}
-      <SectionCard title="Member Intelligence" icon={Users}>
+      <SectionCard title="Member Intelligence" icon={Users} to="/admin/members" navigate={navigate}>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           <Metric label="Active Members" value={num(snap.church?.activeMembers || allMembers.filter(m => m.is_active !== 0).length)} status="good" />
           <Metric label="Inactive Members" value={num(allMembers.filter(m => m.is_active === 0).length)} status="attention" />
@@ -373,7 +419,7 @@ const ExecutiveCommandCenter = (props) => {
       </SectionCard>
 
       {/* ── Growth & Retention Center ── */}
-      <SectionCard title="Growth & Retention Center" icon={TrendingUp}>
+      <SectionCard title="Growth & Retention Center" icon={TrendingUp} to="/admin/analytics" navigate={navigate}>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           <Metric label="New This Week" value={INSUFFICIENT} />
           <Metric label="New This Month" value={num(snap.church?.newMembers)} status="good" />
@@ -398,14 +444,14 @@ const ExecutiveCommandCenter = (props) => {
             {homeCells.slice(0, 5).map((c, i) => {
               const members = c.member_count || (c.members ? c.members.length : 0);
               return (
-                <div key={c.id || i} className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-700/30">
+                <Row key={c.id || i} to="/admin/home-cells" navigate={navigate}>
                   <Home className="w-4 h-4 text-slate-400" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{c.name}</p>
                     <p className="text-[10px] text-slate-400">{members} members</p>
                   </div>
                   <StatusPill status={members > 10 ? 'good' : members > 5 ? 'watch' : 'attention'} />
-                </div>
+                </Row>
               );
             })}
             {homeCells.length === 0 && <InsufficientData />}
@@ -417,7 +463,7 @@ const ExecutiveCommandCenter = (props) => {
           action={<button onClick={() => navigate('/admin/departments')} className="text-[10px] text-blue-600 font-semibold">View all</button>}>
           <div className="space-y-2">
             {departments.slice(0, 5).map((d, i) => (
-              <div key={d.id || i} className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-700/30">
+              <Row key={d.id || i} to="/admin/departments" navigate={navigate}>
                 <Building2 className="w-4 h-4 text-slate-400" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{d.name}</p>
@@ -426,7 +472,7 @@ const ExecutiveCommandCenter = (props) => {
                 <div className="text-right">
                   <p className="text-sm font-bold" style={{ color: (d.attendance_rate || 0) >= 75 ? '#10b981' : (d.attendance_rate || 0) >= 50 ? '#f59e0b' : '#ef4444' }}>{R(d.attendance_rate || 0)}%</p>
                 </div>
-              </div>
+              </Row>
             ))}
             {departments.length === 0 && <InsufficientData />}
           </div>
@@ -434,17 +480,18 @@ const ExecutiveCommandCenter = (props) => {
       </div>
 
       {/* ── Upcoming Activities & Calendar ── */}
-      <SectionCard title="Upcoming Activities & Calendar" icon={CalendarDays}>
+      <SectionCard title="Upcoming Activities & Calendar" icon={CalendarDays} to="/admin/calendar" navigate={navigate}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Next 30 Days Birthdays</p>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {birthdays.slice(0, 8).map((b) => (
-                <div key={b.id} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-700/30">
+                <button key={b.id} type="button" onClick={() => navigate('/admin/birthdays')}
+                  className="group w-full text-left flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-700/30 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                   <Gift className="w-3.5 h-3.5 text-rose-400" />
                   <span className="text-xs text-slate-700 dark:text-slate-200 flex-1">{b.full_name}</span>
                   <span className="text-[10px] text-slate-400">{fmtDate(b.date_of_birth)}</span>
-                </div>
+                </button>
               ))}
               {birthdays.length === 0 && <InsufficientData />}
             </div>
@@ -460,14 +507,15 @@ const ExecutiveCommandCenter = (props) => {
       </SectionCard>
 
       {/* ── Recent Activity Feed ── */}
-      <SectionCard title="Recent Activity" icon={Clock}>
+      <SectionCard title="Recent Activity" icon={Clock} to="/admin/audit" navigate={navigate}>
         <div className="space-y-1.5 max-h-64 overflow-y-auto">
           {audit.slice(0, 12).map((a, i) => (
-            <div key={a.id || i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30">
+            <button key={a.id || i} type="button" onClick={() => navigate('/admin/audit')}
+              className="group w-full text-left flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               <span className="text-xs text-slate-700 dark:text-slate-200 flex-1 truncate">{a.action || a.description || a.entity || 'System activity'}</span>
               <span className="text-[10px] text-slate-400 shrink-0">{fmtDate(a.created_at || a.timestamp)}</span>
-            </div>
+            </button>
           ))}
           {audit.length === 0 && <InsufficientData />}
         </div>
@@ -479,41 +527,46 @@ const ExecutiveCommandCenter = (props) => {
           action={<button onClick={() => navigate('/admin/rewards')} className="text-[10px] text-blue-600 font-semibold">View all</button>}>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {hallOfFame.kpis?.topMember && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center">
+              <button type="button" onClick={() => navigate('/admin/members')}
+                className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                 <Crown className="w-5 h-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-[9px] uppercase text-slate-400">Top Member</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.topMember.name}</p>
                 <p className="text-[10px] text-slate-400">{R(hallOfFame.kpis.topMember.score)}</p>
-              </div>
+              </button>
             )}
             {hallOfFame.kpis?.topLeader && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center">
+              <button type="button" onClick={() => navigate('/admin/leaders')}
+                className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                 <Award className="w-5 h-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-[9px] uppercase text-slate-400">Top Leader</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.topLeader.name}</p>
                 <p className="text-[10px] text-slate-400">{R(hallOfFame.kpis.topLeader.score)}</p>
-              </div>
+              </button>
             )}
             {hallOfFame.kpis?.bestCell && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center">
+              <button type="button" onClick={() => navigate('/admin/home-cells')}
+                className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                 <Home className="w-5 h-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-[9px] uppercase text-slate-400">Top Cell</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.bestCell.name}</p>
-              </div>
+              </button>
             )}
             {hallOfFame.kpis?.bestAttendanceSection && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center">
+              <button type="button" onClick={() => navigate('/admin/sections')}
+                className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                 <Layers className="w-5 h-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-[9px] uppercase text-slate-400">Top Section</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.bestAttendanceSection.name}</p>
-              </div>
+              </button>
             )}
             {hallOfFame.kpis?.bestEvangelist && (
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center">
+              <button type="button" onClick={() => navigate('/admin/evangelism')}
+                className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                 <Send className="w-5 h-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-[9px] uppercase text-slate-400">Top Evangelist</p>
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.bestEvangelist.full_name}</p>
-              </div>
+              </button>
             )}
           </div>
         </SectionCard>
@@ -541,7 +594,7 @@ const ExecutiveCommandCenter = (props) => {
       </SectionCard>
 
       {/* ── System Health ── */}
-      <SectionCard title="System Health" icon={Database}>
+      <SectionCard title="System Health" icon={Database} to="/admin/settings" navigate={navigate}>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Metric label="Database" value={health?.database?.status === 'connected' ? 'Online' : (health?.database?.status || INSUFFICIENT)} status={health?.database?.status === 'connected' ? 'excellent' : 'critical'} />
           <Metric label="Last Backup" value={backup?.last_backup_at ? fmtDate(backup.last_backup_at) : INSUFFICIENT} status={backup?.warning ? 'attention' : 'good'} />
