@@ -15,6 +15,7 @@ import { analyticsAPI } from '../../services/api';
 
 const R = v => Math.round(Number(v) || 0);
 const C = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#84cc16'];
+const asArray = v => Array.isArray(v) ? v : [];
 const STATUS_COLORS = { success: '#10b981', warning: '#f59e0b', danger: '#ef4444', neutral: '#94a3b8' };
 const STATUS_BG = { success: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800', warning: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800', danger: 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800', neutral: 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' };
 const PRIORITY_BADGE = { high: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400', medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', low: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400' };
@@ -128,10 +129,10 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
     );
   }
 
-  const { kpis, alerts, snapshot, sectionRankings, leaderRankings, healthBreakdown, actions, momentumData, benchmarkComparison, recommendations } = data;
-  const kpiList = Object.values(kpis).filter(Boolean);
-  const highPriorityAlerts = (alerts || []).filter(a => a.priority === 'high');
-  const mediumPriorityAlerts = (alerts || []).filter(a => a.priority === 'medium');
+  const { kpis, alerts, snapshot, sectionRankings, leaderRankings, healthBreakdown, actions, momentumData, benchmarkComparison, recommendations } = data || {};
+  const kpiList = Object.values(kpis || {}).filter(Boolean);
+  const highPriorityAlerts = asArray(alerts).filter(a => a.priority === 'high');
+  const mediumPriorityAlerts = asArray(alerts).filter(a => a.priority === 'medium');
 
   const churchScore = kpis?.churchHealthScore;
   const scoreColor = churchScore?.current >= 75 ? '#10b981' : churchScore?.current >= 50 ? '#f59e0b' : '#ef4444';
@@ -185,13 +186,13 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Attendance Momentum */}
-            {momentumData && momentumData.length > 0 && (
+            {momentumData && asArray(momentumData).length > 0 && (
               <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
                   <Activity className="w-4 h-4 text-indigo-500" />Attendance Trend
                 </h3>
                 <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={momentumData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                  <AreaChart data={asArray(momentumData)} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="rptMomentum" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -209,19 +210,19 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
             )}
 
             {/* Section Attendance Bar Chart */}
-            {sectionRankings && sectionRankings.length > 0 && (
+            {sectionRankings && asArray(sectionRankings).length > 0 && (
               <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-indigo-500" />Section Attendance Rates
                 </h3>
                 <ResponsiveContainer width="100%" height={220}>
-                  <ReBar data={sectionRankings.slice(0, 8)} margin={{ top: 5, right: 10, left: -10, bottom: 0 }} layout="vertical">
+                  <ReBar data={asArray(sectionRankings).slice(0, 8)} margin={{ top: 5, right: 10, left: -10, bottom: 0 }} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
                     <Tooltip formatter={v => [`${v}%`, 'Rate']} />
                     <Bar dataKey="attendanceRate" radius={[0, 4, 4, 0]}>
-                      {sectionRankings.slice(0, 8).map((entry, i) => (
+                      {asArray(sectionRankings).slice(0, 8).map((entry, i) => (
                         <Cell key={i} fill={entry.attendanceRate >= 75 ? '#10b981' : entry.attendanceRate >= 50 ? '#f59e0b' : '#ef4444'} />
                       ))}
                     </Bar>
@@ -231,19 +232,19 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
             )}
 
             {/* Leader Performance Bar Chart */}
-            {leaderRankings && leaderRankings.length > 0 && (
+            {leaderRankings && asArray(leaderRankings).length > 0 && (
               <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
                   <Users className="w-4 h-4 text-indigo-500" />Top Leaders by Rate
                 </h3>
                 <ResponsiveContainer width="100%" height={220}>
-                  <ReBar data={leaderRankings.slice(0, 8)} margin={{ top: 5, right: 10, left: -10, bottom: 0 }} layout="vertical">
+                  <ReBar data={asArray(leaderRankings).slice(0, 8)} margin={{ top: 5, right: 10, left: -10, bottom: 0 }} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                     <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
                     <Tooltip formatter={v => [`${v}%`, 'Rate']} />
                     <Bar dataKey="attendanceRate" radius={[0, 4, 4, 0]}>
-                      {leaderRankings.slice(0, 8).map((entry, i) => (
+                      {asArray(leaderRankings).slice(0, 8).map((entry, i) => (
                         <Cell key={i} fill={entry.attendanceRate >= 75 ? '#10b981' : entry.attendanceRate >= 50 ? '#f59e0b' : '#ef4444'} />
                       ))}
                     </Bar>
@@ -253,15 +254,15 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
             )}
 
             {/* Member Health Pie Chart */}
-            {healthBreakdown && healthBreakdown.length > 0 && (
+            {healthBreakdown && asArray(healthBreakdown).length > 0 && (
               <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
                   <Heart className="w-4 h-4 text-indigo-500" />Member Health Distribution
                 </h3>
                 <ResponsiveContainer width="100%" height={220}>
                   <RePie>
-                    <Pie data={healthBreakdown} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="count" nameKey="label">
-                      {healthBreakdown.map((entry, i) => {
+                    <Pie data={asArray(healthBreakdown)} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="count" nameKey="label">
+                      {asArray(healthBreakdown).map((entry, i) => {
                         const pieColors = { Healthy: '#10b981', Moderate: '#f59e0b', 'At Risk': '#f97316', Critical: '#ef4444' };
                         return <Cell key={i} fill={pieColors[entry.label] || C[i % C.length]} />;
                       })}
@@ -327,13 +328,13 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
           </div>
 
           {/* Attendance Momentum */}
-          {momentumData && momentumData.length > 0 && (
+          {momentumData && asArray(momentumData).length > 0 && (
             <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
               <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
                 <Activity className="w-4 h-4 text-indigo-500" />Attendance Momentum
               </h3>
               <ResponsiveContainer width="100%" height={180}>
-                <AreaChart data={momentumData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                <AreaChart data={asArray(momentumData)} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                   <defs>
                     <linearGradient id="momentumGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
@@ -352,13 +353,13 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
 
           {/* Top sections & leaders */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {sectionRankings?.length > 0 && (
+            {asArray(sectionRankings).length > 0 && (
               <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
                   <Building2 className="w-3.5 h-3.5 text-indigo-500" />Top Sections
                 </h3>
                 <div className="space-y-2">
-                  {sectionRankings.slice(0, 5).map((s, i) => (
+                  {asArray(sectionRankings).slice(0, 5).map((s, i) => (
                     <div key={s.id || i} className="flex items-center gap-3">
                       <span className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}>{i + 1}</span>
                       <div className="flex-1 min-w-0">
@@ -376,13 +377,13 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
                 </div>
               </div>
             )}
-            {leaderRankings?.length > 0 && (
+            {asArray(leaderRankings).length > 0 && (
               <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
                   <Users className="w-3.5 h-3.5 text-indigo-500" />Top Leaders
                 </h3>
                 <div className="space-y-2">
-                  {leaderRankings.slice(0, 5).map((l, i) => (
+                  {asArray(leaderRankings).slice(0, 5).map((l, i) => (
                     <div key={l.id || i} className="flex items-center gap-3">
                       <span className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}>{i + 1}</span>
                       <div className="flex-1 min-w-0">
@@ -400,13 +401,13 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
           </div>
 
           {/* Immediate actions */}
-          {actions?.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
-              <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5 text-amber-500" />Immediate Action List
-              </h3>
-              <div className="grid gap-2">
-                {actions.slice(0, 5).map((a, i) => (
+            {asArray(actions).length > 0 && (
+              <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-amber-500" />Immediate Action List
+                </h3>
+                <div className="grid gap-2">
+                  {asArray(actions).slice(0, 5).map((a, i) => (
                   <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${a.priority === 'high' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'}`}>
                       {a.priority === 'high' ? <AlertCircle className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
@@ -423,13 +424,13 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
           )}
 
           {/* AI Recommendations */}
-          {recommendations?.length > 0 && (
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
-              <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
-                <Brain className="w-3.5 h-3.5 text-violet-500" />AI Recommendations
-              </h3>
-              <div className="space-y-2">
-                {recommendations.slice(0, 5).map((r, i) => (
+            {asArray(recommendations).length > 0 && (
+              <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Brain className="w-3.5 h-3.5 text-violet-500" />AI Recommendations
+                </h3>
+                <div className="space-y-2">
+                  {asArray(recommendations).slice(0, 5).map((r, i) => (
                   <div key={i} className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-100 dark:border-slate-700">
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${r.priority === 'high' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/30'}`}>
                       <Brain className="w-3.5 h-3.5" />

@@ -17,6 +17,7 @@ const fmt = v => `TZS ${Number(v||0).toLocaleString()}`;
 const pct = v => `${Math.round(Number(v||0)*10)/10}%`;
 const num = v => Number(v||0).toLocaleString();
 const R = v => Math.round(Number(v||0)*10)/10;
+const asArray = v => Array.isArray(v) ? v : [];
 const MONTHS_SHORT = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const weekToDate = (weekStr) => {
   const [y, w] = String(weekStr).split('-W').map(Number);
@@ -206,12 +207,13 @@ const ExecutiveComparison = () => {
     });
   };
 
-  const latestPeriod = data?.periods?.[data.periods.length - 1];
-  const prevPeriod = data?.periods?.[data.periods.length - 2];
-  const kpis = data?.kpis;
-  const trends = data?.trends;
-  const rootCauses = data?.rootCauses;
-  const actions = data?.actions;
+  const dataPeriods = asArray(data?.periods);
+  const latestPeriod = dataPeriods[dataPeriods.length - 1];
+  const prevPeriod = dataPeriods[dataPeriods.length - 2];
+  const kpis = data?.kpis || {};
+  const trends = data?.trends || {};
+  const rootCauses = data?.rootCauses || {};
+  const actions = asArray(data?.actions);
 
   const latestOverall = latestPeriod?.overall || {};
   const prevOverall = prevPeriod?.overall || {};
@@ -338,7 +340,7 @@ const ExecutiveComparison = () => {
                         { key: 'retention_rate', label: 'Retention Rate', fmt: pct },
                         { key: 'net_growth', label: 'Net Growth', fmt: num },
                       ].map(row => {
-                        const vals = data.periods.map(p => p.overall?.[row.key]);
+                        const vals = dataPeriods.map(p => p.overall?.[row.key]);
                         const numsArr = vals.map(v => Number(v) || 0);
                         const current = numsArr[numsArr.length - 1] || 0;
                         const previous = numsArr.length > 1 ? numsArr[numsArr.length - 2] : current;
@@ -394,7 +396,7 @@ const ExecutiveComparison = () => {
                         <tr className="border-b border-slate-200 dark:border-slate-700">
                           <th className="text-left py-2 px-2 font-semibold text-slate-500">#</th>
                           <th className="text-left py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('name')}>Name</th>
-                          {data.periods.map(p => (
+                          {dataPeriods.map(p => (
                             <th key={p.id} className="text-right py-2 px-2 font-semibold text-slate-500">{p.label}</th>
                           ))}
                           <th className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer" onClick={() => activeSort('attendance_rate')}>Avg Rate</th>
@@ -402,13 +404,13 @@ const ExecutiveComparison = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {(mode === 'sections' ? sortFn(data.periods[data.periods.length-1]?.sections, 'attendance_rate') :
-                          mode === 'leaders' ? sortFn(data.periods[data.periods.length-1]?.leaders, 'attendance_rate') :
-                          mode === 'departments' ? sortFn(data.periods[data.periods.length-1]?.departments, 'attendance_rate') :
-                          sortFn(data.periods[data.periods.length-1]?.memberEngagement, 'attendance_rate')
+                        {(mode === 'sections' ? sortFn(dataPeriods[dataPeriods.length-1]?.sections, 'attendance_rate') :
+                          mode === 'leaders' ? sortFn(dataPeriods[dataPeriods.length-1]?.leaders, 'attendance_rate') :
+                          mode === 'departments' ? sortFn(dataPeriods[dataPeriods.length-1]?.departments, 'attendance_rate') :
+                          sortFn(dataPeriods[dataPeriods.length-1]?.memberEngagement, 'attendance_rate')
                         ).filter(e => !search || (e.name||e.leader_name||e.full_name||'').toLowerCase().includes(search.toLowerCase()))
                         .map((entity, i) => {
-                          const rates = data.periods.map(p => {
+                          const rates = dataPeriods.map(p => {
                             const list = mode === 'sections' ? p.sections : mode === 'leaders' ? p.leaders : mode === 'departments' ? p.departments : p.memberEngagement;
                             const found = list?.find(e2 => e2.id === entity.id || e2.name === entity.name || e2.leader_name === entity.leader_name);
                             return found ? Number(found.attendance_rate) || 0 : 0;
@@ -432,7 +434,7 @@ const ExecutiveComparison = () => {
                             </tr>
                           );
                         })}
-                        {data.periods[data.periods.length-1]?.[mode === 'sections' ? 'sections' : mode === 'leaders' ? 'leaders' : mode === 'departments' ? 'departments' : 'memberEngagement']?.length === 0 && (
+                        {dataPeriods[dataPeriods.length-1]?.[mode === 'sections' ? 'sections' : mode === 'leaders' ? 'leaders' : mode === 'departments' ? 'departments' : 'memberEngagement']?.length === 0 && (
                           <tr><td colSpan={10} className="py-8 text-center text-slate-400">No data available for this period</td></tr>
                         )}
                       </tbody>
@@ -449,14 +451,14 @@ const ExecutiveComparison = () => {
               <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
                 <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-indigo-500" />
-                  Full Comparison Matrix — {data.periods.length} Periods
+                  Full Comparison Matrix — {dataPeriods.length} Periods
                 </h3>
                 <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
                       <tr className="border-b border-slate-200 dark:border-slate-700">
                         <th className="text-left py-2 px-2 font-semibold text-slate-500 sticky left-0 bg-white dark:bg-slate-800 z-20">Metric</th>
-                        {data.periods.map(p => (
+                        {dataPeriods.map(p => (
                           <th key={p.id} className="text-right py-2 px-3 font-semibold text-slate-500 min-w-[90px]">{p.label}</th>
                         ))}
                         <th className="text-right py-2 px-3 font-semibold text-slate-500 min-w-[70px]">Avg</th>
@@ -485,7 +487,7 @@ const ExecutiveComparison = () => {
                         { key: 'net_growth', label: 'Net Growth', fmt: num },
                         { key: 'members_contacted', label: 'Members Contacted', fmt: num },
                       ].map(row => {
-                        const vals = data.periods.map(p => p.overall?.[row.key]);
+                        const vals = dataPeriods.map(p => p.overall?.[row.key]);
                         const nums = vals.map(v => Number(v) || 0);
                         const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
                         const best = Math.max(...nums);
@@ -519,7 +521,7 @@ const ExecutiveComparison = () => {
               {/* Best/Worst/Improving/Declining summaries */}
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {['best','worst','improving','declining'].map(type => {
-                  const lastEntities = data.periods[data.periods.length-1]?.[mode === 'sections' ? 'sections' : 'leaders'];
+                  const lastEntities = dataPeriods[dataPeriods.length-1]?.[mode === 'sections' ? 'sections' : 'leaders'];
                   if (!lastEntities?.length) return null;
                   const sorted = [...lastEntities].sort((a, b) => {
                     const rateA = type === 'declining' || type === 'worst' ? Number(a.attendance_rate) || 0 : -(Number(a.attendance_rate) || 0);
@@ -632,8 +634,8 @@ const ExecutiveComparison = () => {
                               </td>
                               <td className="py-2 px-2 text-right">
                                 {(() => {
-                                  const prevEntity = data.periods.length > 1
-                                    ? data.periods[data.periods.length - 2]?.[mode === 'sections' ? 'sections' : 'leaders']?.find(e2 => e2.id === entity.id)
+                                  const prevEntity = dataPeriods.length > 1
+                                    ? dataPeriods[dataPeriods.length - 2]?.[mode === 'sections' ? 'sections' : 'leaders']?.find(e2 => e2.id === entity.id)
                                     : null;
                                   const diff = prevEntity ? (entity.attendance_rate || 0) - (prevEntity.attendance_rate || 0) : 0;
                                   return diff > 2 ? <Badge variant="success">↑{R(diff)}</Badge> :
@@ -727,14 +729,14 @@ const ExecutiveComparison = () => {
                   </div>
                 </div>
 
-                {trends?.anomalies?.length > 0 && (
+                {asArray(trends?.anomalies).length > 0 && (
                   <div className="mb-4">
                     <h4 className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                       Anomalies Detected
                     </h4>
                     <div className="space-y-1.5">
-                      {trends.anomalies.map((a, i) => (
+                      {asArray(trends?.anomalies).map((a, i) => (
                         <div key={i} className="flex items-center gap-3 text-xs bg-amber-50 dark:bg-amber-900/10 rounded-lg px-3 py-2">
                           <Badge variant={a.type === 'positive' ? 'success' : 'danger'}>{a.deviation > 0 ? '+' : ''}{a.deviation}%</Badge>
                           <span className="text-slate-600 dark:text-slate-400">{a.period}: {pct(a.rate)}</span>
@@ -754,9 +756,9 @@ const ExecutiveComparison = () => {
                     Root Cause Analysis
                   </h3>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{rootCauses?.summary}</p>
-                  {rootCauses?.factors?.length > 0 && (
+                  {asArray(rootCauses?.factors).length > 0 && (
                     <div className="space-y-2">
-                      {rootCauses.factors.slice(0, 10).map((f, i) => (
+                      {asArray(rootCauses?.factors).slice(0, 10).map((f, i) => (
                         <div key={i} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2">
                           <div className="flex items-center gap-2">
                             <Badge variant={f.type === 'section' ? 'info' : 'violet'}>{f.type}</Badge>
@@ -828,15 +830,15 @@ const ExecutiveComparison = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.periods.map((p, i) => {
+                      {dataPeriods.map((p, i) => {
                         const o = p.overall || {};
-                        const prev = i > 0 ? data.periods[i-1].overall : null;
+                        const prev = i > 0 ? dataPeriods[i-1].overall : null;
                         const rateChange = prev ? (o.attendance_rate || 0) - (prev.attendance_rate || 0) : 0;
-                        const isBest = i === 0 || (o.attendance_rate || 0) >= Math.max(...data.periods.slice(0, i+1).map(x => x.overall?.attendance_rate || 0));
-                        const isWorst = i === 0 || (o.attendance_rate || 0) <= Math.min(...data.periods.slice(0, i+1).map(x => x.overall?.attendance_rate || 0));
+                        const isBest = i === 0 || (o.attendance_rate || 0) >= Math.max(...dataPeriods.slice(0, i+1).map(x => x.overall?.attendance_rate || 0));
+                        const isWorst = i === 0 || (o.attendance_rate || 0) <= Math.min(...dataPeriods.slice(0, i+1).map(x => x.overall?.attendance_rate || 0));
                         return (
                           <tr key={p.id} className={`border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${
-                            isBest && i === data.periods.length - 1 ? 'bg-emerald-50/50 dark:bg-emerald-900/5' : ''
+                            isBest && i === dataPeriods.length - 1 ? 'bg-emerald-50/50 dark:bg-emerald-900/5' : ''
                           }`}>
                             <td className="py-2 px-2 font-medium text-slate-700 dark:text-slate-300">{p.label}</td>
                             <td className="py-2 px-2 text-right text-slate-900 dark:text-white">{num(o.present)}</td>
@@ -850,7 +852,7 @@ const ExecutiveComparison = () => {
                               </span>
                             </td>
                             <td className="py-2 px-2 text-right">
-                              {isBest && i === data.periods.length - 1 ? <Badge variant="success">Best</Badge> :
+                              {isBest && i === dataPeriods.length - 1 ? <Badge variant="success">Best</Badge> :
                                isWorst ? <Badge variant="danger">Low</Badge> :
                                rateChange > 2 ? <Badge variant="success">↑</Badge> :
                                rateChange < -2 ? <Badge variant="danger">↓</Badge> :
@@ -909,10 +911,10 @@ const ExecutiveComparison = () => {
                               </div>
                               <p className="text-[11px] text-slate-500 mb-2">{action.description}</p>
                               <div className="flex items-center gap-3 text-[10px]">
-                                {action.affected?.length > 0 && (
+                                {asArray(action.affected).length > 0 && (
                                   <span className="text-slate-400">
                                     <Users className="w-3 h-3 inline mr-1" />
-                                    {action.affected.join(', ')}
+                                    {asArray(action.affected).join(', ')}
                                   </span>
                                 )}
                                 <span className="text-emerald-600 font-medium">
@@ -930,7 +932,7 @@ const ExecutiveComparison = () => {
               </div>
 
               {/* Member At-Risk Quick List */}
-              {latestPeriod?.memberEngagement?.filter(m => m.risk_level === 'high' || m.risk_level === 'critical').length > 0 && (
+              {asArray(latestPeriod?.memberEngagement).filter(m => m.risk_level === 'high' || m.risk_level === 'critical').length > 0 && (
                 <div className="rounded-2xl border border-rose-200 dark:border-rose-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
                   <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                     <UserX className="w-4 h-4 text-rose-500" />
@@ -948,7 +950,7 @@ const ExecutiveComparison = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {latestPeriod.memberEngagement
+                        {asArray(latestPeriod?.memberEngagement)
                           .filter(m => m.risk_level === 'high' || m.risk_level === 'critical')
                           .sort((a, b) => {
                             const order = { critical: 0, high: 1, medium: 2, low: 3 };

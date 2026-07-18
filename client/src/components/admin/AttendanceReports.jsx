@@ -16,6 +16,7 @@ import ExecutiveSummary from './ExecutiveSummary';
 import { KpiCard, QuickActionsPanel, STATUS, statusForScore, TrendIcon, R as RShared } from './ReportShared';
 
 const R = v => Math.round(Number(v) || 0);
+const asArray = v => Array.isArray(v) ? v : [];
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: Eye },
@@ -282,7 +283,7 @@ const AttendanceReports = ({
     try {
       const days = modeToDays[mode] || 30;
       const res = await analyticsAPI.getDepartments(days);
-      setDepartmentsData(res.data || []);
+      setDepartmentsData(asArray(res.data));
     } catch (e) { console.error('Failed to load departments:', e); setDepartmentsData([]); }
     finally { setDepartmentsLoading(false); }
   };
@@ -512,10 +513,10 @@ const AttendanceReports = ({
         analyticsAPI.getLeaderRankings(90, dates.cStart, dates.cEnd, dates.pStart, dates.pEnd),
         analyticsAPI.getAbsentStreaks(100)
       ]);
-      setSecRankings(rankingsRes.data || []);
-      setSecHeadLeaders(headLeadersRes.data || []);
-      setSecLeaderRankings(leaderRankingsRes.data || []);
-      setAbsentStreaks(streaksRes.data || []);
+      setSecRankings(asArray(rankingsRes.data));
+      setSecHeadLeaders(asArray(headLeadersRes.data));
+      setSecLeaderRankings(asArray(leaderRankingsRes.data));
+      setAbsentStreaks(asArray(streaksRes.data));
     } catch (e) {
       console.error('Failed to load section intelligence:', e);
       setSecError(e.message || 'Failed to load Section Intelligence data');
@@ -577,16 +578,16 @@ const AttendanceReports = ({
 
       const ok = i => results[i].status === 'fulfilled' ? results[i].value?.data : null;
       setAnalytics({
-        trends: ok(0)?.trends || [], prediction: ok(1), anomalies: ok(2) || [],
-        streaks: ok(3) || [], leaderMetrics: ok(4) || [], prevLeaderMetrics: ok(5) || [],
-        demographics: ok(6), yearOverYear: ok(7) || [], retention: ok(8) || {},
-        prevRetention: ok(9) || {}, engagementScores: ok(10) || [],
-        dashboardMetrics: ok(11), sectionComparison: ok(12) || [],
-        sectionRankings: ok(13) || [],
-        risk: ok(14), aiInsights: ok(15) || [], growthIndex: ok(16),
-        headLeaders: ok(17) || [],
-        leaderRankings: ok(18) || [],
-        memberIntelligence: ok(19) || [],
+        trends: asArray(ok(0)?.trends), prediction: ok(1), anomalies: asArray(ok(2)),
+        streaks: asArray(ok(3)), leaderMetrics: asArray(ok(4)), prevLeaderMetrics: asArray(ok(5)),
+        demographics: ok(6), yearOverYear: asArray(ok(7)), retention: ok(8) || {},
+        prevRetention: ok(9) || {}, engagementScores: asArray(ok(10)),
+        dashboardMetrics: ok(11), sectionComparison: asArray(ok(12)),
+        sectionRankings: asArray(ok(13)),
+        risk: ok(14), aiInsights: asArray(ok(15)), growthIndex: ok(16),
+        headLeaders: asArray(ok(17)),
+        leaderRankings: asArray(ok(18)),
+        memberIntelligence: asArray(ok(19)),
       });
     } catch (e) { console.error('Failed to load analytics:', e); }
     finally { setAnalyticsLoading(false); }
@@ -2115,7 +2116,7 @@ const AttendanceReports = ({
   };
 
   const renderMembersTab = () => {
-    const rawMembers = analytics.memberIntelligence || [];
+    const rawMembers = asArray(analytics.memberIntelligence);
     const daysBetween = (dateStr) => {
       if (!dateStr) return null;
       const d = new Date(dateStr);
