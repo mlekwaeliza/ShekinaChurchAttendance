@@ -616,24 +616,34 @@ router.get('/member-weekly-matrix', async (req, res) => {
     if (attendanceRows.length > 0) {
       console.log(`[member-weekly-matrix] sample dates: ${attendanceRows.slice(0, 5).map(r => `${r.date}(${r.status})`).join(', ')}`);
       console.log(`[member-weekly-matrix] date range in query: ${dateStart} to ${dateEnd}`);
-      console.log(`[member-weekly-matrix] formatLocalDate sample: ${formatLocalDate(new Date(dateStart + 'T00:00:00'))}`);
     }
+
+    // Normalize dates to YYYY-MM-DD strings (PostgreSQL returns Date objects, SQLite returns strings)
+    const normalizeDate = (d) => {
+      if (typeof d === 'string') return d.slice(0, 10);
+      if (d instanceof Date) return d.toISOString().slice(0, 10);
+      return String(d);
+    };
+    // Increment a YYYY-MM-DD date string by 1 day using UTC (avoids timezone drift)
+    const nextDateStr = (dateStr) => {
+      const [y, m, d] = dateStr.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+    };
 
     const byMember = {};
     for (const row of attendanceRows) {
       if (!byMember[row.member_id]) byMember[row.member_id] = {};
-      byMember[row.member_id][row.date] = row.status;
+      const dateKey = normalizeDate(row.date);
+      byMember[row.member_id][dateKey] = row.status;
     }
 
     const matrix = members.map(m => {
       const weekly = weeks.map(w => {
         const statuses = [];
-        let d = new Date(w.start);
-        const end = new Date(w.end);
-        while (d <= end) {
-          const dateStr = formatLocalDate(d);
+        let dateStr = w.start;
+        while (dateStr <= w.end) {
           if (byMember[m.id]?.[dateStr]) statuses.push(byMember[m.id][dateStr]);
-          d = addDays(d, 1);
+          dateStr = nextDateStr(dateStr);
         }
         if (statuses.length === 0) return null;
         const counts = { present: 0, absent: 0, excused: 0 };
