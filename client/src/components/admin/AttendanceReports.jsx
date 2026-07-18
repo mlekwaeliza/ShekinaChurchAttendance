@@ -237,7 +237,7 @@ const AttendanceReports = ({
   const [memberWeeklyMatrix, setMemberWeeklyMatrix] = useState(null);
   const [memberWeeklyMatrixWeeks, setMemberWeeklyMatrixWeeks] = useState([]);
   const [memberWeeklyLoading, setMemberWeeklyLoading] = useState(false);
-  const [memberView, setMemberView] = useState('summary');
+  const [memberView, setMemberView] = useState('matrix');
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
@@ -2511,25 +2511,60 @@ const AttendanceReports = ({
               <table className="w-full text-xs">
                 <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
                   <tr className="border-b border-slate-200 dark:border-slate-700">
+                    <th className="text-right py-2 px-3 font-semibold text-slate-500 w-12">#</th>
                     <th className="text-left py-2 px-3 font-semibold text-slate-500">Member</th>
                     <th className="text-left py-2 px-3 font-semibold text-slate-500">Section</th>
                     <th className="text-right py-2 px-3 font-semibold text-emerald-600">Present</th>
                     <th className="text-right py-2 px-3 font-semibold text-rose-600">Absent</th>
                     <th className="text-right py-2 px-3 font-semibold text-amber-600">Excused</th>
                     <th className="text-right py-2 px-3 font-semibold text-slate-500">Rate</th>
+                    <th className="text-center py-2 px-3 font-semibold text-slate-500">Streak</th>
+                    <th className="text-right py-2 px-3 font-semibold text-slate-500">Movement</th>
                     <th className="text-right py-2 px-3 font-semibold text-slate-500">Risk</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMembers.map(m => (
+                  {filteredMembers.map(m => {
+                    const streak = Number(m.current_attendance_streak || 0);
+                    const absences = Number(m.consecutive_absences || 0);
+                    return (
                     <tr key={m.id} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
                       onClick={() => openMemberAttendanceDetails(m)}>
+                      <td className="py-2 px-3 text-right">
+                        <span className={`text-[10px] font-black w-5 h-5 inline-flex items-center justify-center rounded-full ${(m.current_rank || 1) === 1 ? 'bg-amber-100 text-amber-800' : (m.current_rank || 1) === 2 ? 'bg-slate-200 text-slate-700' : (m.current_rank || 1) === 3 ? 'bg-orange-100 text-orange-800' : 'text-slate-400'}`}>
+                          {m.current_rank || ''}
+                        </span>
+                      </td>
                       <td className="py-2 px-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">{m.full_name}</td>
                       <td className="py-2 px-3 text-slate-500">{m.section_name || '—'}</td>
                       <td className="py-2 px-3 text-right font-bold text-emerald-600">{Number(m.present_count) || 0}</td>
                       <td className="py-2 px-3 text-right font-bold text-rose-600">{Number(m.absent_count) || 0}</td>
                       <td className="py-2 px-3 text-right font-bold text-amber-600">{Number(m.excused_count) || 0}</td>
                       <td className="py-2 px-3 text-right font-semibold text-indigo-600">{m.attendance_rate || 0}%</td>
+                      <td className="py-2 px-3 text-center">
+                        {streak > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-300 px-1.5 py-0.5 rounded-full" title={`${streak} consecutive present`}>
+                            <Flame className="w-3 h-3" />{streak}
+                          </span>
+                        ) : absences > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-300 px-1.5 py-0.5 rounded-full" title={`${absences} consecutive absences`}>
+                            <XCircle className="w-3 h-3" />{absences}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 dark:text-slate-600">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-right whitespace-nowrap">
+                        {m.rank_movement > 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold text-[10px]"><ArrowUp className="w-3 h-3" />{m.rank_movement}</span>
+                        )}
+                        {m.rank_movement < 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-rose-600 font-bold text-[10px]"><ArrowDown className="w-3 h-3" />{Math.abs(m.rank_movement)}</span>
+                        )}
+                        {(!m.rank_movement || m.rank_movement === 0) && (
+                          <span className="text-slate-300 dark:text-slate-600 text-[10px]">—</span>
+                        )}
+                      </td>
                       <td className="py-2 px-3 text-right">
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                           m.risk_level === 'critical' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' :
@@ -2539,7 +2574,8 @@ const AttendanceReports = ({
                         }`}>{m.risk_level || 'low'}</span>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
