@@ -13,7 +13,6 @@ import Badge from '../ui/Badge';
 import { fdate, fdatetime } from '../../utils/date';
 import ExecutiveComparison from './ExecutiveComparison';
 import ExecutiveSummary from './ExecutiveSummary';
-import { KpiCard, STATUS, statusForScore, TrendIcon, R as RShared } from './ReportShared';
 
 const R = v => Math.round(Number(v) || 0);
 const asArray = v => Array.isArray(v) ? v : [];
