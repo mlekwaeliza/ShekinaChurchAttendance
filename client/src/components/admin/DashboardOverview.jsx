@@ -279,29 +279,32 @@ const DashboardOverview = ({
   }
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 md:p-10 text-white shadow-2xl shadow-indigo-500/25">
-        <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-white/10 blur-3xl -translate-y-40 translate-x-40" />
-        <div className="absolute bottom-0 left-1/4 h-72 w-72 rounded-full bg-pink-400/15 blur-3xl translate-y-32" />
-        <div className="absolute top-1/2 left-1/3 h-48 w-48 rounded-full bg-indigo-300/10 blur-3xl" />
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-8 w-8 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-amber-300" />
-            </div>
-            <span className="text-xs font-bold uppercase tracking-widest text-white/60">Dashboard</span>
+    <div className="space-y-6 animate-fade-in pb-12">
+      <div className="flex items-center justify-between flex-wrap gap-3 px-1">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-slate-600 dark:text-slate-300" />
           </div>
-          <h2 className="text-3xl md:text-4xl font-black tracking-tight">
-            Welcome, <span className="text-amber-200">{welcomeName}</span>
-          </h2>
-          <p className="mt-3 max-w-lg text-base md:text-lg font-medium text-white/75 leading-relaxed">
-            Here's what's happening with your church{' '}
-            <span className="font-black text-white underline decoration-pink-400 underline-offset-4 decoration-2">
-              today
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              Welcome, <span className="text-slate-900 dark:text-white">{welcomeName}</span>
+            </h2>
+            <p className="text-xs text-slate-400">
+              Church overview · {showingLabel}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 relative">
+              <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
             </span>
-            .
-          </p>
+            Live
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5">
+            <Clock3 className="h-3.5 w-3.5" />
+            Updated {lastUpdatedStr}
+          </span>
         </div>
       </div>
 
@@ -484,31 +487,6 @@ const DashboardOverview = ({
         topMembers={hallOfFame || []}
         onViewAll={() => navigate('/admin/rewards')}
       />
-
-      <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 dark:bg-slate-800/50 dark:border-slate-700/50 px-3 py-1.5 backdrop-blur-sm">
-          <Clock3 className="h-3.5 w-3.5" />
-          <span>Standard Time</span>
-          <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-          <span className="font-semibold text-slate-700 dark:text-slate-200">GMT+3 (EAT)</span>
-        </div>
-
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 dark:bg-slate-800/50 dark:border-slate-700/50 px-3 py-1.5 backdrop-blur-sm">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 relative">
-            <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
-          </span>
-          <span>Live</span>
-          <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-          <span className="font-semibold text-slate-700 dark:text-slate-200">Attendance synced</span>
-        </div>
-
-        <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 dark:bg-slate-800/50 dark:border-slate-700/50 px-3 py-1.5 backdrop-blur-sm">
-          <Calendar className="h-3.5 w-3.5" />
-          <span>Updated</span>
-          <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-          <span className="font-semibold text-slate-700 dark:text-slate-200">{lastUpdatedStr}</span>
-        </div>
-      </div>
     </div>
   );
 };
