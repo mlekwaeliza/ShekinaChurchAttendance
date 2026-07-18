@@ -368,10 +368,11 @@ router.get('/aggregated-overview', async (req, res) => {
     });
 
     const submittedDatesByLeader = {};
+    const toDateKey = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d || 'unknown').slice(0, 10));
     const addSubmittedDate = (leaderId, date) => {
       if (!leaderId) return;
       if (!submittedDatesByLeader[leaderId]) submittedDatesByLeader[leaderId] = new Set();
-      submittedDatesByLeader[leaderId].add(String(date || 'unknown'));
+      submittedDatesByLeader[leaderId].add(toDateKey(date));
     };
 
     logs.forEach(log => addSubmittedDate(log.leader_id, log.date));

@@ -2279,11 +2279,12 @@ const queries = {
       })();
 
     // Group dates by service: Map<serviceId, string[]>
+    const normalizeDateStr = (d) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
     const datesByService = new Map();
     for (const row of datesPerService) {
       const sid = Number(row.service_type_id);
       if (!datesByService.has(sid)) datesByService.set(sid, []);
-      datesByService.get(sid).push(row.date);
+      datesByService.get(sid).push(normalizeDateStr(row.date));
     }
 
     // Only proceed for services that have at least 3 dates.
@@ -2354,7 +2355,7 @@ const queries = {
       if (!absentMembersByService.has(key)) {
         absentMembersByService.set(key, { ...r, _absentDates: [] });
       }
-      absentMembersByService.get(key)._absentDates.push(r.date);
+      absentMembersByService.get(key)._absentDates.push(normalizeDateStr(r.date));
     }
 
     // 3e. Single batched visitor-present-count query across all
