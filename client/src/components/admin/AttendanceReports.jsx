@@ -13,10 +13,22 @@ import Badge from '../ui/Badge';
 import { fdate, fdatetime } from '../../utils/date';
 import ExecutiveComparison from './ExecutiveComparison';
 import ExecutiveSummary from './ExecutiveSummary';
-import { KpiCard, QuickActionsPanel, STATUS, statusForScore, TrendIcon, R as RShared } from './ReportShared';
+import { KpiCard, STATUS, statusForScore, TrendIcon, R as RShared } from './ReportShared';
 
 const R = v => Math.round(Number(v) || 0);
 const asArray = v => Array.isArray(v) ? v : [];
+
+const MONTHS_SHORT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const weekToDate = (weekStr) => {
+  const [y, w] = String(weekStr).split('-W').map(Number);
+  if (!y || !w) return weekStr;
+  const simple = new Date(Date.UTC(y, 0, 1 + (w - 1) * 7));
+  const day = simple.getUTCDay();
+  const isoStart = new Date(simple);
+  if (day <= 4) isoStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
+  else isoStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+  return `${isoStart.getUTCDate()} ${MONTHS_SHORT[isoStart.getUTCMonth() + 1]}`;
+};
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: Eye },
@@ -184,7 +196,6 @@ const AttendanceReports = ({
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedLeader, setSelectedLeader] = useState(null);
-  const [selectedSection, setSelectedSection] = useState(null);
   const [compType, setCompType] = useState('overall');
   const [compPeriod, setCompPeriod] = useState('week');
   const [p1Start, setP1Start] = useState('');
@@ -227,6 +238,7 @@ const AttendanceReports = ({
   const [memberWeeklyMatrixWeeks, setMemberWeeklyMatrixWeeks] = useState([]);
   const [memberWeeklyLoading, setMemberWeeklyLoading] = useState(false);
   const [memberView, setMemberView] = useState('summary');
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
 
   useEffect(() => { if (filterValue) loadOverview(); }, [filterType, filterValue, selectedServiceId]);
   useEffect(() => { loadAnalytics(); }, [selectedServiceId, filterType, filterValue, overviewData?.filterValue, overviewData?.requestedFilterValue, overviewData?.service_id]);
@@ -1545,7 +1557,7 @@ const AttendanceReports = ({
                   const longAbsentees = item.absent3wCount + item.absent1mCount + item.absent3mCount;
                   const MovementIcon = diff > 0 ? ArrowUp : diff < 0 ? ArrowDown : Minus;
                   return (
-                    <div key={section.id || section.name} className="bg-white dark:bg-slate-800">
+                    <div key={section.id || section.name} id={`section-card-${section.id || section.name}`} className="bg-white dark:bg-slate-800 scroll-mt-4">
                       <button
                         type="button"
                         onClick={() => toggleSection(section.id || section.name)}
@@ -1748,7 +1760,7 @@ const AttendanceReports = ({
               <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/10">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Roster Rankings & Comparisons</h3>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Click column headers to sort. Click row to select section.</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Click column headers to sort. <span className="text-indigo-600 dark:text-indigo-400 font-medium">Click any row to expand the full section breakdown above</span> (members, leaders, AI insights, follow-up).</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setShowAllColumns(!showAllColumns)}
@@ -1809,7 +1821,16 @@ const AttendanceReports = ({
                         <tr
                           key={row.id}
                           className="border-b border-slate-50 dark:border-slate-750/30 hover:bg-slate-50/40 dark:hover:bg-slate-900/10 cursor-pointer transition-colors"
-                          onClick={() => setSelectedSection(row)}
+                          onClick={() => {
+                            const secKey = row.id || row.name;
+                            if (expandedSectionId !== secKey) {
+                              setExpandedSectionId(secKey);
+                              setSectionSubTab('overview');
+                              document.getElementById(`section-card-${secKey}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            } else {
+                              setExpandedSectionId(null);
+                            }
+                          }}
                         >
                           <td className="px-3 py-2.5 text-center">
                             <span className={`text-[10px] font-black w-6 h-6 inline-flex items-center justify-center rounded-full ${
@@ -2429,51 +2450,59 @@ const AttendanceReports = ({
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Member Intelligence Drill-down</h3>
                 <p className="text-[10px] text-slate-400 mt-0.5">{activeCategory.label}: {filteredMembers.length} member(s)</p>
               </div>
-              <div className="flex flex-col md:flex-row gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-                  <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} placeholder="Search member name, leader, section..." className="pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-w-[260px]" />
-                </div>
-                <select value={memberCategory} onChange={e => setMemberCategory(e.target.value)} className="px-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.label} ({c.members.length})</option>)}
-                </select>
-                <select value={memberRiskFilter} onChange={e => setMemberRiskFilter(e.target.value)} className="px-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                  {['all', 'Low', 'Medium', 'High', 'Critical'].map(r => <option key={r} value={r}>{r === 'all' ? 'All Risk Levels' : r}</option>)}
-                </select>
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)} placeholder="Search member, leader, section..." className="pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white lg:min-w-[280px] w-full focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {categories.map(cat => (
-                <button key={cat.id} onClick={() => setMemberCategory(cat.id)} className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${memberCategory === cat.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500'}`}>
+                <button key={cat.id} onClick={() => setMemberCategory(cat.id)} className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-colors ${memberCategory === cat.id ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-indigo-300 dark:hover:border-indigo-700'}`}>
                   {cat.label} · {cat.members.length}
                 </button>
               ))}
             </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">Risk:</span>
+              {['all', 'Low', 'Medium', 'High', 'Critical'].map(r => (
+                <button key={r} onClick={() => setMemberRiskFilter(r)} className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition-colors ${memberRiskFilter === r ? r === 'Critical' ? 'bg-rose-600 text-white border-rose-600' : r === 'High' ? 'bg-amber-500 text-white border-amber-500' : r === 'Medium' ? 'bg-blue-600 text-white border-blue-600' : r === 'Low' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-700 text-white border-slate-700' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600'}`}>
+                  {r === 'all' ? 'All' : r}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between gap-3">
+          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">
                 {memberView === 'summary' ? 'Member P/A/E Summary' : 'Weekly Attendance Matrix'}
               </h4>
               <button onClick={() => setMemberView(memberView === 'summary' ? 'matrix' : 'summary')}
-                className="text-[10px] text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 underline">
-                {memberView === 'summary' ? 'Switch to Weekly Matrix' : 'Switch to Summary'}
+                className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 px-2 py-1 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                {memberView === 'summary' ? <><BarChart3 className="w-3 h-3" /> Show Weekly Matrix</> : <><Users className="w-3 h-3" /> Show Summary</>}
               </button>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400">
-                {filterType ? `Filtered by ${filterType}` : 'Last'}:
-              </span>
+            <div className="flex items-center gap-2 flex-wrap">
               {memberView === 'matrix' && (
-                <select value={memberWeeklyMatrixWeeks.length || 12} onChange={e => loadMemberWeeklyMatrix(Number(e.target.value))}
-                  className="px-2 py-1 rounded-lg text-[10px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                  <option value={4}>4 weeks</option>
-                  <option value={8}>8 weeks</option>
-                  <option value={12}>12 weeks</option>
-                  <option value={16}>16 weeks</option>
-                  <option value={24}>24 weeks</option>
-                  <option value={52}>52 weeks</option>
-                </select>
+                <div className="flex flex-col">
+                  <label className="text-[9px] font-medium text-slate-400 mb-0.5">Weeks</label>
+                  <select value={memberWeeklyMatrixWeeks.length || 12} onChange={e => loadMemberWeeklyMatrix(Number(e.target.value))}
+                    className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                    <option value={4}>4 weeks</option>
+                    <option value={8}>8 weeks</option>
+                    <option value={12}>12 weeks</option>
+                    <option value={16}>16 weeks</option>
+                    <option value={24}>24 weeks</option>
+                    <option value={52}>52 weeks</option>
+                  </select>
+                </div>
+              )}
+              {memberView === 'matrix' && (
+                <div className="flex items-center gap-2 ml-1">
+                  <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Legend:</span>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 dark:text-emerald-300"><span className="w-3 h-3 rounded bg-emerald-500" />P</span>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-700 dark:text-rose-300"><span className="w-3 h-3 rounded bg-rose-500" />A</span>
+                  <span className="inline-flex items-center gap-1 text-[9px] font-bold text-amber-700 dark:text-amber-300"><span className="w-3 h-3 rounded bg-amber-500" />E</span>
+                </div>
               )}
             </div>
           </div>
@@ -2515,14 +2544,14 @@ const AttendanceReports = ({
               </table>
             </div>
           ) : memberWeeklyMatrix && memberWeeklyMatrix.length > 0 ? (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
               <div className="min-w-max">
                 {/* Header row */}
-                <div className="flex bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase text-slate-500">
-                  <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900/40 w-44 shrink-0 px-3 py-2">Member</div>
-                  <div className="w-28 shrink-0 px-3 py-2">Section</div>
+                <div className="flex bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase text-slate-500 sticky top-0 z-20">
+                  <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900/40 w-40 shrink-0 px-3 py-2">Member</div>
+                  <div className="w-24 shrink-0 px-3 py-2">Section</div>
                   {memberWeeklyMatrixWeeks.map(w => (
-                    <div key={w} className="w-20 shrink-0 px-2 py-2 text-center">{w.replace('W', 'W')}</div>
+                    <div key={w} className="w-14 shrink-0 px-1 py-2 text-center" title={w}>{weekToDate(w)}</div>
                   ))}
                 </div>
                 {/* Data rows */}
@@ -2532,14 +2561,14 @@ const AttendanceReports = ({
                   return haystack.includes(memberSearch.toLowerCase());
                 }).map(m => (
                   <div key={m.member_id} className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                    <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-44 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">{m.full_name}</div>
-                    <div className="w-28 shrink-0 px-3 py-2.5 text-slate-500 truncate">{m.section_name || '—'}</div>
-                    {m.weekly.map((status, wi) => (
-                      <div key={wi} className="w-20 shrink-0 px-2 py-2 text-center">
-                        {status === 'present' && <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-200 px-2 py-1 rounded-full text-[10px] font-semibold"><CheckCircle2 className="w-3 h-3" />Present</span>}
-                        {status === 'absent' && <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-200 px-2 py-1 rounded-full text-[10px] font-semibold"><XCircle className="w-3 h-3" />Absent</span>}
-                        {status === 'excused' && <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-200 px-2 py-1 rounded-full text-[10px] font-semibold"><HelpCircle className="w-3 h-3" />Excused</span>}
-                        {!status && <span className="text-slate-300 dark:text-slate-600">—</span>}
+                    <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-40 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">{m.full_name}</div>
+                    <div className="w-24 shrink-0 px-3 py-2.5 text-slate-500 truncate" title={m.section_name || ''}>{m.section_name || '—'}</div>
+                    {asArray(m.weekly).map((status, wi) => (
+                      <div key={wi} className="w-14 shrink-0 px-1 py-2 text-center">
+                        {status === 'present' && <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-200 text-[10px] font-bold" title="Present">P</span>}
+                        {status === 'absent' && <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-rose-700 bg-rose-100 dark:bg-rose-900/40 dark:text-rose-200 text-[10px] font-bold" title="Absent">A</span>}
+                        {status === 'excused' && <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-200 text-[10px] font-bold" title="Excused">E</span>}
+                        {!status && <span className="text-slate-300 dark:text-slate-600">·</span>}
                       </div>
                     ))}
                   </div>
@@ -2769,6 +2798,25 @@ const AttendanceReports = ({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative">
+            <button onClick={() => setQuickActionsOpen(o => !o)} onBlur={() => setTimeout(() => setQuickActionsOpen(false), 150)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+              <Sparkles className="w-3.5 h-3.5" /> Actions <ChevronDown className="w-3 h-3" />
+            </button>
+            {quickActionsOpen && (
+              <div className="absolute right-0 top-full mt-1 w-52 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg z-50 py-1">
+                {[
+                  { label: 'Download PDF', icon: Download, onClick: () => window.print(), color: 'text-blue-600' },
+                  { label: 'Print Report', icon: Printer, onClick: () => window.print(), color: 'text-slate-600' },
+                  { label: 'Generate AI Report', icon: Brain, onClick: () => setActiveTab('ai'), color: 'text-violet-600' },
+                ].map(({ label, icon: I, onClick, color }) => (
+                  <button key={label} onClick={onClick} className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <I className={`w-3.5 h-3.5 ${color}`} /> {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button onClick={() => window.print()} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
             <Printer className="w-3.5 h-3.5" /> Print
           </button>
@@ -2820,18 +2868,7 @@ const AttendanceReports = ({
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <div className="flex gap-4">
-          <div className="flex-1 min-w-0">{renderTabContent()}</div>
-          <div className="hidden xl:block w-64 shrink-0">
-            <QuickActionsPanel
-              onExport={() => window.print()}
-              onPrint={() => window.print()}
-              onNotifyLeaders={() => {}}
-              onScheduleFollowup={() => {}}
-              onGenerateReport={() => setActiveTab('ai')}
-            />
-          </div>
-        </div>
+        <div>{renderTabContent()}</div>
       )}
     </div>
   );
