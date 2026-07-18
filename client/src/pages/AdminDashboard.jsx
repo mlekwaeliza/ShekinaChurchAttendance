@@ -17,6 +17,8 @@ import AnalyticsView from '../components/admin/AnalyticsView';
 import RewardsView from '../components/admin/RewardsView';
 import SettingsView from '../components/admin/SettingsView';
 import LeaderDrilldown from '../components/admin/LeaderDrilldown';
+import LeaderProfile from '../components/admin/LeaderProfile';
+import SectionProfile from '../components/admin/SectionProfile';
 import SectionManagement from '../components/admin/SectionManagement';
 import LeaderEditModal from '../components/admin/LeaderEditModal';
 import AuditLog from '../components/admin/AuditLog';
@@ -158,6 +160,19 @@ const AdminDashboard = () => {
         );
 
       case 'sections':
+        if (searchParams.get('profile')) {
+          const sectionId = Number(searchParams.get('profile'));
+          const section = data.sections.find(s => Number(s.id) === sectionId);
+          return (
+            <SectionProfile
+              sectionId={sectionId}
+              sectionName={section?.name}
+              onBack={() => navigate('/admin/sections')}
+              allMembers={data.allMembers}
+              leaders={data.leaders}
+            />
+          );
+        }
         return (
           <SectionManagement
             sections={data.sections}
@@ -197,6 +212,15 @@ const AdminDashboard = () => {
         );
 
       case 'leaders':
+        if (searchParams.get('profile')) {
+          return (
+            <LeaderProfile
+              leaderId={Number(searchParams.get('profile'))}
+              onBack={() => navigate('/admin/leaders')}
+              allMembers={data.allMembers}
+            />
+          );
+        }
         return (
           <LeaderDirectory
             leaders={data.leaders}

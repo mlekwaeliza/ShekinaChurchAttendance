@@ -364,7 +364,7 @@ const ExecutiveCommandCenter = (props) => {
           action={<button onClick={() => navigate('/admin/leaders')} className="text-[10px] text-blue-600 font-semibold">View all</button>}>
           <div className="space-y-2">
             {asArray(summary?.leaderRankings).slice(0, 6).map((l, i) => (
-              <Row key={l.id || i} to="/admin/leaders" navigate={navigate}>
+              <Row key={l.id || i} to={`/admin/leaders?profile=${l.id || l.leader_id}`} navigate={navigate}>
                 <span className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}>{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{l.name || l.leader_name}</p>
@@ -387,7 +387,7 @@ const ExecutiveCommandCenter = (props) => {
             {asArray(summary?.sectionRankings).slice(0, 6).map((s, i) => {
               const st = s.status === 'strong' ? 'excellent' : s.status === 'average' ? 'good' : 'attention';
               return (
-                <Row key={s.id || i} to="/admin/sections" navigate={navigate}>
+                <Row key={s.id || i} to={`/admin/sections?profile=${s.id}`} navigate={navigate}>
                   <span className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}>{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{s.name}</p>
@@ -568,7 +568,7 @@ const ExecutiveCommandCenter = (props) => {
               </button>
             )}
             {hallOfFame.kpis?.bestAttendanceSection && (
-              <button type="button" onClick={() => navigate('/admin/sections')}
+              <button type="button" onClick={() => navigate(`/admin/sections?profile=${hallOfFame.kpis.bestAttendanceSection.id || ''}`)}
                 className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                 <Layers className="w-5 h-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-[9px] uppercase text-slate-400">Top Section</p>
