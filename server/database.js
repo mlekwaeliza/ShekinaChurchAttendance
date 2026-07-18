@@ -1013,6 +1013,22 @@ db.serialize(() => {
       }
     });
   });
+
+  // Migration: Recompute finance totals — evangelism_offering must NOT be part of total_income
+  // (was incorrectly included, inflating total/mission/bishop/usable for records with evangelism)
+  db.run(`
+    UPDATE finance_daily_records
+    SET total_income = morning_offering + afternoon_offering + total_tithes,
+        mission_fund = ROUND((morning_offering + afternoon_offering + total_tithes) * 0.1, 2),
+        remaining_after_mission = ROUND((morning_offering + afternoon_offering + total_tithes) * 0.9, 2),
+        bishop_fund = ROUND((morning_offering + afternoon_offering + total_tithes) * 0.9 * 0.1, 2),
+        usable_church_funds = ROUND((morning_offering + afternoon_offering + total_tithes) * 0.9 * 0.9, 2)
+    WHERE evangelism_offering > 0
+      AND ABS(total_income - (morning_offering + afternoon_offering + total_tithes + evangelism_offering)) < 0.01
+  `, (err) => {
+    if (err) console.log('Migration note (finance recompute):', err.message);
+    else console.log('Finance totals recomputed (evangelism excluded from formula).');
+  });
 });
 }
 
@@ -1963,6 +1979,20 @@ async function ensureHomeCellSchema() {
       if (!evType) {
         await run("INSERT INTO contribution_types (name, description, sort_order) VALUES ('Evangelism Offering', 'Dedicated offering for evangelism ministry', 1)");
       }
+
+      // Migration: Recompute finance totals — evangelism_offering must NOT be part of total_income
+      await run(`
+        UPDATE finance_daily_records
+        SET total_income = morning_offering + afternoon_offering + total_tithes,
+            mission_fund = ROUND((morning_offering + afternoon_offering + total_tithes) * 0.1, 2),
+            remaining_after_mission = ROUND((morning_offering + afternoon_offering + total_tithes) * 0.9, 2),
+            bishop_fund = ROUND((morning_offering + afternoon_offering + total_tithes) * 0.9 * 0.1, 2),
+            usable_church_funds = ROUND((morning_offering + afternoon_offering + total_tithes) * 0.9 * 0.9, 2)
+        WHERE evangelism_offering > 0
+          AND ABS(total_income - (morning_offering + afternoon_offering + total_tithes + evangelism_offering)) < 0.01
+      `).then(() => {
+        console.log('Finance totals recomputed (evangelism excluded from formula).');
+      }).catch(() => {});
     } catch (e) {
       console.warn('Finance/contribution table initialization failed (fatal for finance features):', e.message);
     }

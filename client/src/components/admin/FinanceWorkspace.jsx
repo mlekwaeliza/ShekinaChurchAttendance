@@ -17,7 +17,7 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 
 const calcFinance = (morning, afternoon, tithes, evangelism = 0) => {
   const m = Number(morning) || 0, a = Number(afternoon) || 0, t = Number(tithes) || 0, e = Number(evangelism) || 0;
-  const total = m + a + t + e;
+  const total = m + a + t;
   const mission = Math.round(total * 0.1 * 100) / 100;
   const remaining = Math.round((total - mission) * 100) / 100;
   const bishop = Math.round(remaining * 0.1 * 100) / 100;
