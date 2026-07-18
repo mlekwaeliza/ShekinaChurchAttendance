@@ -16,7 +16,7 @@ import SectionOverview from '../components/leader/SectionOverview';
 import ConflictResolutionModal from '../components/leader/ConflictResolutionModal';
 import ChurchCalendar from '../components/ChurchCalendar';
 import HomeCellMembers from '../components/leader/HomeCellMembers';
-import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
+import NewMemberPipeline from '../components/admin/NewMemberPipeline';
 import LeaderContributions from '../components/leader/LeaderContributions';
 
 const LeaderDashboard = () => {
@@ -164,7 +164,7 @@ const LeaderDashboard = () => {
         return <LeaderOutreach members={data.members} />;
 
       case 'new-members':
-        return <NewMemberLeaderView />;
+        return <NewMemberPipeline />;
 
       case 'contributions':
         return <LeaderContributions members={data.members} showMessage={data.showMessage} />;

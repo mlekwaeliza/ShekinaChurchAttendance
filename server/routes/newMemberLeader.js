@@ -1,6 +1,7 @@
 const express = require('express');
 const { queries, run, get, all, transaction } = require('../database');
 const { isAuthenticated } = require('../middleware/auth');
+const { addDays, formatLocalDate } = require('../utils/date');
 
 const router = express.Router();
 
@@ -176,6 +177,168 @@ router.get('/sections', async (req, res) => {
   } catch (err) {
     console.error('Error fetching sections:', err);
     res.status(500).json({ error: 'Failed to fetch sections' });
+  }
+});
+
+// ── Assimilation Pipeline ─────────────────────────────────────────────────
+
+// List all pipeline members or filter by stage
+router.get('/pipeline', async (req, res) => {
+  try {
+    const stage = req.query.stage || null;
+    const members = await queries.getPipelineMembers(stage);
+    res.json(members);
+  } catch (err) {
+    console.error('Error fetching pipeline:', err);
+    res.status(500).json({ error: 'Failed to fetch pipeline' });
+  }
+});
+
+// Move member to a new pipeline stage
+router.post('/pipeline/:id/move', async (req, res) => {
+  try {
+    const { stage, notes } = req.body;
+    if (!stage) return res.status(400).json({ error: 'Stage is required' });
+    if (!queries.PIPELINE_STAGES.includes(stage)) {
+      return res.status(400).json({ error: 'Invalid stage' });
+    }
+    await queries.updatePipelineStage(req.params.id, stage, req.session.userId);
+    await queries.recordStageTransition(req.params.id, stage, notes, req.session.userId);
+    res.json({ message: 'Member moved to ' + stage });
+  } catch (err) {
+    console.error('Error moving pipeline member:', err);
+    res.status(500).json({ error: 'Failed to move member' });
+  }
+});
+
+// Get member journey timeline
+router.get('/pipeline/:id/journey', async (req, res) => {
+  try {
+    const journey = await queries.getMemberJourney(req.params.id);
+    res.json(journey);
+  } catch (err) {
+    console.error('Error fetching journey:', err);
+    res.status(500).json({ error: 'Failed to fetch journey' });
+  }
+});
+
+// Add follow-up record
+router.post('/pipeline/:id/followup', async (req, res) => {
+  try {
+    const { followup_type, notes, next_followup_date } = req.body;
+    if (!followup_type) return res.status(400).json({ error: 'Follow-up type is required' });
+    await queries.addFollowup(req.params.id, followup_type, notes, next_followup_date, req.session.userId);
+    res.status(201).json({ message: 'Follow-up recorded' });
+  } catch (err) {
+    console.error('Error adding follow-up:', err);
+    res.status(500).json({ error: 'Failed to add follow-up' });
+  }
+});
+
+// Get follow-up history
+router.get('/pipeline/:id/followups', async (req, res) => {
+  try {
+    const followups = await queries.getMemberFollowups(req.params.id);
+    res.json(followups);
+  } catch (err) {
+    console.error('Error fetching follow-ups:', err);
+    res.status(500).json({ error: 'Failed to fetch follow-ups' });
+  }
+});
+
+// Dashboard stats
+router.get('/pipeline/stats', async (req, res) => {
+  try {
+    const stageCounts = await queries.getPipelineDashboardStats();
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const { getNewMembersReport, getNewMembersByMonth } = queries;
+    const stageMap = {};
+    stageCounts.forEach(s => { stageMap[s.pipeline_stage] = Number(s.count); });
+    const totalInPipeline = Object.values(stageMap).reduce((a, b) => a + b, 0);
+    const receivedThisMonth = await all(`SELECT COUNT(*) as c FROM new_members WHERE pipeline_stage = 'received' AND date_joined >= ?`, [monthStart]);
+    const orientationScheduled = stageMap['orientation_scheduled'] || 0;
+    const orientationInProgress = stageMap['orientation_in_progress'] || 0;
+    const orientationCompleted = stageMap['orientation_completed'] || 0;
+    const totalOrientation = orientationScheduled + orientationInProgress + orientationCompleted;
+    const completionRate = totalOrientation > 0 ? Math.round((orientationCompleted / (totalOrientation + (stageMap['home_cell_assigned'] || 0) + (stageMap['section_assigned'] || 0) + (stageMap['mentor_assigned'] || 0) + (stageMap['ministry_placement'] || 0) + (stageMap['graduation_review'] || 0) + (stageMap['permanent'] || 0)) * 100)) : 0;
+    const awaitCell = stageMap['orientation_completed'] || 0;
+    const awaitMentor = stageMap['section_assigned'] || 0;
+    const readyGraduation = stageMap['ministry_placement'] || 0;
+    const permanent = stageMap['permanent'] || 0;
+    const graduationRate = totalInPipeline > 0 ? Math.round((permanent / totalInPipeline) * 100) : 0;
+    res.json({
+      stageCounts: stageMap,
+      totalInPipeline,
+      receivedThisMonth: Number(receivedThisMonth?.[0]?.c || 0),
+      orientationScheduled,
+      orientationCompletionRate: completionRate,
+      awaitCellAssignment: awaitCell,
+      awaitMentor: awaitMentor,
+      readyGraduation: readyGraduation,
+      graduationRate,
+      permanentMembers: permanent,
+    });
+  } catch (err) {
+    console.error('Error fetching pipeline stats:', err);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// Today's ministry tasks
+router.get('/pipeline/tasks', async (req, res) => {
+  try {
+    const tasks = await queries.getPipelineTasks();
+    res.json(tasks);
+  } catch (err) {
+    console.error('Error fetching tasks:', err);
+    res.status(500).json({ error: 'Failed to fetch tasks' });
+  }
+});
+
+// Assimilation funnel
+router.get('/pipeline/funnel', async (req, res) => {
+  try {
+    const funnel = await queries.getAssimilationFunnel();
+    res.json(funnel);
+  } catch (err) {
+    console.error('Error fetching funnel:', err);
+    res.status(500).json({ error: 'Failed to fetch funnel' });
+  }
+});
+
+// Transfer baptized souls from evangelism to new members
+router.post('/pipeline/transfer-baptized', async (req, res) => {
+  try {
+    const { soul_won_id } = req.body;
+    if (soul_won_id) {
+      const result = await queries.transferBaptizedToNewMembers(soul_won_id, req.session.userId);
+      return res.status(201).json(result);
+    }
+    // Bulk transfer all baptized awaiting
+    const awaiting = await queries.getBaptizedAwaitingTransfer();
+    const results = [];
+    for (const soul of awaiting) {
+      try {
+        const r = await queries.transferBaptizedToNewMembers(soul.id, req.session.userId);
+        results.push(r);
+      } catch (e) { /* skip duplicates */ }
+    }
+    res.status(201).json({ transferred: results.length, members: results });
+  } catch (err) {
+    console.error('Error transferring baptized:', err);
+    res.status(500).json({ error: 'Failed to transfer baptized members' });
+  }
+});
+
+// List baptized souls awaiting transfer
+router.get('/pipeline/awaiting-transfer', async (req, res) => {
+  try {
+    const awaiting = await queries.getBaptizedAwaitingTransfer();
+    res.json(awaiting);
+  } catch (err) {
+    console.error('Error fetching awaiting transfer:', err);
+    res.status(500).json({ error: 'Failed to fetch awaiting transfer' });
   }
 });
 

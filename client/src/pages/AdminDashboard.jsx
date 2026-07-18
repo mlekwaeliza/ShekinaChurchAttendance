@@ -30,7 +30,7 @@ import HomeCellsView from '../components/admin/HomeCellsView';
 import TitleManager from '../components/admin/TitleManager';
 import LeadershipDirectory from '../components/admin/LeadershipDirectory';
 import DepartmentsView from '../components/admin/DepartmentsView';
-import NewMemberLeaderView from '../components/admin/NewMemberLeaderView';
+import NewMemberPipeline from '../components/admin/NewMemberPipeline';
 import ContributionsView from '../components/admin/ContributionsView';
 import FinanceView from '../components/admin/FinanceView';
 import EvangelistDashboard from './EvangelistDashboard';
@@ -226,7 +226,7 @@ const AdminDashboard = () => {
         return <DepartmentsView allMembers={data.allMembers} showMessage={data.showMessage} />;
 
       case 'new-members':
-        return <NewMemberLeaderView />;
+        return <NewMemberPipeline />;
 
       case 'evangelism':
         return <EvangelistDashboard subtab={searchParams.get('subtab')} />;

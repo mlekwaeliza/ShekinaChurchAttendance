@@ -392,6 +392,18 @@ export const newMemberLeaderAPI = {
   getSections: () => api.get('/new-member-leader/sections'),
   getSectionWithLeastMembers: () => api.get('/new-member-leader/sections/least-members'),
   getWeekAttendance: (weekStart) => api.get(`/new-member-leader/attendance/${weekStart}`),
+  // Pipeline
+  getPipeline: (stage) => api.get('/new-member-leader/pipeline', { params: { stage } }),
+  movePipelineStage: (id, stage, notes) => api.post(`/new-member-leader/pipeline/${id}/move`, { stage, notes }),
+  getJourney: (id) => api.get(`/new-member-leader/pipeline/${id}/journey`),
+  addFollowup: (id, data) => api.post(`/new-member-leader/pipeline/${id}/followup`, data),
+  getFollowups: (id) => api.get(`/new-member-leader/pipeline/${id}/followups`),
+  getPipelineStats: () => api.get('/new-member-leader/pipeline/stats'),
+  getPipelineTasks: () => api.get('/new-member-leader/pipeline/tasks'),
+  getAssimilationFunnel: () => api.get('/new-member-leader/pipeline/funnel'),
+  transferBaptized: (soulWonId) => api.post('/new-member-leader/pipeline/transfer-baptized', { soul_won_id: soulWonId }),
+  transferAllBaptized: () => api.post('/new-member-leader/pipeline/transfer-baptized', {}),
+  getAwaitingTransfer: () => api.get('/new-member-leader/pipeline/awaiting-transfer'),
 };
 
 // Birthdays API
