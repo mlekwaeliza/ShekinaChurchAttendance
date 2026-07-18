@@ -185,6 +185,19 @@ const ExecutiveCommandCenter = (props) => {
 
   const scoreColor = (STATUS[scoreStatus] || STATUS.neutral).color;
 
+  // Best/worst attendance rate across comparison periods
+  const compRates = asArray(comparison?.periods).map(p => Number(p?.overall?.attendance_rate) || 0).filter(r => r > 0);
+  const compBest = compRates.length ? Math.max(...compRates) : null;
+  const compWorst = compRates.length ? Math.min(...compRates) : null;
+
+  // Total members across all departments (proxy for "serving")
+  const deptMemberTotal = asArray(departments).reduce((sum, d) => sum + (Number(d.member_count) || Number(d.memberCount) || 0), 0);
+
+  // Pending submissions = total leaders - leaders who submitted this period
+  const totalLeaders = Number(snap.attendance?.totalLeaders) || 0;
+  const leadersSubmitted = Number(snap.attendance?.leadersSubmitted) || 0;
+  const pendingSubs = totalLeaders > 0 ? totalLeaders - leadersSubmitted : null;
+
   // Church Pulse derived indicators
   const pulse = [
     { icon: Activity, label: 'Attendance', value: pct(kpis.attendanceRate?.current), status: statusForScore(kpis.attendanceRate?.current || 0), to: '/admin/reports' },
@@ -330,16 +343,18 @@ const ExecutiveCommandCenter = (props) => {
           <Metric label="Previous Period" value={pct(kpis.attendanceRate?.previous)} />
           <Metric label="Difference" value={kpis.attendanceRate?.diff != null ? `${kpis.attendanceRate.diff >= 0 ? '+' : ''}${R(kpis.attendanceRate.diff)}%` : INSUFFICIENT} />
           <Metric label="Target" value={churchScore?.target != null ? R(churchScore.target) : INSUFFICIENT} />
-          <Metric label="Best Day" value={snap.attendance?.bestDayRate != null ? pct(snap.attendance.bestDayRate) : INSUFFICIENT} />
-          <Metric label="Worst Day" value={snap.attendance?.worstDayRate != null ? pct(snap.attendance.worstDayRate) : INSUFFICIENT} />
-          <Metric label="Weekly Avg" value={kpis.weeklyGrowth?.current != null ? pct(kpis.attendanceRate?.current) : INSUFFICIENT} />
-          <Metric label="Monthly Avg" value={kpis.monthlyGrowth?.current != null ? pct(kpis.attendanceRate?.current) : INSUFFICIENT} />
-          <Metric label="Yearly Avg" value={INSUFFICIENT} />
-          <Metric label="Highest Ever" value={INSUFFICIENT} />
-          <Metric label="Lowest Ever" value={INSUFFICIENT} />
+          <Metric label="Best Period" value={compBest != null ? pct(compBest) : INSUFFICIENT} status="excellent" />
+          <Metric label="Worst Period" value={compWorst != null ? pct(compWorst) : INSUFFICIENT} status="attention" />
+          <Metric label="Weekly Avg" value={kpis.weeklyGrowth?.current != null ? pct(kpis.weeklyGrowth.current) : INSUFFICIENT} />
+          <Metric label="Monthly Avg" value={kpis.monthlyGrowth?.current != null ? pct(kpis.monthlyGrowth.current) : INSUFFICIENT} />
+          <Metric label="Quarterly Avg" value={kpis.quarterlyGrowth?.current != null ? pct(kpis.quarterlyGrowth.current) : INSUFFICIENT} />
+          <Metric label="Yearly Avg" value={kpis.yearlyGrowth?.current != null ? pct(kpis.yearlyGrowth.current) : INSUFFICIENT} />
+          <Metric label="Historical Avg" value={kpis.attendanceRate?.historicalAvg != null ? pct(kpis.attendanceRate.historicalAvg) : INSUFFICIENT} />
+          <Metric label="Best Ever" value={kpis.attendanceRate?.best != null ? pct(kpis.attendanceRate.best) : INSUFFICIENT} status="excellent" />
           <Metric label="Trend" value={comparison?.trends?.trend ? comparison.trends.trend : INSUFFICIENT} />
-          <Metric label="Forecast" value={kpis.attendance_forecast != null ? pct(kpis.attendance_forecast) : INSUFFICIENT} />
+          <Metric label="Momentum" value={kpis.attendanceMomentum?.current != null ? pct(kpis.attendanceMomentum.current) : INSUFFICIENT} />
           <Metric label="Service Coverage" value={snap.attendance?.serviceDays ? `${snap.attendance.serviceDays} days` : INSUFFICIENT} />
+          <Metric label="Avg per Service" value={snap.attendance?.avgPerService != null ? num(snap.attendance.avgPerService) : INSUFFICIENT} />
         </div>
       </SectionCard>
 
@@ -396,10 +411,9 @@ const ExecutiveCommandCenter = (props) => {
           <Metric label="Active Members" value={num(snap.church?.activeMembers || allMembers.filter(m => m.is_active !== 0).length)} status="good" />
           <Metric label="Inactive Members" value={num(allMembers.filter(m => m.is_active === 0).length)} status="attention" />
           <Metric label="Visitors" value={num(snap.church?.visitors)} />
-          <Metric label="New Converts" value={INSUFFICIENT} />
-          <Metric label="Baptized" value={INSUFFICIENT} />
-          <Metric label="Serving" value={INSUFFICIENT} />
-          <Metric label="Not Serving" value={INSUFFICIENT} />
+          <Metric label="Visitors Converted" value={num(snap.church?.visitorsConverted)} status="good" />
+          <Metric label="In Departments" value={num(deptMemberTotal)} status={deptMemberTotal > 0 ? 'good' : 'neutral'} />
+          <Metric label="Not Serving" value={num(Math.max(0, (snap.church?.activeMembers || allMembers.filter(m => m.is_active !== 0).length) - deptMemberTotal))} status="attention" />
           <Metric label="Need Visitation" value={num(alerts.length)} />
           <Metric label="Missing 2 Weeks" value={num(alerts.filter(a => a.consecutive_absences >= 2).length)} status="attention" />
           <Metric label="Missing 1 Month" value={num(alerts.filter(a => a.consecutive_absences >= 4).length)} status="critical" />
@@ -414,7 +428,7 @@ const ExecutiveCommandCenter = (props) => {
           <Metric label="Youth" value={num(allMembers.filter(m => (m.age_group || '').toLowerCase().includes('youth')).length)} />
           <Metric label="Adults" value={num(allMembers.filter(m => (m.age_group || '').toLowerCase().includes('adult')).length)} />
           <Metric label="Children" value={num(allMembers.filter(m => (m.age_group || '').toLowerCase().includes('child')).length)} />
-          <Metric label="Avg Frequency" value={INSUFFICIENT} />
+          <Metric label="Attendance Freq" value={pct(kpis.attendanceRate?.current)} sub="proxy: att rate" status={statusForScore(kpis.attendanceRate?.current || 0)} />
           <Metric label="Retention Rate" value={pct(kpis.retentionRate?.current)} status={statusForScore(kpis.retentionRate?.current || 0)} />
         </div>
       </SectionCard>
@@ -422,18 +436,18 @@ const ExecutiveCommandCenter = (props) => {
       {/* ── Growth & Retention Center ── */}
       <SectionCard title="Growth & Retention Center" icon={TrendingUp} to="/admin/analytics" navigate={navigate}>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <Metric label="New This Week" value={INSUFFICIENT} />
+          <Metric label="Weekly Growth" value={kpis.weeklyGrowth?.current != null ? `${kpis.weeklyGrowth.current >= 0 ? '+' : ''}${R(kpis.weeklyGrowth.current)}%` : INSUFFICIENT} status={kpis.weeklyGrowth?.current >= 0 ? 'good' : 'attention'} />
           <Metric label="New This Month" value={num(snap.church?.newMembers)} status="good" />
-          <Metric label="New This Year" value={INSUFFICIENT} />
-          <Metric label="Transfers In" value={INSUFFICIENT} />
-          <Metric label="Transfers Out" value={INSUFFICIENT} />
+          <Metric label="Yearly Growth" value={kpis.yearlyGrowth?.current != null ? `${kpis.yearlyGrowth.current >= 0 ? '+' : ''}${R(kpis.yearlyGrowth.current)}%` : INSUFFICIENT} status={kpis.yearlyGrowth?.current >= 0 ? 'good' : 'attention'} />
+          <Metric label="Returning Members" value={num(kpis.returningMembers?.current)} status="good" />
+          <Metric label="Members Contacted" value={num(snap.church?.membersContacted)} />
           <Metric label="Members Lost" value={num(snap.church?.membersLost)} status="critical" />
           <Metric label="Net Growth" value={num(snap.church?.netGrowth)} status={snap.church?.netGrowth >= 0 ? 'good' : 'critical'} />
           <Metric label="Retention %" value={pct(kpis.retentionRate?.current)} status={statusForScore(kpis.retentionRate?.current || 0)} />
           <Metric label="Visitor Conv." value={pct(kpis.visitorConversion?.current)} status={statusForScore(kpis.visitorConversion?.current || 0)} />
-          <Metric label="Baptism Rate" value={INSUFFICIENT} />
-          <Metric label="Ministry Part." value={INSUFFICIENT} />
-          <Metric label="Cell Integration" value={INSUFFICIENT} />
+          <Metric label="Follow-up Done" value={pct(kpis.followUpCompletion?.current)} status={statusForScore(kpis.followUpCompletion?.current || 0)} />
+          <Metric label="Ministry Health" value={kpis.ministryHealth?.current != null ? R(kpis.ministryHealth.current) : INSUFFICIENT} status={statusForScore(kpis.ministryHealth?.current || 0)} />
+          <Metric label="Goal Achiev." value={pct(kpis.goalAchievement?.current)} status={statusForScore(kpis.goalAchievement?.current || 0)} />
         </div>
       </SectionCard>
 
@@ -600,11 +614,11 @@ const ExecutiveCommandCenter = (props) => {
           <Metric label="Database" value={health?.database?.status === 'connected' ? 'Online' : (health?.database?.status || INSUFFICIENT)} status={health?.database?.status === 'connected' ? 'excellent' : 'critical'} />
           <Metric label="Last Backup" value={backup?.last_backup_at ? fmtDate(backup.last_backup_at) : INSUFFICIENT} status={backup?.warning ? 'attention' : 'good'} />
           <Metric label="Sync Status" value={health?.status === 'ok' ? 'Synced' : (health?.status || INSUFFICIENT)} status={health?.status === 'ok' ? 'excellent' : 'watch'} />
-          <Metric label="Pending Subs" value={INSUFFICIENT} />
+          <Metric label="Pending Subs" value={pendingSubs != null ? num(pendingSubs) : INSUFFICIENT} status={pendingSubs > 0 ? 'attention' : 'good'} />
           <Metric label="Notifications" value={num(notifCount)} status={notifCount > 0 ? 'watch' : 'good'} />
           <Metric label="Server" value={health?.status === 'ok' ? 'Healthy' : (health?.status || INSUFFICIENT)} status={health?.status === 'ok' ? 'excellent' : 'watch'} />
         </div>
-        <p className="text-[10px] text-slate-400 mt-2">Uptime: {health?.uptime || INSUFFICIENT} · Last attendance update: {fmtDate(health?.database?.name)}</p>
+        <p className="text-[10px] text-slate-400 mt-2">Uptime: {health?.uptime || INSUFFICIENT} · Active sections: {num(snap.church?.activeSections)} · Active leaders: {num(snap.church?.activeLeaders)}</p>
       </SectionCard>
     </div>
   );

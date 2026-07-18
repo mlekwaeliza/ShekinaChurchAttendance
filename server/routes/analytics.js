@@ -1676,6 +1676,7 @@ router.get('/executive-summary', async (req, res) => {
         netGrowth,
         visitors,
         visitorsConverted,
+        membersContacted: n(cur.members_contacted),
       },
       attendance: {
         present,
@@ -1686,6 +1687,8 @@ router.get('/executive-summary', async (req, res) => {
         totalRecords,
         attendanceRate: Math.round(attendanceRate * 10) / 10,
         avgPerService: serviceDays > 0 ? Math.round(present / serviceDays) : 0,
+        leadersSubmitted: n(cur.leaders_submitted),
+        totalLeaders: n(cur.total_leaders),
       },
       period: {
         start: P.cur.s,
