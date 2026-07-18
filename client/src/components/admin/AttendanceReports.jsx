@@ -651,16 +651,20 @@ const AttendanceReports = ({
     return null;
   };
 
-  const loadMemberWeeklyMatrix = async (numWeeks = 12) => {
+  const loadMemberWeeklyMatrix = async (numWeeks = null) => {
     setMemberWeeklyLoading(true);
     try {
-      const range = deriveDateRange();
       const params = { serviceId: selectedServiceId };
-      if (range) {
-        params.startDate = range.startDate;
-        params.endDate = range.endDate;
-      } else {
+      if (numWeeks) {
         params.weeks = numWeeks;
+      } else {
+        const range = deriveDateRange();
+        if (range) {
+          params.startDate = range.startDate;
+          params.endDate = range.endDate;
+        } else {
+          params.weeks = 12;
+        }
       }
       const res = await analyticsAPI.getMemberWeeklyMatrix(params);
       setMemberWeeklyMatrix(res.data.matrix || []);
@@ -2524,6 +2528,12 @@ const AttendanceReports = ({
                   </tr>
                 </thead>
                 <tbody>
+                  {filteredMembers.length === 0 && (
+                    <tr><td colSpan="10" className="py-12 text-center text-slate-400 text-sm">
+                      <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                      {rawMembers.length === 0 ? 'No member intelligence data available. Try changing the date range or service filter.' : 'No members match the current filters.'}
+                    </td></tr>
+                  )}
                   {filteredMembers.map(m => {
                     const streak = Number(m.current_attendance_streak || 0);
                     const absences = Number(m.consecutive_absences || 0);
