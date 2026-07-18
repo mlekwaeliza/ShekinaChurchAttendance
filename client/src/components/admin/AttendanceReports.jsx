@@ -6,7 +6,7 @@ import {
   X, Zap, Award, Clock, Eye, Layers, CheckCircle2, Flame, Heart, Brain,
   UserCheck, UserX, Star, Info, ChevronDown, ChevronUp, Search,
   ArrowUp, ArrowDown, Minus, RefreshCw, Building2, PieChart,
-  XCircle, HelpCircle
+  XCircle, HelpCircle, Sparkles
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
 import Badge from '../ui/Badge';
