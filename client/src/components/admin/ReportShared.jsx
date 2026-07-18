@@ -102,7 +102,9 @@ export const QuickActionsPanel = ({ onExport, onPrint, onNotifyLeaders, onSchedu
 );
 
 export const AIExecutiveSummary = ({ insights = [], actions = [] }) => {
-  if (!insights.length && !actions.length) return null;
+  const insightList = Array.isArray(insights) ? insights : [];
+  const actionList = Array.isArray(actions) ? actions : [];
+  if (!insightList.length && !actionList.length) return null;
   return (
     <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-3">
@@ -112,7 +114,7 @@ export const AIExecutiveSummary = ({ insights = [], actions = [] }) => {
         <h3 className="text-sm font-bold text-slate-900 dark:text-white">Executive Summary</h3>
       </div>
       <div className="space-y-2">
-        {insights.map((insight, i) => (
+        {insightList.map((insight, i) => (
           <div key={i} className="flex items-start gap-2">
             <div className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${
               insight.type === 'success' ? 'bg-emerald-500' :
@@ -124,13 +126,13 @@ export const AIExecutiveSummary = ({ insights = [], actions = [] }) => {
           </div>
         ))}
       </div>
-      {actions.length > 0 && (
+      {actionList.length > 0 && (
         <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-1.5 mb-2">
             <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
             <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Recommendations</span>
           </div>
-          {actions.map((action, i) => (
+          {actionList.map((action, i) => (
             <div key={i} className="flex items-start gap-2 mb-1.5">
               <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 ${
                 action.priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :

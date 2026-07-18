@@ -181,8 +181,8 @@ const ExecutiveComparison = () => {
       try {
         const numWeeks = Math.max(periods.length * 4, 4);
         const res = await analyticsAPI.getMemberWeeklyMatrix({ weeks: numWeeks, serviceId: 'all' });
-        setMemberMatrix(res.data.matrix || []);
-        setMemberMatrixWeeks(res.data.weeks || []);
+        setMemberMatrix(asArray(res.data.matrix));
+        setMemberMatrixWeeks(asArray(res.data.weeks));
       } catch (e) { console.error('Failed to load member matrix:', e); setMemberMatrix([]); }
       finally { setMemberMatrixLoading(false); }
     };
@@ -214,6 +214,28 @@ const ExecutiveComparison = () => {
   const trends = data?.trends || {};
   const rootCauses = data?.rootCauses || {};
   const actions = asArray(data?.actions);
+
+  // Build trend insights array from the trends object for AIExecutiveSummary
+  const trendInsights = useMemo(() => {
+    const list = [];
+    if (!trends || typeof trends !== 'object') return list;
+    if (trends.classification) {
+      const cls = trends.classification;
+      const type = cls === 'growing' || cls === 'recovering' ? 'success' : cls === 'declining' || cls === 'volatile' ? 'danger' : 'info';
+      const label = cls === 'growing' ? 'Attendance is growing' : cls === 'declining' ? 'Attendance is declining' : cls === 'stable' ? 'Attendance is stable' : cls === 'recovering' ? 'Attendance is recovering' : cls === 'volatile' ? 'Attendance is volatile' : `Trend: ${cls}`;
+      list.push({ type, text: `${label}. Direction: ${trends.direction != null ? (trends.direction >= 0 ? '+' : '') + trends.direction + '%' : 'N/A'} (${trends.first_period_rate || 0}% → ${trends.last_period_rate || 0}%).` });
+    }
+    if (trends.recent_momentum != null) {
+      list.push({ type: trends.recent_momentum >= 0 ? 'success' : 'warning', text: `Recent momentum: ${trends.recent_momentum >= 0 ? '+' : ''}${trends.recent_momentum}% over last 3 periods.` });
+    }
+    asArray(trends.anomalies).forEach(a => {
+      list.push({ type: a.type === 'positive' ? 'success' : 'danger', text: `Anomaly in ${a.period}: ${a.rate}% (${a.deviation > 0 ? '+' : ''}${a.deviation}% deviation).` });
+    });
+    if (trends.average_rate != null) {
+      list.push({ type: 'info', text: `Average attendance rate across periods: ${trends.average_rate}%.` });
+    }
+    return list;
+  }, [trends]);
 
   const latestOverall = latestPeriod?.overall || {};
   const prevOverall = prevPeriod?.overall || {};
@@ -288,7 +310,7 @@ const ExecutiveComparison = () => {
           {view === 'summary' && (
             <div className="space-y-4">
               {/* AI Executive Summary */}
-              <AIExecutiveSummary insights={trends} actions={actions} />
+              <AIExecutiveSummary insights={trendInsights} actions={actions} />
 
               {/* Executive KPI Cards — 6 meaningful metrics */}
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
@@ -676,7 +698,7 @@ const ExecutiveComparison = () => {
                       <div key={m.member_id} className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
                         <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-44 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">{m.full_name}</div>
                         <div className="w-28 shrink-0 px-3 py-2.5 text-slate-500 truncate">{m.section_name || '—'}</div>
-                        {m.weekly.map((status, wi) => (
+                        {asArray(m.weekly).map((status, wi) => (
                           <div key={wi} className="w-20 shrink-0 px-2 py-2 text-center">
                             {status === 'present' && <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-200 px-2 py-1 rounded-full text-[10px] font-semibold"><CheckCircle2 className="w-3 h-3" />Present</span>}
                             {status === 'absent' && <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-200 px-2 py-1 rounded-full text-[10px] font-semibold"><XCircle className="w-3 h-3" />Absent</span>}
