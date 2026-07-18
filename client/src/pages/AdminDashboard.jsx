@@ -8,6 +8,7 @@ import MemberEditModal from '../components/MemberEditModal';
 
 // Admin sub-views
 import DashboardOverview from '../components/admin/DashboardOverview';
+import ExecutiveCommandCenter from '../components/admin/ExecutiveCommandCenter';
 import MemberDirectory from '../components/admin/MemberDirectory';
 import LeaderDirectory from '../components/admin/LeaderDirectory';
 import AttendanceReports from '../components/admin/AttendanceReports';
@@ -145,23 +146,14 @@ const AdminDashboard = () => {
     switch (activeTab) {
       case 'dashboard':
         return (
-          <DashboardOverview
+          <ExecutiveCommandCenter
             allMembers={data.allMembers}
             sections={data.sections}
             leaders={data.leaders}
             pastorName={user?.full_name}
-            dashboardMetrics={data.dashboardMetrics}
-            metricsLoading={data.metricsLoading}
             serviceTypes={data.serviceTypes}
             selectedServiceId={data.selectedServiceId}
             onServiceChange={data.setSelectedServiceId}
-            onRefresh={data.loadDashboardMetrics}
-            onAssignDutyRoster={(date) => {
-              data.setSelectedInstanceDate(date);
-              data.loadServiceInstance(date, data.selectedServiceId);
-              data.setIsAssignmentModalOpen(true);
-            }}
-            lastUpdated={data.lastUpdated}
           />
         );
 

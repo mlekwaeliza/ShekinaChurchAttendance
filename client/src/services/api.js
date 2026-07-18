@@ -214,6 +214,9 @@ export const adminAPI = {
   updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
   resetUserPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
+  // System health & backups
+  getBackupStatus: () => api.get('/admin/backups/status'),
+  getHealth: () => api.get('/health', { params: { detail: 'full' } }),
 };
 
 // Shared church calendar API
