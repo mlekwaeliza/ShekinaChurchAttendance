@@ -237,6 +237,7 @@ const AttendanceReports = ({
   const [memberWeeklyMatrix, setMemberWeeklyMatrix] = useState(null);
   const [memberWeeklyMatrixWeeks, setMemberWeeklyMatrixWeeks] = useState([]);
   const [memberWeeklyLoading, setMemberWeeklyLoading] = useState(false);
+  const [memberWeeksCount, setMemberWeeksCount] = useState(12);
   const [memberView, setMemberView] = useState('matrix');
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
 
@@ -651,21 +652,10 @@ const AttendanceReports = ({
     return null;
   };
 
-  const loadMemberWeeklyMatrix = async (numWeeks = null) => {
+  const loadMemberWeeklyMatrix = async (numWeeks = memberWeeksCount) => {
     setMemberWeeklyLoading(true);
     try {
-      const params = { serviceId: selectedServiceId };
-      if (numWeeks) {
-        params.weeks = numWeeks;
-      } else {
-        const range = deriveDateRange();
-        if (range) {
-          params.startDate = range.startDate;
-          params.endDate = range.endDate;
-        } else {
-          params.weeks = 12;
-        }
-      }
+      const params = { serviceId: selectedServiceId, weeks: numWeeks };
       const res = await analyticsAPI.getMemberWeeklyMatrix(params);
       setMemberWeeklyMatrix(res.data.matrix || []);
       setMemberWeeklyMatrixWeeks(res.data.weeks || []);
@@ -674,8 +664,8 @@ const AttendanceReports = ({
   };
 
   useEffect(() => {
-    if (activeTab === 'members') loadMemberWeeklyMatrix();
-  }, [activeTab, selectedServiceId, filterType, filterValue]);
+    if (activeTab === 'members') loadMemberWeeklyMatrix(memberWeeksCount);
+  }, [activeTab, selectedServiceId]);
 
   const stats = overviewData?.stats || {};
   const leaders = overviewData?.subleaders || [];
@@ -2489,7 +2479,7 @@ const AttendanceReports = ({
               {memberView === 'matrix' && (
                 <div className="flex flex-col">
                   <label className="text-[9px] font-medium text-slate-400 mb-0.5">Weeks</label>
-                  <select value={memberWeeklyMatrixWeeks.length || 12} onChange={e => loadMemberWeeklyMatrix(Number(e.target.value))}
+                  <select value={memberWeeksCount} onChange={e => { const n = Number(e.target.value); setMemberWeeksCount(n); loadMemberWeeklyMatrix(n); }}
                     className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
                     <option value={4}>4 weeks</option>
                     <option value={8}>8 weeks</option>
