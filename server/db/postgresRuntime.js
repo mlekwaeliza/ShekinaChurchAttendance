@@ -2,14 +2,29 @@ const { pool } = require('./postgres');
 
 let transactionClient = null;
 
+// Tables whose primary key is not `id` (e.g. `key TEXT PRIMARY KEY`).
+// `maybeReturningId` won't append `RETURNING id` to INSERTs targeting these,
+// and `runAsync` self-heals this set if it encounters a "column id does not
+// exist" error on first insert into a previously-unknown no-id table.
+const TABLES_WITHOUT_ID = new Set(['performance_penalties', 'achievements']);
+
 function toPostgresSql(sql) {
   let index = 0;
   return sql.replace(/\?/g, () => `$${++index}`);
 }
 
+function extractTableName(sql) {
+  const m = String(sql).trim().match(/^insert\s+into\s+["`]?(\w+)["`]?/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
 function maybeReturningId(sql) {
   const trimmed = sql.trim();
   if (!/^insert\s+/i.test(trimmed) || /\sreturning\s+/i.test(trimmed)) {
+    return sql;
+  }
+  const table = extractTableName(sql);
+  if (table && TABLES_WITHOUT_ID.has(table)) {
     return sql;
   }
   return `${sql} RETURNING id`;
@@ -85,12 +100,28 @@ async function runAsync(sql, params = []) {
       }
     }
 
-    const result = await execute(maybeReturningId(sql), params);
-    return {
-      changes: result.rowCount,
-      lastID: result.rows[0]?.id || null,
-      rows: result.rows
-    };
+    try {
+      const result = await execute(maybeReturningId(sql), params);
+      return {
+        changes: result.rowCount,
+        lastID: result.rows[0]?.id || null,
+        rows: result.rows
+      };
+    } catch (err) {
+      // Self-heal: if `RETURNING id` was appended but the target table has
+      // no `id` column, remember the table and retry the INSERT bare.
+      if (err && /column "id" does not exist/i.test(err.message)) {
+        const table = extractTableName(sql);
+        if (table) TABLES_WITHOUT_ID.add(table);
+        const result = await execute(sql, params);
+        return {
+          changes: result.rowCount,
+          lastID: null,
+          rows: result.rows
+        };
+      }
+      throw err;
+    }
   });
 }
 

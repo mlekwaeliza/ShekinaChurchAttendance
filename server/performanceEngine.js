@@ -86,7 +86,7 @@ async function ensurePerformanceSchema() {
   await seedPerformanceData();
 }
 
-function seedPerformanceData() {
+async function seedPerformanceData() {
   const penalties = [
     ['deduction_absence', 'Repeated Absence', -5, 'Multiple unexplained absences in a period.'],
     ['deduction_late', 'Late Attendance Submission', -3, 'Leader submitted attendance after the grace window.'],
@@ -96,7 +96,9 @@ function seedPerformanceData() {
   const upsertPenalty = usePostgres
     ? (p) => run(`INSERT INTO performance_penalties (key, label, points, description) VALUES (?, ?, ?, ?) ON CONFLICT (key) DO NOTHING`, p)
     : (p) => run(`INSERT OR IGNORE INTO performance_penalties (key, label, points, description) VALUES (?, ?, ?, ?)`, p);
-  penalties.forEach(p => upsertPenalty(p));
+  for (const p of penalties) {
+    try { await upsertPenalty(p); } catch (e) { console.error('seed penalty failed:', e.message); }
+  }
 
   const achievements = [
     ['streak_4', 'Consistent Attender', '🔥', 'Attended 4+ consecutive services.', 'streak', 'bronze', 'streak', 4],
@@ -112,7 +114,9 @@ function seedPerformanceData() {
   const upsertAchievement = usePostgres
     ? (a) => run(`INSERT INTO achievements (key, name, icon, description, category, tier, threshold_type, threshold_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (key) DO NOTHING`, a)
     : (a) => run(`INSERT OR IGNORE INTO achievements (key, name, icon, description, category, tier, threshold_type, threshold_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, a);
-  achievements.forEach(a => upsertAchievement(a));
+  for (const a of achievements) {
+    try { await upsertAchievement(a); } catch (e) { console.error('seed achievement failed:', e.message); }
+  }
 }
 
 // ── Period helpers ──────────────────────────────────────────────────────────
