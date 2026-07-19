@@ -102,7 +102,9 @@ const evangelismRoutes = require('./routes/evangelism');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
-const trustProxy = String(process.env.TRUST_PROXY || '').toLowerCase() === 'true';
+const trustProxy = isProduction
+  || String(process.env.TRUST_PROXY || '').toLowerCase() === 'true'
+  || !!process.env.DATABASE_URL;
 const cookieSecure = isProduction || String(process.env.COOKIE_SECURE || '').toLowerCase() === 'true';
 const clientUrl = process.env.CLIENT_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000';
 
