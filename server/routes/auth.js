@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
     }
 
     username = username.trim();
-    password = password.trim();
+    // Note: do NOT trim password — spaces may be intentional parts of the password
 
     const user = await queries.findUserByUsername(username);
     if (!user) {

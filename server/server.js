@@ -859,6 +859,14 @@ async function startServer() {
       });
     });
     console.log('Database connection established');
+
+    // Reset all account locks and IP blocks on startup (crash recovery)
+    try {
+      await run('UPDATE users SET failed_login_attempts = 0, locked_until = NULL, lockout_count = 0');
+      await run('DELETE FROM ip_login_failures');
+      console.log('Account locks and IP blocks cleared (startup reset).');
+    } catch (e) { console.warn('Lock reset skipped:', e.message); }
+
     await ensureHomeCellSchema();
     await ensureEvangelismSchema();
     await migrateUsersRoleConstraint();
