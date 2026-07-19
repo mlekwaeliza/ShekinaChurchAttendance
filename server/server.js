@@ -699,9 +699,13 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'client', 'dist', 'index.html'));
 });
 
-// Initialize default admin if not exists
-async function initializeAdmin() {
+// Initialize/seed all user accounts.
+// Passwords are ALWAYS re-hashed on startup so the configured values
+// (env var for admin, hardcoded for the rest) are the source of truth.
+async function initializeUsers() {
   try {
+    const bcrypt = require('bcryptjs');
+
     // Helper: look up a member by name keywords and return {id, full_name}
     const findMemberByName = async (keywords) => {
       try {
@@ -711,83 +715,78 @@ async function initializeAdmin() {
       } catch { return null; }
     };
 
-    // Seed admin account — linked to member record
-    const adminExists = await queries.findUserByUsername('admin');
-    if (!adminExists) {
-      const bcrypt = require('bcryptjs');
-      const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
-      if (initialPassword && initialPassword.length >= 12) {
-        const passwordHash = await bcrypt.hash(initialPassword, 10);
-        const member = await findMemberByName(['Daniel', 'Mulesi']);
-        const fullName = member ? member.full_name : 'System Administrator';
-        await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
-          ['admin', passwordHash, 'admin', fullName, member ? member.id : null]);
-        console.log(`Admin user created${member ? ` linked to member "${fullName}"` : ''}.`);
-      } else {
-        console.warn('No admin user exists. Set INITIAL_ADMIN_PASSWORD (>=12 chars) and restart to bootstrap.');
-      }
-    } else {
-      const bcrypt = require('bcryptjs');
-      // Always re-hash admin password from INITIAL_ADMIN_PASSWORD env var.
-      // This ensures the env var is the single source of truth for the password.
-      const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
-      if (initialPassword && initialPassword.length >= 12) {
-        const passwordHash = await bcrypt.hash(initialPassword, 10);
-        await run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
-          [passwordHash, 'admin']);
-        console.log('Admin password reset from INITIAL_ADMIN_PASSWORD.');
-      }
-      // Link existing admin to member record if not yet linked
-      if (!adminExists.member_id) {
-        const member = await findMemberByName(['Daniel', 'Mulesi']);
-        if (member) {
-          await run('UPDATE users SET full_name = ?, member_id = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
-            [member.full_name, member.id, 'admin']);
-          console.log(`Admin account linked to member "${member.full_name}".`);
+    // Helper: title-case a username-derived full name (e.g. "happy_joseph_sikawa" -> "Happy Joseph Sikawa")
+    const titleCase = (s) => s.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+
+    // Helper: seed or re-seed a user. Always re-hashes the password so the
+    // configured password is the single source of truth on every startup.
+    const seedUser = async ({ username, password, role, fullName, memberKeywords = null, isNewMemberLeader = false }) => {
+      const passwordHash = await bcrypt.hash(password, 10);
+      let member = null;
+      if (memberKeywords) member = await findMemberByName(memberKeywords);
+      const finalName = member ? member.full_name : (fullName || titleCase(username));
+      const existing = await queries.findUserByUsername(username);
+      try {
+        if (!existing) {
+          await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
+            [username, passwordHash, role, finalName, member ? member.id : null]);
+          console.log(`User "${username}" created (${role}).`);
+        } else {
+          await run('UPDATE users SET password_hash = ?, role = ?, full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
+            [passwordHash, role, finalName, username]);
+          console.log(`User "${username}" password reset (${role}).`);
         }
+        if (isNewMemberLeader) {
+          const u = await queries.findUserByUsername(username);
+          if (u) await run('UPDATE users SET is_new_member_leader = 1 WHERE id = ?', [u.id]);
+        }
+      } catch (e) {
+        console.warn(`Failed to seed user "${username}":`, e.message);
       }
+    };
+
+    // ── Admin account (password from env var) ──
+    const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
+    if (initialPassword && initialPassword.length >= 12) {
+      await seedUser({ username: 'admin', password: initialPassword, role: 'admin', memberKeywords: ['Daniel', 'Mulesi'], fullName: 'System Administrator' });
+    } else {
+      console.warn('INITIAL_ADMIN_PASSWORD not set or too short (<12 chars). Admin password not updated.');
     }
-    // Seed Genoveva Hance test account (leader with new member leader flag)
-    const genovevaExists = await queries.findUserByUsername('ghance');
-    if (!genovevaExists) {
-      const bcrypt = require('bcryptjs');
-      const passwordHash = await bcrypt.hash('password123', 10);
-      try {
-        const member = await findMemberByName(['Genoveva', 'Hance']);
-        const fullName = member ? member.full_name : 'Genoveva Hance';
-        await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
-          ['ghance', passwordHash, 'leader', fullName, member ? member.id : null]);
-      } catch (e1) {
-        console.warn('createUser failed for ghance:', e1.message);
-      }
+
+    // ── Existing fixed accounts ──
+    await seedUser({ username: 'ghance', password: 'password123', role: 'leader', memberKeywords: ['Genoveva', 'Hance'], fullName: 'Genoveva Hance', isNewMemberLeader: true });
+    await seedUser({ username: 'jnicholaus', password: 'password123', role: 'evangelist', memberKeywords: ['Jeremiah', 'Nicholaus'], fullName: 'PST. JEREMIAH NICHOLAUS' });
+    await seedUser({ username: 'accountant', password: 'accountant123', role: 'accountant', fullName: 'Church Accountant' });
+
+    // ── 20 leader accounts ──
+    const leaders = [
+      { u: 'elizabeth_anthony',    p: 'Elizabeth@jTfS!26' },
+      { u: 'happy_joseph_sikawa',   p: 'Happy@q1OP!26' },
+      { u: 'maria_kidumba',         p: 'Maria@Y277!26' },
+      { u: 'neema_kaijage',         p: 'Neema@nN77!26' },
+      { u: 'rose_simon',            p: 'Rose@5cuV!26' },
+      { u: 'christina_mwamlima',    p: 'Christina@cbUX!26' },
+      { u: 'farida_mlawa',          p: 'Farida@TRP8!26' },
+      { u: 'neema_dickson',         p: 'Neema@wak0!26' },
+      { u: 'neema_godfrey',         p: 'Neema@4jG7!26' },
+      { u: 'sigfred_kaijage',       p: 'Sigfred@tNoa!26' },
+      { u: 'catherine_gasper',      p: 'Catherine@CAew!26' },
+      { u: 'eliya_kasmil_mapunda',  p: 'Eliya@g0O7!26' },
+      { u: 'faith_ngonyani',        p: 'Faith@Hh6q!26' },
+      { u: 'happiness_erasto',      p: 'Happiness@8HJP!26' },
+      { u: 'mariam_adam',           p: 'Mariam@FEU9!26' },
+      { u: 'elizabeth_nehemiah',    p: 'Elizabeth@L7gC!26' },
+      { u: 'crispin_mbatiani',      p: 'Crispin@5Q97!26' },
+      { u: 'doreen_uhuru',          p: 'Doreen@6tvi!26' },
+      { u: 'irene_joseph',          p: 'Irene@gvz7!26' },
+      { u: 'joseph_chitanda',       p: 'Joseph@VYE7!26' },
+    ];
+    for (const { u, p } of leaders) {
+      await seedUser({ username: u, password: p, role: 'leader', fullName: titleCase(u) });
     }
-    // Ensure is_new_member_leader is set to 1 (covers existing users too)
-    const ghanceUser = await queries.findUserByUsername('ghance');
-    if (ghanceUser) {
-      try {
-        await run('UPDATE users SET is_new_member_leader = 1 WHERE id = ?', [ghanceUser.id]);
-        console.log('Genoveva Hance account seeded (leader, is_new_member_leader=1).');
-      } catch (e2) {
-        console.warn('Failed to set is_new_member_leader on ghance:', e2.message);
-      }
-    }
-    // Seed Jeremiah Nicholaus evangelist account — linked to member record
-    const jeremiahExists = await queries.findUserByUsername('jnicholaus');
-    if (!jeremiahExists) {
-      try {
-        const bcrypt = require('bcryptjs');
-        const passwordHash = await bcrypt.hash('password123', 10);
-        const member = await findMemberByName(['Jeremiah', 'Nicholaus']);
-        const fullName = member ? member.full_name : 'PST. JEREMIAH NICHOLAUS';
-        await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
-          ['jnicholaus', passwordHash, 'evangelist', fullName, member ? member.id : null]);
-        console.log(`Jeremiah Nicholaus account seeded (jnicholaus/password123) linked to member "${fullName}".`);
-      } catch (e4) {
-        console.warn('Failed to create jnicholaus user:', e4.message);
-      }
-    }
+    console.log(`Seeded ${leaders.length} leader accounts.`);
   } catch (error) {
-    console.error('Failed to create admin user:', error);
+    console.error('Failed to seed users:', error);
   }
 }
 
@@ -884,17 +883,7 @@ async function startServer() {
     await require('./performanceEngine').ensurePerformanceSchema();
     console.log('Performance & Recognition Center schema ready');
 
-    // Seed default accountant user if none exists
-    const bcrypt = require('bcryptjs');
-    const accountantExists = await get('SELECT id FROM users WHERE role = ?', ['accountant']);
-    if (!accountantExists) {
-      const hash = bcrypt.hashSync('accountant123', 10);
-      await run('INSERT INTO users (username, password_hash, role, full_name) VALUES (?, ?, ?, ?)',
-        ['accountant', hash, 'accountant', 'Church Accountant']);
-      console.log('Default accountant user created: username=accountant, password=accountant123');
-    }
-
-    await initializeAdmin();
+    await initializeUsers();
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);
     startScheduler();
