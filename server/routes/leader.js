@@ -56,7 +56,7 @@ async function getTargetLeaderRecord(currentLeader, targetLeaderId) {
 // GET members assigned to this leader
 router.get('/members', async (req, res) => {
   try {
-    const { target_leader_id } = req.query;
+    const { target_leader_id, date, service_id = 1 } = req.query;
     const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
     if (!leaderRecord) {
       return res.status(404).json({ error: 'Leader record not found' });
@@ -64,9 +64,27 @@ router.get('/members', async (req, res) => {
 
     const targetLeader = await getTargetLeaderRecord(leaderRecord, target_leader_id);
     const members = await queries.getMembersByLeader(targetLeader.id);
-    const sectionLeaders = leaderRecord.is_head
+    let sectionLeaders = leaderRecord.is_head
       ? await queries.getLeadersBySection(leaderRecord.section_id)
       : [];
+
+    // Annotate each section leader with their submission status for the
+    // given date+service so the frontend can hide already-submitted leaders
+    // from the dropdown after a head leader submits on their behalf.
+    if (leaderRecord.is_head && date) {
+      const submittedIds = new Set();
+      const submissions = await all(
+        'SELECT leader_id FROM submission_log WHERE section_id = ? AND date = ? AND service_id = ?',
+        [leaderRecord.section_id, date, Number(service_id)]
+      );
+      for (const row of submissions) {
+        submittedIds.add(Number(row.leader_id));
+      }
+      sectionLeaders = sectionLeaders.map(l => ({
+        ...l,
+        has_submitted: submittedIds.has(Number(l.id))
+      }));
+    }
 
     res.json({
       section_id: leaderRecord.section_id,

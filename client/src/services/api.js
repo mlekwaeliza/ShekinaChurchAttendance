@@ -234,8 +234,12 @@ export const calendarAPI = {
 
 // Leader API
 export const leaderAPI = {
-  getMembers: (targetLeaderId) => api.get('/leader/members', {
-    params: targetLeaderId ? { target_leader_id: targetLeaderId } : {}
+  getMembers: (targetLeaderId, date, serviceId) => api.get('/leader/members', {
+    params: {
+      ...(targetLeaderId ? { target_leader_id: targetLeaderId } : {}),
+      ...(date ? { date } : {}),
+      ...(serviceId ? { service_id: serviceId } : {})
+    }
   }),
   createMember: (data) => api.post('/leader/members', data),
   updateMember: (id, data) => api.put(`/leader/members/${id}`, data),

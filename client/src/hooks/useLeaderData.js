@@ -232,7 +232,7 @@ const useLeaderData = () => {
       }
 
       const [membersRes, servicesRes] = await Promise.all([
-        leaderAPI.getMembers(attendanceLeaderId),
+        leaderAPI.getMembers(attendanceLeaderId, selectedDate, selectedServiceId),
         leaderAPI.getServiceTypes()
       ]);
 
@@ -281,7 +281,7 @@ const useLeaderData = () => {
     } finally {
       setLoading(false);
     }
-  }, [attendanceLeaderId, showMessage, user, selectedDate]);
+  }, [attendanceLeaderId, showMessage, user, selectedDate, selectedServiceId]);
 
   const handleAttendanceLeaderSelection = useCallback((leaderId) => {
     setAttendanceLeaderId(leaderId ? Number(leaderId) : null);
