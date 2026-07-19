@@ -6,17 +6,14 @@ const isFalsy = (value) => ['0', 'false', 'no', 'off'].includes(String(value || 
 function buildPoolConfig() {
   let connectionString = process.env.DATABASE_URL || null;
 
-  // Strip unsupported query params from Neon connection string that cause
-  // silent connection failures in the `pg` library (e.g. channel_binding).
-  // Also append options=-c search_path=public to ensure every connection
-  // starts with the correct search_path (Neon's pooler resets it).
+  // Strip unsupported query params from Neon connection string:
+  // - channel_binding: not supported by the `pg` library
+  // - options: Neon rejects search_path as a startup parameter
   if (connectionString) {
     try {
       const url = new URL(connectionString);
       url.searchParams.delete('channel_binding');
-      if (!url.searchParams.has('options')) {
-        url.searchParams.set('options', '-c search_path=public');
-      }
+      url.searchParams.delete('options');
       connectionString = url.toString();
     } catch (_) { /* not a parseable URL — use as-is */ }
   }
