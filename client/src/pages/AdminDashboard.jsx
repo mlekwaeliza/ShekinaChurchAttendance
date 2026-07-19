@@ -157,6 +157,7 @@ const AdminDashboard = () => {
             serviceTypes={data.serviceTypes}
             selectedServiceId={data.selectedServiceId}
             onServiceChange={data.setSelectedServiceId}
+            birthdays={data.birthdays}
           />
         );
 

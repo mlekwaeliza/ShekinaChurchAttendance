@@ -1041,58 +1041,44 @@ router.post('/executive-comparison', async (req, res) => {
       return res.status(400).json({ error: 'At least one period is required' });
     }
 
-    const periodResults = [];
-    for (const p of periods) {
+    // Parallelize all periods AND all 7 calls within each period
+    const periodResults = await Promise.all(periods.map(async (p) => {
       const { id, label, start, end } = p;
-      if (!start || !end) continue;
+      if (!start || !end) return null;
 
-      // Overall attendance stats for this period
-      const overall = await getMultiPeriodOverall(start, end);
+      const [overall, sections, leaders, departments, memberEngagement, daily, movement] = await Promise.all([
+        getMultiPeriodOverall(start, end),
+        getMultiPeriodSections(start, end),
+        getMultiPeriodLeaders(start, end),
+        getMultiPeriodDepartments(start, end),
+        getMultiPeriodMembers(start, end),
+        queries.getHistoricalDaily(start, end),
+        getAttendanceMovement(start, end),
+      ]);
 
-      // Section rankings for this period
-      const sections = await getMultiPeriodSections(start, end);
-
-      // Leader rankings for this period
-      const leaders = await getMultiPeriodLeaders(start, end);
-
-      // Department data for this period
-      const departments = await getMultiPeriodDepartments(start, end);
-
-      // Member engagement data
-      const memberEngagement = await getMultiPeriodMembers(start, end);
-
-      // Daily breakdown
-      const daily = await queries.getHistoricalDaily(start, end);
-
-      // Movement analysis
-      const movement = await getAttendanceMovement(start, end);
-
-      periodResults.push({
+      return {
         id, label, start, end,
-        overall,
-        sections,
-        leaders,
-        departments,
-        memberEngagement,
-        daily,
-        movement
-      });
-    }
+        overall, sections, leaders, departments, memberEngagement, daily, movement
+      };
+    }));
+
+    // Filter out nulls from skipped periods
+    const validResults = periodResults.filter(Boolean);
 
     // Compute executive KPIs across all periods
-    const kpis = computeExecutiveKPIs(periodResults);
+    const kpis = computeExecutiveKPIs(validResults);
 
     // Trend intelligence
-    const trends = analyzeTrends(periodResults);
+    const trends = analyzeTrends(validResults);
 
     // Root cause analysis
-    const rootCauses = analyzeRootCauses(periodResults);
+    const rootCauses = analyzeRootCauses(validResults);
 
     // Action center
-    const actions = generateActions(periodResults, trends);
+    const actions = generateActions(validResults, trends);
 
     res.json({
-      periods: periodResults,
+      periods: validResults,
       kpis,
       trends,
       rootCauses,
@@ -1491,7 +1477,7 @@ router.get('/executive-summary', async (req, res) => {
       mo:   { s: formatLocalDate(addDays(now, -30)), e: today },
       qr:   { s: formatLocalDate(addDays(now, -90)), e: today },
       yr:   { s: formatLocalDate(addDays(now, -365)), e: today },
-      all:  { s: '1970-01-01', e: today },
+      all:  { s: formatLocalDate(addDays(now, -730)), e: today }, // capped to 2 years (was 1970)
     };
 
     // All DB fetches in parallel

@@ -260,6 +260,9 @@ db.serialize(() => {
 
     CREATE INDEX IF NOT EXISTS idx_followups_member ON absent_followups(member_id);
     CREATE INDEX IF NOT EXISTS idx_followups_leader ON absent_followups(leader_id);
+    CREATE INDEX IF NOT EXISTS idx_followups_absence_date ON absent_followups(absence_date);
+    CREATE INDEX IF NOT EXISTS idx_followups_created ON absent_followups(created_at);
+    CREATE INDEX IF NOT EXISTS idx_visitor_intake_created ON visitor_intake(created_at);
 
     CREATE TABLE IF NOT EXISTS service_types (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1879,6 +1882,9 @@ async function ensureHomeCellSchema() {
       await run('CREATE INDEX IF NOT EXISTS idx_members_created_at ON members(created_at)');
       await run('CREATE INDEX IF NOT EXISTS idx_submission_log_leader_id ON submission_log(leader_id)');
       await run('CREATE INDEX IF NOT EXISTS idx_attendance_date_service ON attendance(date, service_type_id)');
+      await run('CREATE INDEX IF NOT EXISTS idx_followups_absence_date ON absent_followups(absence_date)');
+      await run('CREATE INDEX IF NOT EXISTS idx_followups_created ON absent_followups(created_at)');
+      await run('CREATE INDEX IF NOT EXISTS idx_visitor_intake_created ON visitor_intake(created_at)');
     } catch (e) {
       console.warn('Additional index creation failed (non-fatal):', e.message);
     }

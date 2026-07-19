@@ -119,6 +119,7 @@ const ExecutiveCommandCenter = (props) => {
   const {
     allMembers = [], sections = [], leaders = [], serviceTypes = [],
     selectedServiceId, onServiceChange, pastorName = 'Pastor',
+    birthdays: birthdaysProp = [],
   } = props;
 
   const [loading, setLoading] = useState(true);
@@ -128,7 +129,6 @@ const ExecutiveCommandCenter = (props) => {
   const [aiInsights, setAiInsights] = useState([]);
   const [homeCells, setHomeCells] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [birthdays, setBirthdays] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [audit, setAudit] = useState([]);
   const [hallOfFame, setHallOfFame] = useState(null);
@@ -140,14 +140,12 @@ const ExecutiveCommandCenter = (props) => {
     setLoading(true);
     setErr(null);
     try {
-      const [sumRes, compRes, aiRes, cellRes, deptRes, bdayRes, alertRes, auditRes, perfRes, backupRes, healthRes, notifRes] = await Promise.allSettled([
+      const [sumRes, compRes, aiRes, cellRes, deptRes, auditRes, perfRes, backupRes, healthRes, notifRes] = await Promise.allSettled([
         analyticsAPI.getExecutiveSummary(90),
         analyticsAPI.getExecutiveComparison({ periods: buildPeriods('month', 6), mode: 'overall' }),
         analyticsAPI.getAIInsights(),
         adminAPI.getHomeCells(),
         adminAPI.getDepartments(),
-        adminAPI.getUpcomingBirthdays(30),
-        adminAPI.getConsecutiveAbsences(),
         adminAPI.getAuditLog({ limit: 12 }),
         adminAPI.getPerformanceDashboard('month', selectedServiceId, null),
         adminAPI.getBackupStatus(),
@@ -159,8 +157,6 @@ const ExecutiveCommandCenter = (props) => {
       if (aiRes.status === 'fulfilled') setAiInsights(asArray(aiRes.value.data));
       if (cellRes.status === 'fulfilled') setHomeCells(asArray(cellRes.value.data));
       if (deptRes.status === 'fulfilled') setDepartments(asArray(deptRes.value.data?.departments ?? deptRes.value.data));
-      if (bdayRes.status === 'fulfilled') setBirthdays(asArray(bdayRes.value.data));
-      if (alertRes.status === 'fulfilled') setAlerts(asArray(alertRes.value.data));
       if (auditRes.status === 'fulfilled') setAudit(asArray(auditRes.value.data));
       if (perfRes.status === 'fulfilled') setHallOfFame(perfRes.value.data);
       if (backupRes.status === 'fulfilled') setBackup(backupRes.value.data);
@@ -500,7 +496,7 @@ const ExecutiveCommandCenter = (props) => {
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Next 30 Days Birthdays</p>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {birthdays.slice(0, 8).map((b) => (
+              {birthdaysProp.slice(0, 8).map((b) => (
                 <button key={b.id} type="button" onClick={() => navigate('/admin/birthdays')}
                   className="group w-full text-left flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-700/30 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                   <Gift className="w-3.5 h-3.5 text-rose-400" />
@@ -508,7 +504,7 @@ const ExecutiveCommandCenter = (props) => {
                   <span className="text-[10px] text-slate-400">{fmtDate(b.date_of_birth)}</span>
                 </button>
               ))}
-              {birthdays.length === 0 && <InsufficientData />}
+              {birthdaysProp.length === 0 && <InsufficientData />}
             </div>
           </div>
           <div>

@@ -402,12 +402,16 @@ const useAdminData = () => {
   }, [deletingLeader, loadLeaders, loadCoreData, showMessage]);
 
   // Sync selectedServiceId to localStorage and URL
+  const serviceIdInitialized = useRef(false);
   useEffect(() => {
     localStorage.setItem('lastServiceFilter', selectedServiceId);
-    
     updateSearchParam('service', selectedServiceId);
-    
-    loadDashboardMetrics();
+    // Skip the first run — loadDashboardMetrics is called in the initial load effect
+    if (serviceIdInitialized.current) {
+      loadDashboardMetrics();
+    } else {
+      serviceIdInitialized.current = true;
+    }
   }, [selectedServiceId, loadDashboardMetrics, updateSearchParam]);
 
   useEffect(() => {
@@ -456,7 +460,7 @@ const useAdminData = () => {
 
   // Polling logic for real-time updates
   useEffect(() => {
-    const POLL_INTERVAL = 30000; // 30 seconds
+    const POLL_INTERVAL = 60000; // 60 seconds (reduced from 30s to cut background load)
     let interval;
 
     const startPolling = () => {

@@ -225,14 +225,10 @@ async function scoreMembers(start, end, serviceId) {
     GROUP BY m.id, m.full_name, m.membership_id, m.gender, m.age_group, s.name
   `, [start, end, ...svcP]);
 
-  const outreach = await all(`
-    SELECT member_id, COUNT(*) AS cnt FROM outreach_logs
-    WHERE created_at BETWEEN ? AND ? GROUP BY member_id
-  `, [start, end]);
-  const contribs = await all(`
-    SELECT member_id, COUNT(*) AS cnt FROM contributions
-    WHERE payment_date BETWEEN ? AND ? GROUP BY member_id
-  `, [start, end]);
+  const [outreach, contribs] = await Promise.all([
+    all(`SELECT member_id, COUNT(*) AS cnt FROM outreach_logs WHERE created_at BETWEEN ? AND ? GROUP BY member_id`, [start, end]),
+    all(`SELECT member_id, COUNT(*) AS cnt FROM contributions WHERE payment_date BETWEEN ? AND ? GROUP BY member_id`, [start, end]),
+  ]);
 
   const outMap = Object.fromEntries(outreach.map(r => [r.member_id, r.cnt]));
   const conMap = Object.fromEntries(contribs.map(r => [r.member_id, r.cnt]));
@@ -255,40 +251,16 @@ async function scoreLeaders(start, end, serviceId) {
   const serviceDaysRow = await get(`SELECT COUNT(DISTINCT date) AS d FROM attendance WHERE date BETWEEN ? AND ?`, [start, end]);
   const serviceDays = Number(serviceDaysRow?.d) || 0;
 
-  const subs = await all(`
-    SELECT leader_id, COUNT(DISTINCT date) AS submitted_days
-    FROM submission_log
-    WHERE date BETWEEN ? AND ?
-    GROUP BY leader_id
-  `, [start, end]);
-
-  const memberAtt = await all(`
-    SELECT l.id AS leader_id,
-      AVG(CASE WHEN LOWER(TRIM(a.status))='present' THEN 100.0 ELSE 0 END) AS avg_att
-    FROM leaders l
-    JOIN members m ON m.leader_id = l.id
-    JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ?
-    WHERE l.is_active = 1
-    GROUP BY l.id
-  `, [start, end]);
-
-  const ev = await all(`
-    SELECT l.id AS leader_id, COUNT(*) AS cnt FROM leaders l
-    LEFT JOIN outreach_logs o ON o.leader_id = l.id AND o.created_at BETWEEN ? AND ?
-    WHERE l.is_active = 1 GROUP BY l.id
-  `, [start, end]);
+  const [subs, memberAtt, ev, rows] = await Promise.all([
+    all(`SELECT leader_id, COUNT(DISTINCT date) AS submitted_days FROM submission_log WHERE date BETWEEN ? AND ? GROUP BY leader_id`, [start, end]),
+    all(`SELECT l.id AS leader_id, AVG(CASE WHEN LOWER(TRIM(a.status))='present' THEN 100.0 ELSE 0 END) AS avg_att FROM leaders l JOIN members m ON m.leader_id = l.id JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ? WHERE l.is_active = 1 GROUP BY l.id`, [start, end]),
+    all(`SELECT l.id AS leader_id, COUNT(*) AS cnt FROM leaders l LEFT JOIN outreach_logs o ON o.leader_id = l.id AND o.created_at BETWEEN ? AND ? WHERE l.is_active = 1 GROUP BY l.id`, [start, end]),
+    all(`SELECT l.id, u.full_name, s.name AS section_name FROM leaders l LEFT JOIN users u ON u.id = l.user_id LEFT JOIN sections s ON s.id = l.section_id WHERE l.is_active = 1`),
+  ]);
 
   const subMap = Object.fromEntries(subs.map(r => [r.leader_id, r]));
   const attMap = Object.fromEntries(memberAtt.map(r => [r.leader_id, r]));
   const evMap = Object.fromEntries(ev.map(r => [r.leader_id, r]));
-
-  const rows = await all(`
-    SELECT l.id, u.full_name, s.name AS section_name
-    FROM leaders l
-    LEFT JOIN users u ON u.id = l.user_id
-    LEFT JOIN sections s ON s.id = l.section_id
-    WHERE l.is_active = 1
-  `);
 
   return rows.map(l => {
     const submittedDays = Number(subMap[l.id]?.submitted_days) || 0;
@@ -374,7 +346,7 @@ async function recordTransaction(entity_type, entity_id, season, category, point
 }
 
 // Build a full ranked list with scores, levels, rank movement
-async function buildRanked(scored, weights, season, prevSeason) {
+async function buildRanked(scored, weights, season, prevSeason, prevScores) {
   scored.forEach(e => {
     const w = e.components.submission_rate !== undefined ? weights.leader : weights.member;
     e.overallScore = weighted(e.components, w);
@@ -383,8 +355,7 @@ async function buildRanked(scored, weights, season, prevSeason) {
   scored.sort((a, b) => b.overallScore - a.overallScore);
   scored.forEach((e, i) => { e.rank = i + 1; });
 
-  if (prevSeason) {
-    const prevScores = await scoreForSeason(prevSeason);
+  if (prevSeason && prevScores) {
     scored.forEach(e => {
       const prev = prevScores.find(p => p.id === e.id);
       e.prevRank = prev ? prev.rank : null;
@@ -397,12 +368,14 @@ async function buildRanked(scored, weights, season, prevSeason) {
 // Previous-season scores (recompute for movement).
 async function scoreForSeason(season) {
   const serviceId = 'all';
-  const members = await scoreMembers(season.start, season.end, serviceId);
-  const leaders = await scoreLeaders(season.start, season.end, serviceId);
-  const sections = await scoreSections(season.start, season.end, serviceId);
-  const departments = await scoreDepartments(season.start, season.end);
-  const cells = await scoreCells(season.start, season.end);
-  const weights = await loadWeights();
+  const [members, leaders, sections, departments, cells, weights] = await Promise.all([
+    scoreMembers(season.start, season.end, serviceId),
+    scoreLeaders(season.start, season.end, serviceId),
+    scoreSections(season.start, season.end, serviceId),
+    scoreDepartments(season.start, season.end),
+    scoreCells(season.start, season.end),
+    loadWeights(),
+  ]);
   const out = [];
   members.forEach(m => { m.overallScore = weighted(m.components, weights.member); });
   leaders.forEach(l => { l.overallScore = weighted(l.components, weights.leader); });
@@ -454,18 +427,25 @@ function prevSeasonOf(season) {
 async function getDashboard(filter, serviceId, userId) {
   const season = getFilterRange(filter);
   const weights = await loadWeights();
-  const members = await scoreMembers(season.start, season.end, serviceId);
-  const leaders = await scoreLeaders(season.start, season.end, serviceId);
-  const sections = await scoreSections(season.start, season.end, serviceId);
-  const departments = await scoreDepartments(season.start, season.end);
-  const cells = await scoreCells(season.start, season.end);
 
+  // Parallelize all scoring functions (independent of each other)
+  const [members, leaders, sections, departments, cells] = await Promise.all([
+    scoreMembers(season.start, season.end, serviceId),
+    scoreLeaders(season.start, season.end, serviceId),
+    scoreSections(season.start, season.end, serviceId),
+    scoreDepartments(season.start, season.end),
+    scoreCells(season.start, season.end),
+  ]);
+
+  // Compute previous season scores ONCE (not 5x)
   const prev = prevSeasonOf(season);
-  const rankedMembers = await buildRanked(members, weights, season, prev);
-  const rankedLeaders = await buildRanked(leaders, weights, season, prev);
-  const rankedSections = await buildRanked(sections, { member: { attendance: 100 }, leader: {} }, season, prev);
-  const rankedDepartments = await buildRanked(departments, { member: { attendance: 100 }, leader: {} }, season, prev);
-  const rankedCells = await buildRanked(cells, { member: { attendance: 100 }, leader: {} }, season, prev);
+  const prevScores = prev ? await scoreForSeason(prev) : null;
+
+  const rankedMembers = await buildRanked(members, weights, season, prev, prevScores);
+  const rankedLeaders = await buildRanked(leaders, weights, season, prev, prevScores);
+  const rankedSections = await buildRanked(sections, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores);
+  const rankedDepartments = await buildRanked(departments, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores);
+  const rankedCells = await buildRanked(cells, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores);
 
   // KPIs
   const totalMembers = rankedMembers.length;
@@ -513,8 +493,10 @@ async function getDashboard(filter, serviceId, userId) {
   const outCells = rankedCells.map(g => flattenGroup(g));
 
   // Achievements (per member and leader this season — persisted to entity_achievements)
-  const memberAchievements = await computeAchievements(rankedMembers, season, 'member');
-  const leaderAchievements = await computeAchievements(rankedLeaders, season, 'leader');
+  const [memberAchievements, leaderAchievements] = await Promise.all([
+    computeAchievements(rankedMembers, season, 'member'),
+    computeAchievements(rankedLeaders, season, 'leader'),
+  ]);
   const allAchievements = [...memberAchievements, ...leaderAchievements];
 
   // Attach badges to flattened entities
