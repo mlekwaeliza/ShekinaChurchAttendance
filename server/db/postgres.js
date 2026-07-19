@@ -8,10 +8,15 @@ function buildPoolConfig() {
 
   // Strip unsupported query params from Neon connection string that cause
   // silent connection failures in the `pg` library (e.g. channel_binding).
+  // Also append options=-c search_path=public to ensure every connection
+  // starts with the correct search_path (Neon's pooler resets it).
   if (connectionString) {
     try {
       const url = new URL(connectionString);
       url.searchParams.delete('channel_binding');
+      if (!url.searchParams.has('options')) {
+        url.searchParams.set('options', '-c search_path=public');
+      }
       connectionString = url.toString();
     } catch (_) { /* not a parseable URL — use as-is */ }
   }
@@ -42,10 +47,6 @@ function buildPoolConfig() {
     max: Number(process.env.PGPOOL_MAX || 10),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
     connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 15000),
-    // Neon's transaction pooler resets session state (including search_path)
-    // between checkouts. Setting `options` ensures every connection starts with
-    // the correct search_path. This is the libpq `-c key=val` format.
-    options: process.env.PG_OPTIONS || '-c search_path=public',
     ssl: sslEnabled ? { rejectUnauthorized } : false
   };
 }
