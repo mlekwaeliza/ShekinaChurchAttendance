@@ -1869,6 +1869,23 @@ async function ensureHomeCellSchema() {
       console.warn('member_titles column migration failed (non-fatal):', e.message);
     }
 
+    // Members table missing columns (SQLite path adds these via ALTER TABLE
+    // at line 920-929, but PostgreSQL needs them too)
+    try {
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS last_contacted_at TIMESTAMPTZ');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS last_contacted_by INTEGER');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS prayer_requests TEXT DEFAULT \'[]\'');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS status TEXT DEFAULT \'Active\'');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS flags TEXT DEFAULT \'[]\'');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS soft_deleted_at TIMESTAMPTZ');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS pending_deletion_at TIMESTAMPTZ');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS deletion_confirmed_at TIMESTAMPTZ');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS visitor_date DATE');
+      await run('CREATE INDEX IF NOT EXISTS idx_members_pending_deletion ON members(soft_deleted_at, pending_deletion_at) WHERE is_active = 0');
+    } catch (e) {
+      console.warn('members column migration failed (non-fatal):', e.message);
+    }
+
     try {
       await run('CREATE INDEX IF NOT EXISTS idx_member_titles_status ON member_titles(status)');
     } catch (e) {
