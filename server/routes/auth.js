@@ -75,6 +75,7 @@ router.post('/login', async (req, res) => {
       await recordIpLoginFailure(ip);
       // I5-fix: audit unknown-username attempts (with the attempted
       // username in details — operator-grade, not user-facing).
+      console.warn(`Login failed: user "${username}" not found in database`);
       recordSecurityEvent('login_failure', null, { username, reason: 'unknown_user' }, req);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -97,6 +98,7 @@ router.post('/login', async (req, res) => {
       const attempts = (user.failed_login_attempts || 0) + 1;
       await queries.incrementFailedLogin(user.id);
       await recordIpLoginFailure(ip);
+      console.warn(`Login failed: wrong password for user "${username}" (attempt ${attempts})`);
 
       if (attempts >= 10) {
         const lockoutCount = (user.lockout_count || 0) + 1;

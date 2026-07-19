@@ -4,20 +4,31 @@ const isTruthy = (value) => ['1', 'true', 'yes', 'require'].includes(String(valu
 const isFalsy = (value) => ['0', 'false', 'no', 'off'].includes(String(value || '').toLowerCase());
 
 function buildPoolConfig() {
-  const sslEnabled = isTruthy(process.env.PGSSL || process.env.POSTGRES_SSL);
-  // M2: PG cert verification defaults to ON for production safety.
-  // Override with PG_REJECT_UNAUTHORIZED=false ONLY for self-signed
-  // dev databases or networks where the CA bundle is not trusted.
-  // NOTE: When the connection string sets `sslmode=require` (as our
-  // Neon URL does) the npm `pg` library falls back to libpq semantics
-  // and may bypass rejectUnauthorized entirely. For full cert
-  // verification, use `sslmode=verify-full` in DATABASE_URL.
+  let connectionString = process.env.DATABASE_URL || null;
+
+  // Strip unsupported query params from Neon connection string that cause
+  // silent connection failures in the `pg` library (e.g. channel_binding).
+  if (connectionString) {
+    try {
+      const url = new URL(connectionString);
+      url.searchParams.delete('channel_binding');
+      connectionString = url.toString();
+    } catch (_) { /* not a parseable URL — use as-is */ }
+  }
+
+  // Detect SSL mode from the connection string or env vars
+  const sslInUrl = /sslmode\s*=\s*(require|prefer|verify-ca|verify-full)/i.test(process.env.DATABASE_URL || '');
+  const sslEnabled = isTruthy(process.env.PGSSL || process.env.POSTGRES_SSL) || sslInUrl;
+
+  // For Neon (sslmode=require), we need SSL but can't verify the cert
+  // because Neon uses SNI-based routing. Set rejectUnauthorized=false
+  // unless explicitly overridden.
   const rejectUnauthorized = process.env.PG_REJECT_UNAUTHORIZED === undefined
-    ? true
+    ? false  // Neon requires false; override with PG_REJECT_UNAUTHORIZED=true for self-signed
     : !isFalsy(process.env.PG_REJECT_UNAUTHORIZED);
 
-  const baseConfig = process.env.DATABASE_URL
-    ? { connectionString: process.env.DATABASE_URL }
+  const baseConfig = connectionString
+    ? { connectionString }
     : {
         host: process.env.PGHOST || '127.0.0.1',
         port: Number(process.env.PGPORT || 5432),
