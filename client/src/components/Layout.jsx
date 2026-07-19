@@ -51,6 +51,7 @@ import {
   Cross,
   DollarSign,
   Banknote,
+  Trash2,
 } from 'lucide-react';
 
 const Layout = ({ children, showNav = true }) => {
@@ -195,6 +196,7 @@ const Layout = ({ children, showNav = true }) => {
       { section: 'MANAGEMENT', items: [
         { path: '/admin/sections', label: 'Sections', icon: Layers },
         { path: '/admin/members', label: 'Members', icon: Users },
+        { path: '/admin/trash', label: 'Trash', icon: Trash2 },
         { path: '/admin/leaders', label: 'Leaders', icon: UserCog },
         { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
         { path: '/admin/titles', label: 'Titles', icon: Award },

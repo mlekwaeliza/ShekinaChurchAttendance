@@ -428,8 +428,8 @@ router.get('/leader-dashboard/:id', async (req, res) => {
       db.get(`
         SELECT l.*, u.full_name, u.username, s.name as section_name
         FROM leaders l
-        JOIN users u ON l.user_id = u.id
-        JOIN sections s ON l.section_id = s.id
+        LEFT JOIN users u ON l.user_id = u.id
+        LEFT JOIN sections s ON l.section_id = s.id
         WHERE l.id = ?
       `, [leaderId], (err, row) => err ? reject(err) : resolve(row));
     });
@@ -437,7 +437,7 @@ router.get('/leader-dashboard/:id', async (req, res) => {
     if (!leader) return res.status(404).json({ error: 'Leader not found' });
 
     const members = await new Promise((resolve, reject) => {
-      db.all('SELECT * FROM members WHERE leader_id = ? ORDER BY full_name', [leaderId], (err, rows) => err ? reject(err) : resolve(rows));
+      db.all('SELECT * FROM members WHERE leader_id = ? AND soft_deleted_at IS NULL ORDER BY full_name', [leaderId], (err, rows) => err ? reject(err) : resolve(rows));
     });
 
     const history = await new Promise((resolve, reject) => {

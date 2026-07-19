@@ -442,6 +442,102 @@ router.post('/members/restore', async (req, res) => {
   }
 });
 
+// ── Trash (Google-style recycle bin) ─────────────────────────────────────
+// GET all soft-deleted members (regardless of age)
+router.get('/members/trash', async (req, res) => {
+  try {
+    const usePg = String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
+    const daysExpr = usePg
+      ? `CAST(EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - m.soft_deleted_at)) / 86400 AS INTEGER)`
+      : `CAST(JULIANDAY(CURRENT_TIMESTAMP) - JULIANDAY(m.soft_deleted_at) AS INTEGER)`;
+    const rows = await all(`
+      SELECT m.id, m.membership_id, m.full_name, m.phone, m.email, m.gender,
+             m.age_group, m.soft_deleted_at, m.created_at,
+             s.name AS section_name,
+             u.full_name AS leader_name,
+             (SELECT COUNT(*) FROM attendance WHERE member_id = m.id) AS attendance_count,
+             ${daysExpr} AS days_inactive
+      FROM members m
+      LEFT JOIN sections s ON m.section_id = s.id
+      LEFT JOIN leaders l ON m.leader_id = l.id
+      LEFT JOIN users u ON l.user_id = u.id
+      WHERE m.is_active = 0
+        AND m.soft_deleted_at IS NOT NULL
+      ORDER BY m.soft_deleted_at DESC
+    `);
+    res.json({ count: rows.length, members: rows });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch trash members', details: error.message });
+  }
+});
+
+// DELETE permanently delete a single member (immediate, no 6-month wait)
+router.delete('/members/:id/permanent', async (req, res) => {
+  try {
+    const memberId = Number(req.params.id);
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      return res.status(400).json({ error: 'Valid member ID required' });
+    }
+    const member = await get('SELECT id, full_name FROM members WHERE id = ? AND is_active = 0 AND soft_deleted_at IS NOT NULL', [memberId]);
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found in trash' });
+    }
+    try {
+      const { auditLog } = require('../middleware/audit');
+      await auditLog(req, 'permanent_delete_member', 'member', memberId, JSON.stringify({ full_name: member.full_name }));
+    } catch (_) { /* noop */ }
+    await run('DELETE FROM members WHERE id = ?', [memberId]);
+    res.json({ message: `${member.full_name} permanently deleted`, deleted: 1 });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to permanently delete member', details: error.message });
+  }
+});
+
+// POST empty trash (permanently delete ALL soft-deleted members)
+router.post('/members/empty-trash', async (req, res) => {
+  try {
+    const rows = await all('SELECT id, full_name FROM members WHERE is_active = 0 AND soft_deleted_at IS NOT NULL');
+    if (rows.length === 0) {
+      return res.json({ message: 'Trash is already empty', deleted: 0 });
+    }
+    const ids = rows.map(r => r.id);
+    const placeholders = ids.map(() => '?').join(',');
+    try {
+      const { auditLog } = require('../middleware/audit');
+      await auditLog(req, 'empty_trash', 'member', null, JSON.stringify({ count: ids.length, member_ids: ids }));
+    } catch (_) { /* noop */ }
+    await run(`DELETE FROM members WHERE id IN (${placeholders})`, ids);
+    res.json({ message: `Trash emptied: ${rows.length} member(s) permanently deleted`, deleted: rows.length });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to empty trash', details: error.message });
+  }
+});
+
+// POST restore a single member from trash
+router.post('/members/:id/restore', async (req, res) => {
+  try {
+    const memberId = Number(req.params.id);
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      return res.status(400).json({ error: 'Valid member ID required' });
+    }
+    const member = await get('SELECT id, full_name FROM members WHERE id = ? AND is_active = 0 AND soft_deleted_at IS NOT NULL', [memberId]);
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found in trash' });
+    }
+    await run(
+      `UPDATE members SET is_active = 1, soft_deleted_at = NULL, pending_deletion_at = NULL, deletion_confirmed_at = NULL, deletion_confirmed_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      [memberId]
+    );
+    try {
+      const { auditLog } = require('../middleware/audit');
+      await auditLog(req, 'restore_member', 'member', memberId, JSON.stringify({ full_name: member.full_name }));
+    } catch (_) { /* noop */ }
+    res.json({ message: `${member.full_name} restored`, restored: 1 });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to restore member', details: error.message });
+  }
+});
+
 // --- Leader CRUD ---
 // POST create leader
 router.post('/leaders', async (req, res) => {

@@ -123,6 +123,11 @@ export const adminAPI = {
   getPendingDeletion: () => api.get('/admin/members/pending-deletion'),
   confirmDeletion: (memberIds) => api.post('/admin/members/confirm-deletion', { member_ids: memberIds, confirm: true }),
   restoreMembers: (memberIds) => api.post('/admin/members/restore', { member_ids: memberIds }),
+  // Trash
+  getTrash: () => api.get('/admin/members/trash'),
+  permanentDelete: (id) => api.delete(`/admin/members/${id}/permanent`),
+  emptyTrash: () => api.post('/admin/members/empty-trash'),
+  restoreFromTrash: (id) => api.post(`/admin/members/${id}/restore`),
   getHistory: (serviceId) => api.get('/admin/history', { params: { service_id: serviceId } }),
   getSettingsConfig: () => api.get('/admin/settings/config'),
   updateSettingsConfig: (config) => api.put('/admin/settings/config', { config }),

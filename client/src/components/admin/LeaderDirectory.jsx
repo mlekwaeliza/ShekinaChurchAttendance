@@ -243,9 +243,9 @@ const LeaderDirectory = ({
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">
+                                <button onClick={() => onViewAnalytics(leader.id)} className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left" title="View Profile">
                                   {leader.full_name}
-                                </span>
+                                </button>
                                 {leader.is_head === 1 && (
                                   <span className="flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50">
                                     <Shield className="w-2.5 h-2.5 text-amber-500" />
@@ -320,7 +320,7 @@ const LeaderDirectory = ({
                               className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium ${style.text} ${style.bg} hover:shadow-sm transition-all`}
                             >
                               <Eye className="w-3 h-3" />
-                              Analytics
+                              View Profile
                             </button>
                             <button
                               onClick={() => onViewMembers(leader)}

@@ -35,6 +35,7 @@ import DepartmentsView from '../components/admin/DepartmentsView';
 import NewMemberPipeline from '../components/admin/NewMemberPipeline';
 import ContributionsView from '../components/admin/ContributionsView';
 import FinanceView from '../components/admin/FinanceView';
+import TrashView from '../components/admin/TrashView';
 import EvangelistDashboard from './EvangelistDashboard';
 
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
@@ -229,7 +230,7 @@ const AdminDashboard = () => {
             sections={data.sections}
             sectionFilter={data.leaderSectionFilter}
             setSectionFilter={data.setLeaderSectionFilter}
-            onViewAnalytics={data.openLeaderDashboard}
+            onViewAnalytics={(id) => navigate(`/admin/leaders?profile=${id}`)}
             onViewMembers={handleViewMembersOfLeader}
             onAdd={() => { data.setEditingLeader(null); data.setIsLeaderModalOpen(true); }}
             onEdit={(leader) => { data.setEditingLeader(leader); data.setIsLeaderModalOpen(true); }}
@@ -287,6 +288,9 @@ const AdminDashboard = () => {
             leaders={data.leaders}
           />
         );
+
+      case 'trash':
+        return <TrashView />;
 
       case 'analytics':
         return (
