@@ -820,7 +820,7 @@ db.serialize(() => {
     if (!err && row.count === 0) {
       const defaults = ['Tithes', 'Evangelism Offering', 'Offerings', 'First Fruit', 'Building Fund', 'Missions', 'Thanksgiving', 'Project'];
       defaults.forEach((name, i) => {
-        db.run('INSERT INTO contribution_types (name, sort_order) VALUES (?, ?)', [name, i]);
+        db.run('INSERT OR IGNORE INTO contribution_types (name, sort_order) VALUES (?, ?)', [name, i]);
       });
     }
   });
@@ -1972,13 +1972,10 @@ async function ensureHomeCellSchema() {
       if (countRow && Number(countRow.count) === 0) {
         const types = ['Tithes', 'Morning Offering', 'Afternoon Offering', 'Building Fund', 'Other'];
         for (let i = 0; i < types.length; i++) {
-          await run('INSERT INTO contribution_types (name, sort_order) VALUES (?, ?)', [types[i], i]);
+          await run('INSERT INTO contribution_types (name, sort_order) VALUES (?, ?) ON CONFLICT (name) DO NOTHING', [types[i], i]);
         }
       }
-      const evType = await get("SELECT id FROM contribution_types WHERE name = 'Evangelism Offering'");
-      if (!evType) {
-        await run("INSERT INTO contribution_types (name, description, sort_order) VALUES ('Evangelism Offering', 'Dedicated offering for evangelism ministry', 1)");
-      }
+      await run("INSERT INTO contribution_types (name, description, sort_order) VALUES ('Evangelism Offering', 'Dedicated offering for evangelism ministry', 1) ON CONFLICT (name) DO NOTHING");
 
       // Migration: Recompute finance totals — evangelism_offering must NOT be part of total_income
       await run(`
