@@ -727,6 +727,16 @@ async function initializeAdmin() {
         console.warn('No admin user exists. Set INITIAL_ADMIN_PASSWORD (>=12 chars) and restart to bootstrap.');
       }
     } else {
+      const bcrypt = require('bcryptjs');
+      // Always re-hash admin password from INITIAL_ADMIN_PASSWORD env var.
+      // This ensures the env var is the single source of truth for the password.
+      const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
+      if (initialPassword && initialPassword.length >= 12) {
+        const passwordHash = await bcrypt.hash(initialPassword, 10);
+        await run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
+          [passwordHash, 'admin']);
+        console.log('Admin password reset from INITIAL_ADMIN_PASSWORD.');
+      }
       // Link existing admin to member record if not yet linked
       if (!adminExists.member_id) {
         const member = await findMemberByName(['Daniel', 'Mulesi']);
