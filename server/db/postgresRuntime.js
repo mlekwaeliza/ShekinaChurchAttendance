@@ -59,21 +59,8 @@ function enqueue(fn) {
 async function execute(sql, params = []) {
   const normalizedSql = toPostgresSql(sql);
   const safe = params.map(p => p === undefined ? null : p);
-
-  // When using the pool (not a transaction client), acquire a dedicated
-  // connection so we can set search_path before the query. Neon's pooler
-  // resets session state between checkouts, so this ensures every query
-  // runs with the correct search_path.
-  if (transactionClient) {
-    return transactionClient.query(normalizedSql, safe);
-  }
-  const client = await pool.connect();
-  try {
-    await client.query('SET search_path TO public');
-    return await client.query(normalizedSql, safe);
-  } finally {
-    client.release();
-  }
+  const client = transactionClient || pool;
+  return client.query(normalizedSql, safe);
 }
 
 async function runAsync(sql, params = []) {

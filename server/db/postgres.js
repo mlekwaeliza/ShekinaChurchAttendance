@@ -49,12 +49,19 @@ function buildPoolConfig() {
 }
 
 const poolConfig = buildPoolConfig();
-// Search_path is set per-query via executeWithPath() in postgresRuntime.js
-// because Neon's transaction pooler resets session state between
-// transactions, so onConnect (which runs once per physical connection)
-// is not sufficient.
 
 const pool = new Pool(poolConfig);
+
+// Set search_path on every new physical connection. This works together with
+// the database-level ALTER DATABASE SET search_path (set on startup) to
+// ensure all queries can find tables in the public schema. Neon's PgBouncer
+// pooler resets session state between transactions, but the database-level
+// default and this on-connect hook together cover all cases.
+pool.on('connect', (client) => {
+  client.query('SET search_path TO public').catch((err) => {
+    console.error('Failed to set search_path on new PG connection:', err.message);
+  });
+});
 
 pool.on('error', (err) => {
   console.error('Unexpected PostgreSQL pool error:', err);

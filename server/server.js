@@ -904,8 +904,8 @@ async function startServer() {
     console.log('Database connection established');
 
     // Ensure the current role can CREATE in the public schema (PostgreSQL 15+
-    // removed the default CREATE grant on public). Also set the role-level
-    // search_path so Neon's pooler doesn't reset it to empty.
+    // removed the default CREATE grant on public). Also set the database-level
+    // and role-level search_path so Neon's pooler doesn't reset it to empty.
     if (String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres') {
       try {
         const pgPool = require('./db/postgres').pool;
@@ -913,7 +913,12 @@ async function startServer() {
         try {
           await pgClient.query('GRANT ALL ON SCHEMA public TO PUBLIC');
           await pgClient.query('ALTER ROLE CURRENT_USER SET search_path TO public');
-          console.log('PostgreSQL schema permissions and search_path configured.');
+          // Database-level default persists across all new sessions, including
+          // through PgBouncer's transaction pooler.
+          const dbResult = await pgClient.query('SELECT current_database() AS db');
+          const dbName = dbResult.rows[0].db;
+          await pgClient.query(`ALTER DATABASE "${dbName}" SET search_path TO public`);
+          console.log(`PostgreSQL schema permissions and search_path configured (database: ${dbName}).`);
         } finally {
           pgClient.release();
         }
