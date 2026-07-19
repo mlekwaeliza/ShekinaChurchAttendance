@@ -382,6 +382,52 @@ const TakeAttendance = ({
                 <div className="w-1 h-4 bg-indigo-500 rounded-full" />
                 <h3 className="text-sm font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Editing Attendance — {attendanceLeaderName}</h3>
               </div>
+
+              {/* Edit controls — inline at the top of the edit section */}
+              {editError && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+                  {editError}
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  <span className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
+                    Edit Mode — changes are tracked and audited
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-3 items-center w-full sm:w-auto">
+                  <select
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    className="input bg-white dark:bg-slate-800 text-sm py-2 flex-1 sm:flex-none"
+                  >
+                    <option value="">Select reason...</option>
+                    <option value="Correction">Correction</option>
+                    <option value="Member arrived late">Member arrived late</option>
+                    <option value="Member notified late">Member notified late</option>
+                    <option value="Paper attendance">Paper attendance</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <button
+                    onClick={() => onEditSubmit(editReason)}
+                    disabled={editSaving || !editReason}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {editSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={onToggleEdit}
+                    disabled={editSaving}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold transition-all disabled:opacity-50"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredMembers.map(member => <MemberCard key={member.id} member={member} />)}
               </div>
@@ -438,55 +484,6 @@ const TakeAttendance = ({
               No members match the current search or filter.
             </div>
           )}
-        </div>
-      )}
-
-      {/* Sticky Edit Mode Action Bar — always visible at the bottom when editing */}
-      {editMode && (
-        <div className="sticky bottom-4 z-50">
-          {editError && (
-            <div className="mb-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300 shadow-lg">
-              {editError}
-            </div>
-          )}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-5 bg-white dark:bg-slate-800 rounded-2xl border border-indigo-300 dark:border-indigo-700 shadow-xl">
-            <div className="flex items-center gap-2">
-              <Edit3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              <span className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
-                Edit Mode — changes are tracked and audited
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-3 items-center w-full sm:w-auto">
-              <select
-                value={editReason}
-                onChange={(e) => setEditReason(e.target.value)}
-                className="input bg-slate-50 dark:bg-slate-900 text-sm py-2 flex-1 sm:flex-none"
-              >
-                <option value="">Select reason...</option>
-                <option value="Correction">Correction</option>
-                <option value="Member arrived late">Member arrived late</option>
-                <option value="Member notified late">Member notified late</option>
-                <option value="Paper attendance">Paper attendance</option>
-                <option value="Other">Other</option>
-              </select>
-              <button
-                onClick={() => onEditSubmit(editReason)}
-                disabled={editSaving || !editReason}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                {editSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-              <button
-                onClick={onToggleEdit}
-                disabled={editSaving}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold transition-all disabled:opacity-50"
-              >
-                <X className="w-4 h-4" />
-                Cancel
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
