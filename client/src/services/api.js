@@ -263,6 +263,11 @@ export const leaderAPI = {
   getFollowUps: () => api.get('/leader/follow-ups'),
   updateFollowUp: (memberId, data) => api.put(`/leader/follow-ups/${memberId}`, data),
   getAssignments: () => api.get('/leader/assignments'),
+  // Head leader: edit attendance after submission
+  getEditMembers: (leaderId, date, serviceId = 1) => api.get(`/leader/attendance/edit-members/${leaderId}`, { params: { date, service_id: serviceId } }),
+  updateAttendanceRecord: (id, status, reason) => api.put(`/leader/attendance/${id}`, { status, reason }),
+  bulkEditAttendance: (data) => api.post('/leader/attendance/bulk-edit', data),
+  getAttendanceAudit: (id) => api.get(`/leader/attendance/${id}/audit`),
   // Leadership roles & assignments
   getTitles: () => api.get('/leader/titles'),
   getMemberTitles: (memberId) => api.get(`/leader/members/${memberId}/titles`),

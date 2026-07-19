@@ -436,13 +436,52 @@ const useLeaderData = () => {
   }, [selectedDate, selectedServiceId, attendanceLeaderId, user]);
 
   // --- Attendance Handlers ---
+  const [editMode, setEditMode] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
   const handleStatusChange = useCallback(
     (memberId, status) => {
-      if (submitted) return;
+      if (submitted && !editMode) return;
       setAttendance((prev) => ({ ...prev, [memberId]: status }));
     },
-    [submitted]
+    [submitted, editMode]
   );
+
+  const handleToggleEdit = useCallback(() => {
+    setEditError('');
+    setEditMode((prev) => !prev);
+  }, []);
+
+  const handleEditSubmit = useCallback(async (reason) => {
+    if (!reason) {
+      setEditError('Please select a reason for the correction.');
+      return false;
+    }
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const records = Object.entries(attendance).map(([member_id, status]) => ({
+        member_id: parseInt(member_id),
+        status,
+      }));
+      await leaderAPI.bulkEditAttendance({
+        date: selectedDate,
+        service_id: selectedServiceId,
+        leader_id: attendanceLeaderId,
+        reason,
+        records,
+      });
+      setEditMode(false);
+      showMessage('Attendance edited successfully!');
+      return true;
+    } catch (error) {
+      setEditError(error.response?.data?.error || error.message);
+      return false;
+    } finally {
+      setEditSaving(false);
+    }
+  }, [attendance, selectedDate, selectedServiceId, attendanceLeaderId, showMessage]);
 
   const [submitError, setSubmitError] = useState('');
   const [queuedForDate, setQueuedForDate] = useState(null);
@@ -697,6 +736,12 @@ const useLeaderData = () => {
     handleSubmit,
     queuedForDate,
     submitError,
+    // Edit mode (head leaders)
+    editMode,
+    editSaving,
+    editError,
+    handleToggleEdit,
+    handleEditSubmit,
     // History
     history,
     historyLoading,

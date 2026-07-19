@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle2, Loader2, WifiOff, CloudOff, UserCheck, UserX, Clock, XCircle, Search } from 'lucide-react';
+import { CheckCircle2, Loader2, WifiOff, CloudOff, UserCheck, UserX, Clock, XCircle, Search, Edit3, Save, X } from 'lucide-react';
 
 const TakeAttendance = ({
   members,
@@ -23,10 +23,17 @@ const TakeAttendance = ({
   attendanceLeaderId,
   attendanceLeaderName,
   actingOnBehalf = false,
-  onAttendanceLeaderChange
+  onAttendanceLeaderChange,
+  editMode = false,
+  editSaving = false,
+  editError = '',
+  onToggleEdit,
+  onEditSubmit
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('all');
+  const [editReason, setEditReason] = useState('');
+  const isEditable = !submitted || editMode;
   const currentService = serviceTypes.find(s => s.id === selectedServiceId);
   const serviceName = currentService?.name || 'Main Service';
   
@@ -113,7 +120,7 @@ const TakeAttendance = ({
               <button
                 key={status}
                 onClick={() => onStatusChange(member.id, status)}
-                disabled={submitted}
+                disabled={!isEditable}
                 className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${isActive ? config.active : config.inactive}`}
               >
                 <StatusIcon className="w-3.5 h-3.5" />
@@ -166,7 +173,7 @@ const TakeAttendance = ({
             <select
               value={attendanceLeaderId || ''}
               onChange={(event) => onAttendanceLeaderChange?.(event.target.value)}
-              disabled={submitted}
+              disabled={submitted && !editMode}
               className="input w-full bg-slate-50 dark:bg-slate-900 shadow-inner"
             >
               {sectionLeaders.map((leader) => (
@@ -191,10 +198,10 @@ const TakeAttendance = ({
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            disabled={submitted}
+            disabled={submitted && !editMode}
             className="input w-full bg-slate-50 dark:bg-slate-900 shadow-inner"
           />
-          {submitted && (
+          {submitted && !editMode && (
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mt-3 font-medium text-sm">
               <CheckCircle2 className="w-4 h-4" />
               Roster locked for {serviceName}
@@ -213,7 +220,7 @@ const TakeAttendance = ({
               <button
                 key={service.id}
                 onClick={() => onServiceChange(service.id)}
-                disabled={submitted}
+                disabled={submitted && !editMode}
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${
                   selectedServiceId === service.id
                     ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
@@ -281,7 +288,7 @@ const TakeAttendance = ({
               <button
                 type="button"
                 onClick={() => markMembers(unmarked, 'present')}
-                disabled={submitted || unmarked.length === 0}
+                disabled={!isEditable || unmarked.length === 0}
                 className="h-10 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Mark All Present
@@ -289,7 +296,7 @@ const TakeAttendance = ({
               <button
                 type="button"
                 onClick={() => markMembers(unmarked, 'absent')}
-                disabled={submitted || unmarked.length === 0}
+                disabled={!isEditable || unmarked.length === 0}
                 className="h-10 rounded-xl bg-rose-600 px-3 text-xs font-bold text-white transition-all hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Remaining Absent
@@ -297,7 +304,7 @@ const TakeAttendance = ({
               <button
                 type="button"
                 onClick={() => markMembers(unmarked, 'excused')}
-                disabled={submitted || unmarked.length === 0}
+                disabled={!isEditable || unmarked.length === 0}
                 className="h-10 rounded-xl bg-amber-500 px-3 text-xs font-bold text-white transition-all hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Remaining Excused
@@ -391,8 +398,21 @@ const TakeAttendance = ({
             </div>
           )}
 
+          {/* Edit Mode: show all members when in edit mode */}
+          {editMode && submitted && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-4 bg-indigo-500 rounded-full" />
+                <h3 className="text-sm font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Editing Attendance</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredMembers.map(member => <MemberCard key={member.id} member={member} />)}
+              </div>
+            </div>
+          )}
+
           {/* Locked / Submitted State */}
-          {submitted && (
+          {submitted && !editMode && (
             <div className="py-12 px-6 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-700 border-dashed">
               <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500" />
@@ -401,6 +421,64 @@ const TakeAttendance = ({
               <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs text-center mt-2">
                 Attendance for this service has been {isOfflineSubmit ? 'queued for sync' : 'successfully submitted'}.
               </p>
+              {isHead && (
+                <button
+                  onClick={onToggleEdit}
+                  className="mt-6 flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Edit Attendance
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Edit Mode Controls */}
+          {editMode && (
+            <div className="space-y-4">
+              {editError && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+                  {editError}
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800">
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  <span className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
+                    Edit Mode — changes are tracked and audited
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-3 items-center">
+                  <select
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    className="input bg-white dark:bg-slate-800 text-sm py-2"
+                  >
+                    <option value="">Select reason...</option>
+                    <option value="Correction">Correction</option>
+                    <option value="Member arrived late">Member arrived late</option>
+                    <option value="Member notified late">Member notified late</option>
+                    <option value="Paper attendance">Paper attendance</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  <button
+                    onClick={() => onEditSubmit(editReason)}
+                    disabled={editSaving || !editReason}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {editSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={onToggleEdit}
+                    disabled={editSaving}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold transition-all disabled:opacity-50"
+                  >
+                    <X className="w-4 h-4" />
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 

@@ -111,6 +111,11 @@ const LeaderDashboard = () => {
             onSubmit={handleSubmitAndRedirect}
             isOnline={data.isOnline}
             queuedForDate={data.queuedForDate}
+            editMode={data.editMode}
+            editSaving={data.editSaving}
+            editError={data.editError}
+            onToggleEdit={data.handleToggleEdit}
+            onEditSubmit={data.handleEditSubmit}
           />
         );
 

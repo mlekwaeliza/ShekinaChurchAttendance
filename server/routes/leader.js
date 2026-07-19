@@ -611,6 +611,260 @@ router.post('/attendance', async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════
+// HEAD LEADER ATTENDANCE EDITING (post-submission corrections)
+// Head leaders can edit attendance for their own roster AND for any
+// leader in their section, after submission. All edits are audited.
+// ═══════════════════════════════════════════════════════════════════
+
+const EDIT_VALID_STATUSES = new Set(['present', 'absent', 'excused']);
+const EDIT_REASON_MAX_LENGTH = 500;
+const EDIT_VALID_REASONS = ['Correction', 'Member arrived late', 'Member notified late', 'Paper attendance', 'Other'];
+
+// Helper: verify head leader and that a target leader belongs to their section
+async function requireHeadLeaderWithTarget(req, targetLeaderId) {
+  const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+  if (!leaderRecord) {
+    const err = new Error('Leader record not found'); err.statusCode = 404; throw err;
+  }
+  if (!leaderRecord.is_head) {
+    const err = new Error('Only head leaders can edit attendance after submission'); err.statusCode = 403; throw err;
+  }
+  if (!targetLeaderId || Number(targetLeaderId) === Number(leaderRecord.id)) {
+    return { headLeader: leaderRecord, target: leaderRecord };
+  }
+  const target = await queries.getLeaderById(targetLeaderId);
+  if (!target || Number(target.section_id) !== Number(leaderRecord.section_id)) {
+    const err = new Error('Selected leader does not belong to your section'); err.statusCode = 403; throw err;
+  }
+  return { headLeader: leaderRecord, target };
+}
+
+// Helper: verify an attendance record belongs to a member in the head leader's section
+async function verifyAttendanceInSection(req, attendanceId) {
+  const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+  if (!leaderRecord) {
+    const err = new Error('Leader record not found'); err.statusCode = 404; throw err;
+  }
+  if (!leaderRecord.is_head) {
+    const err = new Error('Only head leaders can edit attendance'); err.statusCode = 403; throw err;
+  }
+  const record = await get(
+    `SELECT a.id, a.member_id, a.date, a.status, a.service_type_id, m.section_id
+     FROM attendance a
+     JOIN members m ON a.member_id = m.id
+     WHERE a.id = ?`,
+    [attendanceId]
+  );
+  if (!record) {
+    const err = new Error('Attendance record not found'); err.statusCode = 404; throw err;
+  }
+  if (Number(record.section_id) !== Number(leaderRecord.section_id)) {
+    const err = new Error('Attendance record does not belong to your section'); err.statusCode = 403; throw err;
+  }
+  return { leaderRecord, record };
+}
+
+// GET members for a leader with current attendance (for edit mode)
+router.get('/attendance/edit-members/:leaderId', async (req, res) => {
+  try {
+    const leaderId = parseInt(req.params.leaderId, 10);
+    if (!Number.isInteger(leaderId) || leaderId <= 0) {
+      return res.status(400).json({ error: 'Invalid leader id' });
+    }
+    const { date, service_id = 1 } = req.query;
+    if (!date) return res.status(400).json({ error: 'Date query parameter required' });
+
+    const { headLeader, target } = await requireHeadLeaderWithTarget(req, leaderId);
+
+    const leader = await get(
+      'SELECT l.id, u.full_name AS leader_name, s.name AS section_name FROM leaders l JOIN users u ON l.user_id = u.id JOIN sections s ON l.section_id = s.id WHERE l.id = ?',
+      [target.id]
+    );
+    if (!leader) return res.status(404).json({ error: 'Leader not found' });
+
+    const members = await all(
+      `SELECT m.id AS member_id, m.full_name, m.membership_id,
+              a.id AS attendance_id, a.status, a.submitted_at
+       FROM members m
+       LEFT JOIN attendance a ON a.member_id = m.id AND a.date = ? AND a.service_type_id = ?
+       WHERE m.leader_id = ? AND m.is_active = 1
+       ORDER BY m.full_name`,
+      [date, Number(service_id), target.id]
+    );
+
+    const submittedRow = await get(
+      'SELECT created_at FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?',
+      [target.id, date, Number(service_id)]
+    );
+
+    res.json({
+      leader: { id: target.id, name: leader.leader_name, section_name: leader.section_name },
+      date,
+      service_id: Number(service_id),
+      members,
+      previously_submitted: !!submittedRow,
+      submitted_at: submittedRow?.created_at || null,
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to fetch leader members' });
+  }
+});
+
+// PUT update single attendance record (head leader edit)
+router.put('/attendance/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid attendance id' });
+    }
+
+    const { status, reason } = req.body || {};
+    if (!EDIT_VALID_STATUSES.has(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be present, absent, or excused.' });
+    }
+    const trimmedReason = typeof reason === 'string' ? reason.trim().slice(0, EDIT_REASON_MAX_LENGTH) : '';
+
+    const { leaderRecord, record } = await verifyAttendanceInSection(req, id);
+
+    if (record.status === status && !trimmedReason) {
+      return res.status(400).json({ error: 'Status is already set to that value. No changes to save.' });
+    }
+
+    await run(
+      'UPDATE attendance SET status = ?, submitted_by = ?, submitted_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [status, req.session.userId, id]
+    );
+
+    const ipAddress = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || null;
+    const userAgent = req.headers['user-agent'] || null;
+    queries.createAuditEntry(
+      req.session.userId, 'update', 'attendance', id,
+      { status: record.status },
+      { status, reason: trimmedReason || null, edited_by_head_leader: true, editor_name: req.session.user?.full_name },
+      ipAddress, userAgent
+    ).catch((err) => console.error('Head leader edit audit log failed:', err.message));
+
+    res.json({ message: 'Attendance updated', id, status, reason: trimmedReason || null });
+  } catch (error) {
+    console.error('Head leader attendance update error:', error);
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to update attendance' });
+  }
+});
+
+// POST bulk edit attendance for a leader's roster (head leader edit)
+router.post('/attendance/bulk-edit', async (req, res) => {
+  try {
+    const { date, service_id = 1, leader_id, reason, records } = req.body;
+
+    if (!date || !leader_id || !Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'date, leader_id, and records array required' });
+    }
+
+    const trimmedReason = typeof reason === 'string' && EDIT_VALID_REASONS.includes(reason) ? reason : 'Other';
+
+    for (const record of records) {
+      if (!record.member_id || !EDIT_VALID_STATUSES.has(record.status)) {
+        return res.status(400).json({ error: 'Invalid member_id or status for record' });
+      }
+    }
+
+    const { headLeader, target } = await requireHeadLeaderWithTarget(req, leader_id);
+
+    const leader = await get(
+      'SELECT l.id, l.section_id, u.full_name AS leader_name FROM leaders l JOIN users u ON l.user_id = u.id WHERE l.id = ?',
+      [target.id]
+    );
+    if (!leader) return res.status(404).json({ error: 'Leader not found' });
+
+    const ipAddress = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || null;
+    const userAgent = req.headers['user-agent'] || null;
+
+    await transaction(async (tx) => {
+      for (const record of records) {
+        const existing = await tx.get(
+          'SELECT id, status FROM attendance WHERE member_id = ? AND date = ? AND service_type_id = ?',
+          [record.member_id, date, Number(service_id)]
+        );
+
+        if (existing) {
+          if (existing.status !== record.status) {
+            await tx.run(
+              'UPDATE attendance SET status = ?, submitted_by = ?, submitted_at = CURRENT_TIMESTAMP WHERE id = ?',
+              [record.status, req.session.userId, existing.id]
+            );
+            queries.createAuditEntry(
+              req.session.userId, 'update', 'attendance', existing.id,
+              { status: existing.status },
+              { status: record.status, reason: trimmedReason, original_leader: leader.leader_name, edited_by_head_leader: true, editor_name: req.session.user?.full_name },
+              ipAddress, userAgent
+            ).catch(e => console.error('Audit write failed:', e.message));
+          }
+        } else {
+          const insertResult = await tx.run(
+            'INSERT INTO attendance (member_id, date, status, submitted_by, service_type_id) VALUES (?, ?, ?, ?, ?)',
+            [record.member_id, date, record.status, req.session.userId, Number(service_id)]
+          );
+          queries.createAuditEntry(
+            req.session.userId, 'create', 'attendance', insertResult?.lastID || 0,
+            null,
+            { status: record.status, reason: trimmedReason, original_leader: leader.leader_name, edited_by_head_leader: true, editor_name: req.session.user?.full_name },
+            ipAddress, userAgent
+          ).catch(e => console.error('Audit write failed:', e.message));
+        }
+      }
+
+      // Create submission_log if not exists
+      const existingSubmission = await tx.get(
+        'SELECT id FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?',
+        [target.id, date, Number(service_id)]
+      );
+      if (!existingSubmission) {
+        await tx.run(
+          'INSERT INTO submission_log (leader_id, section_id, date, service_id) VALUES (?, ?, ?, ?)',
+          [target.id, leader.section_id, date, Number(service_id)]
+        );
+      }
+    });
+
+    res.json({
+      message: 'Attendance edited successfully',
+      leader: leader.leader_name,
+      records_saved: records.length,
+      reason: trimmedReason,
+    });
+  } catch (error) {
+    console.error('Head leader bulk edit error:', error);
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to save attendance edits' });
+  }
+});
+
+// GET audit history for a single attendance record (head leader)
+router.get('/attendance/:id/audit', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: 'Invalid attendance id' });
+    }
+    // Verify the record belongs to the head leader's section
+    await verifyAttendanceInSection(req, id);
+
+    const history = await all(
+      `SELECT al.id, al.action, al.old_value, al.new_value, al.ip_address, al.user_agent, al.created_at,
+              u.id AS editor_id, u.username AS editor_username, u.full_name AS editor_name
+       FROM audit_log al
+       LEFT JOIN users u ON al.user_id = u.id
+       WHERE al.entity_type = 'attendance' AND al.entity_id = ?
+       ORDER BY al.created_at DESC
+       LIMIT 50`,
+      [id]
+    );
+    res.json(history);
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ error: error.message || 'Failed to fetch audit history' });
+  }
+});
+
 // Get leader's submission history
 router.get('/history', async (req, res) => {
   try {
