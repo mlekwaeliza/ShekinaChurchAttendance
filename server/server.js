@@ -604,6 +604,38 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+// Public diagnostic endpoint — shows DB client + user count + sample usernames.
+// Helps diagnose "can't login" issues without authentication.
+app.get('/api/db-check', async (req, res) => {
+  try {
+    const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
+    const dbUrlSet = !!process.env.DATABASE_URL;
+    const dbUrlPreview = process.env.DATABASE_URL
+      ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@').substring(0, 60) + '...'
+      : null;
+    let userCount = 0;
+    let sampleUsers = [];
+    try {
+      const countRow = await get('SELECT COUNT(*) as cnt FROM users');
+      userCount = countRow ? countRow.cnt : 0;
+      const samples = await all('SELECT username, role FROM users ORDER BY id LIMIT 5');
+      sampleUsers = samples.map(u => ({ username: u.username, role: u.role }));
+    } catch (e) {
+      sampleUsers = [{ error: e.message }];
+    }
+    res.json({
+      timestamp: new Date().toISOString(),
+      dbClient,
+      DATABASE_URL_set: dbUrlSet,
+      DATABASE_URL_preview: dbUrlPreview,
+      userCount,
+      sampleUsers
+    });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
+
 // Prometheus-style metrics endpoint. No external dep; just process metrics
 // + DB connection status. Format: text/plain; version=0.0.4
 app.get('/api/metrics', async (req, res) => {
