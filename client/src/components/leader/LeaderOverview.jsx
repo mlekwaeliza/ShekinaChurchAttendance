@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, FileText, CheckCircle2, XCircle, Clock3, ArrowRight } from 'lucide-react';
+import { Users, FileText, CheckCircle2, XCircle, Clock3, ArrowRight, MapPin, Crown } from 'lucide-react';
 
 const LeaderOverview = ({
   members,
@@ -10,6 +10,8 @@ const LeaderOverview = ({
   serviceTypes = [],
   selectedServiceId,
   leaderName,
+  sectionName,
+  isHead = false,
   onGoToAttendance,
 }) => {
   const currentService = serviceTypes.find((service) => service.id === selectedServiceId);
@@ -102,6 +104,18 @@ const LeaderOverview = ({
         <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
         <div className="absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-white/5 translate-y-24" />
         <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+              <MapPin className="h-3.5 w-3.5" />
+              {sectionName || 'Unassigned Section'}
+            </span>
+            {isHead && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-100 backdrop-blur-sm">
+                <Crown className="h-3.5 w-3.5" />
+                Head Leader
+              </span>
+            )}
+          </div>
           <h2 className="text-2xl font-bold tracking-tight">
             Welcome, {leaderName || 'Leader'}
           </h2>

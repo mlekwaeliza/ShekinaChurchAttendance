@@ -52,6 +52,7 @@ import {
   DollarSign,
   Banknote,
   Trash2,
+  MapPin,
 } from 'lucide-react';
 
 const Layout = ({ children, showNav = true }) => {
@@ -466,9 +467,17 @@ const Layout = ({ children, showNav = true }) => {
           {!collapsed && (
             <div className="flex-1 min-w-0 animate-fade-in">
               <p className="text-sm font-semibold text-white truncate">{user?.full_name}</p>
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeColor[user?.role] || ''}`}>
-                {roleLabel[user?.role] || user?.role}
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeColor[user?.role] || ''}`}>
+                  {roleLabel[user?.role] || user?.role}
+                </span>
+                {user?.section_name && (
+                  <span className="text-[10px] font-medium text-white/50 truncate flex items-center gap-0.5">
+                    <MapPin className="h-2.5 w-2.5 shrink-0" />
+                    {user.section_name}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 

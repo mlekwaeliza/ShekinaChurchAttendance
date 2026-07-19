@@ -2186,9 +2186,10 @@ async function ensureEvangelismSchema() {
 const queries = {
   // Auth queries
   findUserByUsername: (username) => get(`
-    SELECT u.*, l.is_head 
+    SELECT u.*, l.is_head, l.id AS leader_id, s.id AS section_id, s.name AS section_name
     FROM users u 
     LEFT JOIN leaders l ON u.id = l.user_id 
+    LEFT JOIN sections s ON l.section_id = s.id 
     WHERE u.username = ?
   `, [username]),
   incrementFailedLogin: (userId) => run('UPDATE users SET failed_login_attempts = COALESCE(failed_login_attempts, 0) + 1 WHERE id = ?', [userId]),

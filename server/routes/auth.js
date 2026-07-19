@@ -141,7 +141,9 @@ router.post('/login', async (req, res) => {
       full_name: user.full_name,
       profile_picture: user.profile_picture,
       is_head: user.is_head,
-      is_new_member_leader: user.is_new_member_leader
+      is_new_member_leader: user.is_new_member_leader,
+      section_name: user.section_name || null,
+      section_id: user.section_id || null
     };
 
     req.session.regenerate((err) => {
@@ -205,6 +207,8 @@ router.get('/me', async (req, res) => {
           req.session.user.full_name = user.full_name;
           req.session.user.is_head = user.is_head;
           req.session.user.is_new_member_leader = user.is_new_member_leader;
+          req.session.user.section_name = user.section_name || null;
+          req.session.user.section_id = user.section_id || null;
         }
         res.json({ user: req.session.user });
       } catch (e) {

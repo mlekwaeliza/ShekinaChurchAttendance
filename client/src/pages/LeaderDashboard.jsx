@@ -82,6 +82,8 @@ const LeaderDashboard = () => {
             serviceTypes={data.serviceTypes}
             selectedServiceId={data.selectedServiceId}
             leaderName={data.sectionInfo?.leader || user?.full_name}
+            sectionName={data.sectionInfo?.name}
+            isHead={data.isHead}
             onGoToAttendance={() => navigate('/leader/attendance')}
           />
         );
