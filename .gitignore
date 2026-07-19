@@ -27,3 +27,5 @@ client/dev-client*.log
 client/build_output*.txt
 client/build_output*.log
 .DS_Store
+diagnose-db.js
+check-session.js
