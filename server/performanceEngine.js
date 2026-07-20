@@ -778,10 +778,61 @@ async function getProfile(entityType, entityId, filter, userId) {
   }
 
   // ── Attendance intelligence ──
-  const attRows = await all(
-    `SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`,
-    [entityId]
-  );
+  // Compute timeline variables first (needed for monthly queries)
+  const now = new Date();
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      label: d.toLocaleString('default', { month: 'short' }),
+      start: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`,
+      end: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`,
+    });
+  }
+  const yearStart = months[0].start;
+  const yearEnd = months[11].end;
+  const ymFn = usePostgres ? "TO_CHAR(date, 'YYYY-MM')" : "strftime('%Y-%m', date)";
+  const ymCreated = usePostgres ? "TO_CHAR(created_at, 'YYYY-MM')" : "strftime('%Y-%m', created_at)";
+  const ymPayment = usePostgres ? "TO_CHAR(payment_date, 'YYYY-MM')" : "strftime('%Y-%m', payment_date)";
+
+  // Parallelize all independent queries
+  const [attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements] = await Promise.all([
+    all(`SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`, [entityId]),
+    all(`SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`, [entityId]),
+    get(`
+      SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
+      FROM (
+        SELECT member_id, COUNT(*) AS total,
+          SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
+        FROM attendance WHERE date BETWEEN ? AND ?
+        GROUP BY member_id
+      )
+    `, [season.start, season.end]),
+    all(
+      `SELECT ${ymFn} AS ym,
+         COUNT(*) AS total,
+         SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
+       FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ?
+       GROUP BY ym`,
+      [entityId, yearStart, yearEnd]
+    ),
+    all(
+      `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt
+       FROM outreach_logs WHERE member_id = ? AND created_at BETWEEN ? AND ?
+       GROUP BY ym`,
+      [entityId, yearStart, yearEnd]
+    ),
+    all(
+      `SELECT ${ymPayment} AS ym, COUNT(*) AS cnt
+       FROM contributions WHERE member_id = ? AND payment_date BETWEEN ? AND ?
+       GROUP BY ym`,
+      [entityId, yearStart, yearEnd]
+    ),
+    all(
+      `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,
+      [entityType, entityId]
+    ),
+  ]);
   const presentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'present').length;
   const absentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'absent').length;
   const excusedCount = attRows.filter(r => (r.status || '').toLowerCase() === 'excused').length;
@@ -807,22 +858,6 @@ async function getProfile(entityType, entityId, filter, userId) {
   const lastPresentRow = [...attRows].reverse().find(r => (r.status || '').toLowerCase() === 'present');
   const lastPresent = lastPresentRow ? lastPresentRow.date : null;
 
-  // ── Department memberships ──
-  const departments = await all(
-    `SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`,
-    [entityId]
-  );
-
-  // ── Church-wide averages for comparison ──
-  const churchAvgRow = await get(`
-    SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
-    FROM (
-      SELECT member_id, COUNT(*) AS total,
-        SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
-      FROM attendance WHERE date BETWEEN ? AND ?
-      GROUP BY member_id
-    )
-  `, [season.start, season.end]);
   const churchAvg = Math.round(Number(churchAvgRow?.avg_att) || 0);
 
   // Section average
@@ -842,55 +877,12 @@ async function getProfile(entityType, entityId, filter, userId) {
     `, [season.start, season.end, entity.section_name]);
     sectionAvg = Math.round(Number(secRow?.avg_att) || 0);
   }
-
-  // ── Monthly timeline (last 12 months — overall weighted scores) ──
-  const timeline = [];
-  const now = new Date();
-  const months = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
-      label: d.toLocaleString('default', { month: 'short' }),
-      start: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`,
-      end: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`,
-    });
-  }
-  const yearStart = months[0].start;
-  const yearEnd = months[11].end;
-
-  const ymFn = usePostgres ? "TO_CHAR(date, 'YYYY-MM')" : "strftime('%Y-%m', date)";
-  const ymCreated = usePostgres ? "TO_CHAR(created_at, 'YYYY-MM')" : "strftime('%Y-%m', created_at)";
-  const ymPayment = usePostgres ? "TO_CHAR(payment_date, 'YYYY-MM')" : "strftime('%Y-%m', payment_date)";
-
-  // Batch query attendance per month
-  const attRowsByMonth = await all(
-    `SELECT ${ymFn} AS ym,
-       COUNT(*) AS total,
-       SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
-     FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ?
-     GROUP BY ym`,
-    [entityId, yearStart, yearEnd]
-  );
   const attByMonth = {};
   attRowsByMonth.forEach(r => { attByMonth[r.ym] = { total: Number(r.total), present: Number(r.present) }; });
 
-  // Batch query outreach per month
-  const outRows = await all(
-    `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt
-     FROM outreach_logs WHERE member_id = ? AND created_at BETWEEN ? AND ?
-     GROUP BY ym`,
-    [entityId, yearStart, yearEnd]
-  );
   const outByMonth = {};
   outRows.forEach(r => { outByMonth[r.ym] = Number(r.cnt); });
 
-  // Batch query contributions per month
-  const conRows = await all(
-    `SELECT ${ymPayment} AS ym, COUNT(*) AS cnt
-     FROM contributions WHERE member_id = ? AND payment_date BETWEEN ? AND ?
-     GROUP BY ym`,
-    [entityId, yearStart, yearEnd]
-  );
   const conByMonth = {};
   conRows.forEach(r => { conByMonth[r.ym] = Number(r.cnt); });
 
@@ -948,12 +940,6 @@ async function getProfile(entityType, entityId, filter, userId) {
     weight: Number(w[k]) || 0,
     points: Math.round(clamp100(entity.components[k]) * (Number(w[k]) || 0) / 100),
   }));
-
-  // ── Achievements ──
-  const achievements = await all(
-    `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,
-    [entityType, entityId]
-  );
 
   // ── AI Pastoral Insight ──
   const aiInsight = generateInsight(entity, {

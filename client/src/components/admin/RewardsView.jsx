@@ -351,6 +351,7 @@ const RewardsView = () => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [profileDetail, setProfileDetail] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(false);
   const [awarding, setAwarding] = useState(false);
   const [memberFilter, setMemberFilter] = useState('all');
   const [familyFilter, setFamilyFilter] = useState('all');
@@ -358,11 +359,13 @@ const RewardsView = () => {
   const openProfile = (item, type) => setSelectedProfile({ type, item });
 
   useEffect(() => {
-    if (!selectedProfile) { setProfileDetail(null); return; }
+    if (!selectedProfile) { setProfileDetail(null); setProfileError(false); return; }
     setProfileLoading(true);
+    setProfileError(false);
+    setProfileDetail(null);
     adminAPI.getPerformanceProfile(selectedProfile.type, selectedProfile.item.id, filter)
       .then(res => setProfileDetail(res.data))
-      .catch(() => setProfileDetail(null))
+      .catch(() => { setProfileDetail(null); setProfileError(true); })
       .finally(() => setProfileLoading(false));
   }, [selectedProfile, filter]);
 
@@ -967,7 +970,7 @@ const RewardsView = () => {
         const isLoading = profileLoading;
         const isGroup = entityType === 'section' || entityType === 'department' || entityType === 'cell';
 
-        if (isLoading || !d) {
+        if (isLoading) {
           return (
             <div style={s.modal} onClick={e => { if (e.target === e.currentTarget) setSelectedProfile(null); }}>
               <div style={s.modalBox}>
@@ -978,6 +981,23 @@ const RewardsView = () => {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, gap: 12 }}>
                   <div style={{ width: 36, height: 36, border: '3px solid rgba(99,102,241,0.3)', borderTopColor: '#6366F1', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                   <p style={{ color: '#64748B', fontSize: 13 }}>Loading profile…</p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (profileError || !d) {
+          return (
+            <div style={s.modal} onClick={e => { if (e.target === e.currentTarget) setSelectedProfile(null); }}>
+              <div style={s.modalBox}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#F1F5F9' }}>{item.full_name || item.name || 'Profile'}</h3>
+                  <button onClick={() => setSelectedProfile(null)} style={{ background: 'rgba(71,85,105,0.3)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8' }}><X size={16} /></button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 200, gap: 12 }}>
+                  <AlertCircle size={32} color="#F87171" />
+                  <p style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>Failed to load profile. This member may not have attendance data for the selected period.</p>
                 </div>
               </div>
             </div>
