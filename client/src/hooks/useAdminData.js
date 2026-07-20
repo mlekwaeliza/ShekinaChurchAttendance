@@ -449,9 +449,11 @@ const useAdminData = () => {
     }
   }, [selectedInstanceDate, selectedServiceId, showMessage]);
 
-  // Initial load — stagger: core data first, then leaders (avoids DB contention spike)
+  // Initial load — fire all three in parallel so the UI populates as fast as possible.
+  // (Dashboard metrics goes to its own cached endpoint, so no DB contention concern.)
   useEffect(() => {
-    loadCoreData().then(() => loadLeaders());
+    loadCoreData();
+    loadLeaders();
     loadDashboardMetrics();
   }, [loadCoreData, loadLeaders, loadDashboardMetrics]);
 
