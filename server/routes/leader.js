@@ -4,6 +4,7 @@ const { isAuthenticated, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate, getWeekStartString } = require('../utils/date');
 const { upsertAttendanceSql } = require('../utils/sqlDialect');
 const realtimeBus = require('../realtime/bus');
+const { invalidate: invalidateCache } = require('../utils/cache');
 
 const router = express.Router();
 router.use(isAuthenticated);
@@ -602,6 +603,7 @@ router.post('/attendance', async (req, res) => {
         ? 'Attendance submitted successfully'
         : `Attendance submitted on behalf of ${targetLeader.full_name}`
     };
+    invalidateCache(); // Invalidate dashboard/analytics cache on database mutation
     if (idemKey) idemCacheSet(idemKey, 200, responseBody);
     res.json(responseBody);
 
@@ -763,6 +765,7 @@ router.put('/attendance/:id', async (req, res) => {
       ipAddress, userAgent
     ).catch((err) => console.error('Head leader edit audit log failed:', err.message));
 
+    invalidateCache(); // Invalidate dashboard/analytics cache on database mutation
     res.json({ message: 'Attendance updated', id, status, reason: trimmedReason || null });
   } catch (error) {
     console.error('Head leader attendance update error:', error);
@@ -845,6 +848,7 @@ router.post('/attendance/bulk-edit', async (req, res) => {
       }
     });
 
+    invalidateCache(); // Invalidate dashboard/analytics cache on database mutation
     res.json({
       message: 'Attendance edited successfully',
       leader: leader.leader_name,

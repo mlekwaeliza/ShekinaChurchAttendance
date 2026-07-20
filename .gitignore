@@ -29,3 +29,4 @@ client/build_output*.log
 .DS_Store
 diagnose-db.js
 check-session.js
+.foglamp/

@@ -2,6 +2,7 @@ const express = require('express');
 const { queries, get, all, getMultiPeriodOverall, getMultiPeriodSections, getMultiPeriodLeaders, getMultiPeriodDepartments, getMultiPeriodMembers, getAttendanceMovement } = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString, parseDateInput } = require('../utils/date');
+const { withCache, invalidate: invalidateCache } = require('../utils/cache');
 
 const router = express.Router();
 
@@ -205,76 +206,86 @@ router.get('/retention', async (req, res) => {
   }
 });
 
+
 // GET /analytics/dashboard-metrics?service_id=...
+// Cached for 2 minutes per service_id — this endpoint is polled every 60s
+// and runs 6 parallel DB queries each time it is not cached.
+const DASHBOARD_METRICS_TTL = 2 * 60 * 1000; // 2 minutes
 router.get('/dashboard-metrics', async (req, res) => {
   try {
     const rawServiceId = req.query.service_id;
     const serviceId = rawServiceId === 'all' ? 'all' : (parseInt(rawServiceId) || 1);
     const year = new Date().getFullYear();
-    
-    const [comparisons, needsAttention, sparkline, hallOfFame, settings, todayStats] = await Promise.all([
-      queries.getDashboardComparisons(),
-      queries.getNeedsAttention(serviceId),
-      queries.getAttendanceSparkline(serviceId),
-      queries.getHallOfFameSummary(year),
-      queries.getSettings(),
-      queries.getTodayAttendanceStats(serviceId)
-    ]);
 
-    // Fetch last session for this service/filter and use it as the dashboard
-    // attendance display when today has no records.
-    const { all: allDb } = require('../database');
-    let lastSession = null;
-    const latestSessionSql = `
-      SELECT
-        date,
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-        SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
-      FROM attendance
-      ${serviceId === 'all' ? '' : 'WHERE service_type_id = ?'}
-      GROUP BY date
-      ORDER BY date DESC
-      LIMIT 1
-    `;
-    const latestSessions = await allDb(
-      latestSessionSql,
-      serviceId === 'all' ? [] : [serviceId]
-    );
-    if (latestSessions.length > 0) {
-      lastSession = latestSessions[0];
-    }
+    const cacheKey = `dashboard-metrics:${serviceId}`;
+    const payload = await withCache(cacheKey, DASHBOARD_METRICS_TTL, async () => {
+      const [comparisons, needsAttention, sparkline, hallOfFame, settings, todayStats] = await Promise.all([
+        queries.getDashboardComparisons(),
+        queries.getNeedsAttention(serviceId),
+        queries.getAttendanceSparkline(serviceId),
+        queries.getHallOfFameSummary(year),
+        queries.getSettings(),
+        queries.getTodayAttendanceStats(serviceId),
+      ]);
 
-    const normalizeStats = (stats = {}) => ({
-      present: Number(stats.present || 0),
-      absent: Number(stats.absent || 0),
-      excused: Number(stats.excused || 0)
+      // Fetch last session for this service/filter and use it as the dashboard
+      // attendance display when today has no records.
+      const { all: allDb } = require('../database');
+      const latestSessionSql = `
+        SELECT
+          date,
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+          SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+          SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused
+        FROM attendance
+        ${serviceId === 'all' ? '' : 'WHERE service_type_id = ?'}
+        GROUP BY date
+        ORDER BY date DESC
+        LIMIT 1
+      `;
+      const latestSessions = await allDb(
+        latestSessionSql,
+        serviceId === 'all' ? [] : [serviceId]
+      );
+      const lastSession = latestSessions.length > 0 ? latestSessions[0] : null;
+
+      const normalizeStats = (stats = {}) => ({
+        present: Number(stats.present || 0),
+        absent: Number(stats.absent || 0),
+        excused: Number(stats.excused || 0),
+      });
+      const todayStatsNormalized = normalizeStats(todayStats);
+      const todayTotal =
+        todayStatsNormalized.present +
+        todayStatsNormalized.absent +
+        todayStatsNormalized.excused;
+      const displayStats =
+        todayTotal > 0 || !lastSession
+          ? todayStatsNormalized
+          : normalizeStats(lastSession);
+      const attendanceContext =
+        todayTotal > 0 || !lastSession
+          ? { mode: 'today', date: formatLocalDate(), isLatestFallback: false }
+          : { mode: 'latest', date: lastSession.date, isLatestFallback: true };
+
+      return {
+        comparisons: comparisons[0],
+        needsAttention: {
+          birthdays: needsAttention.filter((i) => i.reason === 'birthday'),
+          absentees: needsAttention.filter((i) => i.reason === 'absentee'),
+          visitors: needsAttention.filter((i) => i.reason === 'visitor'),
+        },
+        sparkline,
+        hallOfFame,
+        settings: settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {}),
+        lastSession,
+        attendanceContext,
+        todayStats: displayStats,
+      };
     });
-    const todayStatsNormalized = normalizeStats(todayStats);
-    const todayTotal = todayStatsNormalized.present + todayStatsNormalized.absent + todayStatsNormalized.excused;
-    const displayStats = todayTotal > 0 || !lastSession
-      ? todayStatsNormalized
-      : normalizeStats(lastSession);
-    const attendanceContext = todayTotal > 0 || !lastSession
-      ? { mode: 'today', date: formatLocalDate(), isLatestFallback: false }
-      : { mode: 'latest', date: lastSession.date, isLatestFallback: true };
 
-    // Format output
-    res.json({
-      comparisons: comparisons[0],
-      needsAttention: {
-        birthdays: needsAttention.filter(i => i.reason === 'birthday'),
-        absentees: needsAttention.filter(i => i.reason === 'absentee'),
-        visitors: needsAttention.filter(i => i.reason === 'visitor')
-      },
-      sparkline,
-      hallOfFame,
-      settings: settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {}),
-      lastSession,
-      attendanceContext,
-      todayStats: displayStats
-    });
+    res.json(payload);
   } catch (error) {
     console.error('Dashboard metrics error:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard metrics' });
@@ -1034,6 +1045,9 @@ router.get('/finance-analytics', async (req, res) => {
 // ── POST /analytics/executive-comparison ─────────────────────────────────────
 // Multi-Period Executive Attendance Intelligence Engine
 // Accepts multiple periods, returns comprehensive comparison data for all modes
+// Cached for 5 minutes: this endpoint fires up to 7 parallel DB queries × number
+// of periods (typically 6), giving up to 42 queries per cold request.
+const EXEC_COMPARISON_TTL = 5 * 60 * 1000; // 5 minutes
 router.post('/executive-comparison', async (req, res) => {
   try {
     const { periods, mode = 'overall', filters = {} } = req.body;
@@ -1041,51 +1055,58 @@ router.post('/executive-comparison', async (req, res) => {
       return res.status(400).json({ error: 'At least one period is required' });
     }
 
-    // Parallelize all periods AND all 7 calls within each period
-    const periodResults = await Promise.all(periods.map(async (p) => {
-      const { id, label, start, end } = p;
-      if (!start || !end) return null;
+    // Build a stable cache key from the request parameters
+    const cacheKey = `exec-comparison:${JSON.stringify({ periods, mode, filters })}`;
 
-      const [overall, sections, leaders, departments, memberEngagement, daily, movement] = await Promise.all([
-        getMultiPeriodOverall(start, end),
-        getMultiPeriodSections(start, end),
-        getMultiPeriodLeaders(start, end),
-        getMultiPeriodDepartments(start, end),
-        getMultiPeriodMembers(start, end),
-        queries.getHistoricalDaily(start, end),
-        getAttendanceMovement(start, end),
-      ]);
+    const result = await withCache(cacheKey, EXEC_COMPARISON_TTL, async () => {
+      // Parallelize all periods AND all 7 calls within each period
+      const periodResults = await Promise.all(periods.map(async (p) => {
+        const { id, label, start, end } = p;
+        if (!start || !end) return null;
+
+        const [overall, sections, leaders, departments, memberEngagement, daily, movement] = await Promise.all([
+          getMultiPeriodOverall(start, end),
+          getMultiPeriodSections(start, end),
+          getMultiPeriodLeaders(start, end),
+          getMultiPeriodDepartments(start, end),
+          getMultiPeriodMembers(start, end),
+          queries.getHistoricalDaily(start, end),
+          getAttendanceMovement(start, end),
+        ]);
+
+        return {
+          id, label, start, end,
+          overall, sections, leaders, departments, memberEngagement, daily, movement
+        };
+      }));
+
+      // Filter out nulls from skipped periods
+      const validResults = periodResults.filter(Boolean);
+
+      // Compute executive KPIs across all periods
+      const kpis = computeExecutiveKPIs(validResults);
+
+      // Trend intelligence
+      const trends = analyzeTrends(validResults);
+
+      // Root cause analysis
+      const rootCauses = analyzeRootCauses(validResults);
+
+      // Action center
+      const actions = generateActions(validResults, trends);
 
       return {
-        id, label, start, end,
-        overall, sections, leaders, departments, memberEngagement, daily, movement
+        periods: validResults,
+        kpis,
+        trends,
+        rootCauses,
+        actions,
+        mode,
+        filters
       };
-    }));
+    }); // end withCache
 
-    // Filter out nulls from skipped periods
-    const validResults = periodResults.filter(Boolean);
-
-    // Compute executive KPIs across all periods
-    const kpis = computeExecutiveKPIs(validResults);
-
-    // Trend intelligence
-    const trends = analyzeTrends(validResults);
-
-    // Root cause analysis
-    const rootCauses = analyzeRootCauses(validResults);
-
-    // Action center
-    const actions = generateActions(validResults, trends);
-
-    res.json({
-      periods: validResults,
-      kpis,
-      trends,
-      rootCauses,
-      actions,
-      mode,
-      filters
-    });
+    res.json(result);
   } catch (error) {
     console.error('Executive comparison error:', error);
     res.status(500).json({ error: 'Failed to run executive comparison', details: error.message });
@@ -1462,9 +1483,17 @@ function generateActions(periodResults, trends) {
 // benchmarks, and recommendations. All aggregation uses COUNT/SUM/Number
 // only, never string concatenation.  Present+Absent+Excused always validated
 // to equal Total Eligible Members.
+//
+// Cached for 5 minutes per `days` value — this endpoint fires 13 parallel
+// heavy DB queries on every call. Cache cuts cold-start login time
+// dramatically while still reflecting attendance changes within 5 minutes.
+const EXECUTIVE_SUMMARY_TTL = 5 * 60 * 1000; // 5 minutes
 router.get('/executive-summary', async (req, res) => {
   try {
     const days = Math.max(1, parseInt(req.query.days) || 90);
+    const cacheKey = `executive-summary:${days}`;
+
+    const payload = await withCache(cacheKey, EXECUTIVE_SUMMARY_TTL, async () => {
     const now = new Date();
     const today = formatLocalDate(now);
 
@@ -1854,8 +1883,8 @@ router.get('/executive-summary', async (req, res) => {
       recommendations.push({ category: 'engagement', recommendation: 'Low engagement score detected. Create small group activities and ministry involvement opportunities.', priority: 'medium', expectedImpact: 'Boost engagement by 25%' });
     }
 
-    // ── Response ──────────────────────────────────────────────────────────
-    res.json({
+    // ── Response payload ───────────────────────────────────────────────────
+    return {
       snapshot,
       kpis,
       alerts,
@@ -1866,7 +1895,10 @@ router.get('/executive-summary', async (req, res) => {
       momentumData,
       benchmarkComparison,
       recommendations,
-    });
+    };
+    }); // end withCache
+
+    res.json(payload);
   } catch (error) {
     console.error('Executive summary error:', error);
     res.status(500).json({ error: 'Failed to fetch executive summary' });

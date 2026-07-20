@@ -2,6 +2,10 @@ const express = require('express');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
 const { all, get, run, usePostgres } = require('../database');
 const engine = require('../performanceEngine');
+const { withCache, invalidate: invalidateCache } = require('../utils/cache');
+
+// 5-minute TTL for the performance dashboard (runs 5+5 heavy scoring queries)
+const PERF_DASHBOARD_TTL = 5 * 60 * 1000;
 
 const router = express.Router();
 
@@ -12,7 +16,10 @@ router.use(requireRole(['admin', 'pastor']));
 router.get('/performance/dashboard', async (req, res) => {
   try {
     const { filter = 'month', service_id = 'all' } = req.query;
-    const data = await engine.getDashboard(filter, service_id, req.session.user?.id);
+    const cacheKey = `perf-dashboard:${filter}:${service_id}`;
+    const data = await withCache(cacheKey, PERF_DASHBOARD_TTL, () =>
+      engine.getDashboard(filter, service_id, req.session.user?.id)
+    );
     res.json(data);
   } catch (e) {
     console.error('Performance dashboard error:', e);

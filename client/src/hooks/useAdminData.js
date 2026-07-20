@@ -449,10 +449,9 @@ const useAdminData = () => {
     }
   }, [selectedInstanceDate, selectedServiceId, showMessage]);
 
-  // Initial load
+  // Initial load — stagger: core data first, then leaders (avoids DB contention spike)
   useEffect(() => {
-    loadCoreData();
-    loadLeaders();
+    loadCoreData().then(() => loadLeaders());
     loadDashboardMetrics();
   }, [loadCoreData, loadLeaders, loadDashboardMetrics]);
 
@@ -460,7 +459,9 @@ const useAdminData = () => {
 
   // Polling logic for real-time updates
   useEffect(() => {
-    const POLL_INTERVAL = 60000; // 60 seconds (reduced from 30s to cut background load)
+    // Poll every 3 minutes — dashboard-metrics is cached for 2min on the server,
+    // so polling faster than that is wasteful.
+    const POLL_INTERVAL = 3 * 60 * 1000;
     let interval;
 
     const startPolling = () => {

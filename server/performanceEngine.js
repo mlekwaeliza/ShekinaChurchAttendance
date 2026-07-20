@@ -346,7 +346,7 @@ async function recordTransaction(entity_type, entity_id, season, category, point
 }
 
 // Build a full ranked list with scores, levels, rank movement
-async function buildRanked(scored, weights, season, prevSeason, prevScores) {
+async function buildRanked(scored, weights, season, prevSeason, prevScoresMap) {
   scored.forEach(e => {
     const w = e.components.submission_rate !== undefined ? weights.leader : weights.member;
     e.overallScore = weighted(e.components, w);
@@ -355,10 +355,10 @@ async function buildRanked(scored, weights, season, prevSeason, prevScores) {
   scored.sort((a, b) => b.overallScore - a.overallScore);
   scored.forEach((e, i) => { e.rank = i + 1; });
 
-  if (prevSeason && prevScores) {
+  if (prevSeason && prevScoresMap) {
     scored.forEach(e => {
-      const prev = prevScores.find(p => p.id === e.id);
-      e.prevRank = prev ? prev.rank : null;
+      const prevRank = prevScoresMap.get(e.id);
+      e.prevRank = prevRank || null;
       e.rankDelta = e.prevRank ? e.prevRank - e.rank : 0;
     });
   }
@@ -376,7 +376,6 @@ async function scoreForSeason(season) {
     scoreCells(season.start, season.end),
     loadWeights(),
   ]);
-  const out = [];
   members.forEach(m => { m.overallScore = weighted(m.components, weights.member); });
   leaders.forEach(l => { l.overallScore = weighted(l.components, weights.leader); });
   sections.forEach(s => { s.overallScore = s.components.attendance || 0; });
@@ -387,12 +386,14 @@ async function scoreForSeason(season) {
   sections.sort((a, b) => b.overallScore - a.overallScore);
   departments.sort((a, b) => b.overallScore - a.overallScore);
   cells.sort((a, b) => b.overallScore - a.overallScore);
-  members.forEach((m, i) => out.push({ id: m.id, rank: i + 1 }));
-  leaders.forEach((l, i) => out.push({ id: l.id, rank: i + 1 }));
-  sections.forEach((s, i) => out.push({ id: s.id, rank: i + 1 }));
-  departments.forEach((d, i) => out.push({ id: d.id, rank: i + 1 }));
-  cells.forEach((c, i) => out.push({ id: c.id, rank: i + 1 }));
-  return out;
+
+  return {
+    members: new Map(members.map((m, i) => [m.id, i + 1])),
+    leaders: new Map(leaders.map((l, i) => [l.id, i + 1])),
+    sections: new Map(sections.map((s, i) => [s.id, i + 1])),
+    departments: new Map(departments.map((d, i) => [d.id, i + 1])),
+    cells: new Map(cells.map((c, i) => [c.id, i + 1]))
+  };
 }
 
 function prevSeasonOf(season) {
@@ -441,11 +442,11 @@ async function getDashboard(filter, serviceId, userId) {
   const prev = prevSeasonOf(season);
   const prevScores = prev ? await scoreForSeason(prev) : null;
 
-  const rankedMembers = await buildRanked(members, weights, season, prev, prevScores);
-  const rankedLeaders = await buildRanked(leaders, weights, season, prev, prevScores);
-  const rankedSections = await buildRanked(sections, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores);
-  const rankedDepartments = await buildRanked(departments, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores);
-  const rankedCells = await buildRanked(cells, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores);
+  const rankedMembers = await buildRanked(members, weights, season, prev, prevScores?.members);
+  const rankedLeaders = await buildRanked(leaders, weights, season, prev, prevScores?.leaders);
+  const rankedSections = await buildRanked(sections, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores?.sections);
+  const rankedDepartments = await buildRanked(departments, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores?.departments);
+  const rankedCells = await buildRanked(cells, { member: { attendance: 100 }, leader: {} }, season, prev, prevScores?.cells);
 
   // KPIs
   const totalMembers = rankedMembers.length;

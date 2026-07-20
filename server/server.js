@@ -76,6 +76,7 @@ if (!fs.existsSync(financeUploadsDir)) {
 const { queries, db, all, run, get, ensureHomeCellSchema, ensureEvangelismSchema, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
+const { invalidate: invalidateCache } = require('./utils/cache');
 const authRoutes = require('./routes/auth');
 const adminAttendanceRoutes = require('./routes/adminAttendance');
 const adminEngagementRoutes = require('./routes/adminEngagement');
@@ -450,6 +451,14 @@ app.use((req, res, next) => {
       ip: req.ip,
       user_id: req.session?.userId || null
     }));
+    // Invalidate analytics caches on database modifications
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method) && res.statusCode >= 200 && res.statusCode < 300) {
+      try {
+        invalidateCache();
+      } catch (err) {
+        console.error('[Cache] Invalidation error:', err.message);
+      }
+    }
   });
   next();
 });

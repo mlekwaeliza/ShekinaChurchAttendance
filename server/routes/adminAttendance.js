@@ -4,6 +4,7 @@ const { isAuthenticated, requireRole, validateDate } = require('../middleware/au
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString } = require('../utils/date');
 const { escapeCsvValue, toCsvRow } = require('../utils/csv');
 const { yearEquals, monthEquals, weekEquals, dateOnly, upsertAttendanceSql } = require('../utils/sqlDialect');
+const { invalidate: invalidateCache } = require('../utils/cache');
 const {
   getAttendanceHistory,
   getAttendanceTrends,
@@ -127,6 +128,7 @@ router.put('/attendance/:id', async (req, res) => {
       console.error('Attendance correction audit log write failed:', err.message);
     });
 
+    invalidateCache(); // Invalidate dashboard/analytics cache on database mutation
     res.json({ message: 'Attendance updated', id, status, reason: trimmedReason || null });
   } catch (error) {
     console.error('Attendance update error:', error);
@@ -541,6 +543,7 @@ router.post('/attendance', async (req, res) => {
       );
     });
 
+    invalidateCache(); // Invalidate dashboard/analytics cache on database mutation
     res.json({ message: 'Attendance submitted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to submit attendance', details: error.message });
@@ -748,6 +751,7 @@ router.post('/attendance/bulk-correct', async (req, res) => {
       }
     });
 
+    invalidateCache(); // Invalidate dashboard/analytics cache on database mutation
     res.json({
       message: 'Bulk correction saved successfully',
       leader: leader.leader_name,
