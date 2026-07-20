@@ -917,8 +917,10 @@ router.get('/church-growth-index', async (req, res) => {
 });
 
 // GET /analytics/ai-insights
+// Cached for 5 minutes — fires 4 parallel queries
 router.get('/ai-insights', async (req, res) => {
   try {
+    const result = await withCache('ai-insights', 5 * 60 * 1000, async () => {
     const [sectionData, riskData, consecutiveData, growthData] = await Promise.all([
       queries.getSectionRankings(90),
       queries.getAtRiskMembers(),
@@ -983,7 +985,9 @@ router.get('/ai-insights', async (req, res) => {
 
     insights.push({ type: 'info', text: `${growthData.total_members} active members across ${growthData.total_departments} departments.`, category: 'overview' });
 
-    res.json(insights.slice(0, 15));
+    return insights.slice(0, 15);
+    });
+    res.json(result);
   } catch (error) {
     console.error('AI insights error:', error);
     res.status(500).json({ error: 'Failed to generate insights' });
@@ -1740,9 +1744,9 @@ router.get('/executive-summary', async (req, res) => {
     // ── Leader Rankings ───────────────────────────────────────────────────
     const leaderRankings = (curLdr || [])
       .map(l => ({
-        id: l.leader_id,
-        name: l.leader_name,
-        section: l.section_name,
+        id: l.id || l.leader_id,
+        name: l.leader_name || l.name,
+        section: l.section_name || l.section,
         members: n(l.assigned_members),
         present: n(l.members_present),
         attendanceRate: Math.round(n(l.attendance_rate) * 10) / 10,
