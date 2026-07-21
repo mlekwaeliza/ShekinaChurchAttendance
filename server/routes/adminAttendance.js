@@ -438,35 +438,59 @@ router.get('/leader-dashboard/:id', async (req, res) => {
 
     if (!leader) return res.status(404).json({ error: 'Leader not found' });
 
+    const isHead = Boolean(leader.is_head);
+
     const members = await new Promise((resolve, reject) => {
-      db.all('SELECT * FROM members WHERE leader_id = ? AND is_active = 1 AND soft_deleted_at IS NULL ORDER BY full_name', [leaderId], (err, rows) => err ? reject(err) : resolve(rows));
+      const q = isHead
+        ? 'SELECT * FROM members WHERE (leader_id = ? OR section_id = ?) AND is_active = 1 AND soft_deleted_at IS NULL ORDER BY full_name'
+        : 'SELECT * FROM members WHERE leader_id = ? AND is_active = 1 AND soft_deleted_at IS NULL ORDER BY full_name';
+      const params = isHead ? [leaderId, leader.section_id] : [leaderId];
+      db.all(q, params, (err, rows) => err ? reject(err) : resolve(rows));
     });
 
     const history = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT sl.date, sl.created_at as submitted_at, COUNT(a.id) as records_count
-        FROM submission_log sl
-        LEFT JOIN attendance a ON sl.date = a.date AND sl.leader_id = (SELECT m.leader_id FROM members m WHERE m.id = a.member_id LIMIT 1)
-        WHERE sl.leader_id = ?
-        GROUP BY sl.id
-        ORDER BY sl.date DESC, sl.created_at DESC
-        LIMIT 20
-      `, [leaderId], (err, rows) => err ? reject(err) : resolve(rows));
+      const q = isHead
+        ? `SELECT sl.date, sl.created_at as submitted_at, COUNT(a.id) as records_count
+           FROM submission_log sl
+           LEFT JOIN attendance a ON sl.date = a.date AND a.member_id IN (SELECT id FROM members WHERE section_id = ?)
+           WHERE sl.section_id = ? OR sl.leader_id = ?
+           GROUP BY sl.id, sl.date, sl.created_at
+           ORDER BY sl.date DESC, sl.created_at DESC
+           LIMIT 20`
+        : `SELECT sl.date, sl.created_at as submitted_at, COUNT(a.id) as records_count
+           FROM submission_log sl
+           LEFT JOIN attendance a ON sl.date = a.date AND sl.leader_id = (SELECT m.leader_id FROM members m WHERE m.id = a.member_id LIMIT 1)
+           WHERE sl.leader_id = ?
+           GROUP BY sl.id, sl.date, sl.created_at
+           ORDER BY sl.date DESC, sl.created_at DESC
+           LIMIT 20`;
+      const params = isHead ? [leader.section_id, leader.section_id, leaderId] : [leaderId];
+      db.all(q, params, (err, rows) => err ? reject(err) : resolve(rows));
     });
 
     const trendStartDate = formatLocalDate(addDays(new Date(), -90));
     const trends = await new Promise((resolve, reject) => {
-      db.all(`
-        SELECT date,
-               SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_count,
-               SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_count,
-               SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused_count
-        FROM attendance
-        WHERE member_id IN (SELECT id FROM members WHERE leader_id = ?)
-          AND date >= ?
-        GROUP BY date
-        ORDER BY date ASC
-      `, [leaderId, trendStartDate], (err, rows) => err ? reject(err) : resolve(rows));
+      const q = isHead
+        ? `SELECT date,
+                  SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_count,
+                  SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_count,
+                  SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused_count
+           FROM attendance
+           WHERE member_id IN (SELECT id FROM members WHERE section_id = ?)
+             AND date >= ?
+           GROUP BY date
+           ORDER BY date ASC`
+        : `SELECT date,
+                  SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_count,
+                  SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_count,
+                  SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused_count
+           FROM attendance
+           WHERE member_id IN (SELECT id FROM members WHERE leader_id = ?)
+             AND date >= ?
+           GROUP BY date
+           ORDER BY date ASC`;
+      const params = isHead ? [leader.section_id, trendStartDate] : [leaderId, trendStartDate];
+      db.all(q, params, (err, rows) => err ? reject(err) : resolve(rows));
     });
 
     res.json({

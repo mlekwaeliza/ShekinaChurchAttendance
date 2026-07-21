@@ -68,9 +68,12 @@ const LeaderProfile = ({ leaderId, onBack, allMembers = [] }) => {
   const { leader, roster, trends, history } = data;
   const ranking = leaderRankings.find(l => Number(l.id) === Number(leaderId) || Number(l.leader_id) === Number(leaderId));
   const rank = ranking ? (leaderRankings.indexOf(ranking) + 1) : null;
-  const attendanceRate = ranking?.attendance_rate || ranking?.attendanceRate || 0;
-  const submissionRate = ranking?.submissionRate || ranking?.leader_submission_rate || 0;
-  const leadershipScore = performance?.score || ranking?.leadership_score || 0;
+  const totalTrendRecords = asArray(trends).reduce((sum, t) => sum + (Number(t.present_count || 0) + Number(t.absent_count || 0) + Number(t.excused_count || 0)), 0);
+  const totalTrendPresent = asArray(trends).reduce((sum, t) => sum + Number(t.present_count || 0), 0);
+  const calculatedAttendanceRate = totalTrendRecords > 0 ? Math.round((totalTrendPresent / totalTrendRecords) * 100) : 0;
+  const attendanceRate = ranking?.attendance_rate ?? ranking?.attendanceRate ?? calculatedAttendanceRate;
+  const submissionRate = ranking?.submissionRate ?? ranking?.leader_submission_rate ?? (asArray(history).length > 0 ? Math.min(100, Math.round((asArray(history).length / 12) * 100)) : 0);
+  const leadershipScore = performance?.score || ranking?.leadership_score || ranking?.efficiency_score || ranking?.performance_score || Math.round(attendanceRate * 0.6 + submissionRate * 0.4);
   const activeMembers = asArray(roster).filter(m => m.is_active === 1 || m.is_active === true).length;
 
   return (
