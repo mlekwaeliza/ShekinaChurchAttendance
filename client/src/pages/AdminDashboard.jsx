@@ -158,6 +158,16 @@ const AdminDashboard = () => {
             selectedServiceId={data.selectedServiceId}
             onServiceChange={data.setSelectedServiceId}
             birthdays={data.birthdays}
+            summary={data.execSummary}
+            comparison={data.execComparison}
+            aiInsights={data.aiInsights}
+            homeCells={data.homeCells}
+            departments={data.departments}
+            auditLog={data.auditLog}
+            hallOfFame={data.hallOfFame}
+            backup={data.backupStatus}
+            health={data.healthStatus}
+            notifCount={data.notifCount}
           />
         );
 

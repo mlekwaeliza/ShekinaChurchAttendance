@@ -1,6 +1,7 @@
 const express = require('express');
 const { queries, run, get, all, transaction } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
+const { withCache, invalidate } = require('../utils/cache');
 
 const router = express.Router();
 
@@ -19,46 +20,50 @@ const normalizePersonKey = (name, phone = '') => {
 
 router.get('/home-cells', async (req, res) => {
   try {
-    const cells = await all(`
-      SELECT hc.*, COALESCE(COUNT(DISTINCT hcm.id), 0) AS member_count
-      FROM home_cells hc
-      LEFT JOIN home_cell_members hcm ON hcm.cell_id = hc.id AND hcm.is_active = 1
-      WHERE hc.is_active = 1
-      GROUP BY hc.id, hc.name, hc.cell_number, hc.is_active, hc.created_at
-      ORDER BY hc.cell_number
-    `);
+    const result = await withCache('admin-home-cells', 30000, async () => {
+      const cells = await all(`
+        SELECT hc.*, COALESCE(COUNT(DISTINCT hcm.id), 0) AS member_count
+        FROM home_cells hc
+        LEFT JOIN home_cell_members hcm ON hcm.cell_id = hc.id AND hcm.is_active = 1
+        WHERE hc.is_active = 1
+        GROUP BY hc.id, hc.name, hc.cell_number, hc.is_active, hc.created_at
+        ORDER BY hc.cell_number
+      `);
 
-    const leaders = await all(`
-      SELECT hcl.cell_id, m.id AS leader_id, m.full_name, s.name AS section_name
-      FROM home_cell_leaders hcl
-      JOIN members m ON m.id = hcl.leader_id
-      LEFT JOIN sections s ON s.id = m.section_id
-      WHERE m.is_active = 1
-      ORDER BY m.full_name
-    `);
+      const leaders = await all(`
+        SELECT hcl.cell_id, m.id AS leader_id, m.full_name, s.name AS section_name
+        FROM home_cell_leaders hcl
+        JOIN members m ON m.id = hcl.leader_id
+        LEFT JOIN sections s ON s.id = m.section_id
+        WHERE m.is_active = 1
+        ORDER BY m.full_name
+      `);
 
-    const members = await all(`
-      SELECT
-        hcm.*,
-        hc.name AS cell_name,
-        m.membership_id AS church_membership_id,
-        s.name AS church_section_name,
-        u.full_name AS church_leader_name
-      FROM home_cell_members hcm
-      JOIN home_cells hc ON hc.id = hcm.cell_id
-      LEFT JOIN members m ON m.id = hcm.church_member_id
-      LEFT JOIN sections s ON s.id = m.section_id
-      LEFT JOIN leaders l ON l.id = m.leader_id
-      LEFT JOIN users u ON u.id = l.user_id
-      WHERE hcm.is_active = 1
-      ORDER BY hc.cell_number, hcm.full_name
-    `);
+      const members = await all(`
+        SELECT
+          hcm.*,
+          hc.name AS cell_name,
+          m.membership_id AS church_membership_id,
+          s.name AS church_section_name,
+          u.full_name AS church_leader_name
+        FROM home_cell_members hcm
+        JOIN home_cells hc ON hc.id = hcm.cell_id
+        LEFT JOIN members m ON m.id = hcm.church_member_id
+        LEFT JOIN sections s ON s.id = m.section_id
+        LEFT JOIN leaders l ON l.id = m.leader_id
+        LEFT JOIN users u ON u.id = l.user_id
+        WHERE hcm.is_active = 1
+        ORDER BY hc.cell_number, hcm.full_name
+      `);
 
-    res.json(cells.map((cell) => ({
-      ...cell,
-      leaders: leaders.filter((leader) => Number(leader.cell_id) === Number(cell.id)),
-      members: members.filter((member) => Number(member.cell_id) === Number(cell.id))
-    })));
+      return cells.map((cell) => ({
+        ...cell,
+        leaders: leaders.filter((leader) => Number(leader.cell_id) === Number(cell.id)),
+        members: members.filter((member) => Number(member.cell_id) === Number(cell.id))
+      }));
+    });
+
+    res.json(result);
   } catch (error) {
     console.error('Fetch home cells error:', error);
     res.status(500).json({ error: 'Failed to fetch home cells' });
@@ -86,6 +91,7 @@ router.post('/home-cells', async (req, res) => {
       'INSERT INTO home_cells (name, cell_number, is_active) VALUES (?, ?, 1)',
       [name, cellNumber]
     );
+    invalidate('admin-home-cells');
     res.status(201).json({ id: result.lastID, message: 'Home cell created' });
   } catch (error) {
     console.error('Create home cell error:', error);
@@ -119,6 +125,7 @@ router.put('/home-cells/:id/leaders', async (req, res) => {
       }
     });
 
+    invalidate('admin-home-cells');
     res.json({ message: 'Home cell leaders updated' });
   } catch (error) {
     console.error('Update home cell leaders error:', error);
@@ -184,6 +191,7 @@ router.post('/home-cell-members', async (req, res) => {
       req.session.userId
     ]);
 
+    invalidate('admin-home-cells');
     res.status(201).json({ message: 'Home cell member assigned' });
   } catch (error) {
     console.error('Create admin home cell member error:', error);
@@ -194,6 +202,7 @@ router.post('/home-cell-members', async (req, res) => {
 router.delete('/home-cell-members/:id', async (req, res) => {
   try {
     await run('UPDATE home_cell_members SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [req.params.id]);
+    invalidate('admin-home-cells');
     res.json({ message: 'Home cell member removed' });
   } catch (error) {
     console.error('Remove admin home cell member error:', error);
@@ -222,6 +231,7 @@ router.delete('/home-cells/:id', async (req, res) => {
       await tx.run('UPDATE home_cell_members SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE cell_id = ?', [cellId]);
     });
 
+    invalidate('admin-home-cells');
     res.json({ message: `Home cell '${cell.name}' deleted successfully` });
   } catch (error) {
     console.error('Delete home cell error:', error);
@@ -257,6 +267,7 @@ router.patch('/home-cells/:id', async (req, res) => {
 
     values.push(cellId);
     await run(`UPDATE home_cells SET ${fields.join(', ')} WHERE id = ?`, values);
+    invalidate('admin-home-cells');
     res.json({ message: 'Home cell updated' });
   } catch (error) {
     console.error('Update home cell error:', error);
@@ -289,6 +300,7 @@ router.put('/home-cell-members/:id/transfer', async (req, res) => {
     }
 
     await run('UPDATE home_cell_members SET cell_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [newCellId, memberId]);
+    invalidate('admin-home-cells');
     res.json({ message: `${member.full_name} transferred successfully` });
   } catch (error) {
     console.error('Transfer home cell member error:', error);

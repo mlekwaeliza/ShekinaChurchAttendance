@@ -11,6 +11,7 @@ const { isAuthenticated, requireRole } = require('../middleware/auth');
 const { formatLocalDate } = require('../utils/date');
 const { escapeCsvValue, toCsvRow } = require('../utils/csv');
 const { monthsAgo } = require('../utils/sqlDialect');
+const { withCache, invalidate } = require('../utils/cache');
 
 const router = express.Router();
 const upload = multer({
@@ -78,7 +79,7 @@ async function syncChurchMemberHomeCell(memberId, cellId, userId) {
 // GET all sections
 router.get('/sections', async (req, res) => {
   try {
-    const sections = await queries.getAllSections();
+    const sections = await withCache('admin-sections', 30000, () => queries.getAllSections());
     res.json(sections);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch sections' });
@@ -93,6 +94,7 @@ router.post('/sections', async (req, res) => {
       return res.status(400).json({ error: 'Section name required' });
     }
     await queries.createSection(name);
+    invalidate('admin-');
     res.json({ message: 'Section created' });
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
@@ -111,6 +113,7 @@ router.put('/sections/:id', async (req, res) => {
       return res.status(400).json({ error: 'Section name required' });
     }
     await queries.updateSection(id, name);
+    invalidate('admin-');
     res.json({ message: 'Section updated successfully' });
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
@@ -132,6 +135,7 @@ router.delete('/sections/:id', async (req, res) => {
       });
     }
     await queries.deleteSection(req.params.id);
+    invalidate('admin-');
     res.json({ message: 'Section deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete section' });
@@ -150,15 +154,15 @@ router.get('/members', async (req, res) => {
 
     let members;
     if (section_id) {
-      members = await queries.getMembersBySection(section_id);
+      members = await withCache(`admin-members-section:${section_id}`, 30000, () => queries.getMembersBySection(section_id));
     } else if (leader_id) {
-      const membersByLeader = await queries.getMembersByLeader(leader_id);
+      const membersByLeader = await withCache(`admin-members-leader:${leader_id}`, 30000, () => queries.getMembersByLeader(leader_id));
       members = membersByLeader.map(m => ({
         ...m,
         section_name: m.section_name || 'Unknown'
       }));
     } else {
-      members = await queries.getAllMembers();
+      members = await withCache('admin-members-all', 30000, () => queries.getAllMembers());
     }
     res.json(members);
   } catch (error) {
@@ -212,6 +216,7 @@ router.put('/members/bulk-update', async (req, res) => {
     }
     await Promise.allSettled(auditPromises);
 
+    invalidate('admin-');
     res.json({ message: `${updatedCount} member(s) updated` });
   } catch (error) {
     console.error('Bulk update error:', error);
@@ -262,6 +267,7 @@ router.put('/members/:id', async (req, res) => {
 
     await syncChurchMemberHomeCell(id, req.body.home_cell_id || null, req.session.userId);
     
+    invalidate('admin-');
     res.json({ message: 'Member updated' });
   } catch (error) {
     console.error('Update member error:', error);
@@ -285,6 +291,7 @@ router.delete('/members/:id', async (req, res) => {
       "UPDATE members SET is_active = 0, soft_deleted_at = CURRENT_TIMESTAMP, pending_deletion_at = NULL, deletion_confirmed_at = NULL, deletion_confirmed_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
       [req.params.id]
     );
+    invalidate('admin-');
     res.json({ message: 'Member deactivated; will be eligible for permanent deletion after 6 months of inactivity' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete member' });
@@ -315,6 +322,7 @@ router.post('/members/bulk-soft-delete', async (req, res) => {
          AND is_active = 1`,
       ids
     );
+    invalidate('admin-');
     res.json({
       message: `${result.changes || 0} member(s) deactivated; will be eligible for permanent deletion after 6 months of inactivity`,
       deactivated: result.changes || 0
@@ -585,6 +593,7 @@ router.post('/leaders', async (req, res) => {
     if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
       responseBody.set_url = setUrl;
     }
+    invalidate('admin-');
     res.json(responseBody);
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
@@ -619,6 +628,7 @@ router.put('/leaders/:id', async (req, res) => {
         [section_id, phone, email, is_head ? 1 : 0, id]
       );
     });
+    invalidate('admin-');
     res.json({ message: 'Leader updated successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update leader' });
@@ -643,6 +653,7 @@ router.delete('/leaders/:id', async (req, res) => {
 
     // Deleting the user will securely cascade delete the leader and members
     await queries.deleteUserAndCascade(leader.user_id);
+    invalidate('admin-');
     res.json({ message: 'Leader deleted successfully along with associated records' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete leader' });
@@ -889,7 +900,7 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
 // GET leaders list (for admin management)
 router.get('/leaders', async (req, res) => {
   try {
-    const leaders = await new Promise((resolve, reject) => {
+    const leaders = await withCache('admin-leaders', 30000, () => new Promise((resolve, reject) => {
       db.all(`
         SELECT l.id, l.section_id, u.username, u.full_name, s.name as section_name, l.phone, l.email, l.is_head
         FROM leaders l
@@ -900,7 +911,7 @@ router.get('/leaders', async (req, res) => {
         if (err) reject(err);
         else resolve(rows);
       });
-    });
+    }));
     res.json(leaders);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch leaders' });
@@ -1119,6 +1130,7 @@ router.post('/members', async (req, res) => {
     }
     await syncChurchMemberHomeCell(memberId, req.body.home_cell_id || null, req.session.userId);
 
+    invalidate('admin-');
     res.json({ message: 'Member created successfully' });
   } catch (error) {
     console.error('Create member error:', error);
@@ -1363,18 +1375,17 @@ router.get('/members/:id/departments', async (req, res) => {
 // GET all departments
 router.get('/departments', async (req, res) => {
   try {
-    const [departmentsResult, titlesResult] = await Promise.allSettled([
-      queries.getAllDepartments(),
-      queries.getAllTitlesWithCategory ? queries.getAllTitlesWithCategory() : queries.getAllTitles(),
-    ]);
-    const errors = [];
-    if (departmentsResult.status === 'rejected') { errors.push(`getAllDepartments: ${departmentsResult.reason?.message}`); console.error('getAllDepartments error:', departmentsResult.reason?.message); }
-    if (titlesResult.status === 'rejected') { errors.push(`getAllTitles: ${titlesResult.reason?.message}`); console.error('getAllTitles error:', titlesResult.reason?.message); }
-    res.json({
-      departments: departmentsResult.status === 'fulfilled' ? departmentsResult.value : [],
-      titles: titlesResult.status === 'fulfilled' ? titlesResult.value : [],
-      errors: errors.length > 0 ? errors : undefined,
+    const result = await withCache('admin-departments', 30000, async () => {
+      const [departmentsResult, titlesResult] = await Promise.allSettled([
+        queries.getAllDepartments(),
+        queries.getAllTitlesWithCategory ? queries.getAllTitlesWithCategory() : queries.getAllTitles(),
+      ]);
+      return {
+        departments: departmentsResult.status === 'fulfilled' ? departmentsResult.value : [],
+        titles: titlesResult.status === 'fulfilled' ? titlesResult.value : [],
+      };
     });
+    res.json(result);
   } catch (error) {
     console.error('Departments error:', error.message);
     res.status(500).json({ error: error.message || 'Failed to fetch departments' });

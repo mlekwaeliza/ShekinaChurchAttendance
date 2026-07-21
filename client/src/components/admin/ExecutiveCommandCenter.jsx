@@ -8,7 +8,6 @@ import {
   ArrowUpRight, ChevronDown, ChevronRight, Calendar, Gift, Crown, Target,
   UserX,
 } from 'lucide-react';
-import { adminAPI, analyticsAPI } from '../../services/api';
 import { STATUS, statusForScore, TrendIcon, R as Rn } from './ReportShared';
 
 const R = (v) => Math.round(Number(v) || 0);
@@ -120,56 +119,44 @@ const ExecutiveCommandCenter = (props) => {
     allMembers = [], sections = [], leaders = [], serviceTypes = [],
     selectedServiceId, onServiceChange, pastorName = 'Pastor',
     birthdays: birthdaysProp = [],
+    // Executive data from useAdminData (fired in parallel with core data)
+    summary: summaryProp = null,
+    comparison: comparisonProp = null,
+    aiInsights: aiInsightsProp = [],
+    homeCells: homeCellsProp = [],
+    departments: departmentsProp = [],
+    auditLog: auditProp = [],
+    hallOfFame: hallOfFameProp = null,
+    backup: backupProp = null,
+    health: healthProp = null,
+    notifCount: notifCountProp = 0,
   } = props;
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
-  const [summary, setSummary] = useState(null);
-  const [comparison, setComparison] = useState(null);
-  const [aiInsights, setAiInsights] = useState([]);
-  const [homeCells, setHomeCells] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  const [summary, setSummary] = useState(summaryProp);
+  const [comparison, setComparison] = useState(comparisonProp);
+  const [aiInsights, setAiInsights] = useState(aiInsightsProp);
+  const [homeCells, setHomeCells] = useState(homeCellsProp);
+  const [departments, setDepartments] = useState(departmentsProp);
   const [alerts, setAlerts] = useState([]);
-  const [audit, setAudit] = useState([]);
-  const [hallOfFame, setHallOfFame] = useState(null);
-  const [backup, setBackup] = useState(null);
-  const [health, setHealth] = useState(null);
-  const [notifCount, setNotifCount] = useState(0);
+  const [audit, setAudit] = useState(auditProp);
+  const [hallOfFame, setHallOfFame] = useState(hallOfFameProp);
+  const [backup, setBackup] = useState(backupProp);
+  const [health, setHealth] = useState(healthProp);
+  const [notifCount, setNotifCount] = useState(notifCountProp);
 
-  const load = async () => {
-    setLoading(true);
-    setErr(null);
-    try {
-      const [sumRes, compRes, aiRes, cellRes, deptRes, auditRes, perfRes, backupRes, healthRes, notifRes] = await Promise.allSettled([
-        analyticsAPI.getExecutiveSummary(90),
-        analyticsAPI.getExecutiveComparison({ periods: buildPeriods('month', 6), mode: 'overall' }),
-        analyticsAPI.getAIInsights(),
-        adminAPI.getHomeCells(),
-        adminAPI.getDepartments(),
-        adminAPI.getAuditLog({ limit: 12 }),
-        adminAPI.getPerformanceDashboard('month', selectedServiceId, null),
-        adminAPI.getBackupStatus(),
-        adminAPI.getHealth(),
-        adminAPI.getUnreadNotificationCount(),
-      ]);
-      if (sumRes.status === 'fulfilled') setSummary(sumRes.value.data);
-      if (compRes.status === 'fulfilled') setComparison(compRes.value.data);
-      if (aiRes.status === 'fulfilled') setAiInsights(asArray(aiRes.value.data));
-      if (cellRes.status === 'fulfilled') setHomeCells(asArray(cellRes.value.data));
-      if (deptRes.status === 'fulfilled') setDepartments(asArray(deptRes.value.data?.departments ?? deptRes.value.data));
-      if (auditRes.status === 'fulfilled') setAudit(asArray(auditRes.value.data));
-      if (perfRes.status === 'fulfilled') setHallOfFame(perfRes.value.data);
-      if (backupRes.status === 'fulfilled') setBackup(backupRes.value.data);
-      if (healthRes.status === 'fulfilled') setHealth(healthRes.value.data);
-      if (notifRes.status === 'fulfilled') setNotifCount(notifRes.value.data?.count || 0);
-    } catch (e) {
-      setErr(e.message || 'Failed to load command center');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
+  // Sync props when they arrive (data loads in parallel from useAdminData)
+  useEffect(() => { if (summaryProp) { setSummary(summaryProp); setLoading(false); } }, [summaryProp]);
+  useEffect(() => { if (comparisonProp) setComparison(comparisonProp); }, [comparisonProp]);
+  useEffect(() => { if (aiInsightsProp.length) setAiInsights(aiInsightsProp); }, [aiInsightsProp]);
+  useEffect(() => { if (homeCellsProp.length) setHomeCells(homeCellsProp); }, [homeCellsProp]);
+  useEffect(() => { if (departmentsProp.length) setDepartments(departmentsProp); }, [departmentsProp]);
+  useEffect(() => { if (auditProp.length) setAudit(auditProp); }, [auditProp]);
+  useEffect(() => { if (hallOfFameProp) setHallOfFame(hallOfFameProp); }, [hallOfFameProp]);
+  useEffect(() => { if (backupProp) setBackup(backupProp); }, [backupProp]);
+  useEffect(() => { if (healthProp) setHealth(healthProp); }, [healthProp]);
+  useEffect(() => { if (notifCountProp) setNotifCount(notifCountProp); }, [notifCountProp]);
 
   const kpis = summary?.kpis || {};
   const snap = summary?.snapshot || {};
@@ -619,34 +606,5 @@ const ExecutiveCommandCenter = (props) => {
     </div>
   );
 };
-
-// Build N periods backward from today for the executive comparison
-function buildPeriods(periodType, count) {
-  const periods = [];
-  const now = new Date();
-  for (let i = count - 1; i >= 0; i--) {
-    let start, end, label;
-    if (periodType === 'month') {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-      end = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
-      label = d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
-    } else if (periodType === 'week') {
-      const d = new Date(now); d.setDate(d.getDate() - i * 7 - d.getDay());
-      start = d.toISOString().split('T')[0];
-      const e = new Date(d); e.setDate(e.getDate() + 6);
-      end = e.toISOString().split('T')[0];
-      label = `W${i + 1}`;
-    } else {
-      const d = new Date(now.getFullYear() - i, 0, 1);
-      start = `${d.getFullYear()}-01-01`;
-      end = `${d.getFullYear()}-12-31`;
-      label = `${d.getFullYear()}`;
-    }
-    periods.push({ id: `p${i}`, label, start, end });
-  }
-  return periods;
-}
 
 export default ExecutiveCommandCenter;

@@ -96,6 +96,18 @@ const useAdminData = () => {
   const [assignmentsLoading, setAssignmentsLoading] = useState(false);
   const [assignedLeaderIds, setAssignedLeaderIds] = useState([]);
 
+  // Executive Command Center data (fired in parallel with core data)
+  const [execSummary, setExecSummary] = useState(null);
+  const [execComparison, setExecComparison] = useState(null);
+  const [aiInsights, setAiInsights] = useState([]);
+  const [homeCells, setHomeCells] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
+  const [hallOfFame, setHallOfFame] = useState(null);
+  const [backupStatus, setBackupStatus] = useState(null);
+  const [healthStatus, setHealthStatus] = useState(null);
+  const [notifCount, setNotifCount] = useState(0);
+
   const messageTimerRef = useRef(null);
   const latestReportInitializedRef = useRef(false);
   const overviewRequestRef = useRef(0);
@@ -150,11 +162,9 @@ const useAdminData = () => {
   const loadCoreData = useCallback(async () => {
     setLoading(true);
     try {
-      const today = formatLocalDate();
-      const [sectionsRes, membersRes, attendanceRes, birthdaysRes, servicesRes] = await Promise.allSettled([
+      const [sectionsRes, membersRes, birthdaysRes, servicesRes] = await Promise.allSettled([
         adminAPI.getSections(),
         adminAPI.getMembers(),
-        adminAPI.getAttendance({ date: today }),
         adminAPI.getUpcomingBirthdays(30),
         adminAPI.getServiceTypes(),
       ]);
@@ -165,7 +175,6 @@ const useAdminData = () => {
         setAllMembers(membersRes.value.data);
       } else {
         console.error('Failed to load members:', membersRes.reason);
-        // Don't show toast here as loadCoreData runs on mount and polling
       }
 
       if (birthdaysRes.status === 'fulfilled') setBirthdays(birthdaysRes.value.data);
@@ -176,17 +185,6 @@ const useAdminData = () => {
 
       if (servicesRes.status === 'fulfilled') setServiceTypes(servicesRes.value.data);
       else console.error('Failed to load service types:', servicesRes.reason);
-      
-      // Calculate today stats
-      const attendance = attendanceRes.status === 'fulfilled' ? attendanceRes.value.data : [];
-      if (attendanceRes.status === 'rejected') console.error('Failed to load attendance:', attendanceRes.reason);
-      const stats = attendance.reduce((acc, curr) => {
-        if (curr.status === 'present') acc.present++;
-        if (curr.status === 'absent') acc.absent++;
-        if (curr.status === 'excused') acc.excused++;
-        return acc;
-      }, { present: 0, absent: 0, excused: 0 });
-      setTodayStats(stats);
     } catch (error) {
       console.error('Failed to load core data:', error);
     } finally {
@@ -220,6 +218,66 @@ const useAdminData = () => {
       setMetricsLoading(false);
     }
   }, [selectedServiceId]);
+
+  // Build N periods backward from today for executive comparison
+  const buildPeriods = useCallback((periodType, count) => {
+    const periods = [];
+    const now = new Date();
+    for (let i = count - 1; i >= 0; i--) {
+      let start, end, label;
+      if (periodType === 'month') {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+        const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+        end = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+        label = d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+      } else if (periodType === 'week') {
+        const d = new Date(now); d.setDate(d.getDate() - i * 7 - d.getDay());
+        start = d.toISOString().split('T')[0];
+        const e = new Date(d); e.setDate(e.getDate() + 6);
+        end = e.toISOString().split('T')[0];
+        label = `W${i + 1}`;
+      } else {
+        const d = new Date(now.getFullYear() - i, 0, 1);
+        start = `${d.getFullYear()}-01-01`;
+        end = `${d.getFullYear()}-12-31`;
+        label = `${d.getFullYear()}`;
+      }
+      periods.push({ id: `p${i}`, label, start, end });
+    }
+    return periods;
+  }, []);
+
+  // Fire all executive command center API calls in parallel
+  const loadExecutiveData = useCallback(async () => {
+    try {
+      const asArray = (v) => Array.isArray(v) ? v : [];
+      const [sumRes, compRes, aiRes, cellRes, deptRes, auditRes, perfRes, backupRes, healthRes, notifRes] = await Promise.allSettled([
+        analyticsAPI.getExecutiveSummary(90),
+        analyticsAPI.getExecutiveComparison({ periods: buildPeriods('month', 6), mode: 'overall' }),
+        analyticsAPI.getAIInsights(),
+        adminAPI.getHomeCells(),
+        adminAPI.getDepartments(),
+        adminAPI.getAuditLog({ limit: 12 }),
+        adminAPI.getPerformanceDashboard('month', selectedServiceId, null),
+        adminAPI.getBackupStatus(),
+        adminAPI.getHealth(),
+        adminAPI.getUnreadNotificationCount(),
+      ]);
+      if (sumRes.status === 'fulfilled') setExecSummary(sumRes.value.data);
+      if (compRes.status === 'fulfilled') setExecComparison(compRes.value.data);
+      if (aiRes.status === 'fulfilled') setAiInsights(asArray(aiRes.value.data));
+      if (cellRes.status === 'fulfilled') setHomeCells(asArray(cellRes.value.data));
+      if (deptRes.status === 'fulfilled') setDepartments(asArray(deptRes.value.data?.departments ?? deptRes.value.data));
+      if (auditRes.status === 'fulfilled') setAuditLog(asArray(auditRes.value.data));
+      if (perfRes.status === 'fulfilled') setHallOfFame(perfRes.value.data);
+      if (backupRes.status === 'fulfilled') setBackupStatus(backupRes.value.data);
+      if (healthRes.status === 'fulfilled') setHealthStatus(healthRes.value.data);
+      if (notifRes.status === 'fulfilled') setNotifCount(notifRes.value.data?.count || 0);
+    } catch (e) {
+      console.error('Failed to load executive data:', e);
+    }
+  }, [selectedServiceId, buildPeriods]);
 
   const loadOverview = useCallback(async () => {
     if (!filterValue) return;
@@ -417,8 +475,8 @@ const useAdminData = () => {
   useEffect(() => {
     if (latestReportInitializedRef.current) return;
     latestReportInitializedRef.current = true;
-    loadLatestReportWindow();
-  }, [loadLatestReportWindow]);
+    // Deferred: only load when reports tab is active (called from AdminDashboard)
+  }, []);
 
   // Service Assignments
   const loadServiceInstance = useCallback(async (date, serviceId) => {
@@ -449,13 +507,14 @@ const useAdminData = () => {
     }
   }, [selectedInstanceDate, selectedServiceId, showMessage]);
 
-  // Initial load — fire all three in parallel so the UI populates as fast as possible.
-  // (Dashboard metrics goes to its own cached endpoint, so no DB contention concern.)
+  // Initial load — fire ALL calls in parallel so the UI populates as fast as possible.
+  // Executive data (ECC) fires alongside core data instead of waiting for ECC to mount.
   useEffect(() => {
     loadCoreData();
     loadLeaders();
     loadDashboardMetrics();
-  }, [loadCoreData, loadLeaders, loadDashboardMetrics]);
+    loadExecutiveData();
+  }, [loadCoreData, loadLeaders, loadDashboardMetrics, loadExecutiveData]);
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -517,7 +576,7 @@ const useAdminData = () => {
     uploadResult, setUploadResult,
     // Message
     message, showMessage,
-    loadCoreData, loadLeaders, loadServiceTypes,
+    loadCoreData, loadLeaders, loadServiceTypes, loadLatestReportWindow, loadExecutiveData,
     // Dashboard metrics
     dashboardMetrics, metricsLoading, serviceTypes, selectedServiceId, setSelectedServiceId, loadDashboardMetrics,
     // Sections Management
@@ -540,6 +599,9 @@ const useAdminData = () => {
     selectedInstanceDate, setSelectedInstanceDate,
     assignmentsLoading, assignedLeaderIds, setAssignedLeaderIds,
     loadServiceInstance, handleSaveServiceAssignments,
+    // Executive Command Center data
+    execSummary, execComparison, aiInsights, homeCells, departments,
+    auditLog, hallOfFame, backupStatus, healthStatus, notifCount,
   };
 };
 
