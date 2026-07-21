@@ -781,6 +781,7 @@ async function getProfile(entityType, entityId, filter, userId) {
   // Compute timeline variables first (needed for monthly queries)
   const now = new Date();
   const months = [];
+  const timeline = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({

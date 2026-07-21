@@ -6,7 +6,7 @@ import {
   Calendar, Zap, Medal, BarChart2, Shield, GitMerge, Globe, 
   CheckCircle2, AlertCircle, Info, Loader2, RefreshCw, X,
   ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus,
-  Sparkles, Building2, Home, UserPlus, Trash2
+  Sparkles, Building2, Home, UserPlus, Trash2, Search
 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 
@@ -342,6 +342,7 @@ const FamilyManager = ({ families, allMembers, onRefresh }) => {
 const RewardsView = () => {
   const [activeTab, setActiveTab] = useState('members');
   const [filter, setFilter] = useState('month');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -357,6 +358,11 @@ const RewardsView = () => {
   const [familyFilter, setFamilyFilter] = useState('all');
 
   const openProfile = (item, type) => setSelectedProfile({ type, item });
+
+  // Clear search query when changing tabs or period filters
+  useEffect(() => {
+    setSearchQuery('');
+  }, [activeTab, filter]);
 
   useEffect(() => {
     if (!selectedProfile) { setProfileDetail(null); setProfileError(false); return; }
@@ -535,20 +541,68 @@ const RewardsView = () => {
   const allMembers = data?.members || [];
   const families = data?.families || [];
   const members = (() => {
-    if (memberFilter === 'all' && familyFilter === 'all') return allMembers;
-    return allMembers.filter(m => {
-      if (familyFilter !== 'all' && String(m.family_id) !== String(familyFilter)) return false;
-      if (memberFilter === 'men') return (m.gender || '').toLowerCase().startsWith('m');
-      if (memberFilter === 'women') return (m.gender || '').toLowerCase().startsWith('f');
-      if (memberFilter === 'youth') return (m.age_group || '').toLowerCase().includes('youth');
-      if (memberFilter === 'visitors') return (m.evCount || 0) > 0;
-      return true;
-    });
+    let filtered = allMembers;
+    if (memberFilter !== 'all' || familyFilter !== 'all') {
+      filtered = allMembers.filter(m => {
+        if (familyFilter !== 'all' && String(m.family_id) !== String(familyFilter)) return false;
+        if (memberFilter === 'men') return (m.gender || '').toLowerCase().startsWith('m');
+        if (memberFilter === 'women') return (m.gender || '').toLowerCase().startsWith('f');
+        if (memberFilter === 'youth') return (m.age_group || '').toLowerCase().includes('youth');
+        if (memberFilter === 'visitors') return (m.evCount || 0) > 0;
+        return true;
+      });
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(m =>
+        (m.full_name || '').toLowerCase().includes(q) ||
+        (m.section_name || '').toLowerCase().includes(q)
+      );
+    }
+    return filtered;
   })();
-  const leaders = data?.leaders || [];
-  const cells = data?.cells || [];
-  const sections = data?.sections || [];
-  const departments = data?.departments || [];
+  const leaders = (() => {
+    let filtered = data?.leaders || [];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(l =>
+        (l.leader_name || '').toLowerCase().includes(q) ||
+        (l.section_name || '').toLowerCase().includes(q)
+      );
+    }
+    return filtered;
+  })();
+  const cells = (() => {
+    let filtered = data?.cells || [];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(c =>
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.section_name || '').toLowerCase().includes(q)
+      );
+    }
+    return filtered;
+  })();
+  const sections = (() => {
+    let filtered = data?.sections || [];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(s =>
+        (s.name || '').toLowerCase().includes(q)
+      );
+    }
+    return filtered;
+  })();
+  const departments = (() => {
+    let filtered = data?.departments || [];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(d =>
+        (d.name || '').toLowerCase().includes(q)
+      );
+    }
+    return filtered;
+  })();
   const insights = data?.insights || [];
   const awards = data?.awardsHistory || [];
 
@@ -631,6 +685,60 @@ const RewardsView = () => {
           </button>
         ))}
       </div>
+
+      {/* ── Search Bar ── */}
+      {['members', 'leaders', 'cells', 'sections', 'departments'].includes(activeTab) && (
+        <div style={{
+          marginBottom: 16,
+          display: 'flex',
+          gap: 10,
+          position: 'relative'
+        }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Search size={16} color="#64748B" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+            <input
+              type="text"
+              placeholder={`Search ${activeTab}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px 10px 38px',
+                borderRadius: 12,
+                border: '1px solid rgba(71,85,105,0.3)',
+                background: 'rgba(15,23,42,0.4)',
+                color: '#F1F5F9',
+                fontSize: 13,
+                outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.15s',
+              }}
+              onFocus={(e) => { e.target.style.borderColor = '#6366F1'; }}
+              onBlur={(e) => { e.target.style.borderColor = 'rgba(71,85,105,0.3)'; }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: '#64748B',
+                  cursor: 'pointer',
+                  padding: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Tab Content ── */}
 
