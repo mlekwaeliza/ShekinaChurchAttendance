@@ -255,7 +255,7 @@ async function scoreLeaders(start, end, serviceId) {
     all(`SELECT leader_id, COUNT(DISTINCT date) AS submitted_days FROM submission_log WHERE date BETWEEN ? AND ? GROUP BY leader_id`, [start, end]),
     all(`SELECT l.id AS leader_id, AVG(CASE WHEN LOWER(TRIM(a.status))='present' THEN 100.0 ELSE 0 END) AS avg_att FROM leaders l JOIN members m ON m.leader_id = l.id AND m.is_active = 1 JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ? WHERE l.is_active = 1 GROUP BY l.id`, [start, end]),
     all(`SELECT l.id AS leader_id, COUNT(*) AS cnt FROM leaders l LEFT JOIN outreach_logs o ON o.leader_id = l.id AND o.created_at BETWEEN ? AND ? WHERE l.is_active = 1 GROUP BY l.id`, [start, end]),
-    all(`SELECT l.id, u.full_name, s.name AS section_name FROM leaders l LEFT JOIN users u ON u.id = l.user_id LEFT JOIN sections s ON s.id = l.section_id WHERE l.is_active = 1`),
+    all(`SELECT l.id, u.full_name, s.name AS section_name FROM leaders l LEFT JOIN users u ON u.id = l.user_id LEFT JOIN sections s ON s.id = l.section_id WHERE COALESCE(l.is_active, 1) = 1`),
   ]);
 
   const subMap = Object.fromEntries(subs.map(r => [r.leader_id, r]));
@@ -754,7 +754,23 @@ async function getProfile(entityType, entityId, filter, userId) {
   if (entityType === 'leader') scored = await scoreLeaders(season.start, season.end, 'all');
   else scored = await scoreMembers(season.start, season.end, 'all');
   const w = entityType === 'leader' ? weights.leader : weights.member;
-  const entity = scored.find(e => String(e.id) === String(entityId));
+  let entity = scored.find(e => String(e.id) === String(entityId));
+  if (!entity && entityType === 'leader') {
+    const lRow = await get(`SELECT l.id, u.full_name, s.name AS section_name FROM leaders l LEFT JOIN users u ON u.id = l.user_id LEFT JOIN sections s ON s.id = l.section_id WHERE l.id = ?`, [entityId]);
+    if (lRow) {
+      const components = { submission_rate: 0, member_attendance: 0, retention: 0, cell_growth: 0, evangelism: 0, followups: 0, reports: 0 };
+      entity = { id: lRow.id, full_name: lRow.full_name || 'Leader', section_name: lRow.section_name || 'Section', components, submission_rate: 0, assigned_days: 0, submitted_days: 0, followups: 0 };
+      scored.push(entity);
+    }
+  }
+  if (!entity && entityType === 'member') {
+    const mRow = await get(`SELECT m.id, m.full_name, m.membership_id, m.gender, m.age_group, s.name AS section_name FROM members m LEFT JOIN sections s ON s.id = m.section_id WHERE m.id = ?`, [entityId]);
+    if (mRow) {
+      const components = { church_attendance: 0, cell_attendance: 0, evangelism: 0, contributions: 0, events: 0 };
+      entity = { ...mRow, components, present: 0, absent: 0, excused: 0, totalDays: 0, evCount: 0, hasContribution: false };
+      scored.push(entity);
+    }
+  }
   if (!entity) return null;
   entity.overallScore = weighted(entity.components, w);
   entity.level = performanceLevel(entity.overallScore);

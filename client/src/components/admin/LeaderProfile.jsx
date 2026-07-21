@@ -374,6 +374,25 @@ const PerformanceTab = ({ performance, ranking }) => {
   if (!performance && !ranking) {
     return <EmptyState icon={Award} message="No performance data available yet." />;
   }
+
+  const score = performance?.entity?.overallScore ?? performance?.overallScore ?? performance?.score ?? ranking?.leadership_score ?? 0;
+  const breakdown = performance?.breakdown || [];
+  const achievements = performance?.achievements || performance?.entity?.badges || [];
+
+  const breakdownItems = Array.isArray(breakdown)
+    ? breakdown.map(item => ({
+        key: item.key,
+        label: item.label || (item.key ? item.key.replace(/_/g, ' ') : ''),
+        score: item.score ?? item.points ?? 0,
+        max: item.max || 100,
+      }))
+    : Object.entries(breakdown).map(([k, v]) => ({
+        key: k,
+        label: k.replace(/_/g, ' '),
+        score: typeof v === 'object' ? (v.score ?? 0) : Number(v) || 0,
+        max: typeof v === 'object' ? v.max : 100,
+      }));
+
   return (
     <div className="space-y-4">
       {performance && (
@@ -382,28 +401,28 @@ const PerformanceTab = ({ performance, ranking }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Overall Leadership Score</p>
-                <p className="text-3xl font-black text-slate-900 dark:text-white mt-1">{R(performance.score || 0)}<span className="text-base text-slate-400">/100</span></p>
+                <p className="text-3xl font-black text-slate-900 dark:text-white mt-1">{R(score)}<span className="text-base text-slate-400">/100</span></p>
               </div>
               <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center">
                 <Award className="w-8 h-8 text-indigo-500" />
               </div>
             </div>
           </div>
-          {performance.breakdown && (
+          {breakdownItems.length > 0 && (
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Score Breakdown</h3>
               <div className="space-y-3">
-                {Object.entries(performance.breakdown).map(([key, val]) => {
-                  const score = typeof val === 'object' ? R(val.score || 0) : R(val);
-                  const max = typeof val === 'object' ? val.max : null;
+                {breakdownItems.map((item, idx) => {
+                  const itemScore = R(item.score || 0);
+                  const max = item.max || 100;
                   return (
-                    <div key={key}>
+                    <div key={item.key || idx}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 capitalize">{key.replace(/_/g, ' ')}</span>
-                        <span className="text-xs font-bold text-slate-900 dark:text-white">{score}{max ? `/${max}` : ''}</span>
+                        <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 capitalize">{item.label}</span>
+                        <span className="text-xs font-bold text-slate-900 dark:text-white">{itemScore}{max ? `/${max}` : ''}</span>
                       </div>
                       <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-900/40 overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: `${max ? (score / max) * 100 : score}%` }} />
+                        <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: `${max ? Math.min(100, (itemScore / max) * 100) : itemScore}%` }} />
                       </div>
                     </div>
                   );
@@ -411,11 +430,11 @@ const PerformanceTab = ({ performance, ranking }) => {
               </div>
             </div>
           )}
-          {performance.achievements && asArray(performance.achievements).length > 0 && (
+          {asArray(achievements).length > 0 && (
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2"><Flame className="w-4 h-4 text-amber-500" /> Achievements</h3>
               <div className="flex flex-wrap gap-2">
-                {asArray(performance.achievements).map((a, i) => (
+                {asArray(achievements).map((a, i) => (
                   <span key={i} className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
                     <Award className="w-3 h-3" />{a.name || a.key || a}
                   </span>
@@ -425,7 +444,7 @@ const PerformanceTab = ({ performance, ranking }) => {
           )}
         </>
       )}
-      {ranking && !performance && (
+      {ranking && (
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Ranking Details</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
