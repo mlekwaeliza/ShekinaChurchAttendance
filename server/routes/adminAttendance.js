@@ -439,7 +439,7 @@ router.get('/leader-dashboard/:id', async (req, res) => {
     if (!leader) return res.status(404).json({ error: 'Leader not found' });
 
     const members = await new Promise((resolve, reject) => {
-      db.all('SELECT * FROM members WHERE leader_id = ? AND soft_deleted_at IS NULL ORDER BY full_name', [leaderId], (err, rows) => err ? reject(err) : resolve(rows));
+      db.all('SELECT * FROM members WHERE leader_id = ? AND is_active = 1 AND soft_deleted_at IS NULL ORDER BY full_name', [leaderId], (err, rows) => err ? reject(err) : resolve(rows));
     });
 
     const history = await new Promise((resolve, reject) => {
