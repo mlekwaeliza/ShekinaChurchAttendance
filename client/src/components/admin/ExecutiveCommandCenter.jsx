@@ -130,6 +130,7 @@ const ExecutiveCommandCenter = (props) => {
     backup: backupProp = null,
     health: healthProp = null,
     notifCount: notifCountProp = 0,
+    onRefresh,
   } = props;
 
   const [loading, setLoading] = useState(true);
@@ -209,8 +210,14 @@ const ExecutiveCommandCenter = (props) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-20">
-        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-4 animate-pulse">
+        <div className="rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-5 h-28" />
+        <div className="rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 h-16" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="rounded-2xl bg-slate-100 dark:bg-slate-800 h-40" />
+          <div className="rounded-2xl bg-slate-100 dark:bg-slate-800 h-40" />
+        </div>
+        <p className="text-center text-xs text-slate-400 mt-2">Loading executive analytics…</p>
       </div>
     );
   }
@@ -220,9 +227,11 @@ const ExecutiveCommandCenter = (props) => {
       <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800 p-6 text-center">
         <AlertTriangle className="w-10 h-10 mx-auto mb-2 text-rose-400" />
         <p className="text-sm font-medium text-rose-700 dark:text-rose-300">{err}</p>
-        <button onClick={load} className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 text-xs font-medium">
-          <RefreshCw className="w-3.5 h-3.5" /> Retry
-        </button>
+        {onRefresh && (
+          <button onClick={onRefresh} className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 text-xs font-medium">
+            <RefreshCw className="w-3.5 h-3.5" /> Retry
+          </button>
+        )}
       </div>
     );
   }

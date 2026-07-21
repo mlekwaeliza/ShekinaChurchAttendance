@@ -769,12 +769,26 @@ async function getProfile(entityType, entityId, filter, userId) {
   const prev = prevSeasonOf(season);
   if (prev) {
     const prevScores = await scoreForSeason(prev);
-    const pr = prevScores.find(p => String(p.id) === String(entityId));
-    entity.prevRank = pr ? pr.rank : null;
+    const map = entityType === 'leader' ? prevScores?.leaders : prevScores?.members;
+    const prevRank = map ? (map.get(Number(entityId)) || map.get(entityId) || map.get(String(entityId))) : null;
+    entity.prevRank = prevRank || null;
     entity.rankDelta = entity.prevRank ? entity.prevRank - entity.rank : 0;
   } else {
     entity.prevRank = null;
     entity.rankDelta = 0;
+  }
+
+  // Resolve target member ID (if leader, resolve linked member ID for member-specific queries)
+  let targetMemberId = entityId;
+  if (entityType === 'leader') {
+    // Leaders always have a user_id (NOT NULL). Find the matching member via user_id.
+    const mRow = await get(
+      `SELECT m.id FROM members m
+       JOIN leaders l ON l.user_id = m.user_id
+       WHERE l.id = ? AND m.user_id IS NOT NULL`,
+      [entityId]
+    );
+    if (mRow) targetMemberId = mRow.id;
   }
 
   // ── Attendance intelligence ──
@@ -798,8 +812,8 @@ async function getProfile(entityType, entityId, filter, userId) {
 
   // Parallelize all independent queries
   const [attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements] = await Promise.all([
-    all(`SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`, [entityId]),
-    all(`SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`, [entityId]),
+    all(`SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`, [targetMemberId]),
+    all(`SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`, [targetMemberId]),
     get(`
       SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
       FROM (
@@ -815,19 +829,19 @@ async function getProfile(entityType, entityId, filter, userId) {
          SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
        FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ?
        GROUP BY ym`,
-      [entityId, yearStart, yearEnd]
+      [targetMemberId, yearStart, yearEnd]
     ),
     all(
       `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt
        FROM outreach_logs WHERE member_id = ? AND created_at BETWEEN ? AND ?
        GROUP BY ym`,
-      [entityId, yearStart, yearEnd]
+      [targetMemberId, yearStart, yearEnd]
     ),
     all(
       `SELECT ${ymPayment} AS ym, COUNT(*) AS cnt
        FROM contributions WHERE member_id = ? AND payment_date BETWEEN ? AND ?
        GROUP BY ym`,
-      [entityId, yearStart, yearEnd]
+      [targetMemberId, yearStart, yearEnd]
     ),
     all(
       `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,

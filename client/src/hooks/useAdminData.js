@@ -107,6 +107,7 @@ const useAdminData = () => {
   const [backupStatus, setBackupStatus] = useState(null);
   const [healthStatus, setHealthStatus] = useState(null);
   const [notifCount, setNotifCount] = useState(0);
+  const execDataLoadedRef = useRef(false);
 
   const messageTimerRef = useRef(null);
   const latestReportInitializedRef = useRef(false);
@@ -507,14 +508,21 @@ const useAdminData = () => {
     }
   }, [selectedInstanceDate, selectedServiceId, showMessage]);
 
-  // Initial load — fire ALL calls in parallel so the UI populates as fast as possible.
-  // Executive data (ECC) fires alongside core data instead of waiting for ECC to mount.
+  // Initial load — fire core data calls in parallel immediately.
+  // Executive data (heavy analytics) is deferred until the dashboard tab is actually visited.
   useEffect(() => {
     loadCoreData();
     loadLeaders();
     loadDashboardMetrics();
-    loadExecutiveData();
-  }, [loadCoreData, loadLeaders, loadDashboardMetrics, loadExecutiveData]);
+  }, [loadCoreData, loadLeaders, loadDashboardMetrics]);
+
+  // Lazy loader for executive data — only fires when called from the dashboard tab,
+  // and only once per session (unless manually refreshed).
+  const loadExecutiveDataOnce = useCallback(async () => {
+    if (execDataLoadedRef.current) return;
+    execDataLoadedRef.current = true;
+    await loadExecutiveData();
+  }, [loadExecutiveData]);
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -576,7 +584,7 @@ const useAdminData = () => {
     uploadResult, setUploadResult,
     // Message
     message, showMessage,
-    loadCoreData, loadLeaders, loadServiceTypes, loadLatestReportWindow, loadExecutiveData,
+    loadCoreData, loadLeaders, loadServiceTypes, loadLatestReportWindow, loadExecutiveData, loadExecutiveDataOnce,
     // Dashboard metrics
     dashboardMetrics, metricsLoading, serviceTypes, selectedServiceId, setSelectedServiceId, loadDashboardMetrics,
     // Sections Management

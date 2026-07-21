@@ -58,6 +58,14 @@ const AdminDashboard = () => {
     }
   }, []);
 
+  // Load heavy executive analytics only when the dashboard tab is active.
+  // This prevents the 10-call analytics burst from hitting on every admin mount.
+  React.useEffect(() => {
+    if (activeTab === 'dashboard') {
+      data.loadExecutiveDataOnce();
+    }
+  }, [activeTab, data.loadExecutiveDataOnce]);
+
   // Handle Dynamic Breadcrumbs for Sections
   React.useEffect(() => {
     if (activeTab === 'leaders' && data.leaderSectionFilter) {
@@ -168,6 +176,7 @@ const AdminDashboard = () => {
             backup={data.backupStatus}
             health={data.healthStatus}
             notifCount={data.notifCount}
+            onRefresh={data.loadExecutiveData}
           />
         );
 
