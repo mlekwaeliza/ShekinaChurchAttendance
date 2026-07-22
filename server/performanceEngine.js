@@ -271,7 +271,7 @@ async function scoreLeaders(start, end, serviceId) {
     const evangelism = Math.min(100, evCount * 25);
     const retention = 0; const cell_growth = 0; const reports = 0;
     const components = { submission_rate, member_attendance, retention, cell_growth, evangelism, followups, reports };
-    return { id: l.id, full_name: l.full_name, section_name: l.section_name, components, submission_rate, assigned_days: serviceDays, submitted_days: submittedDays, followups };
+    return { id: l.id, full_name: l.full_name, section_name: l.section_name, components, submission_rate, assigned_days: serviceDays, submitted_days: submittedDays, followups, evCount };
   });
 }
 
@@ -797,7 +797,6 @@ async function getProfile(entityType, entityId, filter, userId) {
   // Resolve target member ID (if leader, resolve linked member ID for member-specific queries)
   let targetMemberId = entityId;
   if (entityType === 'leader') {
-    // Leaders always have a user_id (NOT NULL). Find the matching member via user_id.
     const mRow = await get(
       `SELECT m.id FROM members m
        JOIN leaders l ON l.user_id = m.user_id
@@ -826,9 +825,23 @@ async function getProfile(entityType, entityId, filter, userId) {
   const ymCreated = usePostgres ? "TO_CHAR(created_at, 'YYYY-MM')" : "strftime('%Y-%m', created_at)";
   const ymPayment = usePostgres ? "TO_CHAR(payment_date, 'YYYY-MM')" : "strftime('%Y-%m', payment_date)";
 
+  // Leader-specific query helpers: attendance by m.leader_id, outreach by o.leader_id
+  const isLeader = entityType === 'leader';
+  const attQuery = isLeader
+    ? `SELECT a.date, a.status FROM attendance a JOIN members m ON m.id = a.member_id WHERE m.leader_id = ? ORDER BY a.date ASC`
+    : `SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`;
+  const attParamId = isLeader ? entityId : targetMemberId;
+  const attByMonthQuery = isLeader
+    ? `SELECT ${ymFn} AS ym, COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present FROM attendance a JOIN members m ON m.id = a.member_id WHERE m.leader_id = ? AND a.date BETWEEN ? AND ? GROUP BY ym`
+    : `SELECT ${ymFn} AS ym, COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ? GROUP BY ym`;
+  const outQuery = isLeader
+    ? `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt FROM outreach_logs WHERE leader_id = ? AND created_at BETWEEN ? AND ? GROUP BY ym`
+    : `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt FROM outreach_logs WHERE member_id = ? AND created_at BETWEEN ? AND ? GROUP BY ym`;
+  const outParamId = isLeader ? entityId : targetMemberId;
+
   // Parallelize all independent queries
   const [attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements] = await Promise.all([
-    all(`SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`, [targetMemberId]),
+    all(attQuery, [attParamId]),
     all(`SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`, [targetMemberId]),
     get(`
       SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
@@ -839,20 +852,8 @@ async function getProfile(entityType, entityId, filter, userId) {
         GROUP BY member_id
       )
     `, [season.start, season.end]),
-    all(
-      `SELECT ${ymFn} AS ym,
-         COUNT(*) AS total,
-         SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
-       FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ?
-       GROUP BY ym`,
-      [targetMemberId, yearStart, yearEnd]
-    ),
-    all(
-      `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt
-       FROM outreach_logs WHERE member_id = ? AND created_at BETWEEN ? AND ?
-       GROUP BY ym`,
-      [targetMemberId, yearStart, yearEnd]
-    ),
+    all(attByMonthQuery, [attParamId, yearStart, yearEnd]),
+    all(outQuery, [outParamId, yearStart, yearEnd]),
     all(
       `SELECT ${ymPayment} AS ym, COUNT(*) AS cnt
        FROM contributions WHERE member_id = ? AND payment_date BETWEEN ? AND ?
