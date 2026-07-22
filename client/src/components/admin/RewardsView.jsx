@@ -644,8 +644,8 @@ const RewardsView = () => {
           {/* Top 3 hero winners */}
           <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
             {[
-              { label: '🥇 Top Member', name: kpis.topMember?.full_name, score: kpis.topMember?.overallScore, sub: kpis.topMember?.section_name },
-              { label: '👑 Top Leader', name: kpis.topLeader?.leader_name, score: kpis.topLeader?.overallScore, sub: kpis.topLeader?.section_name },
+              { label: '🥇 Top Member', name: kpis.topMember?.full_name || kpis.topMember?.name, score: kpis.topMember?.overallScore ?? kpis.topMember?.score, sub: kpis.topMember?.section_name },
+              { label: '👑 Top Leader', name: kpis.topLeader?.leader_name || kpis.topLeader?.full_name || kpis.topLeader?.name, score: kpis.topLeader?.overallScore ?? kpis.topLeader?.score, sub: kpis.topLeader?.section_name },
               { label: '🏠 Best Cell', name: kpis.bestCell?.name, score: kpis.bestCell?.overallScore, sub: `${kpis.bestCell?.membersCount || 0} members` },
             ].map((hero, i) => (
               <div key={i} style={{

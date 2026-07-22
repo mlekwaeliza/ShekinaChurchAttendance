@@ -548,8 +548,8 @@ async function getDashboard(filter, serviceId, userId) {
     weights,
     kpis: {
       totalMembers, avgScore, champions, consistent, withEvangelism,
-      topMember: rankedMembers[0] ? { name: rankedMembers[0].full_name, score: rankedMembers[0].overallScore, section_name: rankedMembers[0].section_name } : null,
-      topLeader: rankedLeaders[0] ? { name: rankedLeaders[0].full_name, score: rankedLeaders[0].overallScore, section_name: rankedLeaders[0].section_name } : null,
+      topMember: rankedMembers[0] ? { name: rankedMembers[0].full_name, full_name: rankedMembers[0].full_name, score: rankedMembers[0].overallScore, overallScore: rankedMembers[0].overallScore, section_name: rankedMembers[0].section_name } : null,
+      topLeader: rankedLeaders[0] ? { name: rankedLeaders[0].full_name, full_name: rankedLeaders[0].full_name, leader_name: rankedLeaders[0].full_name, score: rankedLeaders[0].overallScore, overallScore: rankedLeaders[0].overallScore, section_name: rankedLeaders[0].section_name } : null,
       bestCell: bestCell ? { name: bestCell.name, overallScore: bestCell.overallScore, membersCount: bestCell.members_count } : null,
       bestEvangelist: bestEvangelist ? { full_name: bestEvangelist.full_name, evangelism: bestEvangelist.evCount } : null,
       mostConsistentMember: mostConsistent ? { full_name: mostConsistent.full_name, churchAttendance: mostConsistent.components.church_attendance } : null,

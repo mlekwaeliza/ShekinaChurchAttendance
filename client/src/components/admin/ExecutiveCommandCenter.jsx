@@ -542,8 +542,8 @@ const ExecutiveCommandCenter = (props) => {
                 className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                 <Crown className="w-5 h-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-[9px] uppercase text-slate-400">Top Member</p>
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.topMember.name}</p>
-                <p className="text-[10px] text-slate-400">{R(hallOfFame.kpis.topMember.score)}</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.topMember.full_name || hallOfFame.kpis.topMember.name}</p>
+                <p className="text-[10px] text-slate-400">{R(hallOfFame.kpis.topMember.overallScore ?? hallOfFame.kpis.topMember.score)}</p>
               </button>
             )}
             {hallOfFame.kpis?.topLeader && (
@@ -551,8 +551,8 @@ const ExecutiveCommandCenter = (props) => {
                 className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-center hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 transition-all cursor-pointer">
                 <Award className="w-5 h-5 mx-auto text-amber-500 mb-1" />
                 <p className="text-[9px] uppercase text-slate-400">Top Leader</p>
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.topLeader.name}</p>
-                <p className="text-[10px] text-slate-400">{R(hallOfFame.kpis.topLeader.score)}</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{hallOfFame.kpis.topLeader.leader_name || hallOfFame.kpis.topLeader.full_name || hallOfFame.kpis.topLeader.name}</p>
+                <p className="text-[10px] text-slate-400">{R(hallOfFame.kpis.topLeader.overallScore ?? hallOfFame.kpis.topLeader.score)}</p>
               </button>
             )}
             {hallOfFame.kpis?.bestCell && (
