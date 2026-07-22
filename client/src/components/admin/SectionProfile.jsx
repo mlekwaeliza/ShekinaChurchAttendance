@@ -242,7 +242,7 @@ const SectionOverview = ({ section, ranking, performance, leaders, activeMembers
               const total = R(t.present_count) + R(t.absent_count) + R(t.excused_count);
               const pct   = total > 0 ? Math.round((R(t.present_count) / total) * 100) : 0;
               return (
-                <div key={i} className="flex flex-col items-center gap-0.5 min-w-[6px]" title={`${t.date}: ${pct}%`}>
+                <div key={i} className="flex flex-col items-center gap-0.5 min-w-[6px]" title={`${fdate(t.date)}: ${pct}%`}>
                   <div
                     className="w-full rounded-t-sm"
                     style={{
@@ -256,9 +256,9 @@ const SectionOverview = ({ section, ranking, performance, leaders, activeMembers
             })}
           </div>
           <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400">
-            <span>{asArray(trends)[0]?.date || ''}</span>
+            <span>{asArray(trends)[0]?.date ? fdate(asArray(trends)[0].date) : ''}</span>
             <span>Overall: {attendanceRate}%</span>
-            <span>{asArray(trends)[asArray(trends).length - 1]?.date || ''}</span>
+            <span>{asArray(trends)[asArray(trends).length - 1]?.date ? fdate(asArray(trends)[asArray(trends).length - 1].date) : ''}</span>
           </div>
         </div>
       )}
@@ -412,7 +412,7 @@ const SectionAnalytics = ({ ranking, compData, rankings, trends }) => {
                   const pct = tot > 0 ? Math.round((R(t.present_count) / tot) * 100) : 0;
                   return (
                     <tr key={i} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                      <td className="py-2 px-3 font-medium text-slate-700 dark:text-slate-300">{t.date}</td>
+                      <td className="py-2 px-3 font-medium text-slate-700 dark:text-slate-300">{fdate(t.date)}</td>
                       <td className="py-2 px-3 text-right font-semibold text-emerald-600">{R(t.present_count)}</td>
                       <td className="py-2 px-3 text-right text-rose-500">{R(t.absent_count)}</td>
                       <td className="py-2 px-3 text-right text-amber-500">{R(t.excused_count)}</td>
@@ -493,7 +493,7 @@ const SectionSubmissions = ({ submissions }) => {
           <tbody>
             {asArray(submissions).map((s, i) => (
               <tr key={i} className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">{s.date}</td>
+                <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">{fdate(s.date)}</td>
                 <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{s.leader_name || '—'}</td>
                 <td className="py-2.5 px-3 text-right font-semibold text-indigo-600">{s.records_count || 0}</td>
                 <td className="py-2.5 px-3 text-right text-slate-400 text-[10px]">{s.submitted_at ? fdatetime(s.submitted_at) : '—'}</td>
