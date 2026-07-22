@@ -1892,6 +1892,13 @@ async function ensureHomeCellSchema() {
       console.warn('member_titles status index creation failed (non-fatal):', e.message);
     }
 
+    // Leaders table missing columns (exists in postgres-schema.sql)
+    try {
+      await run('ALTER TABLE leaders ADD COLUMN IF NOT EXISTS is_active INTEGER DEFAULT 1');
+    } catch (e) {
+      console.warn('leaders is_active column migration failed (non-fatal):', e.message);
+    }
+
     // Additional indexes
     try {
       await run('CREATE INDEX IF NOT EXISTS idx_attendance_service_type_id ON attendance(service_type_id)');

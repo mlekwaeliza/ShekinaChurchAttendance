@@ -751,12 +751,23 @@ async function getProfile(entityType, entityId, filter, userId) {
 
   const weights = await loadWeights();
   let scored = [];
-  if (entityType === 'leader') scored = await scoreLeaders(season.start, season.end, 'all');
-  else scored = await scoreMembers(season.start, season.end, 'all');
+  if (entityType === 'leader') {
+    try {
+      scored = await scoreLeaders(season.start, season.end, 'all');
+      console.error(`[profile-debug] scoreLeaders returned ${scored.length} entities for season ${season.start}..${season.end}`);
+    } catch (e) {
+      console.error(`[profile-debug] scoreLeaders threw:`, e?.message, e?.stack);
+      throw e;
+    }
+  } else {
+    scored = await scoreMembers(season.start, season.end, 'all');
+  }
   const w = entityType === 'leader' ? weights.leader : weights.member;
   let entity = scored.find(e => String(e.id) === String(entityId));
+  console.error(`[profile-debug] entity ${entityId} ${entityType}: found=${!!entity} in ${scored.length} scored items; ids=${scored.slice(0,5).map(e=>e.id).join(',')}`);
   if (!entity && entityType === 'leader') {
     const lRow = await get(`SELECT l.id, u.full_name, s.name AS section_name FROM leaders l LEFT JOIN users u ON u.id = l.user_id LEFT JOIN sections s ON s.id = l.section_id WHERE l.id = ?`, [entityId]);
+    console.error(`[profile-debug] fallback query for leader ${entityId}: found=${!!lRow}`);
     if (lRow) {
       const components = { submission_rate: 0, member_attendance: 0, retention: 0, cell_growth: 0, evangelism: 0, followups: 0, reports: 0 };
       entity = { id: lRow.id, full_name: lRow.full_name || 'Leader', section_name: lRow.section_name || 'Section', components, submission_rate: 0, assigned_days: 0, submitted_days: 0, followups: 0 };
@@ -771,7 +782,10 @@ async function getProfile(entityType, entityId, filter, userId) {
       scored.push(entity);
     }
   }
-  if (!entity) return null;
+  if (!entity) {
+    console.error(`[profile-debug] entity ${entityId} ${entityType} NOT FOUND after all fallbacks, returning null`);
+    return null;
+  }
   entity.overallScore = weighted(entity.components, w);
   entity.level = performanceLevel(entity.overallScore);
 

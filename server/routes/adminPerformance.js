@@ -54,7 +54,8 @@ router.get('/performance/profile/:entityType/:entityId', async (req, res) => {
     if (!profile) return res.status(404).json({ error: 'Entity not found' });
     res.json(profile);
   } catch (e) {
-    console.error('Performance profile error:', e);
+    console.error(`[profile-error] ${entityType}/${entityId} filter=${filter}:`, e?.message || e);
+    console.error(e?.stack);
     res.status(500).json({ error: 'Failed to load profile' });
   }
 });
