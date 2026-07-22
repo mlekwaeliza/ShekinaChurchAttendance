@@ -450,10 +450,10 @@ router.get('/section-dashboard/:id', async (req, res) => {
       // Leaders in section
       new Promise((resolve, reject) => {
         db.all(
-          `SELECT l.*, u.full_name, u.email as user_email
+          `SELECT l.*, u.full_name, l.email as user_email
            FROM leaders l
            JOIN users u ON l.user_id = u.id
-           WHERE l.section_id = ? AND l.is_active = 1
+           WHERE l.section_id = ? AND COALESCE(l.is_active, 1) = 1
            ORDER BY l.is_head DESC, u.full_name`,
           [sectionId], (err, rows) => err ? reject(err) : resolve(rows)
         );
