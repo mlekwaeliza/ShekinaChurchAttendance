@@ -38,6 +38,7 @@ import FinanceView from '../components/admin/FinanceView';
 import TrashView from '../components/admin/TrashView';
 import EvangelistDashboard from './EvangelistDashboard';
 import ChildrensMinistry from './ChildrensMinistry';
+import ExecutiveReportingCenter from './ExecutiveReportingCenter';
 
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
 
@@ -290,6 +291,9 @@ const AdminDashboard = () => {
 
       case 'children':
         return <ChildrensMinistry />;
+
+      case 'reporting':
+        return <ExecutiveReportingCenter />;
 
       case 'evangelism':
         return <EvangelistDashboard subtab={searchParams.get('subtab')} />;

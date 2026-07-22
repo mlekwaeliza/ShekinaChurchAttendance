@@ -246,6 +246,18 @@ export const adminAPI = {
     createPromotion: (data) => api.post('/admin/children/promotions', data),
     getDashboard: () => api.get('/admin/children/dashboard'),
   },
+  // Executive Reporting Center
+  reports: {
+    getTypes: () => api.get('/admin/reports/types'),
+    getAttendance: (params = {}) => api.get('/admin/reports/attendance', { params }),
+    getMembership: (params = {}) => api.get('/admin/reports/membership', { params }),
+    getLeadership: (params = {}) => api.get('/admin/reports/leadership', { params }),
+    getFinance: (params = {}) => api.get('/admin/reports/finance', { params }),
+    getEvangelism: (params = {}) => api.get('/admin/reports/evangelism', { params }),
+    getNewMembers: (params = {}) => api.get('/admin/reports/new-members', { params }),
+    getHomeCells: (params = {}) => api.get('/admin/reports/home-cells', { params }),
+    getChildren: (params = {}) => api.get('/admin/reports/children', { params }),
+  },
 };
 
 // Shared church calendar API

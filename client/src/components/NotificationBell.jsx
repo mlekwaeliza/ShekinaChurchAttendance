@@ -16,9 +16,15 @@ const NotificationBell = ({ user }) => {
   const [activeTab, setActiveTab] = useState('all');
   const dropdownRef = useRef(null);
 
+  const [followUps, setFollowUps] = useState([]);
+
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 60000);
+    loadFollowUps();
+    const interval = setInterval(() => {
+      loadNotifications();
+      loadFollowUps();
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -43,6 +49,16 @@ const NotificationBell = ({ user }) => {
       setUnreadCount(countRes.data?.count || 0);
     } catch (e) {
       console.error('Failed to load notifications:', e);
+    }
+  };
+
+  const loadFollowUps = async () => {
+    try {
+      const res = await adminAPI.getFollowUpTasks();
+      const pending = (res.data || []).filter(t => t.status !== 'completed').slice(0, 5);
+      setFollowUps(pending);
+    } catch (e) {
+      console.error('Failed to load follow-ups:', e);
     }
   };
 
@@ -75,6 +91,8 @@ const NotificationBell = ({ user }) => {
     event: { icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10', label: 'Event' },
     follow_up: { icon: ClipboardCheck, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10', label: 'Follow-up' },
     finance: { icon: DollarSign, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-500/10', label: 'Finance' },
+    children: { icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-500/10', label: "Children's Ministry" },
+    report: { icon: FileText, color: 'text-cyan-500', bg: 'bg-cyan-50 dark:bg-cyan-500/10', label: 'Report' },
   };
 
   const tabs = [
@@ -220,6 +238,26 @@ const NotificationBell = ({ user }) => {
 
           {/* Quick Actions Footer */}
           <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+            {/* Follow-up Reminders */}
+            {followUps.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Pending Follow-ups</p>
+                <div className="space-y-1.5">
+                  {followUps.map(task => (
+                    <div key={task.id} className="flex items-center justify-between p-2 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
+                      <div className="flex items-center gap-2">
+                        <ClipboardCheck className="w-3 h-3 text-emerald-500" />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]">{task.title || task.description}</span>
+                      </div>
+                      {task.due_date && (
+                        <span className="text-[10px] text-slate-400">Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Quick Actions</p>
             <div className="flex gap-2">
               {user?.role === 'admin' && (

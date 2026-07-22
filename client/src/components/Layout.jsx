@@ -240,6 +240,7 @@ const Layout = ({ children, showNav = true }) => {
       ]},
       { section: 'REPORTS & INSIGHTS', items: [
         { path: '/admin/reports', label: 'Reports', icon: BarChart3 },
+        { path: '/admin/reporting', label: 'Reporting Center', icon: FileText },
         { path: '/admin/analytics', label: 'Analytics', icon: TrendingUp },
         { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
       ]},
