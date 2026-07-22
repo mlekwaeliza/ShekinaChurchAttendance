@@ -915,7 +915,8 @@ async function generateNotifications() {
 async function seedFinanceRecords() {
   try {
     const existing = await get('SELECT COUNT(*) as cnt FROM finance_daily_records');
-    if (existing && existing.cnt > 0) return; // already has data
+    const count = Number(existing?.cnt || existing?.count || 0);
+    if (count > 0) return; // already has data
 
     const adminUser = await get("SELECT id FROM users WHERE role IN ('admin','accountant') LIMIT 1");
     const userId = adminUser ? adminUser.id : 1;
@@ -953,8 +954,12 @@ async function seedFinanceRecords() {
              bishop_fund,usable_church_funds,status,created_by,notes)
           VALUES (?,?,?,?,?,?,?,?,?,?,'approved',?,'Auto-seeded sample record')
         `, [date, m, a, t, ev, c.total, c.mission, c.remaining, c.bishop, c.usable, userId]);
-        const rec = await get('SELECT id FROM finance_daily_records WHERE record_date=?', [date]);
-        if (rec) {
+
+        const rec = await get('SELECT id FROM finance_daily_records WHERE record_date::text LIKE ?', [`${date}%`]).catch(() =>
+          get('SELECT id FROM finance_daily_records WHERE record_date = ?', [date])
+        );
+
+        if (rec && rec.id) {
           const numExp = Math.floor(Math.random()*3)+1;
           for (let e=0; e<numExp; e++) {
             const cat = expCats[Math.floor(Math.random()*expCats.length)];
@@ -963,7 +968,9 @@ async function seedFinanceRecords() {
           }
         }
         seeded++;
-      } catch (_) { /* skip duplicate dates */ }
+      } catch (err) {
+        console.warn('Seed record row error:', err.message);
+      }
     }
     if (seeded > 0) console.log(`Finance seed: inserted ${seeded} sample records.`);
   } catch (e) {
