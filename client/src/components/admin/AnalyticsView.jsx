@@ -715,23 +715,30 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const FinanceTab = ({ data }) => {
   const fd = data.finance || {};
   const summary = fd.summary || {};
-  const monthly = (fd.monthly || []).map(m => ({
-    name: MONTH_NAMES[Number(m.month) - 1] || m.month,
-    Income: R(m.income),
-    Tithes: R(m.tithes),
-    Usable: R(m.usable),
-    Mission: R(m.mission),
-    Bishop: R(m.bishop),
-  }));
+  // monthly comes as [{month:'2025-03', income:..., ...}] — parse YYYY-MM
+  const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthly = (fd.monthly || []).map(m => {
+    // m.month is 'YYYY-MM'
+    const parts = String(m.month || '').split('-');
+    const monthIdx = parts.length >= 2 ? Number(parts[1]) - 1 : -1;
+    return {
+      name: monthIdx >= 0 ? MONTH_NAMES_SHORT[monthIdx] : m.month,
+      Income: R(m.income),
+      Tithes: R(m.tithes),
+      Usable: R(m.usable),
+      Mission: R(m.mission),
+      Bishop: R(m.bishop),
+    };
+  });
   const expenses = fd.expenses || [];
   const statusBreakdown = fd.statusBreakdown || [];
 
   const totalIncome = Number(summary.total_income) || 0;
   const totalTithes = Number(summary.total_tithes) || 0;
-  const totalUsable = Number(summary.total_usable) || 0;
+  const totalUsable = Number(summary.usable_church_funds) || 0;
   const totalExpenses = Number(summary.total_expenses) || 0;
-  const totalMission = Number(summary.total_mission) || 0;
-  const totalBishop = Number(summary.total_bishop) || 0;
+  const totalMission = Number(summary.mission_fund) || 0;
+  const totalBishop = Number(summary.bishop_fund) || 0;
 
   const fmtK = v => {
     const n = Number(v) || 0;
@@ -741,7 +748,7 @@ const FinanceTab = ({ data }) => {
   };
   const fmt = v => `TZS ${(Number(v) || 0).toLocaleString()}`;
 
-  const noData = !data.finance;
+  const noData = !data.finance || (totalIncome === 0 && totalTithes === 0 && monthly.length === 0);
 
   return (
     <div className="space-y-6">

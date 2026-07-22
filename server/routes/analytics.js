@@ -1015,15 +1015,33 @@ router.get('/ai-insights', async (req, res) => {
 router.get('/finance-analytics', async (req, res) => {
   try {
     const year = String(Number(req.query.year) || new Date().getFullYear());
-    const yearFrom = `${year}-01-01`;
-    const yearTo   = `${year}-12-31`;
 
-    const summary = await queries.getFinanceSummary(yearFrom, yearTo);
+    // Summary: aggregate all approved/submitted records for the year
+    const summary = await get(`
+      SELECT
+        COALESCE(SUM(total_income), 0)          as total_income,
+        COALESCE(SUM(total_tithes), 0)          as total_tithes,
+        COALESCE(SUM(mission_fund), 0)          as mission_fund,
+        COALESCE(SUM(bishop_fund), 0)           as bishop_fund,
+        COALESCE(SUM(usable_church_funds), 0)   as usable_church_funds,
+        COALESCE(SUM(morning_offering), 0)      as morning_offering,
+        COALESCE(SUM(afternoon_offering), 0)    as afternoon_offering,
+        COALESCE(SUM(evangelism_offering), 0)   as evangelism_offering,
+        (SELECT COALESCE(SUM(fe.amount),0)
+           FROM finance_expenses fe
+           JOIN finance_daily_records fd2 ON fe.record_id = fd2.id
+          WHERE strftime('%Y', fd2.record_date) = ?) as total_expenses,
+        COUNT(*) as record_count
+      FROM finance_daily_records
+      WHERE strftime('%Y', record_date) = ?
+        AND status IN ('submitted', 'approved')
+    `, [year, year]);
 
+    // Monthly income trend grouped by month
     const monthly = await all(`
       SELECT
-        ${monthOnly('record_date')} as month,
-        COUNT(*) as day_count,
+        strftime('%Y-%m', record_date)         as month,
+        COUNT(*)                               as day_count,
         COALESCE(SUM(morning_offering), 0)    as morning,
         COALESCE(SUM(afternoon_offering), 0)  as afternoon,
         COALESCE(SUM(total_tithes), 0)        as tithes,
@@ -1033,28 +1051,32 @@ router.get('/finance-analytics', async (req, res) => {
         COALESCE(SUM(mission_fund), 0)        as mission,
         COALESCE(SUM(bishop_fund), 0)         as bishop
       FROM finance_daily_records
-      WHERE ${yearOnly('record_date')} = ? AND status IN ('submitted', 'approved')
-      GROUP BY ${monthOnly('record_date')}
+      WHERE strftime('%Y', record_date) = ?
+        AND status IN ('submitted', 'approved')
+      GROUP BY strftime('%Y-%m', record_date)
       ORDER BY month ASC
     `, [year]);
 
+    // Expense category breakdown
     const expenses = await all(`
       SELECT fe.category, COALESCE(SUM(fe.amount), 0) as total
       FROM finance_expenses fe
       JOIN finance_daily_records fd ON fe.record_id = fd.id
-      WHERE ${yearOnly('fd.record_date')} = ? AND fd.status IN ('submitted', 'approved')
+      WHERE strftime('%Y', fd.record_date) = ?
+        AND fd.status IN ('submitted', 'approved')
       GROUP BY fe.category
       ORDER BY total DESC
     `, [year]);
 
+    // Record status breakdown (draft / submitted / approved / rejected)
     const statusBreakdown = await all(`
       SELECT status, COUNT(*) as count
       FROM finance_daily_records
-      WHERE ${yearOnly('record_date')} = ?
+      WHERE strftime('%Y', record_date) = ?
       GROUP BY status
     `, [year]);
 
-    res.json({ summary, monthly, expenses, statusBreakdown, year });
+    res.json({ summary: summary || {}, monthly, expenses, statusBreakdown, year });
   } catch (error) {
     console.error('Finance analytics error:', error);
     res.status(500).json({ error: 'Failed to load finance analytics', details: error.message });
