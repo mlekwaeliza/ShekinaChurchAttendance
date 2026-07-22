@@ -388,7 +388,16 @@ export const analyticsAPI = {
   getFinanceAnalytics: (year) => api.get('/analytics/finance-analytics', { params: { year } }),
   getExecutiveComparison: (data) => api.post('/analytics/executive-comparison', data),
   getExecutiveSummary: (days = 90) => api.get('/analytics/executive-summary', { params: { days } }),
-  getMemberWeeklyMatrix: ({ weeks = 12, serviceId = 1, startDate, endDate } = {}) => api.get('/analytics/member-weekly-matrix', { params: { weeks, service_id: serviceId, startDate, endDate } }),
+  getMemberWeeklyMatrix: ({ weeks = 12, serviceId = 'all', startDate, endDate, sectionId, leaderId } = {}) => api.get('/analytics/member-weekly-matrix', {
+    params: {
+      weeks,
+      ...(serviceId !== undefined ? { service_id: serviceId } : {}),
+      ...(startDate ? { startDate } : {}),
+      ...(endDate ? { endDate } : {}),
+      ...(sectionId ? { section_id: sectionId } : {}),
+      ...(leaderId ? { leader_id: leaderId } : {}),
+    }
+  }),
 };
 
 // New Member Leader API

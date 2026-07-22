@@ -602,27 +602,42 @@ router.get('/member-weekly-matrix', async (req, res) => {
       }
     }
 
+    const sectionIdParam = req.query.section_id;
+    const leaderIdParam  = req.query.leader_id;
+
+    let memberWhere = 'm.is_active = 1';
+    const memberParams = [];
+
+    if (sectionIdParam) {
+      memberWhere += ' AND m.section_id = ?';
+      memberParams.push(parseInt(sectionIdParam));
+    } else if (leaderIdParam) {
+      const lid = parseInt(leaderIdParam);
+      memberWhere += ' AND (m.leader_id = ? OR (m.section_id = (SELECT section_id FROM leaders WHERE id = ? AND is_head = 1)))';
+      memberParams.push(lid, lid);
+    }
+
     const members = await all(`
       SELECT m.id, m.full_name, m.membership_id, s.name AS section_name
       FROM members m
       LEFT JOIN sections s ON m.section_id = s.id
-      WHERE m.is_active = 1
+      WHERE ${memberWhere}
       ORDER BY m.full_name
-    `);
+    `, memberParams);
 
     const serviceCondition = serviceId ? 'AND a.service_type_id = ?' : '';
     const serviceParams = serviceId ? [serviceId] : [];
     const dateStart = weeks[0].start;
     const dateEnd = weeks[weeks.length - 1].end;
-    console.log(`[member-weekly-matrix] params: startDate=${req.query.startDate || 'none'}, endDate=${req.query.endDate || 'none'}, service_id=${req.query.service_id || 'none'}`);
+    console.log(`[member-weekly-matrix] params: startDate=${req.query.startDate || 'none'}, endDate=${req.query.endDate || 'none'}, service_id=${req.query.service_id || 'none'}, section_id=${sectionIdParam || 'none'}, leader_id=${leaderIdParam || 'none'}`);
     console.log(`[member-weekly-matrix] computed weeks: ${weeks.length} weeks from ${dateStart} to ${dateEnd}, members: ${members.length}`);
     const attendanceRows = await all(`
       SELECT a.member_id, a.date, a.status
       FROM attendance a
       JOIN members m ON a.member_id = m.id
-      WHERE m.is_active = 1 AND a.date BETWEEN ? AND ? ${serviceCondition}
+      WHERE ${memberWhere} AND a.date BETWEEN ? AND ? ${serviceCondition}
       ORDER BY a.member_id, a.date
-    `, [dateStart, dateEnd, ...serviceParams]);
+    `, [...memberParams, dateStart, dateEnd, ...serviceParams]);
     console.log(`[member-weekly-matrix] attendance rows: ${attendanceRows.length}`);
     if (attendanceRows.length > 0) {
       console.log(`[member-weekly-matrix] sample dates: ${attendanceRows.slice(0, 5).map(r => `${r.date}(${r.status})`).join(', ')}`);

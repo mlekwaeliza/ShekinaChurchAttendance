@@ -7,7 +7,7 @@ import {
   Activity, Target, Loader2, AlertTriangle, Flame,
   CheckCircle2, UserCheck, Phone, Mail, Calendar,
   ClipboardList, ChevronRight, Shield, Search, BarChart2
-} from 'lucide-react';
+import WeeklyAttendanceMatrix from './WeeklyAttendanceMatrix';
 
 const asArray = (v) => Array.isArray(v) ? v : [];
 const R = (v) => Math.round(Number(v) || 0);
@@ -15,6 +15,7 @@ const R = (v) => Math.round(Number(v) || 0);
 const SUBTABS = [
   { key: 'overview',     label: 'Overview',     icon: Layers },
   { key: 'members',      label: 'Members',       icon: Users },
+  { key: 'matrix',       label: 'Weekly Matrix', icon: Calendar },
   { key: 'analytics',   label: 'Analytics',     icon: TrendingUp },
   { key: 'submissions', label: 'Submissions',   icon: ClipboardList },
   { key: 'performance', label: 'Performance',   icon: Award },
@@ -152,6 +153,7 @@ const SectionProfile = ({ sectionId, sectionName, onBack }) => {
         />
       )}
       {tab === 'members'  && <SectionMembers members={members} navigate={navigate} />}
+      {tab === 'matrix'   && <WeeklyAttendanceMatrix sectionId={sectionId} title={`Weekly Attendance Matrix - ${section.name || sectionName}`} />}
       {tab === 'analytics' && <SectionAnalytics ranking={ranking} compData={compData} rankings={rankings} trends={trends} />}
       {tab === 'submissions' && <SectionSubmissions submissions={submissions} />}
       {tab === 'performance' && <SectionPerformance performance={performance} ranking={ranking} />}

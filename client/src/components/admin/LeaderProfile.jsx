@@ -8,12 +8,15 @@ import {
   Crown, ClipboardList, Flame, CheckCircle2, Layers
 } from 'lucide-react';
 
+import WeeklyAttendanceMatrix from './WeeklyAttendanceMatrix';
+
 const asArray = (v) => Array.isArray(v) ? v : [];
 const R = (v) => Math.round(Number(v) || 0);
 
 const SUBTABS = [
   { key: 'overview', label: 'Overview', icon: UserCheck },
   { key: 'members', label: 'Members', icon: Users },
+  { key: 'matrix', label: 'Weekly Matrix', icon: Calendar },
   { key: 'roster', label: 'Roster', icon: ClipboardList },
   { key: 'analytics', label: 'Analytics', icon: TrendingUp },
   { key: 'performance', label: 'Performance', icon: Award },
@@ -138,6 +141,7 @@ const LeaderProfile = ({ leaderId, onBack, allMembers = [] }) => {
       {/* Tab Content */}
       {tab === 'overview' && <OverviewTab leader={leader} roster={roster} ranking={ranking} performance={performance} activeMembers={activeMembers} attendanceRate={attendanceRate} submissionRate={submissionRate} leadershipScore={leadershipScore} historyCount={asArray(history).length} />}
       {tab === 'members' && <MembersTab roster={roster} />}
+      {tab === 'matrix' && <WeeklyAttendanceMatrix leaderId={leaderId} title={`Weekly Attendance Matrix - ${leader.full_name}`} />}
       {tab === 'roster' && <RosterTab roster={roster} trends={trends} />}
       {tab === 'analytics' && <AnalyticsTab trends={trends} history={history} />}
       {tab === 'performance' && <PerformanceTab performance={performance} ranking={ranking} />}
