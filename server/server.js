@@ -910,6 +910,67 @@ async function generateNotifications() {
   }
 }
 
+// ── Auto-seed finance records on first boot ────────────────────────────────
+// Runs only when the finance_daily_records table is empty (fresh deploy).
+async function seedFinanceRecords() {
+  try {
+    const existing = await get('SELECT COUNT(*) as cnt FROM finance_daily_records');
+    if (existing && existing.cnt > 0) return; // already has data
+
+    const adminUser = await get("SELECT id FROM users WHERE role IN ('admin','accountant') LIMIT 1");
+    const userId = adminUser ? adminUser.id : 1;
+
+    function calcFin(m, a, t) {
+      const total = m + a + t;
+      const mission  = Math.round(total * 0.1  * 100) / 100;
+      const remaining= Math.round((total - mission) * 100) / 100;
+      const bishop   = Math.round(remaining * 0.1  * 100) / 100;
+      const usable   = Math.round((remaining - bishop) * 100) / 100;
+      return { total, mission, remaining, bishop, usable };
+    }
+    function rnd(min, max) { return Math.round((Math.random()*(max-min)+min)/1000)*1000; }
+
+    // Generate last 24 Sundays
+    const sundays = [];
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay()); // back to last Sunday
+    for (let i = 0; i < 24; i++) {
+      sundays.push(d.toISOString().split('T')[0]);
+      d.setDate(d.getDate() - 7);
+    }
+
+    const expCats = ['Food','Water','Fruits','Sugar','Media','Transport'];
+    let seeded = 0;
+    for (const date of sundays) {
+      const m = rnd(80000, 250000), a = rnd(40000, 150000), t = rnd(120000, 400000);
+      const ev = rnd(10000, 50000);
+      const c = calcFin(m, a, t);
+      try {
+        await run(`
+          INSERT INTO finance_daily_records
+            (record_date,morning_offering,afternoon_offering,total_tithes,
+             evangelism_offering,total_income,mission_fund,remaining_after_mission,
+             bishop_fund,usable_church_funds,status,created_by,notes)
+          VALUES (?,?,?,?,?,?,?,?,?,?,'approved',?,'Auto-seeded sample record')
+        `, [date, m, a, t, ev, c.total, c.mission, c.remaining, c.bishop, c.usable, userId]);
+        const rec = await get('SELECT id FROM finance_daily_records WHERE record_date=?', [date]);
+        if (rec) {
+          const numExp = Math.floor(Math.random()*3)+1;
+          for (let e=0; e<numExp; e++) {
+            const cat = expCats[Math.floor(Math.random()*expCats.length)];
+            await run(`INSERT INTO finance_expenses (record_id,category,amount,description) VALUES (?,?,?,?)`,
+              [rec.id, cat, rnd(5000,40000), `${cat} for Sunday service`]);
+          }
+        }
+        seeded++;
+      } catch (_) { /* skip duplicate dates */ }
+    }
+    if (seeded > 0) console.log(`Finance seed: inserted ${seeded} sample records.`);
+  } catch (e) {
+    console.warn('Finance seed skipped:', e.message);
+  }
+}
+
 // Start server
 let server = null;
 async function startServer() {
@@ -961,6 +1022,7 @@ async function startServer() {
     console.log('Performance & Recognition Center schema ready');
 
     await initializeUsers();
+    await seedFinanceRecords();
     await generateNotifications();
     setInterval(generateNotifications, 24 * 60 * 60 * 1000);
     startScheduler();
