@@ -251,28 +251,50 @@ const Layout = ({ children, showNav = true }) => {
       ]},
     ],
     leader: [
-      { section: 'MAIN', items: [
+      { section: 'DASHBOARD', items: [
         { path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-        { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
-        { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
+      ]},
+      { section: 'MY WORK', items: [
         { path: '/leader/members', label: 'My Members', icon: Users },
+        { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
         { path: '/leader/home-cells', label: 'Home Cell Members', icon: Home },
+      ]},
+      { section: 'OUTREACH', items: [
         { path: '/leader/outreach', label: 'Outreach', icon: MessageSquare },
+      ]},
+      { section: 'REPORTS', items: [
         { path: '/leader/history', label: 'History', icon: Clock },
         { path: '/leader/contributions', label: 'Contributions', icon: DollarSign },
         { path: '/leader/reports', label: 'Reports', icon: BarChart3 },
-        ...(user?.is_head ? [{ path: '/leader/overview', label: 'Section Overview', icon: Eye }] : []),
-        ...(user?.is_new_member_leader ? [{ path: '/leader/new-members', label: 'New Members', icon: UserPlus }] : []),
+      ]},
+      ...(user?.is_head ? [
+        { section: 'SECTION MANAGEMENT', items: [
+          { path: '/leader/overview', label: 'Section Overview', icon: Eye },
+        ]}
+      ] : []),
+      ...(user?.is_new_member_leader ? [
+        { section: 'NEW MEMBERS', items: [
+          { path: '/leader/new-members', label: 'New Members', icon: UserPlus },
+        ]}
+      ] : []),
+      { section: 'ACCOUNT', items: [
+        { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
       ]},
     ],
     evangelist: [
+      { section: 'DASHBOARD', items: [
+        { path: '/evangelist', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+      ]},
       { section: 'EVANGELISM', items: [
-        { path: '/evangelist', label: 'Evangelism Dashboard', icon: Heart, exact: true },
         { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
         { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
         { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },
-        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
         { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
+      ]},
+      { section: 'TEAM', items: [
+        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
+      ]},
+      { section: 'REPORTS', items: [
         { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
       ]},
       { section: 'ACCOUNT', items: [
@@ -281,9 +303,10 @@ const Layout = ({ children, showNav = true }) => {
       ]},
     ],
     pastor: [
-      { section: 'MAIN', items: [
+      { section: 'DASHBOARD', items: [
         { path: '/pastor', label: 'Overview', icon: LayoutDashboard, exact: true },
-        { path: '/pastor/calendar', label: 'Calendar', icon: Calendar },
+      ]},
+      { section: 'PASTORAL CARE', items: [
         { path: '/pastor/insights', label: 'Insights', icon: Activity },
         { path: '/pastor/engagement', label: 'Engagement', icon: MessageSquare },
         { path: '/pastor/weekly', label: 'Weekly Summary', icon: Calendar },
@@ -293,15 +316,17 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/evangelist', label: 'Evangelism Dashboard', icon: Heart, exact: true },
         { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
         { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
-        { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },
-        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
         { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
-        { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
+      ]},
+      { section: 'ACCOUNT', items: [
+        { path: '/pastor/calendar', label: 'Calendar', icon: Calendar },
       ]},
     ],
     accountant: [
-      { section: 'ACCOUNTING', items: [
+      { section: 'DASHBOARD', items: [
         { path: '/accountant', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+      ]},
+      { section: 'FINANCE', items: [
         { path: '/accountant/finance', label: 'Finance Module', icon: Banknote },
         { path: '/accountant/analytics', label: 'Analytics', icon: BarChart3 },
       ]},
@@ -315,17 +340,22 @@ const Layout = ({ children, showNav = true }) => {
     if (user?.role === 'leader' && user?.is_new_member_leader) {
       return [
         {
-          section: 'NEW MEMBERS',
+          section: 'DASHBOARD',
           items: [
             { path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+          ]
+        },
+        {
+          section: 'NEW MEMBERS',
+          items: [
             { path: '/leader/new-members', label: 'New Members', icon: UserPlus },
             { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
-            { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
           ]
         },
         {
           section: 'ACCOUNT',
           items: [
+            { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
             { path: '/leader/settings', label: 'Settings', icon: Settings },
           ]
         }
