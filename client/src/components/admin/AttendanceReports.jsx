@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   BarChart3, TrendingUp, TrendingDown, Users, AlertTriangle, Target,
@@ -184,6 +185,7 @@ const AttendanceReports = ({
   overviewData, overviewLoading, serviceTypes = [],
   selectedServiceId, onServiceChange, loadOverview, onLeaderClick,
 }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [analytics, setAnalytics] = useState({});
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
@@ -1581,8 +1583,20 @@ const AttendanceReports = ({
                           <MiniMetric label="Retention" value={R(section.retention_rate)} suffix="%" tone={section.retention_rate >= 75 ? 'green' : section.retention_rate >= 55 ? 'amber' : 'red'} />
                           <MiniMetric label="Follow-up" value={R(section.follow_up_rate)} suffix="%" tone={section.follow_up_rate >= 75 ? 'green' : section.follow_up_rate >= 55 ? 'amber' : 'red'} />
                         </div>
-                        <div className="shrink-0 text-slate-400">
-                          {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        <div className="shrink-0 flex items-center gap-2">
+                          {section.id && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); navigate(`/admin/sections?profile=${section.id}`); }}
+                              className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-[10px] font-bold text-indigo-600 dark:text-indigo-300 flex items-center gap-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                              title="View full section profile"
+                            >
+                              <Layers className="w-3 h-3" /> View Profile
+                            </button>
+                          )}
+                          <div className="text-slate-400">
+                            {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                          </div>
                         </div>
                       </button>
 

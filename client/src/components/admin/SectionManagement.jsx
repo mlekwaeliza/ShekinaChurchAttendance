@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Layers, Plus, Pencil, Trash2, Users, UserCog, Search, Layout, ChevronRight, Building2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Layers, Plus, Pencil, Trash2, Users, UserCog, Search, Layout, ChevronRight, Building2, BarChart2 } from 'lucide-react';
 import Modal from '../ui/Modal';
 import { fdate, fdatetime } from '../../utils/date';
 
@@ -29,6 +30,7 @@ const SectionManagement = ({
   onViewMembers,
   loading = false,
 }) => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
   const openNewSectionModal = () => {
@@ -199,19 +201,31 @@ const SectionManagement = ({
                   {/* View Buttons */}
                   <div className="flex flex-col gap-2">
                     <button
-                      onClick={() => onViewMembers(section.name)}
-                      className={`w-full flex items-center justify-between px-4 py-2 rounded-xl border ${colors.border} ${colors.light} hover:shadow-md transition-all group/btn`}
+                      type="button"
+                      onClick={() => navigate(`/admin/sections?profile=${section.id}`)}
+                      className="w-full flex items-center justify-between px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-xs shadow-sm hover:shadow-md hover:from-violet-700 hover:to-indigo-700 transition-all group/btn"
                     >
-                      <span className={`text-sm font-medium ${colors.text}`}>View Members</span>
-                      <ChevronRight className={`w-4 h-4 ${colors.text} group-hover/btn:translate-x-0.5 transition-transform`} />
+                      <span className="inline-flex items-center gap-1.5"><BarChart2 className="w-3.5 h-3.5" /> View Section Profile</span>
+                      <ChevronRight className="w-4 h-4 text-white/80 group-hover/btn:translate-x-0.5 transition-transform" />
                     </button>
-                    <button
-                      onClick={() => onViewLeaders(section.name)}
-                      className={`w-full flex items-center justify-between px-4 py-2 rounded-xl border ${colors.border} ${colors.light} hover:shadow-md transition-all group/btn`}
-                    >
-                      <span className={`text-sm font-medium ${colors.text}`}>View Leaders</span>
-                      <ChevronRight className={`w-4 h-4 ${colors.text} group-hover/btn:translate-x-0.5 transition-transform`} />
-                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onViewMembers(section.name)}
+                        className={`flex items-center justify-between px-3 py-1.5 rounded-xl border ${colors.border} ${colors.light} hover:shadow-sm transition-all group/btn`}
+                      >
+                        <span className={`text-xs font-medium ${colors.text}`}>Members</span>
+                        <ChevronRight className={`w-3.5 h-3.5 ${colors.text}`} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onViewLeaders(section.name)}
+                        className={`flex items-center justify-between px-3 py-1.5 rounded-xl border ${colors.border} ${colors.light} hover:shadow-sm transition-all group/btn`}
+                      >
+                        <span className={`text-xs font-medium ${colors.text}`}>Leaders</span>
+                        <ChevronRight className={`w-3.5 h-3.5 ${colors.text}`} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

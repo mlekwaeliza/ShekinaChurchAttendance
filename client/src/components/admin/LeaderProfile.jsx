@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminAPI, analyticsAPI } from '../../services/api';
 import { fdate, fdatetime } from '../../utils/date';
 import {
   ArrowLeft, Phone, Mail, Users, Calendar, TrendingUp, Award, Clock,
   UserCheck, UserX, Activity, Target, ChevronRight, Loader2, AlertTriangle,
-  Crown, ClipboardList, Flame, CheckCircle2
+  Crown, ClipboardList, Flame, CheckCircle2, Layers
 } from 'lucide-react';
 
 const asArray = (v) => Array.isArray(v) ? v : [];
@@ -19,6 +20,7 @@ const SUBTABS = [
 ];
 
 const LeaderProfile = ({ leaderId, onBack, allMembers = [] }) => {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -93,7 +95,14 @@ const LeaderProfile = ({ leaderId, onBack, allMembers = [] }) => {
             <div>
               <h1 className="text-xl font-bold">{leader.full_name}</h1>
               <div className="flex items-center gap-3 mt-1 text-sm text-indigo-100">
-                <span className="inline-flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {leader.section_name}</span>
+                <button
+                  type="button"
+                  onClick={() => leader.section_id && navigate(`/admin/sections?profile=${leader.section_id}`)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/15 hover:bg-white/25 transition-colors cursor-pointer text-indigo-100 font-semibold"
+                  title="View Section Profile"
+                >
+                  <Layers className="w-3.5 h-3.5" /> {leader.section_name}
+                </button>
                 {leader.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> {leader.phone}</span>}
                 {leader.email && <span className="inline-flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> {leader.email}</span>}
               </div>

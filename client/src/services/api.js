@@ -135,6 +135,7 @@ export const adminAPI = {
     params: { filterType, filterValue, service_id: serviceId, fallback_latest: true } 
   }),
   getLeaderDashboard: (id) => api.get(`/admin/leader-dashboard/${id}`),
+  getSectionDashboard: (id) => api.get(`/admin/section-dashboard/${id}`),
   submitAttendance: (date, attendance, leader_id, section_id) => api.post('/admin/attendance', { date, attendance, leader_id, section_id }),
   getMissingSubmissions: (date, service_id = 1) => api.get('/admin/attendance/missing-submissions', { params: { date, service_id } }),
   getLeaderMembers: (leaderId, date, service_id = 1) => api.get(`/admin/attendance/leader-members/${leaderId}`, { params: { date, service_id } }),

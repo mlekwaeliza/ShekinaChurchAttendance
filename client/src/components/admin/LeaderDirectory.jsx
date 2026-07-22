@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UserCog, Phone, AtSign, Eye, Plus, Pencil, Trash2, Search, Shield, Users, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import Badge from '../ui/Badge';
 
@@ -37,6 +38,7 @@ const LeaderDirectory = ({
   onEdit,
   onDelete
 }) => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [collapsedSections, setCollapsedSections] = useState(new Set());
   const [expandedLeaderRosters, setExpandedLeaderRosters] = useState(new Set());
@@ -216,6 +218,19 @@ const LeaderDirectory = ({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {sectionIdx >= 0 && sections?.[sectionIdx] && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/sections?profile=${sections[sectionIdx].id}`);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs flex items-center gap-1 transition-all"
+                        title="View Section Profile"
+                      >
+                        <Layers className="w-3 h-3 text-violet-500" /> View Section
+                      </button>
+                    )}
                     {isCollapsed ? (
                       <ChevronDown className={`w-4 h-4 ${style.text} transition-transform`} />
                     ) : (

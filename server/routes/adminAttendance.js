@@ -421,6 +421,83 @@ router.get('/aggregated-overview', async (req, res) => {
   }
 });
 
+// GET comprehensive details for a specific section dashboard (Admin Section Drill-Down)
+router.get('/section-dashboard/:id', async (req, res) => {
+  try {
+    const sectionId = Number(req.params.id);
+    if (!sectionId) return res.status(400).json({ error: 'Invalid section ID' });
+
+    const section = await new Promise((resolve, reject) => {
+      db.get('SELECT * FROM sections WHERE id = ?', [sectionId], (err, row) => err ? reject(err) : resolve(row));
+    });
+    if (!section) return res.status(404).json({ error: 'Section not found' });
+
+    const trendStart = formatLocalDate(addDays(new Date(), -90));
+
+    const [members, leaders, trends, submissions] = await Promise.all([
+      // Members in section
+      new Promise((resolve, reject) => {
+        db.all(
+          `SELECT m.*, u.full_name as leader_name
+           FROM members m
+           LEFT JOIN leaders l ON m.leader_id = l.id
+           LEFT JOIN users u ON l.user_id = u.id
+           WHERE m.section_id = ? AND m.soft_deleted_at IS NULL
+           ORDER BY m.is_active DESC, m.full_name`,
+          [sectionId], (err, rows) => err ? reject(err) : resolve(rows)
+        );
+      }),
+      // Leaders in section
+      new Promise((resolve, reject) => {
+        db.all(
+          `SELECT l.*, u.full_name, u.email as user_email
+           FROM leaders l
+           JOIN users u ON l.user_id = u.id
+           WHERE l.section_id = ? AND l.is_active = 1
+           ORDER BY l.is_head DESC, u.full_name`,
+          [sectionId], (err, rows) => err ? reject(err) : resolve(rows)
+        );
+      }),
+      // 90-day attendance trends (whole section)
+      new Promise((resolve, reject) => {
+        db.all(
+          `SELECT date,
+                  SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_count,
+                  SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_count,
+                  SUM(CASE WHEN status = 'excused' THEN 1 ELSE 0 END) as excused_count
+           FROM attendance
+           WHERE member_id IN (SELECT id FROM members WHERE section_id = ?)
+             AND date >= ?
+           GROUP BY date
+           ORDER BY date ASC`,
+          [sectionId, trendStart], (err, rows) => err ? reject(err) : resolve(rows)
+        );
+      }),
+      // Submission history
+      new Promise((resolve, reject) => {
+        db.all(
+          `SELECT sl.date, sl.created_at as submitted_at, u.full_name as leader_name,
+                  COUNT(a.id) as records_count
+           FROM submission_log sl
+           JOIN leaders l ON sl.leader_id = l.id
+           JOIN users u ON l.user_id = u.id
+           LEFT JOIN attendance a ON sl.date = a.date AND a.member_id IN (SELECT id FROM members WHERE section_id = ?)
+           WHERE l.section_id = ?
+           GROUP BY sl.id, sl.date, sl.created_at, u.full_name
+           ORDER BY sl.date DESC, sl.created_at DESC
+           LIMIT 40`,
+          [sectionId, sectionId], (err, rows) => err ? reject(err) : resolve(rows)
+        );
+      }),
+    ]);
+
+    res.json({ section, members, leaders, trends, submissions });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch section dashboard' });
+  }
+});
+
 // GET comprehensive details for a specific leader dashboard (Admin Drill-Down)
 router.get('/leader-dashboard/:id', async (req, res) => {
   try {
