@@ -353,6 +353,7 @@ const RewardsView = () => {
   const [profileDetail, setProfileDetail] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState(false);
+  const [profileErrorMessage, setProfileErrorMessage] = useState('');
   const [awarding, setAwarding] = useState(false);
   const [memberFilter, setMemberFilter] = useState('all');
   const [familyFilter, setFamilyFilter] = useState('all');
@@ -371,7 +372,7 @@ const RewardsView = () => {
     setProfileDetail(null);
     adminAPI.getPerformanceProfile(selectedProfile.type, selectedProfile.item.id, filter)
       .then(res => setProfileDetail(res.data))
-      .catch(() => { setProfileDetail(null); setProfileError(true); })
+      .catch((err) => { setProfileDetail(null); setProfileError(true); setProfileErrorMessage(err?.response?.data?.error || err?.message || 'Unknown error'); })
       .finally(() => setProfileLoading(false));
   }, [selectedProfile, filter]);
 
@@ -1105,7 +1106,7 @@ const RewardsView = () => {
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 200, gap: 12 }}>
                   <AlertCircle size={32} color="#F87171" />
-                  <p style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>Failed to load profile. This member may not have attendance data for the selected period.</p>
+                  <p style={{ color: '#F87171', fontSize: 13, textAlign: 'center' }}>{profileErrorMessage || 'Failed to load profile. This member may not have attendance data for the selected period.'}</p>
                 </div>
               </div>
             </div>
