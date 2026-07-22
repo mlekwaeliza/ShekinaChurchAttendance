@@ -702,62 +702,13 @@ const RiskTab = ({ data }) => {
                 <div className="w-8 h-8 rounded-full bg-rose-200 dark:bg-rose-800 flex items-center justify-center text-xs font-bold text-rose-700">{m.full_name?.charAt(0)}</div>
                 <div><p className="text-xs font-medium text-slate-900 dark:text-white truncate">{m.full_name}</p><p className="text-[10px] text-slate-500">{m.section_name} | {m.present_count}/{m.total_services} services</p></div>
               </div>
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-4">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Day of Week Attendance Patterns</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={patternChart} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} />
-              <Tooltip formatter={(v) => [`${v}%`, 'Rate']} />
-              <Bar dataKey="rate" name="Avg Rate" radius={[6, 6, 0, 0]}>
-                {patternChart.map((entry, i) => <Cell key={i} fill={C[i % C.length]} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-      {trends.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Attendance Trend Data</h3>
-          </div>
-          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-            <table className="min-w-full text-sm">
-              <thead className="sticky top-0 bg-white dark:bg-slate-800">
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  {['Date','Rate','4-Week MA','8-Week MA','Status'].map(h => (
-                    <th key={h} className={`py-2.5 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Date' ? 'text-left' : 'text-right'}`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {trends.slice(-90).reverse().map((t, i) => {
-                  const ma4 = t.ma_4week || 0;
-                  const ma8 = t.ma_8week || 0;
-                  const trend = ma4 > ma8 ? 'Improving' : ma4 < ma8 ? 'Declining' : 'Stable';
-                  return (
-                    <tr key={i} className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                      <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">{fdate(t.date)}</td>
-                      <td className="py-2 px-3 text-right font-bold">{R(t.daily_rate)}%</td>
-                      <td className="py-2 px-3 text-right text-emerald-600">{R(ma4)}%</td>
-                      <td className="py-2 px-3 text-right text-amber-600">{R(ma8)}%</td>
-                      <td className="py-2 px-3 text-right">
-                        <Badge variant={trend === 'Improving' ? 'success' : trend === 'Declining' ? 'danger' : 'default'}>{trend}</Badge>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            ))}
           </div>
         </div>
       )}
     </div>
   );
 };
-
-
 
 const COLOR_THEMES = {
   indigo: { bg: 'bg-indigo-100 dark:bg-indigo-900/30', text: 'text-indigo-600 dark:text-indigo-400', fill: 'bg-indigo-500' },
@@ -802,36 +753,34 @@ const FinanceTab = ({ data }) => {
 
   const isBaseline = !rawIncome && rawMonthly.length === 0;
 
-  const totalIncome = !isBaseline ? rawIncome : 12153000;
-  const totalTithes = !isBaseline ? rawTithes : 6165000;
-  const totalUsable = !isBaseline ? rawUsable : 9843930;
-  const totalExpenses = !isBaseline ? rawExpensesTotal : 1085000;
-  const totalMission = !isBaseline ? rawMission : 1215300;
-  const totalBishop = !isBaseline ? rawBishop : 1093770;
+  const totalIncome = !isBaseline ? rawIncome : 14850000;
+  const totalTithes = !isBaseline ? rawTithes : 7420000;
+  const totalUsable = !isBaseline ? rawUsable : 12028500;
+  const totalExpenses = !isBaseline ? rawExpensesTotal : 3150000;
+  const totalMission = !isBaseline ? rawMission : 1485000;
+  const totalBishop = !isBaseline ? rawBishop : 1336500;
 
   const monthly = !isBaseline ? rawMonthly : [
-    { name: 'Feb', Income: 1756000, Tithes: 910000, Usable: 1422360, Mission: 175600, Bishop: 158040 },
-    { name: 'Mar', Income: 2338000, Tithes: 1180000, Usable: 1893780, Mission: 233800, Bishop: 210420 },
-    { name: 'Apr', Income: 1780000, Tithes: 890000, Usable: 1441800, Mission: 178000, Bishop: 160200 },
-    { name: 'May', Income: 2441000, Tithes: 1210000, Usable: 1977210, Mission: 244100, Bishop: 219690 },
-    { name: 'Jun', Income: 2302000, Tithes: 1170000, Usable: 1864620, Mission: 230200, Bishop: 207180 },
-    { name: 'Jul', Income: 1536000, Tithes: 805000, Usable: 1244160, Mission: 153600, Bishop: 138240 },
+    { name: 'Feb', Income: 2100000, Tithes: 1050000, Usable: 1700000, Mission: 210000, Bishop: 189000 },
+    { name: 'Mar', Income: 2450000, Tithes: 1200000, Usable: 1980000, Mission: 245000, Bishop: 220000 },
+    { name: 'Apr', Income: 2200000, Tithes: 1100000, Usable: 1780000, Mission: 220000, Bishop: 198000 },
+    { name: 'May', Income: 2680000, Tithes: 1340000, Usable: 2170000, Mission: 268000, Bishop: 241000 },
+    { name: 'Jun', Income: 2520000, Tithes: 1260000, Usable: 2040000, Mission: 252000, Bishop: 226000 },
+    { name: 'Jul', Income: 2900000, Tithes: 1470000, Usable: 2350000, Mission: 290000, Bishop: 261000 },
   ];
 
   const expenses = !isBaseline ? rawExpenses : [
-    { category: 'Water & Utilities', total: 345000 },
-    { category: 'Media & Sound', total: 285000 },
-    { category: 'Transport', total: 215000 },
-    { category: 'Food & Refreshments', total: 140000 },
-    { category: 'Visitors & Support', total: 100000 },
+    { category: 'Transport', total: 950000 },
+    { category: 'Media & Tech', total: 720000 },
+    { category: 'Hospitality & Food', total: 650000 },
+    { category: 'Utilities & Water', total: 480000 },
+    { category: 'Visitors & Support', total: 350000 },
   ];
 
-  const expTotalSum = expenses.reduce((s, e) => s + (Number(e.total) || 0), 0);
-
   const statusBreakdown = !isBaseline ? rawStatusBreakdown : [
-    { status: 'approved', count: 24 },
-    { status: 'submitted', count: 0 },
-    { status: 'draft', count: 0 },
+    { status: 'approved', count: 18 },
+    { status: 'submitted', count: 4 },
+    { status: 'draft', count: 2 },
   ];
 
   const fmtK = v => {
@@ -850,11 +799,12 @@ const FinanceTab = ({ data }) => {
           <span>Executive Financial Intelligence Engine</span>
         </div>
         {isBaseline && (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/60 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Verified Financial Intelligence
+          <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/60">
+            📊 Baseline Projections Mode (Submit daily records in Finance view to auto-sync live)
           </span>
         )}
       </div>
+
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {[
           { label: 'Total Income', value: totalIncome, color: 'indigo', icon: DollarSign },
@@ -878,6 +828,7 @@ const FinanceTab = ({ data }) => {
           );
         })}
       </div>
+
       {monthly.length > 0 && (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
@@ -912,60 +863,30 @@ const FinanceTab = ({ data }) => {
           </ResponsiveContainer>
         </div>
       )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {expenses.length > 0 && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5 flex flex-col justify-between">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-rose-500" />
               Expense Category Breakdown
             </h3>
-            <div className="flex flex-col sm:flex-row items-center gap-4 py-2">
-              <div className="relative w-44 h-44 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expenses}
-                      dataKey="total"
-                      nameKey="category"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={48}
-                      outerRadius={72}
-                      paddingAngle={4}
-                      label={false}
-                    >
-                      {expenses.map((_, i) => (
-                        <Cell key={i} fill={C[i % C.length]} strokeWidth={0} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={v => fmt(v)} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                  <span className="text-[10px] uppercase font-semibold text-slate-400">Total</span>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">TZS {fmtK(expTotalSum)}</span>
-                </div>
-              </div>
-              <div className="flex-1 w-full space-y-2 text-xs">
-                {expenses.map((e, i) => {
-                  const pct = expTotalSum > 0 ? Math.round((e.total / expTotalSum) * 100) : 0;
-                  return (
-                    <div key={e.category} className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: C[i % C.length] }} />
-                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate">{e.category}</span>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">{fmtK(e.total)}</span>
-                        <span className="text-slate-400 text-[10px] ml-1.5">({pct}%)</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={expenses} dataKey="total" nameKey="category"
+                  cx="50%" cy="50%" innerRadius={55} outerRadius={95}
+                  paddingAngle={3}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false}>
+                  {expenses.map((_, i) => <Cell key={i} fill={C[i % C.length]} />)}
+                </Pie>
+                <Tooltip formatter={v => fmt(v)} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         )}
+
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <DollarSign className="w-4 h-4 text-indigo-500" />
@@ -994,6 +915,7 @@ const FinanceTab = ({ data }) => {
           })}
         </div>
       </div>
+
       {monthly.length > 0 && (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
@@ -1013,6 +935,7 @@ const FinanceTab = ({ data }) => {
           </ResponsiveContainer>
         </div>
       )}
+
       {statusBreakdown.length > 0 && (
         <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">Record Status Breakdown ({fd.year || new Date().getFullYear()})</h3>
