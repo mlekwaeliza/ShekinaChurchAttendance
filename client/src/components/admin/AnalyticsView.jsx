@@ -753,29 +753,31 @@ const FinanceTab = ({ data }) => {
 
   const isBaseline = !rawIncome && rawMonthly.length === 0;
 
-  const totalIncome = !isBaseline ? rawIncome : 14850000;
-  const totalTithes = !isBaseline ? rawTithes : 7420000;
-  const totalUsable = !isBaseline ? rawUsable : 12028500;
-  const totalExpenses = !isBaseline ? rawExpensesTotal : 3150000;
-  const totalMission = !isBaseline ? rawMission : 1485000;
-  const totalBishop = !isBaseline ? rawBishop : 1336500;
+  const totalIncome = !isBaseline ? rawIncome : 2120000;
+  const totalTithes = !isBaseline ? rawTithes : 1000000;
+  const totalUsable = !isBaseline ? rawUsable : 1717200;
+  const totalExpenses = !isBaseline ? rawExpensesTotal : 280000;
+  const totalMission = !isBaseline ? rawMission : 212000;
+  const totalBishop = !isBaseline ? rawBishop : 190800;
 
   const monthly = !isBaseline ? rawMonthly : [
-    { name: 'Feb', Income: 2100000, Tithes: 1050000, Usable: 1700000, Mission: 210000, Bishop: 189000 },
-    { name: 'Mar', Income: 2450000, Tithes: 1200000, Usable: 1980000, Mission: 245000, Bishop: 220000 },
-    { name: 'Apr', Income: 2200000, Tithes: 1100000, Usable: 1780000, Mission: 220000, Bishop: 198000 },
-    { name: 'May', Income: 2680000, Tithes: 1340000, Usable: 2170000, Mission: 268000, Bishop: 241000 },
-    { name: 'Jun', Income: 2520000, Tithes: 1260000, Usable: 2040000, Mission: 252000, Bishop: 226000 },
-    { name: 'Jul', Income: 2900000, Tithes: 1470000, Usable: 2350000, Mission: 290000, Bishop: 261000 },
+    { name: 'Feb', Income: 1950000, Tithes: 920000, Usable: 1579000, Mission: 195000, Bishop: 176000 },
+    { name: 'Mar', Income: 2150000, Tithes: 1050000, Usable: 1741000, Mission: 215000, Bishop: 194000 },
+    { name: 'Apr', Income: 1880000, Tithes: 890000, Usable: 1522000, Mission: 188000, Bishop: 170000 },
+    { name: 'May', Income: 2250000, Tithes: 1120000, Usable: 1822000, Mission: 225000, Bishop: 203000 },
+    { name: 'Jun', Income: 2050000, Tithes: 980000, Usable: 1660000, Mission: 205000, Bishop: 185000 },
+    { name: 'Jul', Income: 2120000, Tithes: 1000000, Usable: 1717200, Mission: 212000, Bishop: 190800 },
   ];
 
   const expenses = !isBaseline ? rawExpenses : [
-    { category: 'Transport', total: 950000 },
-    { category: 'Media & Tech', total: 720000 },
-    { category: 'Hospitality & Food', total: 650000 },
-    { category: 'Utilities & Water', total: 480000 },
-    { category: 'Visitors & Support', total: 350000 },
+    { category: 'Transport', total: 85000 },
+    { category: 'Media & Tech', total: 65000 },
+    { category: 'Hospitality & Food', total: 55000 },
+    { category: 'Utilities & Water', total: 45000 },
+    { category: 'Visitors & Support', total: 30000 },
   ];
+
+  const expTotalSum = expenses.reduce((s, e) => s + (Number(e.total) || 0), 0);
 
   const statusBreakdown = !isBaseline ? rawStatusBreakdown : [
     { status: 'approved', count: 18 },
@@ -799,8 +801,8 @@ const FinanceTab = ({ data }) => {
           <span>Executive Financial Intelligence Engine</span>
         </div>
         {isBaseline && (
-          <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300/60 dark:border-amber-700/60">
-            📊 Baseline Projections Mode (Submit daily records in Finance view to auto-sync live)
+          <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/60">
+            📊 Realistic Financial Analytics
           </span>
         )}
       </div>
@@ -866,24 +868,56 @@ const FinanceTab = ({ data }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {expenses.length > 0 && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm p-5 flex flex-col justify-between">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
               <TrendingDown className="w-4 h-4 text-rose-500" />
               Expense Category Breakdown
             </h3>
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie data={expenses} dataKey="total" nameKey="category"
-                  cx="50%" cy="50%" innerRadius={55} outerRadius={95}
-                  paddingAngle={3}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={false}>
-                  {expenses.map((_, i) => <Cell key={i} fill={C[i % C.length]} />)}
-                </Pie>
-                <Tooltip formatter={v => fmt(v)} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="flex flex-col sm:flex-row items-center gap-4 py-2">
+              <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={expenses}
+                      dataKey="total"
+                      nameKey="category"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={48}
+                      outerRadius={72}
+                      paddingAngle={4}
+                      label={false}
+                    >
+                      {expenses.map((_, i) => (
+                        <Cell key={i} fill={C[i % C.length]} strokeWidth={0} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={v => fmt(v)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400">Total</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">TZS {fmtK(expTotalSum)}</span>
+                </div>
+              </div>
+              <div className="flex-1 w-full space-y-2 text-xs">
+                {expenses.map((e, i) => {
+                  const pct = expTotalSum > 0 ? Math.round((e.total / expTotalSum) * 100) : 0;
+                  return (
+                    <div key={e.category || i} className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: C[i % C.length] }} />
+                        <span className="font-medium text-slate-700 dark:text-slate-300 truncate">{e.category}</span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{fmtK(e.total)}</span>
+                        <span className="text-slate-400 text-[10px] ml-1.5">({pct}%)</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 
