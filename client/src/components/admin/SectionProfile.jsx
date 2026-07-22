@@ -7,6 +7,7 @@ import {
   Activity, Target, Loader2, AlertTriangle, Flame,
   CheckCircle2, UserCheck, Phone, Mail, Calendar,
   ClipboardList, ChevronRight, Shield, Search, BarChart2
+} from 'lucide-react';
 import WeeklyAttendanceMatrix from './WeeklyAttendanceMatrix';
 
 const asArray = (v) => Array.isArray(v) ? v : [];
