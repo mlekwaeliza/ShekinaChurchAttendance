@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { adminAPI } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { PDFReportGenerator } from '../utils/pdfReportGenerator';
 import Badge from '../components/ui/Badge';
 import { BarChart3, Download, FileText, Users, Calendar, TrendingUp, Heart, Baby, Home, DollarSign, Filter, RefreshCw } from 'lucide-react';
 
@@ -68,6 +69,52 @@ export default function ExecutiveReportingCenter() {
     }
   };
 
+  const handlePDFExport = () => {
+    if (!reportData) {
+      showToast('No data to export', 'error');
+      return;
+    }
+
+    try {
+      const generator = new PDFReportGenerator();
+      
+      switch (activeReport) {
+        case 'attendance':
+          generator.generateAttendanceReport(reportData);
+          break;
+        case 'membership':
+          generator.generateMembershipReport(reportData);
+          break;
+        case 'finance':
+          generator.generateFinanceReport(reportData);
+          break;
+        case 'leadership':
+          generator.generateLeadershipReport(reportData);
+          break;
+        case 'evangelism':
+          generator.generateEvangelismReport(reportData);
+          break;
+        case 'newMembers':
+          generator.generateNewMembersReport(reportData);
+          break;
+        case 'children':
+          generator.generateChildrenReport(reportData);
+          break;
+        case 'homeCells':
+          generator.generateHomeCellsReport(reportData);
+          break;
+        default:
+          generator.generateAttendanceReport(reportData);
+      }
+      
+      generator.save(`${activeReport}_report_${startDate}_to_${endDate}.pdf`);
+      showToast('PDF exported successfully', 'success');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      showToast('Failed to export PDF', 'error');
+    }
+  };
+
   const renderStatCard = (label, value, subtitle, color = 'slate') => (
     <div className="card p-4">
       <p className="text-sm text-slate-500">{label}</p>
@@ -110,8 +157,11 @@ export default function ExecutiveReportingCenter() {
           <button onClick={loadReport} className="btn-secondary flex items-center gap-2" disabled={loading}>
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
-          <button onClick={handleExport} className="btn-primary flex items-center gap-2" disabled={exporting}>
+          <button onClick={handleExport} className="btn-secondary flex items-center gap-2" disabled={exporting}>
             <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={handlePDFExport} className="btn-primary flex items-center gap-2">
+            <FileText className="w-4 h-4" /> Export PDF
           </button>
         </div>
       </div>

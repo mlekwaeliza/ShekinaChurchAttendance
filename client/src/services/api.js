@@ -258,6 +258,15 @@ export const adminAPI = {
     getHomeCells: (params = {}) => api.get('/admin/reports/home-cells', { params }),
     getChildren: (params = {}) => api.get('/admin/reports/children', { params }),
   },
+  // Audit Trail
+  auditTrail: {
+    get: (params = {}) => api.get('/admin/audit-trail', { params }),
+    getActivitySummary: (days = 30) => api.get('/admin/audit-trail/activity-summary', { params: { days } }),
+    getUserActivity: (userId, params = {}) => api.get(`/admin/audit-trail/user/${userId}`, { params }),
+    getEntityActivity: (entityType, entityId) => api.get(`/admin/audit-trail/entity/${entityType}/${entityId}`),
+    logAction: (data) => api.post('/admin/audit-trail', data),
+    export: (params = {}) => api.get('/admin/audit-trail/export', { params }),
+  },
 };
 
 // Shared church calendar API
