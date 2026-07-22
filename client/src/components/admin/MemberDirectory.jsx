@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
-import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock, Award, Plus, X as XIcon } from 'lucide-react';
+import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock, Award, Plus, X as XIcon, UserCheck, Crown } from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
 import { fdatetime } from '../../utils/date';
@@ -35,6 +36,8 @@ const MemberDirectory = ({
   onLeaderFilterChange,
   loading = false,
 }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'all');
   const [searchTerm, setSearchTerm] = useState('');
   const [localSectionFilter, setLocalSectionFilter] = useState('');
 
@@ -326,12 +329,48 @@ const MemberDirectory = ({
             <Users className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">Members</h2>
+            <h2 className="text-xl font-bold">People</h2>
             <p className="text-sm text-white/80">
               {loading ? 'Loading members...' : `${allMembers.length} members · ${sections.length} sections`}
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="border-b border-slate-200 dark:border-slate-700">
+        <nav className="flex gap-1 -mb-px overflow-x-auto">
+          {[
+            { id: 'all', label: 'All Members', icon: Users },
+            { id: 'new', label: 'New Members', icon: UserPlus },
+            { id: 'leadership', label: 'Leadership', icon: Crown },
+            { id: 'titles', label: 'Titles', icon: Award },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id !== 'all') {
+                    setSearchParams({ tab: tab.id });
+                  } else {
+                    setSearchParams({});
+                  }
+                }}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'border-rose-500 text-rose-600 dark:text-rose-400 dark:border-rose-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:border-slate-600'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
       <div className="flex w-full flex-wrap items-center justify-end gap-2">

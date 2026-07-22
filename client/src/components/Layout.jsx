@@ -6,6 +6,7 @@ import useOffline from '../hooks/useOffline';
 import { BreadcrumbProvider } from '../context/BreadcrumbContext';
 import Breadcrumbs from './ui/Breadcrumbs';
 import NotificationBell from './NotificationBell';
+import SearchModal from './admin/SearchModal';
 import { authAPI } from '../services/api';
 import { useQueryClient } from '@tanstack/react-query';
 import useEventStream from '../hooks/useEventStream';
@@ -53,6 +54,10 @@ import {
   Banknote,
   Trash2,
   MapPin,
+  Send,
+  Droplets,
+  TrendingUp,
+  Crown,
 } from 'lucide-react';
 
 const Layout = ({ children, showNav = true }) => {
@@ -70,6 +75,18 @@ const Layout = ({ children, showNav = true }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileImgKey, setProfileImgKey] = useState(0);
   const [refreshingApp, setRefreshingApp] = useState(false);
+
+  // Global search keyboard shortcut (Ctrl+K or Cmd+K)
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // Live clock
   useEffect(() => {
@@ -191,43 +208,45 @@ const Layout = ({ children, showNav = true }) => {
   // Navigation structure per role
   const navConfig = {
     admin: [
-      { section: 'MAIN', items: [
+      { section: 'DASHBOARD', items: [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
       ]},
-      { section: 'MANAGEMENT', items: [
-        { path: '/admin/sections', label: 'Sections', icon: Layers },
+      { section: 'PEOPLE', items: [
         { path: '/admin/members', label: 'Members', icon: Users },
-        { path: '/admin/trash', label: 'Trash', icon: Trash2 },
-        { path: '/admin/leaders', label: 'Leaders', icon: UserCog },
-        { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
-        { path: '/admin/titles', label: 'Titles', icon: Award },
-        { path: '/admin/leadership', label: 'Leadership', icon: Users },
-        { path: '/admin/departments', label: 'Departments', icon: Building2 },
-        { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
-        { path: '/admin/finance', label: 'Finance', icon: Banknote },
+        { path: '/admin/leaders', label: 'Leadership', icon: Crown },
       ]},
-      { section: 'INSIGHTS', items: [
-        { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
-        { path: '/admin/reports', label: 'Reports', icon: FileText },
-        { path: '/admin/attendance-corrections', label: 'Edit Attendance', icon: Edit3 },
-        { path: '/admin/history', label: 'History', icon: Clock },
-        { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-        { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
-        { path: '/admin/announcements', label: 'Announcements', icon: Megaphone },
+      { section: 'CHURCH STRUCTURE', items: [
+        { path: '/admin/sections', label: 'Sections', icon: Layers },
+        { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
+        { path: '/admin/departments', label: 'Departments', icon: Building2 },
+      ]},
+      { section: 'ATTENDANCE', items: [
+        { path: '/admin/history', label: 'Attendance History', icon: Clock },
         { path: '/admin/follow-ups', label: 'Follow-ups', icon: ClipboardCheck },
-        { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
       ]},
       { section: 'EVANGELISM', items: [
         { path: '/admin/evangelism', label: 'Evangelism Dashboard', icon: Heart, exact: true },
-        { path: '/admin/evangelism', label: 'Outreach Events', icon: Calendar, search: '?subtab=outreach' },
+        { path: '/admin/evangelism', label: 'Outreach Events', icon: Send, search: '?subtab=outreach' },
         { path: '/admin/evangelism', label: 'Souls Won', icon: Users, search: '?subtab=souls' },
-        { path: '/admin/evangelism', label: 'Follow-Ups', icon: MessageSquare, search: '?subtab=follow-ups' },
-        { path: '/admin/evangelism', label: 'Evangelism Team', icon: Users, search: '?subtab=team' },
-        { path: '/admin/evangelism', label: 'Baptism', icon: Cross, search: '?subtab=baptism' },
-        { path: '/admin/evangelism', label: 'Reports', icon: BarChart3, search: '?subtab=reports' },
+        { path: '/admin/evangelism', label: 'Baptism', icon: Droplets, search: '?subtab=baptism' },
       ]},
-      { section: 'SYSTEM', items: [
-        { path: '/admin/audit', label: 'Audit Log', icon: ShieldCheck },
+      { section: 'FINANCE', items: [
+        { path: '/admin/finance', label: 'Finance', icon: Banknote },
+        { path: '/admin/contributions', label: 'Contributions', icon: DollarSign },
+      ]},
+      { section: 'REPORTS & INSIGHTS', items: [
+        { path: '/admin/reports', label: 'Reports', icon: BarChart3 },
+        { path: '/admin/analytics', label: 'Analytics', icon: TrendingUp },
+        { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
+      ]},
+      { section: 'COMMUNICATION', items: [
+        { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
+        { path: '/admin/announcements', label: 'Announcements', icon: Megaphone },
+        { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
+      ]},
+      { section: 'ADMINISTRATION', items: [
+        { path: '/admin/audit', label: 'Audit Logs', icon: ShieldCheck },
+        { path: '/admin/trash', label: 'Trash', icon: Trash2 },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
       ]},
     ],
@@ -572,6 +591,18 @@ const Layout = ({ children, showNav = true }) => {
 
           {/* Right side controls */}
           <div className="flex items-center gap-2">
+            {/* Global search */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:shadow-none dark:hover:border-primary-400/50 dark:hover:bg-primary-500/10 dark:hover:text-white"
+              title="Search (Ctrl+K)"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden md:inline text-xs font-medium">Search</span>
+              <kbd className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 rounded">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </button>
             {/* Live time */}
             <div className="hidden lg:flex items-center gap-2 text-sm text-slate-500 mr-2">
               <span className="font-medium">
@@ -661,6 +692,9 @@ const Layout = ({ children, showNav = true }) => {
           </div>
         </main>
       </div>
+      {/* Search Modal */}
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+
     </div>
       </RealtimeBridge>
   </BreadcrumbProvider>

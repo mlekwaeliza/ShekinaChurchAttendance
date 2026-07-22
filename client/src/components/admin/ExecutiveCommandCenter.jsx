@@ -9,6 +9,7 @@ import {
   UserX,
 } from 'lucide-react';
 import { STATUS, statusForScore, TrendIcon, R as Rn } from './ReportShared';
+import QuickActions from './QuickActions';
 
 const R = (v) => Math.round(Number(v) || 0);
 const pct = (v) => `${R(Number(v || 0) * 10) / 10}%`;
@@ -238,6 +239,9 @@ const ExecutiveCommandCenter = (props) => {
 
   return (
     <div className="space-y-5 animate-fade-in pb-12">
+      {/* ── Quick Actions ── */}
+      <QuickActions sections={[]} leaders={[]} showMessage={console.log} />
+
       {/* ── Church Health Score Hero ── */}
       <button type="button" onClick={() => navigate('/admin/reports')}
         className="w-full text-left rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm hover:ring-1 hover:ring-blue-200 dark:hover:ring-blue-800 hover:border-blue-300 dark:hover:border-blue-600 transition-all cursor-pointer group">

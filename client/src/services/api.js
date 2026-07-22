@@ -223,6 +223,8 @@ export const adminAPI = {
   // System health & backups
   getBackupStatus: () => api.get('/admin/backups/status'),
   getHealth: () => api.get('/health', { params: { detail: 'full' } }),
+  // Global search
+  search: (q) => api.get('/admin/search', { params: { q } }),
 };
 
 // Shared church calendar API

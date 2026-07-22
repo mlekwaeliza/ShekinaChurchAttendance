@@ -49,6 +49,20 @@ const AdminDashboard = () => {
   const data = useAdminData();
   const { setCrumbs, clearCrumbs } = useBreadcrumbs();
 
+  // Redirect old routes to new structure
+  React.useEffect(() => {
+    const redirects = {
+      'new-members': '/admin/members?tab=new',
+      'titles': '/admin/members?tab=titles',
+      'leadership': '/admin/leaders?tab=leadership',
+      'attendance-corrections': '/admin/history',
+      'attendance-dashboard': '/admin/history',
+    };
+    if (redirects[tab]) {
+      navigate(redirects[tab], { replace: true });
+    }
+  }, [tab, navigate]);
+
   // One-time migration: renumber all membership IDs to sequential numbers
   React.useEffect(() => {
     if (!localStorage.getItem('membership_ids_renumbered_shacm')) {
