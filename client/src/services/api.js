@@ -225,6 +225,27 @@ export const adminAPI = {
   getHealth: () => api.get('/health', { params: { detail: 'full' } }),
   // Global search
   search: (q) => api.get('/admin/search', { params: { q } }),
+  // Children's Ministry
+  children: {
+    getClasses: () => api.get('/admin/children/classes'),
+    createClass: (data) => api.post('/admin/children/classes', data),
+    updateClass: (id, data) => api.put(`/admin/children/classes/${id}`, data),
+    deleteClass: (id) => api.delete(`/admin/children/classes/${id}`),
+    getTeachers: () => api.get('/admin/children/teachers'),
+    createTeacher: (data) => api.post('/admin/children/teachers', data),
+    updateTeacher: (id, data) => api.put(`/admin/children/teachers/${id}`, data),
+    deleteTeacher: (id) => api.delete(`/admin/children/teachers/${id}`),
+    getChildren: (filters = {}) => api.get('/admin/children/children', { params: filters }),
+    createChild: (data) => api.post('/admin/children/children', data),
+    updateChild: (id, data) => api.put(`/admin/children/children/${id}`, data),
+    deleteChild: (id) => api.delete(`/admin/children/children/${id}`),
+    getAttendance: (filters = {}) => api.get('/admin/children/attendance', { params: filters }),
+    recordAttendance: (data) => api.post('/admin/children/attendance', data),
+    bulkAttendance: (data) => api.post('/admin/children/attendance/bulk', data),
+    getPromotions: () => api.get('/admin/children/promotions'),
+    createPromotion: (data) => api.post('/admin/children/promotions', data),
+    getDashboard: () => api.get('/admin/children/dashboard'),
+  },
 };
 
 // Shared church calendar API

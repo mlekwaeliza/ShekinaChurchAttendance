@@ -2205,6 +2205,126 @@ async function ensureEvangelismSchema() {
   }
 }
 
+// Children's Ministry tables
+async function createChildrensMinistryTables() {
+  try {
+    const idType = usePostgres ? 'SERIAL' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    const tsType = usePostgres ? 'TIMESTAMPTZ' : 'DATETIME';
+
+    await run(`
+      CREATE TABLE IF NOT EXISTS children_classes (
+        id ${idType},
+        name TEXT NOT NULL,
+        age_group TEXT,
+        description TEXT,
+        max_capacity INTEGER,
+        room_number TEXT,
+        schedule TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
+        updated_at ${tsType} DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await run(`
+      CREATE TABLE IF NOT EXISTS children_teachers (
+        id ${idType},
+        member_id INTEGER,
+        user_id INTEGER,
+        full_name TEXT NOT NULL,
+        phone TEXT,
+        email TEXT,
+        qualification TEXT,
+        background_check INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
+        updated_at ${tsType} DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await run(`
+      CREATE TABLE IF NOT EXISTS children (
+        id ${idType},
+        member_id INTEGER,
+        full_name TEXT NOT NULL,
+        date_of_birth DATE,
+        gender TEXT,
+        parent_guardian_name TEXT,
+        parent_guardian_phone TEXT,
+        parent_guardian_email TEXT,
+        emergency_contact TEXT,
+        emergency_phone TEXT,
+        medical_notes TEXT,
+        allergies TEXT,
+        class_id INTEGER,
+        age_group TEXT,
+        photo_consent INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
+        updated_at ${tsType} DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await run(`
+      CREATE TABLE IF NOT EXISTS children_class_assignments (
+        id ${idType},
+        child_id INTEGER NOT NULL,
+        class_id INTEGER NOT NULL,
+        assigned_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(child_id, class_id)
+      )
+    `);
+
+    await run(`
+      CREATE TABLE IF NOT EXISTS children_teacher_assignments (
+        id ${idType},
+        teacher_id INTEGER NOT NULL,
+        class_id INTEGER NOT NULL,
+        assigned_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(teacher_id, class_id)
+      )
+    `);
+
+    await run(`
+      CREATE TABLE IF NOT EXISTS children_attendance (
+        id ${idType},
+        child_id INTEGER NOT NULL,
+        class_id INTEGER NOT NULL,
+        date DATE NOT NULL,
+        status TEXT DEFAULT 'present'
+          CHECK(status IN ('present','absent','excused','late')),
+        checked_in_at ${tsType},
+        checked_out_at ${tsType},
+        checked_in_by INTEGER,
+        checked_out_by INTEGER,
+        notes TEXT,
+        created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(child_id, class_id, date)
+      )
+    `);
+
+    await run(`
+      CREATE TABLE IF NOT EXISTS children_promotions (
+        id ${idType},
+        child_id INTEGER NOT NULL,
+        from_class_id INTEGER,
+        to_class_id INTEGER NOT NULL,
+        promotion_date DATE NOT NULL,
+        notes TEXT,
+        created_by INTEGER,
+        created_at ${tsType} DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await run('CREATE INDEX IF NOT EXISTS idx_children_class ON children(class_id)');
+    await run('CREATE INDEX IF NOT EXISTS idx_children_dob ON children(date_of_birth)');
+    await run('CREATE INDEX IF NOT EXISTS idx_children_attendance_date ON children_attendance(date)');
+    await run('CREATE INDEX IF NOT EXISTS idx_children_attendance_child ON children_attendance(child_id)');
+  } catch (e) {
+    console.warn('Children\'s Ministry tables migration skipped (non-fatal):', e.message);
+  }
+}
+
 // Prepared statement wrappers
 const queries = {
   // Auth queries
@@ -5836,6 +5956,7 @@ module.exports = {
   usePostgres,
   ensureHomeCellSchema,
   ensureEvangelismSchema,
+  createChildrensMinistryTables,
   migrateUsersRoleConstraint,
   linkUsersToMembers
 };

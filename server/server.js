@@ -73,7 +73,7 @@ if (!fs.existsSync(financeUploadsDir)) {
   fs.mkdirSync(financeUploadsDir, { recursive: true });
 }
 
-const { queries, db, all, run, get, ensureHomeCellSchema, ensureEvangelismSchema, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
+const { queries, db, all, run, get, ensureHomeCellSchema, ensureEvangelismSchema, createChildrensMinistryTables, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
 const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const { invalidate: invalidateCache } = require('./utils/cache');
@@ -85,6 +85,7 @@ const adminInsightsRoutes = require('./routes/adminInsights');
 const adminOperationsRoutes = require('./routes/adminOperations');
 const adminPeopleRoutes = require('./routes/adminPeople');
 const adminSearchRoutes = require('./routes/adminSearch');
+const childrensMinistryRoutes = require('./routes/childrensMinistry');
 const adminSystemRoutes = require('./routes/adminSystem');
 const adminPerformanceRoutes = require('./routes/adminPerformance');
 const adminContributionsRoutes = require('./routes/adminContributions');
@@ -488,6 +489,7 @@ app.use('/api/admin', adminOperationsRoutes);
 app.use('/api/admin', adminSystemRoutes);
 app.use('/api/admin', adminPerformanceRoutes);
 app.use('/api/admin/search', adminSearchRoutes);
+app.use('/api/admin/children', childrensMinistryRoutes);
 app.use('/api/leader', leaderRoutes);
 app.use('/api/pastor', pastorRoutes);
 app.use('/api/analytics', analyticsRoutes);
@@ -1025,6 +1027,7 @@ async function startServer() {
 
     await ensureHomeCellSchema();
     await ensureEvangelismSchema();
+    await createChildrensMinistryTables();
     await migrateUsersRoleConstraint();
     await linkUsersToMembers();
     await require('./performanceEngine').ensurePerformanceSchema();

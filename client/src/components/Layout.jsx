@@ -58,6 +58,7 @@ import {
   Droplets,
   TrendingUp,
   Crown,
+  Baby,
 } from 'lucide-react';
 
 const Layout = ({ children, showNav = true }) => {
@@ -219,6 +220,9 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/sections', label: 'Sections', icon: Layers },
         { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
         { path: '/admin/departments', label: 'Departments', icon: Building2 },
+      ]},
+      { section: "CHILDREN'S MINISTRY", items: [
+        { path: '/admin/children', label: 'Children', icon: Baby },
       ]},
       { section: 'ATTENDANCE', items: [
         { path: '/admin/history', label: 'Attendance History', icon: Clock },
