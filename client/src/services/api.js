@@ -144,7 +144,7 @@ export const adminAPI = {
   getTopLeaders: (year, week) => api.get('/admin/rewards/top-leaders', { params: { year, week } }),
   getPerformanceDashboard: (filters = {}) => api.get('/admin/performance/dashboard', { params: filters }),
   updatePerformanceWeights: (weights) => api.put('/admin/performance/weights', { weights }),
-  getPerformanceProfile: (entityType, entityId, filter = 'month') => api.get(`/admin/performance/profile/${entityType}/${entityId}`, { params: { filter } }),
+  getPerformanceProfile: (entityType, entityId, filter = 'month', cancelToken) => api.get(`/admin/performance/profile/${entityType}/${entityId}`, { params: { filter }, cancelToken }),
   getPerformanceRecognition: (seasonType, seasonKey) => api.get('/admin/performance/recognition', { params: { season_type: seasonType, season_key: seasonKey } }),
   awardPerformanceSeason: (payload) => api.post('/admin/performance/award-season', payload),
   getPerformancePenalties: () => api.get('/admin/performance/penalties'),

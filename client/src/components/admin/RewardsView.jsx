@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import axios from 'axios';
 import {
   Trophy, Star, Crown, Award, TrendingUp, TrendingDown, Users,
   Church, Heart, Flame, BookOpen, Target, Settings2, ChevronRight,
@@ -370,10 +371,24 @@ const RewardsView = () => {
     setProfileLoading(true);
     setProfileError(false);
     setProfileDetail(null);
-    adminAPI.getPerformanceProfile(selectedProfile.type, selectedProfile.item.id, filter)
+    setProfileErrorMessage('');
+    const source = axios.CancelToken.source();
+    const timeout = setTimeout(() => {
+      source.cancel('Request timed out');
+    }, 45000);
+    adminAPI.getPerformanceProfile(selectedProfile.type, selectedProfile.item.id, filter, source.token)
       .then(res => setProfileDetail(res.data))
-      .catch((err) => { setProfileDetail(null); setProfileError(true); setProfileErrorMessage(err?.response?.data?.error || err?.message || 'Unknown error'); })
-      .finally(() => setProfileLoading(false));
+      .catch((err) => {
+        setProfileDetail(null);
+        setProfileError(true);
+        if (axios.isCancel(err)) {
+          setProfileErrorMessage('Request timed out. The server may be busy.');
+        } else {
+          setProfileErrorMessage(err?.response?.data?.error || err?.message || 'Unknown error');
+        }
+      })
+      .finally(() => { setProfileLoading(false); clearTimeout(timeout); });
+    return () => { clearTimeout(timeout); source.cancel('Component unmounted'); };
   }, [selectedProfile, filter]);
 
   // Close modals on Escape key
