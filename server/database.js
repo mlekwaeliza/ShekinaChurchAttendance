@@ -1909,6 +1909,10 @@ async function ensureHomeCellSchema() {
       await run('CREATE INDEX IF NOT EXISTS idx_followups_absence_date ON absent_followups(absence_date)');
       await run('CREATE INDEX IF NOT EXISTS idx_followups_created ON absent_followups(created_at)');
       await run('CREATE INDEX IF NOT EXISTS idx_visitor_intake_created ON visitor_intake(created_at)');
+      // Critical for leader profile: filter members by leader_id
+      await run('CREATE INDEX IF NOT EXISTS idx_members_leader ON members(leader_id)');
+      // Critical for leader profile: join attendance by member_id + date range
+      await run('CREATE INDEX IF NOT EXISTS idx_attendance_member_date ON attendance(member_id, date)');
     } catch (e) {
       console.warn('Additional index creation failed (non-fatal):', e.message);
     }
