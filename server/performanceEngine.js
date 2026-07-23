@@ -842,7 +842,7 @@ async function getProfile(entityType, entityId, filter, userId) {
   // Leader-specific query helpers: attendance by m.leader_id, outreach by o.leader_id
   const isLeader = entityType === 'leader';
   const attQuery = isLeader
-    ? `SELECT a.date, a.status FROM attendance a JOIN members m ON m.id = a.member_id WHERE m.leader_id = ? ORDER BY a.date ASC`
+    ? `SELECT a.date, a.status FROM attendance a JOIN members m ON m.id = a.member_id WHERE m.leader_id = ? ORDER BY a.date DESC LIMIT 500`
     : `SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`;
   const attParamId = isLeader ? entityId : targetMemberId;
   const attByMonthQuery = isLeader
@@ -879,6 +879,8 @@ async function getProfile(entityType, entityId, filter, userId) {
       [entityType, entityId]
     ),
   ]);
+  // Leader attRows come in DESC order (LIMIT 500) — reverse to ASC for streak processing
+  if (isLeader) attRows.reverse();
   const presentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'present').length;
   const absentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'absent').length;
   const excusedCount = attRows.filter(r => (r.status || '').toLowerCase() === 'excused').length;
