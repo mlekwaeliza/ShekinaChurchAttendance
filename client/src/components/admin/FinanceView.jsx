@@ -155,6 +155,93 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `finance-${today()}.csv`; a.click();
   };
 
+  const exportPDF = async () => {
+    const [{ default: jsPDF }, autoTableModule] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+    const m = 20;
+    let y = 20;
+
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 0, pw, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Finance Report', m, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Shekina Church · ${rptFrom} to ${rptTo}`, m, 28);
+    y = 45;
+
+    if (summary) {
+      doc.setTextColor(51, 51, 51);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Summary', m, y);
+      y += 8;
+      doc.setDrawColor(99, 102, 241);
+      doc.setLineWidth(0.5);
+      doc.line(m, y, pw - m, y);
+      y += 10;
+
+      const summaryData = [
+        ['Days Recorded', String(summary.day_count || 0)],
+        ['Total Income', fmt(summary.total_income)],
+        ['Total Expenses', fmt(summary.total_expenses)],
+        ['Usable Funds', fmt(summary.usable_funds)],
+      ];
+      autoTableModule.default(doc, {
+        startY: y,
+        head: [['Metric', 'Value']],
+        body: summaryData,
+        margin: { left: m, right: m },
+        styles: { fontSize: 10, cellPadding: 4 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    if (filteredRecords.length > 0) {
+      if (y > 200) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Daily Records', m, y);
+      y += 8;
+      doc.line(m, y, pw - m, y);
+      y += 5;
+
+      const bodyData = filteredRecords.map(r => [
+        r.record_date || 'N/A',
+        (r.status || 'draft').charAt(0).toUpperCase() + (r.status || 'draft').slice(1),
+        fmt(r.morning_offering),
+        fmt(r.afternoon_offering),
+        fmt(r.auto_tithes ?? r.total_tithes ?? 0),
+        fmt(r.total_income),
+        fmt(r.total_expenses),
+      ]);
+      autoTableModule.default(doc, {
+        startY: y,
+        head: [['Date', 'Status', 'Morning', 'Afternoon', 'Tithes', 'Income', 'Expenses']],
+        body: bodyData,
+        margin: { left: m, right: m },
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+    }
+
+    const pc = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pc; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+    }
+
+    doc.save(`finance_report_${today()}.pdf`);
+  };
+
   if (view === 'workspace') {
     return <FinanceWorkspace recordId={selectedId} onBack={backToList} onNewRecord={createNew} showMessage={showMessage} userRole={userRole} />;
   }
@@ -234,9 +321,13 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                 className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5">Clear</button>
             )}
             <div className="flex-1" />
+            <button onClick={exportPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">
+              <Download className="w-3 h-3" /> Download PDF
+            </button>
             <button onClick={exportCSV}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">
-              <Download className="w-3 h-3" /> Export
+              <Download className="w-3 h-3" /> Export CSV
             </button>
           </div>
 
@@ -330,9 +421,13 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
             <span className="text-xs text-slate-400">to</span>
             <input type="date" value={rptTo} onChange={e => setRptTo(e.target.value)}
               className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs" />
+            <button onClick={exportPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">
+              <Download className="w-3 h-3" /> PDF
+            </button>
             <button onClick={exportCSV}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">
-              <Download className="w-3 h-3" /> Export CSV
+              <Download className="w-3 h-3" /> CSV
             </button>
           </div>
           {summary ? (

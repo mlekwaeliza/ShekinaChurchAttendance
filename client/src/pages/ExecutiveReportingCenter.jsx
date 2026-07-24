@@ -115,6 +115,44 @@ export default function ExecutiveReportingCenter() {
     }
   };
 
+  const handleFullReport = async () => {
+    try {
+      setExporting(true);
+      showToast('Generating full report...', 'info');
+      const params = { start_date: startDate, end_date: endDate };
+      const allData = await Promise.allSettled([
+        adminAPI.reports.getAttendance(params),
+        adminAPI.reports.getMembership(params),
+        adminAPI.reports.getLeadership(params),
+        adminAPI.reports.getFinance(params),
+        adminAPI.reports.getEvangelism(params),
+        adminAPI.reports.getNewMembers(params),
+        adminAPI.reports.getHomeCells(params),
+        adminAPI.reports.getChildren(params),
+      ]);
+      const gen = new PDFReportGenerator();
+      const labels = ['Attendance', 'Membership', 'Leadership', 'Finance', 'Evangelism', 'New Members', 'Home Cells', 'Children'];
+      const generators = [
+        'generateAttendanceReport', 'generateMembershipReport', 'generateLeadershipReport',
+        'generateFinanceReport', 'generateEvangelismReport', 'generateNewMembersReport',
+        'generateHomeCellsReport', 'generateChildrenReport',
+      ];
+      allData.forEach((result, i) => {
+        if (result.status === 'fulfilled' && result.value) {
+          gen.doc.addPage();
+          gen[generators[i]](result.value);
+        }
+      });
+      gen.save(`full_executive_report_${startDate}_to_${endDate}.pdf`);
+      showToast('Full report exported successfully', 'success');
+    } catch (error) {
+      console.error('Full report error:', error);
+      showToast('Failed to export full report', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const renderStatCard = (label, value, subtitle, color = 'slate') => (
     <div className="card p-4">
       <p className="text-sm text-slate-500">{label}</p>
@@ -162,6 +200,9 @@ export default function ExecutiveReportingCenter() {
           </button>
           <button onClick={handlePDFExport} className="btn-primary flex items-center gap-2">
             <FileText className="w-4 h-4" /> Export PDF
+          </button>
+          <button onClick={handleFullReport} className="btn-primary flex items-center gap-2" disabled={exporting}>
+            <FileText className="w-4 h-4" /> Full Report
           </button>
         </div>
       </div>

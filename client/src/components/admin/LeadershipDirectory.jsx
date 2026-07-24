@@ -96,6 +96,65 @@ const LeadershipDirectory = () => {
     link.click();
   };
 
+  const exportPDF = async () => {
+    if (data.directory.length === 0) return;
+    const [{ default: jsPDF }, autoTableModule] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+    const m = 20;
+    let y = 20;
+
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 0, pw, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Leadership Directory', m, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Shekina Church · ${new Date().toLocaleDateString()} · ${data.directory.length} leaders`, m, 28);
+    y = 45;
+
+    doc.setTextColor(51, 51, 51);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Leadership Roster', m, y);
+    y += 8;
+    doc.setDrawColor(99, 102, 241);
+    doc.setLineWidth(0.5);
+    doc.line(m, y, pw - m, y);
+    y += 5;
+
+    const bodyData = data.directory.map(d => [
+      d.full_name || 'N/A',
+      d.section_name || 'N/A',
+      d.title_name || 'N/A',
+      (d.title_status || 'active').charAt(0).toUpperCase() + (d.title_status || 'active').slice(1),
+      d.appointment_date ? fdatetime(d.appointment_date) : 'N/A',
+      d.phone || 'N/A',
+      d.email || 'N/A',
+    ]);
+    autoTableModule.default(doc, {
+      startY: y,
+      head: [['Name', 'Section', 'Title', 'Status', 'Appointed', 'Phone', 'Email']],
+      body: bodyData,
+      margin: { left: m, right: m },
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+
+    const pc = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pc; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+    }
+
+    doc.save(`leadership_directory_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const STATUS_VARIANTS = {
     active: 'success',
     on_leave: 'warning',
@@ -314,8 +373,13 @@ const LeadershipDirectory = () => {
             <Plus className="w-3.5 h-3.5" /> Assign Leader
           </button>
           {totalLeaders > 0 && (
+            <button onClick={exportPDF} className="btn-sm btn-secondary active:scale-[0.97]">
+              <Download className="w-3.5 h-3.5" /> PDF
+            </button>
+          )}
+          {totalLeaders > 0 && (
             <button onClick={handleExport} className="btn-sm btn-secondary active:scale-[0.97]">
-              <Download className="w-3.5 h-3.5" /> Export CSV
+              <Download className="w-3.5 h-3.5" /> CSV
             </button>
           )}
         </div>

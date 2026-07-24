@@ -313,6 +313,63 @@ const MemberDirectory = ({
 
   const hasActiveFilters = sectionFilter || leaderFilter;
 
+  const exportPDF = async () => {
+    const [{ default: jsPDF }, autoTableModule] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+    const m = 20;
+    let y = 20;
+
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 0, pw, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Member Directory', m, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Shekina Church · ${new Date().toLocaleDateString()} · ${filteredMembers.length} members`, m, 28);
+    y = 45;
+
+    doc.setTextColor(51, 51, 51);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Members', m, y);
+    y += 8;
+    doc.setDrawColor(99, 102, 241);
+    doc.setLineWidth(0.5);
+    doc.line(m, y, pw - m, y);
+    y += 5;
+
+    const bodyData = filteredMembers.map(member => [
+      member.full_name || 'N/A',
+      member.membership_id || 'N/A',
+      member.section_name || 'N/A',
+      member.leader_name || 'N/A',
+      member.phone || 'N/A',
+      member.email || 'N/A',
+    ]);
+    autoTableModule.default(doc, {
+      startY: y,
+      head: [['Name', 'ID', 'Section', 'Leader', 'Phone', 'Email']],
+      body: bodyData,
+      margin: { left: m, right: m },
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+
+    const pc = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pc; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+    }
+
+    doc.save(`member_directory_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   const SortIcon = ({ field }) => {
     if (sortField !== field) return <span className="ml-1 text-slate-300 dark:text-slate-600">↕</span>;
     return <span className="ml-1 text-primary-500">{sortDir === 'asc' ? '↑' : '↓'}</span>;
@@ -376,11 +433,19 @@ const MemberDirectory = ({
       <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <button
             type="button"
+            onClick={exportPDF}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            <Download className="w-4 h-4" />
+            PDF
+          </button>
+          <button
+            type="button"
             onClick={() => adminAPI.exportMembers()}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <Download className="w-4 h-4" />
-            Export
+            CSV
           </button>
           <button
             type="button"

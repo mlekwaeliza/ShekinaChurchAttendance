@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Sparkles,
   Zap,
+  Download,
 } from 'lucide-react';
 
 import QuickActionsBar from './QuickActionsBar';
@@ -94,6 +95,115 @@ const DashboardOverview = ({
   const attendanceRate = totalToday > 0
     ? Math.round((todayStats.present / totalToday) * 100)
     : 0;
+
+  const handleExportPDF = async () => {
+    const [{ default: jsPDF }, autoTableModule] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+    const m = 20;
+    let y = 20;
+
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 0, pw, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Church Dashboard Summary', m, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Shekina Church · ${new Date().toLocaleDateString()}`, m, 28);
+    y = 45;
+
+    doc.setTextColor(51, 51, 51);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Key Statistics', m, y);
+    y += 8;
+    doc.setDrawColor(99, 102, 241);
+    doc.setLineWidth(0.5);
+    doc.line(m, y, pw - m, y);
+    y += 10;
+
+    const stats = [
+      ['Total Members', String(totalMembers)],
+      ['Present Today', String(todayStats.present)],
+      ['Absent Today', String(todayStats.absent)],
+      ['Excused Today', String(todayStats.excused)],
+      ['Attendance Rate', `${attendanceRate}%`],
+      ['Total Leaders', String(leaders.length)],
+      ['Total Sections', String(sections.length)],
+      ['New Members This Month', String(newMembersMonth)],
+    ];
+    autoTableModule.default(doc, {
+      startY: y,
+      head: [['Metric', 'Value']],
+      body: stats,
+      margin: { left: m, right: m },
+      styles: { fontSize: 10, cellPadding: 4 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
+    if (sections.length > 0) {
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Sections', m, y);
+      y += 8;
+      doc.line(m, y, pw - m, y);
+      y += 5;
+
+      const sectionData = sections.map(s => {
+        const sectionMembers = allMembers.filter(m => m.section_id === s.id);
+        return [s.name, String(sectionMembers.length)];
+      });
+      autoTableModule.default(doc, {
+        startY: y,
+        head: [['Section', 'Members']],
+        body: sectionData,
+        margin: { left: m, right: m },
+        styles: { fontSize: 10, cellPadding: 4 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    if (leaders.length > 0) {
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Leaders', m, y);
+      y += 8;
+      doc.line(m, y, pw - m, y);
+      y += 5;
+
+      const leaderData = leaders.map(l => [
+        l.full_name || l.leader_name || 'N/A',
+        l.section_name || 'N/A',
+        l.is_head ? 'Head' : 'Leader',
+      ]);
+      autoTableModule.default(doc, {
+        startY: y,
+        head: [['Name', 'Section', 'Role']],
+        body: leaderData,
+        margin: { left: m, right: m },
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+    }
+
+    const pc = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pc; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+    }
+
+    doc.save(`dashboard_summary_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   const renderSparkline = () => {
     if (!sparkline || sparkline.length < 2) {
@@ -295,6 +405,9 @@ const DashboardOverview = ({
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <button onClick={handleExportPDF} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+            <Download className="h-3.5 w-3.5" /> Download PDF
+          </button>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500 relative">
               <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
