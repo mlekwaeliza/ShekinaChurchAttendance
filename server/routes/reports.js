@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { all, get } = require('../database');
+const { yearMonth, dayOfWeek } = require('../utils/sqlDialect');
 
-// ─── Executive Reporting Center ────────────────────────────────────────────────────
-// Unified reporting endpoint that consolidates all report types with CSV export
+const isPostgres = () => String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
 
 const REPORT_TYPES = {
   attendance: {
@@ -40,12 +40,12 @@ const REPORT_TYPES = {
   },
 };
 
-// GET /api/admin/reports/types - List available report types
+// GET /api/admin/reports/types
 router.get('/types', async (req, res) => {
   res.json(REPORT_TYPES);
 });
 
-// GET /api/admin/reports/attendance - Attendance report data
+// GET /api/admin/reports/attendance
 router.get('/attendance', async (req, res) => {
   try {
     const { start_date, end_date, section_id, service_id } = req.query;
@@ -81,17 +81,17 @@ router.get('/attendance', async (req, res) => {
         GROUP BY date ORDER BY date
       `, [start, end]),
       all(`
-        SELECT CASE CAST(strftime('%w', date) AS INTEGER)
+        SELECT CASE ${dayOfWeek('date')}
           WHEN 0 THEN 'Sunday' WHEN 1 THEN 'Monday' WHEN 2 THEN 'Tuesday'
           WHEN 3 THEN 'Wednesday' WHEN 4 THEN 'Thursday' WHEN 5 THEN 'Friday'
           WHEN 6 THEN 'Saturday' END as day_name,
           COUNT(CASE WHEN status = 'present' THEN 1 END) as present,
           COUNT(*) as total
         FROM attendance WHERE date BETWEEN ? AND ?
-        GROUP BY strftime('%w', date) ORDER BY strftime('%w', date)
+        GROUP BY ${dayOfWeek('date')} ORDER BY ${dayOfWeek('date')}
       `, [start, end]),
       all(`
-        SELECT m.id, m.first_name || ' ' || m.last_name as name, s.name as section_name,
+        SELECT m.id, m.full_name as name, s.name as section_name,
           COUNT(CASE WHEN a.status = 'present' THEN 1 END) as attended,
           COUNT(*) as total,
           ROUND(CAST(COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) AS NUMERIC), 1) as rate
@@ -100,7 +100,7 @@ router.get('/attendance', async (req, res) => {
         GROUP BY m.id ORDER BY rate DESC LIMIT 20
       `, [start, end]),
       all(`
-        SELECT m.id, m.first_name || ' ' || m.last_name as name, s.name as section_name,
+        SELECT m.id, m.full_name as name, s.name as section_name,
           COUNT(CASE WHEN a.status = 'present' THEN 1 END) as attended,
           COUNT(*) as total,
           ROUND(CAST(COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) AS NUMERIC), 1) as rate
@@ -127,12 +127,30 @@ router.get('/attendance', async (req, res) => {
   }
 });
 
-// GET /api/admin/reports/membership - Membership report data
+// GET /api/admin/reports/membership
 router.get('/membership', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     const start = start_date || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const end = end_date || new Date().toISOString().split('T')[0];
+
+    const ageCaseSql = isPostgres()
+      ? `CASE 
+          WHEN EXTRACT(YEAR FROM age(date_of_birth::date)) < 13 THEN 'Children (0-12)'
+          WHEN EXTRACT(YEAR FROM age(date_of_birth::date)) < 18 THEN 'Youth (13-17)'
+          WHEN EXTRACT(YEAR FROM age(date_of_birth::date)) < 30 THEN 'Young Adult (18-29)'
+          WHEN EXTRACT(YEAR FROM age(date_of_birth::date)) < 50 THEN 'Adult (30-49)'
+          WHEN EXTRACT(YEAR FROM age(date_of_birth::date)) < 65 THEN 'Senior (50-64)'
+          ELSE 'Elder (65+)'
+        END`
+      : `CASE 
+          WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 13 THEN 'Children (0-12)'
+          WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 18 THEN 'Youth (13-17)'
+          WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 30 THEN 'Young Adult (18-29)'
+          WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 50 THEN 'Adult (30-49)'
+          WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 65 THEN 'Senior (50-64)'
+          ELSE 'Elder (65+)'
+        END`;
 
     const [overview, bySection, byGender, byAgeGroup, recentJoins, topSections] = await Promise.all([
       get(`
@@ -158,21 +176,12 @@ router.get('/membership', async (req, res) => {
         FROM members WHERE is_active = 1 GROUP BY gender
       `),
       all(`
-        SELECT 
-          CASE 
-            WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 13 THEN 'Children (0-12)'
-            WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 18 THEN 'Youth (13-17)'
-            WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 30 THEN 'Young Adult (18-29)'
-            WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 50 THEN 'Adult (30-49)'
-            WHEN CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER) < 65 THEN 'Senior (50-64)'
-            ELSE 'Elder (65+)'
-          END as age_group,
-          COUNT(*) as count
+        SELECT ${ageCaseSql} as age_group, COUNT(*) as count
         FROM members WHERE is_active = 1 AND date_of_birth IS NOT NULL
-        GROUP BY age_group ORDER BY MIN(CAST((julianday('now') - julianday(date_of_birth)) / 365.25 AS INTEGER))
+        GROUP BY age_group ORDER BY age_group
       `),
       all(`
-        SELECT m.id, m.first_name || ' ' || m.last_name as name, s.name as section_name, m.created_at as join_date
+        SELECT m.id, m.full_name as name, s.name as section_name, m.created_at as join_date
         FROM members m JOIN sections s ON m.section_id = s.id
         WHERE m.created_at BETWEEN ? AND ? AND m.is_active = 1
         ORDER BY m.created_at DESC LIMIT 20
@@ -203,7 +212,7 @@ router.get('/membership', async (req, res) => {
   }
 });
 
-// GET /api/admin/reports/leadership - Leadership report data
+// GET /api/admin/reports/leadership
 router.get('/leadership', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
@@ -215,45 +224,45 @@ router.get('/leadership', async (req, res) => {
         SELECT 
           COUNT(*) as total_leaders,
           COUNT(CASE WHEN l.is_head = 1 THEN 1 END) as head_leaders,
-          COUNT(CASE WHEN l.is_active = 1 THEN 1 END) as active_leaders
-        FROM leaders l WHERE l.is_active = 1
+          COUNT(*) as active_leaders
+        FROM leaders l
       `),
       all(`
-        SELECT l.id, u.username, m.first_name || ' ' || m.last_name as name, s.name as section_name,
+        SELECT l.id, u.username,
+          COALESCE(u.full_name, u.username) as name,
+          s.name as section_name,
           COUNT(DISTINCT sl.date) as submissions,
           COUNT(DISTINCT CASE WHEN a.status = 'present' THEN a.member_id END) as members_present,
           COUNT(DISTINCT a.member_id) as total_members
         FROM leaders l
         JOIN users u ON l.user_id = u.id
-        LEFT JOIN members m ON l.member_id = m.id
         LEFT JOIN sections s ON l.section_id = s.id
         LEFT JOIN submission_log sl ON l.id = sl.leader_id AND sl.date BETWEEN ? AND ?
         LEFT JOIN attendance a ON sl.date = a.date AND a.member_id IN (
           SELECT member_id FROM members WHERE section_id = l.section_id AND is_active = 1
         )
-        WHERE l.is_active = 1
         GROUP BY l.id ORDER BY submissions DESC
       `, [start, end]),
       all(`
-        SELECT l.id, u.username, m.first_name || ' ' || m.last_name as name, s.name as section_name,
+        SELECT l.id, u.username,
+          COALESCE(u.full_name, u.username) as name,
+          s.name as section_name,
           (SELECT COUNT(*) FROM members WHERE section_id = l.section_id AND is_active = 1) as member_count,
           (SELECT COUNT(*) FROM home_cell_leaders WHERE leader_id = l.id) as home_cells,
-          (SELECT COUNT(*) FROM leaders WHERE section_id = l.section_id AND is_active = 1) as peers
+          (SELECT COUNT(*) FROM leaders WHERE section_id = l.section_id) as peers
         FROM leaders l
         JOIN users u ON l.user_id = u.id
-        LEFT JOIN members m ON l.member_id = m.id
         LEFT JOIN sections s ON l.section_id = s.id
-        WHERE l.is_active = 1 ORDER BY member_count DESC
+        ORDER BY member_count DESC
       `),
       all(`
-        SELECT l.id, u.username, m.first_name || ' ' || m.last_name as name,
+        SELECT l.id, u.username,
+          COALESCE(u.full_name, u.username) as name,
           COUNT(DISTINCT sl.date) as total_submissions,
           COUNT(DISTINCT CASE WHEN sl.attendance_count > 0 THEN sl.date END) as days_with_attendance
         FROM leaders l
         JOIN users u ON l.user_id = u.id
-        LEFT JOIN members m ON l.member_id = m.id
         LEFT JOIN submission_log sl ON l.id = sl.leader_id AND sl.date BETWEEN ? AND ?
-        WHERE l.is_active = 1
         GROUP BY l.id ORDER BY total_submissions DESC
       `, [start, end]),
     ]);
@@ -273,48 +282,51 @@ router.get('/leadership', async (req, res) => {
   }
 });
 
-// GET /api/admin/reports/finance - Finance report data
+// GET /api/admin/reports/finance
 router.get('/finance', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     const start = start_date || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const end = end_date || new Date().toISOString().split('T')[0];
 
+    const ymExpr = yearMonth('c.payment_date');
+
     const [overview, byType, byMonth, expenses, topContributors] = await Promise.all([
       get(`
         SELECT 
           COALESCE(SUM(amount), 0) as total_contributions,
           COUNT(DISTINCT member_id) as unique_contributors,
-          COUNT(DISTINCT date) as contribution_days,
-          ROUND(COALESCE(SUM(amount), 0) / NULLIF(COUNT(DISTINCT date), 0), 2) as avg_per_day
-        FROM contributions WHERE date BETWEEN ? AND ?
+          COUNT(DISTINCT payment_date) as contribution_days,
+          ROUND(COALESCE(SUM(amount), 0) / NULLIF(COUNT(DISTINCT payment_date), 0), 2) as avg_per_day
+        FROM contributions WHERE payment_date BETWEEN ? AND ?
       `, [start, end]),
       all(`
         SELECT ct.name as type_name, 
           COALESCE(SUM(c.amount), 0) as total,
           COUNT(*) as count
         FROM contribution_types ct
-        LEFT JOIN contributions c ON ct.id = c.type_id AND c.date BETWEEN ? AND ?
+        LEFT JOIN contributions c ON ct.id = c.contribution_type_id AND c.payment_date BETWEEN ? AND ?
         WHERE ct.is_active = 1
         GROUP BY ct.id, ct.name ORDER BY total DESC
       `, [start, end]),
       all(`
-        SELECT strftime('%Y-%m', date) as month,
+        SELECT ${ymExpr} as month,
           COALESCE(SUM(amount), 0) as total
-        FROM contributions WHERE date BETWEEN ? AND ?
+        FROM contributions WHERE payment_date BETWEEN ? AND ?
         GROUP BY month ORDER BY month
       `, [start, end]),
       all(`
-        SELECT description, amount, date, category
-        FROM finance_expenses WHERE date BETWEEN ? AND ?
-        ORDER BY amount DESC LIMIT 20
+        SELECT fdr.description, fdr.total_expenses as amount, fdr.record_date as date, 'expenses' as category
+        FROM finance_daily_records fdr
+        WHERE fdr.record_date BETWEEN ? AND ? AND fdr.total_expenses > 0
+        ORDER BY fdr.total_expenses DESC LIMIT 20
       `, [start, end]),
       all(`
-        SELECT m.id, m.first_name || ' ' || m.last_name as name,
+        SELECT m.id, m.full_name as name,
           COALESCE(SUM(c.amount), 0) as total_contributed,
           COUNT(*) as contribution_count
         FROM members m JOIN contributions c ON m.id = c.member_id
-        WHERE c.date BETWEEN ? AND ? AND m.is_active = 1
+        WHERE c.payment_date BETWEEN ? AND ? AND m.is_active = 1
         GROUP BY m.id ORDER BY total_contributed DESC LIMIT 20
       `, [start, end]),
     ]);
@@ -335,12 +347,14 @@ router.get('/finance', async (req, res) => {
   }
 });
 
-// GET /api/admin/reports/evangelism - Evangelism report data
+// GET /api/admin/reports/evangelism
 router.get('/evangelism', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     const start = start_date || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const end = end_date || new Date().toISOString().split('T')[0];
+
+    const ymExpr = yearMonth('date_saved');
 
     const [overview, byMonth, followUps, baptisms, teamStats] = await Promise.all([
       get(`
@@ -352,7 +366,7 @@ router.get('/evangelism', async (req, res) => {
         FROM souls_won WHERE date_saved BETWEEN ? AND ?
       `, [start, end]),
       all(`
-        SELECT strftime('%Y-%m', date_saved) as month,
+        SELECT ${ymExpr} as month,
           COUNT(*) as souls_won
         FROM souls_won WHERE date_saved BETWEEN ? AND ?
         GROUP BY month ORDER BY month
@@ -394,19 +408,21 @@ router.get('/evangelism', async (req, res) => {
   }
 });
 
-// GET /api/admin/reports/new-members - New Members report data
+// GET /api/admin/reports/new-members
 router.get('/new-members', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     const start = start_date || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const end = end_date || new Date().toISOString().split('T')[0];
 
+    const ymExpr = yearMonth('created_at');
+
     const [overview, byStage, byMonth, recentMembers, conversionRates] = await Promise.all([
       get(`
         SELECT 
           COUNT(*) as total_new_members,
-          COUNT(CASE WHEN status = 'Active' THEN 1 END) as active,
-          COUNT(CASE WHEN status = 'Inactive' THEN 1 END) as inactive
+          COUNT(CASE WHEN status IN ('graduated', 'permanent') THEN 1 END) as active,
+          COUNT(CASE WHEN status = 'probation' THEN 1 END) as inactive
         FROM new_members WHERE created_at BETWEEN ? AND ?
       `, [start, end]),
       all(`
@@ -419,13 +435,13 @@ router.get('/new-members', async (req, res) => {
           END
       `, [start, end]),
       all(`
-        SELECT strftime('%Y-%m', created_at) as month,
+        SELECT ${ymExpr} as month,
           COUNT(*) as count
         FROM new_members WHERE created_at BETWEEN ? AND ?
         GROUP BY month ORDER BY month
       `, [start, end]),
       all(`
-        SELECT nm.id, nm.first_name || ' ' || nm.last_name as name, nm.stage, nm.created_at as join_date,
+        SELECT nm.id, nm.full_name as name, nm.stage, nm.created_at as join_date,
           nm.phone, nm.email
         FROM new_members nm
         WHERE nm.created_at BETWEEN ? AND ?
@@ -455,12 +471,24 @@ router.get('/new-members', async (req, res) => {
   }
 });
 
-// GET /api/admin/reports/home-cells - Home Cells report data
+// GET /api/admin/reports/home-cells
 router.get('/home-cells', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
     const start = start_date || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const end = end_date || new Date().toISOString().split('T')[0];
+
+    const leadersAgg = isPostgres()
+      ? `(SELECT STRING_AGG(COALESCE(u.full_name, u.username), ', ')
+          FROM home_cell_leaders hcl
+          JOIN leaders l ON hcl.leader_id = l.id
+          JOIN users u ON l.user_id = u.id
+          WHERE hcl.cell_id = hc.id)`
+      : `(SELECT GROUP_CONCAT(COALESCE(u.full_name, u.username), ', ')
+          FROM home_cell_leaders hcl
+          JOIN leaders l ON hcl.leader_id = l.id
+          JOIN users u ON l.user_id = u.id
+          WHERE hcl.cell_id = hc.id)`;
 
     const [overview, byCell, topCells] = await Promise.all([
       get(`
@@ -476,9 +504,7 @@ router.get('/home-cells', async (req, res) => {
       all(`
         SELECT hc.name as cell_name, hc.cell_number,
           (SELECT COUNT(*) FROM home_cell_members WHERE cell_id = hc.id) as member_count,
-          (SELECT GROUP_CONCAT(m.first_name || ' ' || m.last_name, ', ')
-           FROM home_cell_leaders hcl JOIN members m ON hcl.leader_id = m.id
-           WHERE hcl.cell_id = hc.id) as leaders
+          ${leadersAgg} as leaders
         FROM home_cells hc WHERE hc.is_active = 1 ORDER BY member_count DESC
       `),
       all(`
@@ -503,7 +529,7 @@ router.get('/home-cells', async (req, res) => {
   }
 });
 
-// GET /api/admin/reports/children - Children Ministry report data
+// GET /api/admin/reports/children
 router.get('/children', async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
@@ -570,7 +596,6 @@ router.get('/export/:type', async (req, res) => {
     const { type } = req.params;
     const { start_date, end_date } = req.query;
     
-    // Get report data by calling the appropriate endpoint internally
     const start = start_date || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const end = end_date || new Date().toISOString().split('T')[0];
 
@@ -579,30 +604,30 @@ router.get('/export/:type', async (req, res) => {
 
     if (type === 'attendance') {
       csvData = await all(`
-        SELECT a.date, m.first_name || ' ' || m.last_name as member_name, s.name as section_name,
+        SELECT a.date, m.full_name as member_name, s.name as section_name,
           a.status, a.reason
         FROM attendance a
         JOIN members m ON a.member_id = m.id
         JOIN sections s ON m.section_id = s.id
         WHERE a.date BETWEEN ? AND ?
-        ORDER BY a.date, m.last_name
+        ORDER BY a.date, m.full_name
       `, [start, end]);
     } else if (type === 'membership') {
       csvData = await all(`
-        SELECT m.first_name, m.last_name, m.email, m.phone, m.gender,
+        SELECT m.full_name, m.email, m.phone, m.gender,
           s.name as section_name, m.created_at as join_date, m.is_active
         FROM members m JOIN sections s ON m.section_id = s.id
-        ORDER BY m.last_name
+        ORDER BY m.full_name
       `);
     } else if (type === 'finance') {
       csvData = await all(`
-        SELECT c.date, m.first_name || ' ' || m.last_name as contributor_name,
+        SELECT c.payment_date, m.full_name as contributor_name,
           ct.name as contribution_type, c.amount, c.notes
         FROM contributions c
         JOIN members m ON c.member_id = m.id
-        JOIN contribution_types ct ON c.type_id = ct.id
-        WHERE c.date BETWEEN ? AND ?
-        ORDER BY c.date DESC
+        JOIN contribution_types ct ON c.contribution_type_id = ct.id
+        WHERE c.payment_date BETWEEN ? AND ?
+        ORDER BY c.payment_date DESC
       `, [start, end]);
     }
 
@@ -610,7 +635,6 @@ router.get('/export/:type', async (req, res) => {
       return res.status(404).json({ error: 'No data found for this report type' });
     }
 
-    // Convert to CSV
     const headers = Object.keys(csvData[0]);
     const csvRows = [headers.join(',')];
     for (const row of csvData) {
