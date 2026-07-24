@@ -1,7 +1,7 @@
 const express = require('express');
 const { queries, all, get } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
-const { withCache } = require('../utils/cache');
+const { withCache, withTimeout } = require('../utils/cache');
 
 const router = express.Router();
 router.use(isAuthenticated);
@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
     const { q } = req.query;
     if (!q || q.trim().length < 2) return res.json({ results: [] });
 
-    const [members, leaders, sections, homeCells, departments] = await Promise.allSettled([
+    const [members, leaders, sections, homeCells, departments] = await withTimeout(Promise.allSettled([
       withCache(`search-members:${q}`, 30000, () =>
         all(`SELECT id, full_name, membership_id, phone, email, 'member' as type
              FROM members WHERE is_active = 1 AND soft_deleted_at IS NULL
@@ -49,7 +49,7 @@ router.get('/', async (req, res) => {
         all(`SELECT id, name, 'department' as type FROM departments
              WHERE is_active = 1 AND name ILIKE ? ORDER BY name LIMIT 5`, [`%${q}%`])
       ),
-    ]);
+    ]), 15000, 'Search queries timed out');
 
     const results = [
       ...(members.status === 'fulfilled' ? members.value : []),

@@ -4,6 +4,7 @@
 // profiles, recognition history and configurable weights.
 const { all, get, run, transaction, usePostgres } = require('./database');
 const { formatLocalDate, addDays, getISOWeekString, getISOWeekRange } = require('./utils/date');
+const { withTimeout } = require('./utils/cache');
 
 // ── Schema ────────────────────────────────────────────────────────────────
 async function ensurePerformanceSchema() {
@@ -225,10 +226,10 @@ async function scoreMembers(start, end, serviceId) {
     GROUP BY m.id, m.full_name, m.membership_id, m.gender, m.age_group, s.name
   `, [start, end, ...svcP]);
 
-  const [outreach, contribs] = await Promise.all([
+  const [outreach, contribs] = await withTimeout(Promise.all([
     all(`SELECT member_id, COUNT(*) AS cnt FROM outreach_logs WHERE created_at BETWEEN ? AND ? GROUP BY member_id`, [start, end]),
     all(`SELECT member_id, COUNT(*) AS cnt FROM contributions WHERE payment_date BETWEEN ? AND ? GROUP BY member_id`, [start, end]),
-  ]);
+  ]), 20000, 'scoreMembers outreach/contribs timed out');
 
   const outMap = Object.fromEntries(outreach.map(r => [r.member_id, r.cnt]));
   const conMap = Object.fromEntries(contribs.map(r => [r.member_id, r.cnt]));
@@ -251,12 +252,12 @@ async function scoreLeaders(start, end, serviceId) {
   const serviceDaysRow = await get(`SELECT COUNT(DISTINCT date) AS d FROM attendance WHERE date BETWEEN ? AND ?`, [start, end]);
   const serviceDays = Number(serviceDaysRow?.d) || 0;
 
-  const [subs, memberAtt, ev, rows] = await Promise.all([
+  const [subs, memberAtt, ev, rows] = await withTimeout(Promise.all([
     all(`SELECT leader_id, COUNT(DISTINCT date) AS submitted_days FROM submission_log WHERE date BETWEEN ? AND ? GROUP BY leader_id`, [start, end]),
     all(`SELECT l.id AS leader_id, AVG(CASE WHEN LOWER(TRIM(a.status))='present' THEN 100.0 ELSE 0 END) AS avg_att FROM leaders l JOIN members m ON m.leader_id = l.id AND m.is_active = 1 JOIN attendance a ON a.member_id = m.id AND a.date BETWEEN ? AND ? WHERE l.is_active = 1 GROUP BY l.id`, [start, end]),
     all(`SELECT l.id AS leader_id, COUNT(*) AS cnt FROM leaders l LEFT JOIN outreach_logs o ON o.leader_id = l.id AND o.created_at BETWEEN ? AND ? WHERE l.is_active = 1 GROUP BY l.id`, [start, end]),
     all(`SELECT l.id, u.full_name, s.name AS section_name FROM leaders l LEFT JOIN users u ON u.id = l.user_id LEFT JOIN sections s ON s.id = l.section_id WHERE COALESCE(l.is_active, 1) = 1`),
-  ]);
+  ]), 20000, 'scoreLeaders queries timed out');
 
   const subMap = Object.fromEntries(subs.map(r => [r.leader_id, r]));
   const attMap = Object.fromEntries(memberAtt.map(r => [r.leader_id, r]));
@@ -368,14 +369,14 @@ async function buildRanked(scored, weights, season, prevSeason, prevScoresMap) {
 // Previous-season scores (recompute for movement).
 async function scoreForSeason(season) {
   const serviceId = 'all';
-  const [members, leaders, sections, departments, cells, weights] = await Promise.all([
+  const [members, leaders, sections, departments, cells, weights] = await withTimeout(Promise.all([
     scoreMembers(season.start, season.end, serviceId),
     scoreLeaders(season.start, season.end, serviceId),
     scoreSections(season.start, season.end, serviceId),
     scoreDepartments(season.start, season.end),
     scoreCells(season.start, season.end),
     loadWeights(),
-  ]);
+  ]), 45000, 'scoreForSeason timed out');
   members.forEach(m => { m.overallScore = weighted(m.components, weights.member); });
   leaders.forEach(l => { l.overallScore = weighted(l.components, weights.leader); });
   sections.forEach(s => { s.overallScore = s.components.attendance || 0; });
@@ -430,13 +431,13 @@ async function getDashboard(filter, serviceId, userId) {
   const weights = await loadWeights();
 
   // Parallelize all scoring functions (independent of each other)
-  const [members, leaders, sections, departments, cells] = await Promise.all([
+  const [members, leaders, sections, departments, cells] = await withTimeout(Promise.all([
     scoreMembers(season.start, season.end, serviceId),
     scoreLeaders(season.start, season.end, serviceId),
     scoreSections(season.start, season.end, serviceId),
     scoreDepartments(season.start, season.end),
     scoreCells(season.start, season.end),
-  ]);
+  ]), 45000, 'getDashboard scoring timed out');
 
   // Compute previous season scores ONCE (not 5x)
   const prev = prevSeasonOf(season);
@@ -494,10 +495,10 @@ async function getDashboard(filter, serviceId, userId) {
   const outCells = rankedCells.map(g => flattenGroup(g));
 
   // Achievements (per member and leader this season — persisted to entity_achievements)
-  const [memberAchievements, leaderAchievements] = await Promise.all([
+  const [memberAchievements, leaderAchievements] = await withTimeout(Promise.all([
     computeAchievements(rankedMembers, season, 'member'),
     computeAchievements(rankedLeaders, season, 'leader'),
-  ]);
+  ]), 20000, 'computeAchievements timed out');
   const allAchievements = [...memberAchievements, ...leaderAchievements];
 
   // Attach badges to flattened entities
@@ -854,7 +855,7 @@ async function getProfile(entityType, entityId, filter, userId) {
   const outParamId = isLeader ? entityId : targetMemberId;
 
   // Parallelize all independent queries
-  const [attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements] = await Promise.all([
+  const [attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements] = await withTimeout(Promise.all([
     all(attQuery, [attParamId]),
     all(`SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`, [targetMemberId]),
     get(`
@@ -878,7 +879,7 @@ async function getProfile(entityType, entityId, filter, userId) {
       `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,
       [entityType, entityId]
     ),
-  ]);
+  ]), 20000, 'Profile queries timed out');
   // Leader attRows come in DESC order (LIMIT 500) — reverse to ASC for streak processing
   if (isLeader) attRows.reverse();
   const presentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'present').length;

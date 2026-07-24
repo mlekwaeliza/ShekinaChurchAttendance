@@ -43,6 +43,8 @@ import {
   Home,
   Megaphone,
   ClipboardCheck,
+  CheckSquare,
+  Tag,
   UserPlus,
   RefreshCw,
   Edit3,
@@ -209,49 +211,50 @@ const Layout = ({ children, showNav = true }) => {
   // Navigation structure per role
   const navConfig = {
     admin: [
-      { section: 'DASHBOARD', items: [
+      { section: 'MAIN', items: [
         { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-      ]},
-      { section: 'PEOPLE', items: [
-        { path: '/admin/members', label: 'Members', icon: Users },
-        { path: '/admin/leaders', label: 'Leadership', icon: Crown },
       ]},
       { section: 'CHURCH STRUCTURE', items: [
         { path: '/admin/sections', label: 'Sections', icon: Layers },
         { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
         { path: '/admin/departments', label: 'Departments', icon: Building2 },
+        { path: '/admin/leadership', label: 'Leadership', icon: Award },
+        { path: '/admin/titles', label: 'Titles', icon: Tag },
       ]},
-      { section: "CHILDREN'S MINISTRY", items: [
-        { path: '/admin/children', label: 'Children', icon: Baby },
+      { section: 'PEOPLE', items: [
+        { path: '/admin/members', label: 'Members', icon: Users },
+        { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
+        { path: '/admin/leaders', label: 'Leaders', icon: Crown },
+        { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
+        { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
       ]},
       { section: 'ATTENDANCE', items: [
+        { path: '/admin/attendance-dashboard', label: 'Attendance Dashboard', icon: BarChart3 },
+        { path: '/admin/attendance-corrections', label: 'Attendance Corrections', icon: CheckSquare },
         { path: '/admin/history', label: 'Attendance History', icon: Clock },
-        { path: '/admin/follow-ups', label: 'Follow-ups', icon: ClipboardCheck },
+        { path: '/admin/attendance-analytics', label: 'Attendance Analytics', icon: TrendingUp },
       ]},
       { section: 'EVANGELISM', items: [
-        { path: '/admin/evangelism', label: 'Evangelism Dashboard', icon: Heart, exact: true },
+        { path: '/admin/evangelism', label: 'Dashboard', icon: Heart, exact: true },
         { path: '/admin/evangelism', label: 'Outreach Events', icon: Send, search: '?subtab=outreach' },
         { path: '/admin/evangelism', label: 'Souls Won', icon: Users, search: '?subtab=souls' },
+        { path: '/admin/follow-ups', label: 'Follow-Ups', icon: ClipboardCheck },
         { path: '/admin/evangelism', label: 'Baptism', icon: Droplets, search: '?subtab=baptism' },
+        { path: '/admin/evangelism', label: 'Reports', icon: FileText, search: '?subtab=reports' },
       ]},
       { section: 'FINANCE', items: [
-        { path: '/admin/finance', label: 'Finance', icon: Banknote },
-        { path: '/admin/contributions', label: 'Contributions', icon: DollarSign },
-      ]},
-      { section: 'REPORTS & INSIGHTS', items: [
-        { path: '/admin/reports', label: 'Reports', icon: BarChart3 },
-        { path: '/admin/reporting', label: 'Reporting Center', icon: FileText },
-        { path: '/admin/analytics', label: 'Analytics', icon: TrendingUp },
-        { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
+        { path: '/admin/finance', label: 'Finance Dashboard', icon: Banknote },
       ]},
       { section: 'COMMUNICATION', items: [
         { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
         { path: '/admin/announcements', label: 'Announcements', icon: Megaphone },
-        { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
       ]},
-      { section: 'ADMINISTRATION', items: [
-        { path: '/admin/audit', label: 'Audit Logs', icon: ShieldCheck },
-        { path: '/admin/trash', label: 'Trash', icon: Trash2 },
+      { section: 'REPORTING', items: [
+        { path: '/admin/reporting', label: 'Church Reports', icon: FileText },
+        { path: '/admin/analytics', label: 'Analytics', icon: Activity },
+        { path: '/admin/audit', label: 'Audit Log', icon: ShieldCheck },
+      ]},
+      { section: 'SYSTEM', items: [
         { path: '/admin/settings', label: 'Settings', icon: Settings },
       ]},
     ],

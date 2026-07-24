@@ -79,7 +79,7 @@ async function syncChurchMemberHomeCell(memberId, cellId, userId) {
 // GET all sections
 router.get('/sections', async (req, res) => {
   try {
-    const sections = await withCache('admin-sections', 30000, () => queries.getAllSections());
+    const sections = await withCache('admin-sections', 600000, () => queries.getAllSections());
     res.json(sections);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch sections' });
@@ -162,7 +162,7 @@ router.get('/members', async (req, res) => {
         section_name: m.section_name || 'Unknown'
       }));
     } else {
-      members = await withCache('admin-members-all', 30000, () => queries.getAllMembers());
+      members = await withCache('admin-members-all', 120000, () => queries.getAllMembers());
     }
     res.json(members);
   } catch (error) {
@@ -900,7 +900,7 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
 // GET leaders list (for admin management)
 router.get('/leaders', async (req, res) => {
   try {
-    const leaders = await withCache('admin-leaders', 30000, () => new Promise((resolve, reject) => {
+    const leaders = await withCache('admin-leaders', 300000, () => new Promise((resolve, reject) => {
       db.all(`
         SELECT l.id, l.section_id, u.username, u.full_name, s.name as section_name, l.phone, l.email, l.is_head
         FROM leaders l
@@ -1306,7 +1306,9 @@ router.get('/leadership-directory', async (req, res) => {
     const p = parseInt(page) || 1;
     const lim = parseInt(limit) || 50;
     const offset = (p - 1) * lim;
-    const [directoryResult, titlesResult, sectionsResult, countResult] = await Promise.allSettled([
+
+    const [directoryResult, titlesResult, sectionsResult, countResult] = await Promise.race([
+      Promise.allSettled([
       queries.getLeadershipDirectory({
         titleId: title_id || null,
         status: status || null,
@@ -1327,7 +1329,9 @@ router.get('/leadership-directory', async (req, res) => {
         appointmentFrom: appointment_from || null,
         appointmentTo: appointment_to || null,
       }),
-    ]);
+    ]),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Leadership directory queries timed out after 30s')), 30000))
+  ]);
 
     const errors = [];
 

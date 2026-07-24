@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { queries, db, all, get } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
 const { yearEquals, weekEquals, timeToSeconds } = require('../utils/sqlDialect');
+const { withCache } = require('../utils/cache');
 
 
 
@@ -507,7 +508,7 @@ router.put('/settings/config', async (req, res) => {
 
 router.get('/service-types', async (req, res) => {
   try {
-    const services = await queries.getAllServiceTypes();
+    const services = await withCache('admin-service-types', 600000, () => queries.getAllServiceTypes());
     res.json(services.map(s => ({
       ...s,
       eligibility_rules: JSON.parse(s.eligibility_rules || '{}'),

@@ -1,5 +1,5 @@
 const express = require('express');
-const { queries, run, db } = require('../database');
+const { queries, run, all, db } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -65,17 +65,15 @@ router.delete('/announcements/:id', async (req, res) => {
 // --- Follow-up workspace ---
 router.get('/follow-up-tasks', async (req, res) => {
   try {
-    db.all(`
+    const rows = await all(`
       SELECT t.*, owner_user.full_name AS owner_name
       FROM admin_followup_tasks t
       LEFT JOIN leaders l ON l.id = t.owner_id
       LEFT JOIN users owner_user ON owner_user.id = l.user_id
       ORDER BY CASE WHEN t.status = 'open' THEN 0 ELSE 1 END, t.created_at DESC
       LIMIT 100
-    `, [], (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Failed to fetch follow-up tasks' });
-      res.json(rows);
-    });
+    `);
+    res.json(rows);
   } catch (error) {
     console.error('Fetch follow-up tasks error:', error);
     res.status(500).json({ error: 'Failed to fetch follow-up tasks' });
@@ -132,16 +130,14 @@ router.put('/follow-up-tasks/:id', async (req, res) => {
 // --- Visitor intake ---
 router.get('/visitors', async (req, res) => {
   try {
-    db.all(`
+    const rows = await all(`
       SELECT v.*, u.full_name AS created_by_name
       FROM visitor_intake v
       LEFT JOIN users u ON u.id = v.created_by
       ORDER BY v.created_at DESC
       LIMIT 100
-    `, [], (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Failed to fetch visitors' });
-      res.json(rows);
-    });
+    `);
+    res.json(rows);
   } catch (error) {
     console.error('Fetch visitors error:', error);
     res.status(500).json({ error: 'Failed to fetch visitors' });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2, Users, UserPlus, Edit3, RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2, Users, UserPlus, Edit3, RefreshCw, Layers, Clock, Heart, Banknote, Calendar, Building2, Megaphone, FileText, TrendingUp, BarChart3 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import { capitalizeName } from '../../utils/phone';
@@ -256,438 +257,610 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     }
   };
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentTabParam = searchParams.get('mod') || 'all';
+
+  const MODULE_TABS = [
+    { id: 'all', label: 'All Modules', icon: Settings },
+    { id: 'profile', label: 'Profile & Security', icon: ShieldCheck },
+    { id: 'church-structure', label: 'Church Structure', icon: Layers },
+    { id: 'people', label: 'People & Leaders', icon: Users },
+    { id: 'attendance', label: 'Attendance', icon: Clock },
+    { id: 'evangelism', label: 'Evangelism', icon: Heart },
+    { id: 'finance', label: 'Finance', icon: Banknote },
+    { id: 'communication', label: 'Communication', icon: Calendar },
+    { id: 'reporting', label: 'Reporting & Audit', icon: ShieldCheck },
+    { id: 'system', label: 'System & Users', icon: Key },
+  ];
+
+  const handleTabChange = (tabId) => {
+    setSearchParams({ mod: tabId });
+  };
+
+  const isTabActive = (tabId) => currentTabParam === 'all' || currentTabParam === tabId;
+
   const triggerProfileUpload = () => {
     document.getElementById('profile-upload')?.click();
   };
 
   return (
     <div className="space-y-8 animate-fade-in max-w-4xl">
-      {/* Profile Section */}
-      <div className="card p-6">
-      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
-        <Settings className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
-        Profile Settings
-        </h3>
-        <div className="space-y-5">
-          {/* Display name */}
-          <div>
-            <label className="input-label">Display Name</label>
-            <div className="flex gap-3">
-              <select
-                value={profileName}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const [name, id] = val.split('|');
-                  setProfileName(name);
-                  setSelectedMemberId(id ? Number(id) : null);
-                }}
-                className="select flex-1"
+      {/* Module Navigation Tabs */}
+      <div className="card p-2">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide py-1 px-1">
+          {MODULE_TABS.map((t) => {
+            const Icon = t.icon;
+            const active = currentTabParam === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => handleTabChange(t.id)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  active
+                    ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
               >
-                <option value="">Select a member...</option>
-                {members
-                  .filter((m) => m.full_name)
-                  .sort((a, b) => a.full_name.localeCompare(b.full_name))
-                  .map((m) => (
-                    <option key={m.id} value={`${m.full_name}|${m.id}`}>{m.full_name}</option>
-                  ))}
+                <Icon className="w-4 h-4" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Profile & Security Section */}
+      {isTabActive('profile') && (
+        <div className="space-y-6">
+          <div className="card p-6">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+              <Settings className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+              Profile Settings
+            </h3>
+            <div className="space-y-5">
+              {/* Display name */}
+              <div>
+                <label className="input-label">Display Name</label>
+                <div className="flex gap-3">
+                  <select
+                    value={profileName}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const [name, id] = val.split('|');
+                      setProfileName(name);
+                      setSelectedMemberId(id ? Number(id) : null);
+                    }}
+                    className="select flex-1"
+                  >
+                    <option value="">Select a member...</option>
+                    {members
+                      .filter((m) => m.full_name)
+                      .sort((a, b) => a.full_name.localeCompare(b.full_name))
+                      .map((m) => (
+                        <option key={m.id} value={`${m.full_name}|${m.id}`}>{m.full_name}</option>
+                      ))}
+                  </select>
+                  <button
+                    onClick={handleSaveName}
+                    disabled={saving || !profileName.trim() || profileName.trim() === user?.full_name}
+                    className="btn-primary whitespace-nowrap"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Action row */}
+              <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+                <button onClick={triggerProfileUpload} className="btn-secondary">
+                  <Camera className="w-4 h-4" />
+                  Update Photo
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="card p-6">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+              <ShieldCheck className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+              Two-Factor Authentication
+            </h3>
+            {twoFactorEnabled ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200/60 dark:border-emerald-700/60">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">2FA is enabled</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                      {twoFactorStatus?.backupCodesRemaining || 0} backup codes remaining
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button onClick={() => setShowDisable2FA(true)} className="btn-secondary text-rose-600 dark:text-rose-400">
+                    <Trash2 className="w-4 h-4" />
+                    Disable 2FA
+                  </button>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await authAPI.regenerateBackupCodes();
+                        const codes = res.data.backupCodes;
+                        const text = codes.join('\n');
+                        navigator.clipboard.writeText(text);
+                        showMessage('Backup codes regenerated and copied to clipboard');
+                        load2FAStatus();
+                      } catch (e) {
+                        showMessage('Failed to regenerate backup codes');
+                      }
+                    }}
+                    className="btn-secondary"
+                  >
+                    <Key className="w-4 h-4" />
+                    Regenerate Backup Codes
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Protect your account with an authenticator app. After enabling, you'll need a 6-digit code from your app to log in.
+                </p>
+                <button onClick={() => setShow2FAModal(true)} className="btn-primary">
+                  <ShieldCheck className="w-4 h-4" />
+                  Enable 2FA
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Leader Password Reset & People Config */}
+      {isAdmin && isTabActive('people') && (
+        <div className="space-y-6">
+          <div className="card p-6">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+              <Key className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+              Leader Password Reset
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Generate a new temporary password for a leader. They will be prompted to change it on next login.
+            </p>
+            <div className="flex gap-3">
+              <select id="leaderResetSelect" className="select flex-1">
+                <option value="">Select a leader...</option>
+                {leaders.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.full_name} ({l.section_name})
+                  </option>
+                ))}
               </select>
               <button
-                onClick={handleSaveName}
-                disabled={saving || !profileName.trim() || profileName.trim() === user?.full_name}
-                className="btn-primary whitespace-nowrap"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          </div>
-
-          {/* Action row */}
-          <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-            <button onClick={triggerProfileUpload} className="btn-secondary">
-              <Camera className="w-4 h-4" />
-              Update Photo
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Two-Factor Authentication */}
-      <div className="card p-6">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
-          <ShieldCheck className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
-          Two-Factor Authentication
-        </h3>
-        {twoFactorEnabled ? (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200/60 dark:border-emerald-700/60">
-              <div className="w-3 h-3 rounded-full bg-emerald-500" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">2FA is enabled</p>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                  {twoFactorStatus?.backupCodesRemaining || 0} backup codes remaining
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <button onClick={() => setShowDisable2FA(true)} className="btn-secondary text-rose-600 dark:text-rose-400">
-                <Trash2 className="w-4 h-4" />
-                Disable 2FA
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    const res = await authAPI.regenerateBackupCodes();
-                    const codes = res.data.backupCodes;
-                    const text = codes.join('\n');
-                    navigator.clipboard.writeText(text);
-                    showMessage('Backup codes regenerated and copied to clipboard');
-                    load2FAStatus();
-                  } catch (e) {
-                    showMessage('Failed to regenerate backup codes');
-                  }
+                onClick={() => {
+                  const id = document.getElementById('leaderResetSelect')?.value;
+                  if (id) handleResetPassword(id);
+                  else showMessage('Please select a leader first.');
                 }}
-                className="btn-secondary"
+                className="btn-danger whitespace-nowrap"
               >
-                <Key className="w-4 h-4" />
-                Regenerate Backup Codes
+                Reset Password
               </button>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Protect your account with an authenticator app. After enabling, you'll need a 6-digit code from your app to log in.
-            </p>
-            <button onClick={() => setShow2FAModal(true)} className="btn-primary">
-              <ShieldCheck className="w-4 h-4" />
-              Enable 2FA
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Leader Password Reset */}
-      {isAdmin && (
-      <div className="card p-6">
-      <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
-        <Key className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
-        Leader Password Reset
-      </h3>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Generate a new temporary password for a leader. They will be prompted to change it on next login.
-        </p>
-        <div className="flex gap-3">
-          <select id="leaderResetSelect" className="select flex-1">
-            <option value="">Select a leader...</option>
-            {leaders.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.full_name} ({l.section_name})
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() => {
-              const id = document.getElementById('leaderResetSelect').value;
-              if (id) handleResetPassword(id);
-              else showMessage('Please select a leader first.');
-            }}
-            className="btn-danger whitespace-nowrap"
-          >
-            Reset Password
-          </button>
-        </div>
-        {resetResult && (
-          <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
-            <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">New Temporary Password</p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Username: <strong>{resetResult.username}</strong></span>
-                <button onClick={() => copyToClipboard(resetResult.username, 'username')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-                  {copiedField === 'username' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-              <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Password: <strong>{resetResult.temp_password}</strong></span>
-                <button onClick={() => copyToClipboard(resetResult.temp_password, 'password')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-                  {copiedField === 'password' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Share these credentials securely and ask the leader to change their password on first login.</p>
-            <button onClick={() => setResetResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
-          </div>
-        )}
-      </div>
-      )}
-
-      {/* User Management */}
-      {isAdmin && (
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Users className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
-            User Management
-          </h3>
-          <button onClick={() => { setShowCreateUser(true); setUserForm({ username: '', password: '', role: 'leader', full_name: '', section_id: '', phone: '', email: '' }); }} className="btn-primary text-sm">
-            <UserPlus className="w-4 h-4" />
-            Add User
-          </button>
-        </div>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-          Manage system users and their roles. Create accounts for leaders, pastors, evangelists, and accountants.
-        </p>
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <input
-            type="text"
-            value={userSearch}
-            onChange={(e) => setUserSearch(e.target.value)}
-            placeholder="Search by name or username..."
-            className="input flex-1"
-          />
-          <select
-            value={userRoleFilter}
-            onChange={(e) => setUserRoleFilter(e.target.value)}
-            className="select w-full sm:w-40"
-          >
-            <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="leader">Leader</option>
-            <option value="pastor">Pastor</option>
-            <option value="evangelist">Evangelist</option>
-            <option value="accountant">Accountant</option>
-          </select>
-          <button onClick={loadUsers} disabled={usersLoading} className="btn-secondary">
-            <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        </div>
-
-        {/* User Reset Result */}
-        {userResetResult && (
-          <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
-            <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">Credentials</p>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Username: <strong>{userResetResult.username}</strong></span>
-                <button onClick={() => copyToClipboard(userResetResult.username, 'user-username')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700">
-                  {copiedField === 'user-username' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-              <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                <span className="text-sm text-slate-600 dark:text-slate-400">Password: <strong>{userResetResult.temp_password}</strong></span>
-                <button onClick={() => copyToClipboard(userResetResult.temp_password, 'user-password')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700">
-                  {copiedField === 'user-password' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Share these credentials securely.</p>
-            <button onClick={() => setUserResetResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
-          </div>
-        )}
-
-        {/* Users Table */}
-        {usersLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
-            <span className="ml-2 text-sm text-slate-500">Loading users...</span>
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-500 dark:text-slate-400">
-            No users found.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">User</th>
-                  <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">Role</th>
-                  <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden sm:table-cell">Section</th>
-                  <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden md:table-cell">Status</th>
-                  <th className="text-right py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-3">
-                        {u.profile_picture ? (
-                          <img src={u.profile_picture} alt="" className="w-8 h-8 rounded-lg object-cover" />
-                        ) : (
-                          <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
-                            {u.full_name?.charAt(0)}
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-slate-100">{u.full_name}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">@{u.username}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeColor[u.role] || ''}`}>
-                        {roleLabels[u.role] || u.role}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-slate-600 dark:text-slate-400 hidden sm:table-cell">
-                      {u.section_name || '-'}
-                    </td>
-                    <td className="py-3 px-3 hidden md:table-cell">
-                      {u.locked_until ? (
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Locked</span>
-                      ) : u.totp_enabled ? (
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">2FA</span>
-                      ) : (
-                        <span className="text-xs text-slate-400">Active</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleResetUserPassword(u.id)} title="Reset Password" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600">
-                          <Key className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => setEditingUser({ ...u })} title="Edit User" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-primary-600">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => setDeletingUser(u)} title="Delete User" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-rose-600">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="mt-3 text-xs text-slate-400 dark:text-slate-500">
-          {filteredUsers.length} of {users.length} users shown
-        </div>
-      </div>
-      )}
-
-      {/* CSV Import */}
-      {isAdmin && (
-      <div className="card overflow-hidden">
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-8 text-white">
-          <h3 className="text-lg font-bold mb-2">Data Import</h3>
-          <p className="text-primary-100 text-sm max-w-lg">
-            Bulk provision sections, leaders, and members via CSV upload. This will automatically create accounts and set up hierarchies.
-          </p>
-        </div>
-        <div className="p-6">
-          <label className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-all cursor-pointer group">
-            <Upload className="w-10 h-10 text-slate-300 dark:text-slate-600 group-hover:text-primary-500 transition-colors mb-3" />
-            <span className="text-sm font-semibold text-slate-600 dark:text-slate-400 group-hover:text-primary-600 dark:group-hover:text-primary-400">
-              {uploading ? 'Uploading...' : 'Click to upload CSV file'}
-            </span>
-            <span className="text-xs text-slate-400 mt-1">Supports .csv format</span>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleCSVUpload}
-              disabled={uploading}
-              className="hidden"
-            />
-          </label>
-        </div>
-        {uploadResult && (
-          <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl">
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">Upload Complete</p>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div><span className="text-slate-500 dark:text-slate-400">Sections:</span> <strong>{uploadResult.results.sectionsCreated}</strong></div>
-              <div><span className="text-slate-500 dark:text-slate-400">Leaders:</span> <strong>{uploadResult.results.leadersCreated}</strong></div>
-              <div><span className="text-slate-500 dark:text-slate-400">Members:</span> <strong>{uploadResult.results.membersCreated}</strong></div>
-            </div>
-            {uploadResult.tempPasswords?.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
-                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">New Leader Credentials</p>
-                {uploadResult.tempPasswords.map((cred, i) => (
-                  <div key={i} className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg mb-2">
-                    <span className="text-sm text-slate-600 dark:text-slate-400"><strong>{cred.username}</strong>: {cred.password}</span>
-                    <button onClick={() => copyToClipboard(`${cred.username}: ${cred.password}`, `cred-${i}`)} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-                      {copiedField === `cred-${i}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {resetResult && (
+              <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">New Temporary Password</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Username: <strong>{resetResult.username}</strong></span>
+                    <button onClick={() => copyToClipboard(resetResult.username, 'username')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
+                      {copiedField === 'username' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
-                ))}
+                  <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Password: <strong>{resetResult.temp_password}</strong></span>
+                    <button onClick={() => copyToClipboard(resetResult.temp_password, 'password')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
+                      {copiedField === 'password' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Share these credentials securely and ask the leader to change their password on first login.</p>
+                <button onClick={() => setResetResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
               </div>
             )}
-            {uploadResult.results.errors?.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
-                <p className="text-sm font-semibold text-rose-700 dark:text-rose-400 mb-1">Errors ({uploadResult.results.errors.length})</p>
-                <ul className="text-xs text-rose-600 dark:text-rose-400 space-y-1 max-h-32 overflow-y-auto">
-                  {uploadResult.results.errors.map((err, i) => <li key={i}>{err}</li>)}
-                </ul>
+          </div>
+
+          <div className="card p-6">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+              <Trophy className="w-4.5 h-4.5 text-amber-500" />
+              Hall of Fame & Points Configuration
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              Configure how points are awarded to members. These points contribute to the yearly leaderboard.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="input-label">Attendance Points</label>
+                <input
+                  type="number"
+                  value={hallOfFameSettings.points_attendance}
+                  onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, points_attendance: e.target.value })}
+                  className="input w-full"
+                  placeholder="e.g. 10"
+                />
+                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Awarded for "Present" status</p>
+              </div>
+              <div>
+                <label className="input-label">Excused Points</label>
+                <input
+                  type="number"
+                  value={hallOfFameSettings.points_excused}
+                  onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, points_excused: e.target.value })}
+                  className="input w-full"
+                  placeholder="e.g. 5"
+                />
+                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Awarded for "Excused" status</p>
+              </div>
+              <div>
+                <label className="input-label">Midweek Service Day</label>
+                <select
+                  value={hallOfFameSettings.midweek_day}
+                  onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, midweek_day: e.target.value })}
+                  className="select w-full"
+                >
+                  <option value="Wednesday">Wednesday</option>
+                  <option value="Thursday">Thursday</option>
+                  <option value="Friday">Friday</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700">
+              <button
+                onClick={handleSaveSettings}
+                disabled={settingsLoading}
+                className="btn-primary"
+              >
+                {settingsLoading ? 'Saving...' : 'Save Configuration'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Church Structure Settings */}
+      {isAdmin && isTabActive('church-structure') && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+            <Layers className="w-4.5 h-4.5 text-primary-500" />
+            Church Structure Configuration
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+            Manage section structure parameters, home cell rules, and department hierarchy defaults.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+              <span className="text-xs font-semibold text-slate-400 uppercase">Active Sections</span>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{sections.length}</p>
+              <p className="text-xs text-slate-500 mt-1">Configured in Section Management</p>
+            </div>
+            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
+              <span className="text-xs font-semibold text-slate-400 uppercase">Active Leaders</span>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{leaders.length}</p>
+              <p className="text-xs text-slate-500 mt-1">Assigned to Sections & Cells</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attendance & Service Settings */}
+      {isAdmin && isTabActive('attendance') && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+            <Clock className="w-4.5 h-4.5 text-emerald-500" />
+            Attendance & Service Settings
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+            Configure service attendance rules, submission deadline alerts, and automatic correction workflows.
+          </p>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Sunday Service Deadline</p>
+                <p className="text-xs text-slate-500">Require leaders to submit attendance within 24 hours</p>
+              </div>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full">Active</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Evangelism Settings */}
+      {isAdmin && isTabActive('evangelism') && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+            <Heart className="w-4.5 h-4.5 text-rose-500" />
+            Evangelism & Outreach Settings
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+            Define monthly soul-winning goals, baptism verification thresholds, and follow-up SLAs.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="input-label">Monthly Target Souls Won</label>
+              <input type="number" defaultValue="50" className="input w-full" />
+            </div>
+            <div>
+              <label className="input-label">Follow-up SLA (Days)</label>
+              <input type="number" defaultValue="7" className="input w-full" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Finance Settings */}
+      {isAdmin && isTabActive('finance') && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+            <Banknote className="w-4.5 h-4.5 text-cyan-500" />
+            Finance & Contribution Settings
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+            Configure financial reporting categories, tithes/offering rules, and currency formats.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="input-label">Currency Symbol</label>
+              <input type="text" defaultValue="TZS" className="input w-48" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Communication Settings */}
+      {isAdmin && isTabActive('communication') && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+            <Calendar className="w-4.5 h-4.5 text-purple-500" />
+            Communication & Announcement Settings
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+            Configure default announcement expiry periods, mobile push notification defaults, and event categories.
+          </p>
+          <div>
+            <label className="input-label">Default Announcement Expiry (Days)</label>
+            <input type="number" defaultValue="30" className="input w-48" />
+          </div>
+        </div>
+      )}
+
+      {/* Reporting & Audit Settings */}
+      {isAdmin && isTabActive('reporting') && (
+        <div className="card p-6">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+            <ShieldCheck className="w-4.5 h-4.5 text-indigo-500" />
+            Reporting & Audit Log Retention
+          </h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+            Set retention policies for audit logs and executive report export defaults.
+          </p>
+          <div>
+            <label className="input-label">Audit Log Retention (Days)</label>
+            <input type="number" defaultValue="365" className="input w-48" />
+          </div>
+        </div>
+      )}
+
+      {/* System & User Management */}
+      {isAdmin && isTabActive('system') && (
+        <div className="space-y-6">
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Users className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+                User Management
+              </h3>
+              <button onClick={() => { setShowCreateUser(true); setUserForm({ username: '', password: '', role: 'leader', full_name: '', section_id: '', phone: '', email: '' }); }} className="btn-primary text-sm">
+                <UserPlus className="w-4 h-4" />
+                Add User
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Manage system users and their roles. Create accounts for leaders, pastors, evangelists, and accountants.
+            </p>
+
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <input
+                type="text"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Search by name or username..."
+                className="input flex-1"
+              />
+              <select
+                value={userRoleFilter}
+                onChange={(e) => setUserRoleFilter(e.target.value)}
+                className="select w-full sm:w-40"
+              >
+                <option value="all">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="leader">Leader</option>
+                <option value="pastor">Pastor</option>
+                <option value="evangelist">Evangelist</option>
+                <option value="accountant">Accountant</option>
+              </select>
+              <button onClick={loadUsers} disabled={usersLoading} className="btn-secondary">
+                <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+
+            {/* User Reset Result */}
+            {userResetResult && (
+              <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">Credentials</p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Username: <strong>{userResetResult.username}</strong></span>
+                    <button onClick={() => copyToClipboard(userResetResult.username, 'user-username')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700">
+                      {copiedField === 'user-username' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
+                    <span className="text-sm text-slate-600 dark:text-slate-400">Password: <strong>{userResetResult.temp_password}</strong></span>
+                    <button onClick={() => copyToClipboard(userResetResult.temp_password, 'user-password')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700">
+                      {copiedField === 'user-password' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Share these credentials securely.</p>
+                <button onClick={() => setUserResetResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
               </div>
             )}
-            <button onClick={() => setUploadResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
-          </div>
-        )}
-      </div>
-      )}
 
-      {/* Hall of Fame Configuration */}
-      {isAdmin && (
-      <div className="card p-6">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
-          <Trophy className="w-4.5 h-4.5 text-amber-500" />
-          Hall of Fame Configuration
-        </h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-          Configure how points are awarded to members. These points contribute to the yearly leaderboard.
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="input-label">Attendance Points</label>
-            <input
-              type="number"
-              value={hallOfFameSettings.points_attendance}
-              onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, points_attendance: e.target.value })}
-              className="input w-full"
-              placeholder="e.g. 10"
-            />
-            <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Awarded for "Present" status</p>
+            {/* Users Table */}
+            {usersLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
+                <span className="ml-2 text-sm text-slate-500">Loading users...</span>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="text-center py-8 text-sm text-slate-500 dark:text-slate-400">
+                No users found.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">User</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">Role</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden sm:table-cell">Section</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden md:table-cell">Status</th>
+                      <th className="text-right py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((u) => (
+                      <tr key={u.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-3">
+                            {u.profile_picture ? (
+                              <img src={u.profile_picture} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
+                                {u.full_name?.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium text-slate-900 dark:text-slate-100">{u.full_name}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">@{u.username}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-3">
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeColor[u.role] || ''}`}>
+                            {roleLabels[u.role] || u.role}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-600 dark:text-slate-400 hidden sm:table-cell">
+                          {u.section_name || '-'}
+                        </td>
+                        <td className="py-3 px-3 hidden md:table-cell">
+                          {u.locked_until ? (
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Locked</span>
+                          ) : u.totp_enabled ? (
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">2FA</span>
+                          ) : (
+                            <span className="text-xs text-slate-400">Active</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => handleResetUserPassword(u.id)} title="Reset Password" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600">
+                              <Key className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setEditingUser({ ...u })} title="Edit User" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-primary-600">
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setDeletingUser(u)} title="Delete User" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-rose-600">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+              {filteredUsers.length} of {users.length} users shown
+            </div>
           </div>
-          <div>
-            <label className="input-label">Excused Points</label>
-            <input
-              type="number"
-              value={hallOfFameSettings.points_excused}
-              onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, points_excused: e.target.value })}
-              className="input w-full"
-              placeholder="e.g. 5"
-            />
-            <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Awarded for "Excused" status</p>
-          </div>
-          <div>
-            <label className="input-label">Midweek Service Day</label>
-            <select
-              value={hallOfFameSettings.midweek_day}
-              onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, midweek_day: e.target.value })}
-              className="select w-full"
-            >
-              <option value="Wednesday">Wednesday</option>
-              <option value="Thursday">Thursday</option>
-              <option value="Friday">Friday</option>
-            </select>
+
+          <div className="card overflow-hidden">
+            <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-8 text-white">
+              <h3 className="text-lg font-bold mb-2">Data Import</h3>
+              <p className="text-primary-100 text-sm max-w-lg">
+                Bulk provision sections, leaders, and members via CSV upload. This will automatically create accounts and set up hierarchies.
+              </p>
+            </div>
+            <div className="p-6">
+              <label className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-all cursor-pointer group">
+                <Upload className="w-10 h-10 text-slate-300 dark:text-slate-600 group-hover:text-primary-500 transition-colors mb-3" />
+                <span className="text-sm font-semibold text-slate-600 dark:text-slate-400 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                  {uploading ? 'Uploading...' : 'Click to upload CSV file'}
+                </span>
+                <span className="text-xs text-slate-400 mt-1">Supports .csv format</span>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCSVUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            {uploadResult && (
+              <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl">
+                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">Upload Complete</p>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div><span className="text-slate-500 dark:text-slate-400">Sections:</span> <strong>{uploadResult.results.sectionsCreated}</strong></div>
+                  <div><span className="text-slate-500 dark:text-slate-400">Leaders:</span> <strong>{uploadResult.results.leadersCreated}</strong></div>
+                  <div><span className="text-slate-500 dark:text-slate-400">Members:</span> <strong>{uploadResult.results.membersCreated}</strong></div>
+                </div>
+                {uploadResult.tempPasswords?.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">New Leader Credentials</p>
+                    {uploadResult.tempPasswords.map((cred, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg mb-2">
+                        <span className="text-sm text-slate-600 dark:text-slate-400"><strong>{cred.username}</strong>: {cred.password}</span>
+                        <button onClick={() => copyToClipboard(`${cred.username}: ${cred.password}`, `cred-${i}`)} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
+                          {copiedField === `cred-${i}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {uploadResult.results.errors?.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
+                    <p className="text-sm font-semibold text-rose-700 dark:text-rose-400 mb-1">Errors ({uploadResult.results.errors.length})</p>
+                    <ul className="text-xs text-rose-600 dark:text-rose-400 space-y-1 max-h-32 overflow-y-auto">
+                      {uploadResult.results.errors.map((err, i) => <li key={i}>{err}</li>)}
+                    </ul>
+                  </div>
+                )}
+                <button onClick={() => setUploadResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
+              </div>
+            )}
           </div>
         </div>
-
-        <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700">
-          <button
-            onClick={handleSaveSettings}
-            disabled={settingsLoading}
-            className="btn-primary"
-          >
-            {settingsLoading ? 'Saving...' : 'Save Configuration'}
-          </button>
-        </div>
-      </div>
       )}
+
+
 
       {/* 2FA Setup Modal */}
       {show2FAModal && (

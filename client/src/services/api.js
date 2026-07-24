@@ -2,7 +2,8 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: '/api',
-  withCredentials: true
+  withCredentials: true,
+  timeout: 45000
 });
 
 // Helper to get cookie value

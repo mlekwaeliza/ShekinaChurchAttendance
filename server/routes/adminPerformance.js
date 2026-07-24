@@ -46,11 +46,15 @@ router.put('/performance/weights', async (req, res) => {
 });
 
 // Detailed profile for one ranked entity
+// 2-minute cache: scoreLeaders() runs across ALL leaders and is expensive
 router.get('/performance/profile/:entityType/:entityId', async (req, res) => {
+  const { entityType, entityId } = req.params;
+  const { filter = 'month' } = req.query;
   try {
-    const { entityType, entityId } = req.params;
-    const { filter = 'month' } = req.query;
-    const profile = await engine.getProfile(entityType, entityId, filter, req.session.user?.id);
+    const cacheKey = `perf-profile:${entityType}:${entityId}:${filter}`;
+    const profile = await withCache(cacheKey, 120000, () =>
+      engine.getProfile(entityType, entityId, filter, req.session.user?.id)
+    );
     if (!profile) return res.status(404).json({ error: 'Entity not found' });
     res.json(profile);
   } catch (e) {

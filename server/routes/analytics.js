@@ -2,7 +2,7 @@ const express = require('express');
 const { queries, get, all, getMultiPeriodOverall, getMultiPeriodSections, getMultiPeriodLeaders, getMultiPeriodDepartments, getMultiPeriodMembers, getAttendanceMovement } = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString, parseDateInput } = require('../utils/date');
-const { withCache, invalidate: invalidateCache } = require('../utils/cache');
+const { withCache, invalidate: invalidateCache, withTimeout } = require('../utils/cache');
 const { yearOnly, yearMonth } = require('../utils/sqlDialect');
 
 const router = express.Router();
@@ -220,14 +220,14 @@ router.get('/dashboard-metrics', async (req, res) => {
 
     const cacheKey = `dashboard-metrics:${serviceId}`;
     const payload = await withCache(cacheKey, DASHBOARD_METRICS_TTL, async () => {
-      const [comparisons, needsAttention, sparkline, hallOfFame, settings, todayStats] = await Promise.all([
+      const [comparisons, needsAttention, sparkline, hallOfFame, settings, todayStats] = await withTimeout(Promise.all([
         queries.getDashboardComparisons(),
         queries.getNeedsAttention(serviceId),
         queries.getAttendanceSparkline(serviceId),
         queries.getHallOfFameSummary(year),
         queries.getSettings(),
         queries.getTodayAttendanceStats(serviceId),
-      ]);
+      ]), 20000, 'Dashboard metrics queries timed out');
 
       // Fetch last session for this service/filter and use it as the dashboard
       // attendance display when today has no records.
