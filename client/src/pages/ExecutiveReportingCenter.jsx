@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { adminAPI } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { PDFReportGenerator } from '../utils/pdfReportGenerator';
+import { PresentationGenerator } from '../utils/presentationGenerator';
 import Badge from '../components/ui/Badge';
-import { BarChart3, Download, FileText, Users, Calendar, TrendingUp, Heart, Baby, Home, DollarSign, Filter, RefreshCw } from 'lucide-react';
+import { BarChart3, Download, FileText, Users, Calendar, TrendingUp, Heart, Baby, Home, DollarSign, Filter, RefreshCw, Presentation } from 'lucide-react';
 
 const REPORT_TYPES = [
   { id: 'attendance', label: 'Attendance', icon: Calendar, color: 'blue' },
@@ -153,6 +154,59 @@ export default function ExecutiveReportingCenter() {
     }
   };
 
+  const handlePresentation = () => {
+    if (!reportData) {
+      showToast('No data to export', 'error');
+      return;
+    }
+    try {
+      setExporting(true);
+      const gen = new PresentationGenerator();
+      const dateRange = `${startDate} to ${endDate}`;
+      gen.setTitle(`${activeReport.charAt(0).toUpperCase() + activeReport.slice(1)} Report`);
+      gen[activeReport === 'newMembers' ? 'generateNewMembersReport' : `generate${activeReport.charAt(0).toUpperCase() + activeReport.slice(1)}Report`](reportData);
+      gen.save(`${activeReport}_presentation_${startDate}_to_${endDate}.pptx`);
+      showToast('Presentation exported successfully', 'success');
+    } catch (error) {
+      console.error('Presentation export error:', error);
+      showToast('Failed to export presentation', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleFullPresentation = async () => {
+    try {
+      setExporting(true);
+      showToast('Generating full presentation...', 'info');
+      const params = { start_date: startDate, end_date: endDate };
+      const allData = await Promise.allSettled([
+        adminAPI.reports.getAttendance(params),
+        adminAPI.reports.getMembership(params),
+        adminAPI.reports.getLeadership(params),
+        adminAPI.reports.getFinance(params),
+        adminAPI.reports.getEvangelism(params),
+        adminAPI.reports.getNewMembers(params),
+        adminAPI.reports.getHomeCells(params),
+        adminAPI.reports.getChildren(params),
+      ]);
+      const keys = ['attendance', 'membership', 'leadership', 'finance', 'evangelism', 'newMembers', 'homeCells', 'children'];
+      const dataObj = {};
+      allData.forEach((result, i) => {
+        dataObj[keys[i]] = { data: result.status === 'fulfilled' ? result.value : null };
+      });
+      const gen = new PresentationGenerator();
+      gen.generateFullPresentation(dataObj);
+      gen.save(`full_executive_presentation_${startDate}_to_${endDate}.pptx`);
+      showToast('Full presentation exported successfully', 'success');
+    } catch (error) {
+      console.error('Full presentation error:', error);
+      showToast('Failed to export full presentation', 'error');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const renderStatCard = (label, value, subtitle, color = 'slate') => (
     <div className="card p-4">
       <p className="text-sm text-slate-500">{label}</p>
@@ -201,8 +255,11 @@ export default function ExecutiveReportingCenter() {
           <button onClick={handlePDFExport} className="btn-primary flex items-center gap-2">
             <FileText className="w-4 h-4" /> Export PDF
           </button>
-          <button onClick={handleFullReport} className="btn-primary flex items-center gap-2" disabled={exporting}>
-            <FileText className="w-4 h-4" /> Full Report
+          <button onClick={handlePresentation} className="btn-primary flex items-center gap-2" disabled={exporting}>
+            <Presentation className="w-4 h-4" /> Presentation
+          </button>
+          <button onClick={handleFullPresentation} className="btn-primary flex items-center gap-2" disabled={exporting}>
+            <Presentation className="w-4 h-4" /> Full Presentation
           </button>
         </div>
       </div>

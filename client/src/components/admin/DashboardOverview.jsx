@@ -14,10 +14,12 @@ import {
   Sparkles,
   Zap,
   Download,
+  Presentation,
 } from 'lucide-react';
 
 import QuickActionsBar from './QuickActionsBar';
 import NeedsAttentionWidget from './NeedsAttentionWidget';
+import { PresentationGenerator } from '../../utils/presentationGenerator';
 import HallOfFamePreview from './HallOfFamePreview';
 import LeadershipWidget from './LeadershipWidget';
 import StatCard from '../ui/StatCard';
@@ -203,6 +205,16 @@ const DashboardOverview = ({
     }
 
     doc.save(`dashboard_summary_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handlePresentation = () => {
+    try {
+      const gen = new PresentationGenerator();
+      gen.generateDashboardSummary(dashboardMetrics, sections, leaders);
+      gen.save(`church_dashboard_${new Date().toISOString().split('T')[0]}.pptx`);
+    } catch (error) {
+      console.error('Presentation export error:', error);
+    }
   };
 
   const renderSparkline = () => {
@@ -407,6 +419,9 @@ const DashboardOverview = ({
         <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
           <button onClick={handleExportPDF} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
             <Download className="h-3.5 w-3.5" /> Download PDF
+          </button>
+          <button onClick={handlePresentation} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+            <Presentation className="h-3.5 w-3.5" /> Presentation
           </button>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500 relative">
