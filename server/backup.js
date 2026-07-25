@@ -81,19 +81,31 @@ function backupPostgres() {
     }
 
     // Force IPv4 for pg_dump — Supabase DNS may resolve to IPv6
-    // which Render's network cannot reach. Replace hostname with
-    // resolved IPv4 directly in the connection URL.
+    // which Render's network cannot reach.
     const dns = require('dns');
     const resolveUrl = (url) => {
       try {
         const u = new URL(url);
         const hostname = u.hostname;
-        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return url;
-        const { address } = dns.lookupSync(hostname, { family: 4, all: false });
-        if (address) {
-          u.hostname = address;
-          console.log(`Resolved ${hostname} -> ${address} (IPv4 forced for pg_dump)`);
+
+        // Supabase direct connection → switch to pooler endpoint (IPv4)
+        if (hostname.endsWith('.supabase.co') && u.port === '5432') {
+          u.port = '6543';
+          u.searchParams.set('pgbouncer', 'true');
+          console.log(`Supabase: switched pg_dump to pooler endpoint (port 6543)`);
           return u.toString();
+        }
+
+        // For other hosts: try to resolve to IPv4
+        if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+          try {
+            const { address } = dns.lookupSync(hostname, { family: 4 });
+            if (address) {
+              u.hostname = address;
+              console.log(`pg_dump: resolved ${hostname} -> ${address} (IPv4)`);
+              return u.toString();
+            }
+          } catch (_) {}
         }
       } catch (_) {}
       return url;

@@ -4,37 +4,47 @@ const dns = require('dns');
 const isTruthy = (value) => ['1', 'true', 'yes', 'require'].includes(String(value || '').toLowerCase());
 const isFalsy = (value) => ['0', 'false', 'no', 'off'].includes(String(value || '').toLowerCase());
 
-// Resolve hostname to IPv4 synchronously — Supabase DNS may return IPv6
+// Resolve hostname to IPv4 — Supabase DNS may return IPv6
 // which some hosting environments (Render) cannot reach.
-function resolveIPv4Sync(hostname) {
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return hostname;
+// For Supabase: automatically switch to pooler endpoint (port 6543) which has IPv4.
+function forceIPv4(url) {
   try {
-    const { address } = dns.lookupSync(hostname, { family: 4, all: false });
-    return address;
-  } catch (_) {
-    return null;
-  }
+    const u = new URL(url);
+    const hostname = u.hostname;
+
+    // Supabase direct connection → switch to pooler endpoint (IPv4)
+    if (hostname.endsWith('.supabase.co') && u.port === '5432') {
+      // Pooler hostname: db.<ref>.supabase.co → aws-0-<region>.pooler.supabase.com
+      // But simpler: just change port to 6543 and add pgbouncer=true
+      u.port = '6543';
+      u.searchParams.set('pgbouncer', 'true');
+      console.log(`Supabase: switched to pooler endpoint (port 6543) for IPv4`);
+      return u.toString();
+    }
+
+    // For other hosts: try to resolve to IPv4
+    try {
+      const { address } = dns.lookupSync(hostname, { family: 4 });
+      if (address && address !== hostname) {
+        u.hostname = address;
+        console.log(`Resolved ${hostname} -> ${address} (IPv4)`);
+        return u.toString();
+      }
+    } catch (_) {}
+  } catch (_) {}
+  return url;
 }
 
 function buildPoolConfig() {
   let connectionString = process.env.DATABASE_URL || null;
 
-  // Strip unsupported query params from Neon/Supabase connection strings
+  // Force IPv4 and strip unsupported query params
   if (connectionString) {
+    connectionString = forceIPv4(connectionString);
     try {
       const url = new URL(connectionString);
       url.searchParams.delete('channel_binding');
       url.searchParams.delete('options');
-
-      // Force IPv4 — Supabase DNS may resolve to IPv6 which Render cannot reach.
-      // Replace hostname with resolved IPv4 directly in the connection string.
-      const hostname = url.hostname;
-      const ipv4 = resolveIPv4Sync(hostname);
-      if (ipv4) {
-        url.hostname = ipv4;
-        console.log(`Resolved ${hostname} -> ${ipv4} (IPv4 forced)`);
-      }
-
       connectionString = url.toString();
     } catch (_) { /* not a parseable URL — use as-is */ }
   }
