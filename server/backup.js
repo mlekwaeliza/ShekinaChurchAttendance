@@ -86,17 +86,9 @@ function backupPostgres() {
     const resolveUrl = (url) => {
       try {
         const u = new URL(url);
+        u.searchParams.delete('pgbouncer');
+
         const hostname = u.hostname;
-
-        // Supabase direct connection → switch to pooler endpoint (IPv4)
-        if (hostname.endsWith('.supabase.co') && u.port === '5432') {
-          u.port = '6543';
-          u.searchParams.set('pgbouncer', 'true');
-          console.log(`Supabase: switched pg_dump to pooler endpoint (port 6543)`);
-          return u.toString();
-        }
-
-        // For other hosts: try to resolve to IPv4
         if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
           try {
             const { address } = dns.lookupSync(hostname, { family: 4 });

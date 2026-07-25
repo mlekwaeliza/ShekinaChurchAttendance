@@ -4,33 +4,25 @@ const dns = require('dns');
 const isTruthy = (value) => ['1', 'true', 'yes', 'require'].includes(String(value || '').toLowerCase());
 const isFalsy = (value) => ['0', 'false', 'no', 'off'].includes(String(value || '').toLowerCase());
 
-// Resolve hostname to IPv4 — Supabase DNS may return IPv6
-// which some hosting environments (Render) cannot reach.
-// For Supabase: automatically switch to pooler endpoint (port 6543) which has IPv4.
+// Force IPv4 — Supabase DNS may return IPv6 which Render cannot reach.
+// Strip pgbouncer param (unsupported by pg lib and pg_dump).
 function forceIPv4(url) {
   try {
     const u = new URL(url);
+    u.searchParams.delete('pgbouncer');
+
+    // Try dns.lookupSync to resolve to IPv4
     const hostname = u.hostname;
-
-    // Supabase direct connection → switch to pooler endpoint (IPv4)
-    if (hostname.endsWith('.supabase.co') && u.port === '5432') {
-      // Pooler hostname: db.<ref>.supabase.co → aws-0-<region>.pooler.supabase.com
-      // But simpler: just change port to 6543 and add pgbouncer=true
-      u.port = '6543';
-      u.searchParams.set('pgbouncer', 'true');
-      console.log(`Supabase: switched to pooler endpoint (port 6543) for IPv4`);
-      return u.toString();
+    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+      try {
+        const { address } = dns.lookupSync(hostname, { family: 4 });
+        if (address) {
+          u.hostname = address;
+          console.log(`Resolved ${hostname} -> ${address} (IPv4)`);
+          return u.toString();
+        }
+      } catch (_) {}
     }
-
-    // For other hosts: try to resolve to IPv4
-    try {
-      const { address } = dns.lookupSync(hostname, { family: 4 });
-      if (address && address !== hostname) {
-        u.hostname = address;
-        console.log(`Resolved ${hostname} -> ${address} (IPv4)`);
-        return u.toString();
-      }
-    } catch (_) {}
   } catch (_) {}
   return url;
 }
