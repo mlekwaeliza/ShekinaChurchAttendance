@@ -20,24 +20,23 @@ function buildPoolConfig() {
   let connectionString = process.env.DATABASE_URL || null;
 
   // Strip unsupported query params from Neon/Supabase connection strings
-  let hostname = null;
   if (connectionString) {
     try {
       const url = new URL(connectionString);
       url.searchParams.delete('channel_binding');
       url.searchParams.delete('options');
-      hostname = url.hostname;
+
+      // Force IPv4 — Supabase DNS may resolve to IPv6 which Render cannot reach.
+      // Replace hostname with resolved IPv4 directly in the connection string.
+      const hostname = url.hostname;
+      const ipv4 = resolveIPv4Sync(hostname);
+      if (ipv4) {
+        url.hostname = ipv4;
+        console.log(`Resolved ${hostname} -> ${ipv4} (IPv4 forced)`);
+      }
+
       connectionString = url.toString();
     } catch (_) { /* not a parseable URL — use as-is */ }
-  }
-
-  // Resolve hostname to IPv4 synchronously
-  let hostaddr = null;
-  if (hostname) {
-    hostaddr = resolveIPv4Sync(hostname);
-    if (hostaddr) {
-      console.log(`Resolved ${hostname} -> ${hostaddr} (IPv4 forced)`);
-    }
   }
 
   // Detect SSL mode from the connection string or env vars
@@ -65,11 +64,6 @@ function buildPoolConfig() {
     connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 15000),
     ssl: sslEnabled ? { rejectUnauthorized } : false
   };
-
-  // hostaddr forces pg to use the resolved IPv4, bypassing DNS at connect time
-  if (hostaddr) {
-    config.hostaddr = hostaddr;
-  }
 
   return config;
 }

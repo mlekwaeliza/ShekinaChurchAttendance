@@ -81,56 +81,50 @@ function backupPostgres() {
     }
 
     // Force IPv4 for pg_dump — Supabase DNS may resolve to IPv6
-    // which Render's network cannot reach. Resolve the hostname to
-    // an IPv4 address and replace it in the connection URL.
+    // which Render's network cannot reach. Replace hostname with
+    // resolved IPv4 directly in the connection URL.
     const dns = require('dns');
-    const resolveUrl = async (url) => {
+    const resolveUrl = (url) => {
       try {
         const u = new URL(url);
         const hostname = u.hostname;
-        const ipv4 = await new Promise((res, rej) => {
-          dns.resolve4(hostname, (err, addresses) => {
-            if (err || !addresses.length) rej(err || new Error('No IPv4'));
-            else res(addresses[0]);
-          });
-        });
-        u.hostname = ipv4;
-        return u.toString();
-      } catch (_) {
-        return url;
-      }
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return url;
+        const { address } = dns.lookupSync(hostname, { family: 4, all: false });
+        if (address) {
+          u.hostname = address;
+          console.log(`Resolved ${hostname} -> ${address} (IPv4 forced for pg_dump)`);
+          return u.toString();
+        }
+      } catch (_) {}
+      return url;
     };
 
-    resolveUrl(cleanUrl).then(finalUrl => {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `backup-${timestamp}.sql`;
-      const backupPath = path.join(BACKUP_DIR, fileName);
-      const pgDump = findPgDump();
+    const finalUrl = resolveUrl(cleanUrl);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `backup-${timestamp}.sql`;
+    const backupPath = path.join(BACKUP_DIR, fileName);
+    const pgDump = findPgDump();
 
-      execFile(pgDump, [finalUrl, '--file', backupPath, '--format', 'plain'], async (error, stdout, stderr) => {
-        if (error) {
-          console.error('PostgreSQL backup failed:', stderr || error.message);
-          reject(error);
-          return;
+    execFile(pgDump, [finalUrl, '--file', backupPath, '--format', 'plain'], async (error, stdout, stderr) => {
+      if (error) {
+        console.error('PostgreSQL backup failed:', stderr || error.message);
+        reject(error);
+        return;
+      }
+
+      console.log(`PostgreSQL database backed up to: ${backupPath}`);
+      cleanupOldBackups();
+
+      const remoteUrl = process.env.BACKUP_REMOTE_URL;
+      if (remoteUrl) {
+        try {
+          await uploadBackupToRemote(backupPath, fileName);
+        } catch (uploadErr) {
+          console.error('Remote backup upload failed:', uploadErr.message);
         }
+      }
 
-        console.log(`PostgreSQL database backed up to: ${backupPath}`);
-        cleanupOldBackups();
-
-        const remoteUrl = process.env.BACKUP_REMOTE_URL;
-        if (remoteUrl) {
-          try {
-            await uploadBackupToRemote(backupPath, fileName);
-          } catch (uploadErr) {
-            console.error('Remote backup upload failed:', uploadErr.message);
-          }
-        }
-
-        resolve(backupPath);
-      });
-    }).catch(err => {
-      console.error('Backup URL resolution failed:', err.message);
-      reject(err);
+      resolve(backupPath);
     });
   });
 }
