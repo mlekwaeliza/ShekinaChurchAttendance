@@ -11,7 +11,6 @@ import {
   ShieldAlert,
   Calendar,
   MessageSquare,
-  Sparkles,
   Zap,
   Download,
   Presentation,
@@ -58,6 +57,8 @@ const DashboardOverview = ({
 
   const { comparisons, needsAttention, sparkline, hallOfFame } = dashboardMetrics || {};
   const welcomeName = pastorName?.trim() || 'Pastor';
+  const currentHour = new Date().getHours();
+  const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
 
   const totalMembers = comparisons?.total_members || allMembers.length;
   const newMembersMonth = comparisons?.new_members_month || 0;
@@ -266,7 +267,7 @@ const DashboardOverview = ({
                   className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-600 transition-colors hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/40"
                 >
                   <ShieldAlert className="w-3 h-3" />
-                  Duty Roster
+                  Service Team
                 </button>
               )}
             </div>
@@ -310,13 +311,13 @@ const DashboardOverview = ({
                   No attendance records yet
                 </p>
                 <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Consistency is key. Start documenting today's {serviceLabel} to track progress.
+                  When leaders submit attendance for today&apos;s {serviceLabel}, this overview will update automatically.
                 </p>
                 <button
                   onClick={() => navigate('/admin/reports')}
                   className="btn-primary btn-lg"
                 >
-                  Start Check-in
+                  Open attendance workspace
                 </button>
               </>
             ) : (
@@ -337,7 +338,7 @@ const DashboardOverview = ({
                     className="btn-secondary btn-lg"
                   >
                     <Calendar className="w-4 h-4" />
-                    View last session - {lastSession.date}
+                    Review last service · {lastSession.date}
                   </button>
                 )}
               </>
@@ -370,7 +371,7 @@ const DashboardOverview = ({
                 <span className="text-xs font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400">Absent</span>
               </div>
               <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{todayStats.absent}</p>
-              <p className="mt-2 text-[10px] font-semibold text-slate-400">Requires follow-up</p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">Review before creating a care follow-up</p>
             </div>
           </div>
 
@@ -384,7 +385,7 @@ const DashboardOverview = ({
                 <span className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">Excused</span>
               </div>
               <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{todayStats.excused}</p>
-              <p className="mt-2 text-[10px] font-semibold text-slate-400">Planned absence</p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">Known in advance</p>
             </div>
           </div>
         </div>
@@ -402,39 +403,42 @@ const DashboardOverview = ({
 
   return (
     <div className="space-y-6 animate-fade-in pb-12">
-      <div className="flex items-center justify-between flex-wrap gap-3 px-1">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-          </div>
+      <section className="product-surface relative overflow-hidden px-5 py-6 sm:px-7">
+        <div className="absolute inset-y-0 right-0 hidden w-[42%] bg-[radial-gradient(circle_at_80%_20%,rgba(20,168,150,0.14),transparent_65%)] lg:block" />
+        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-              Welcome, <span className="text-slate-900 dark:text-white">{welcomeName}</span>
+            <div className="mb-3 flex items-center gap-2">
+              <span className="section-eyebrow">Church command center</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-500">
+                  <span className="absolute inset-0 animate-ping rounded-full bg-emerald-500 opacity-60" />
+                </span>
+                Live
+              </span>
+            </div>
+            <h2 className="font-display text-2xl font-semibold tracking-[-0.035em] text-slate-950 dark:text-white sm:text-3xl">
+              {greeting}, {welcomeName}
             </h2>
-            <p className="text-xs text-slate-400">
-              Church overview · {showingLabel}
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+              Here is the health of your church for <span className="font-semibold text-slate-700 dark:text-slate-200">{showingLabel}</span>.
+              Focus first on the people and ministry areas that need attention.
             </p>
           </div>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-          <button onClick={handleExportPDF} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
-            <Download className="h-3.5 w-3.5" /> Download PDF
-          </button>
-          <button onClick={handlePresentation} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
-            <Presentation className="h-3.5 w-3.5" /> Presentation
-          </button>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 relative">
-              <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={handleExportPDF} className="btn-secondary btn-sm focus-ring">
+              <Download className="h-3.5 w-3.5" /> PDF summary
+            </button>
+            <button onClick={handlePresentation} className="btn-secondary btn-sm focus-ring">
+              <Presentation className="h-3.5 w-3.5" /> Presentation
+            </button>
+            <span className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50 px-3 text-[11px] font-semibold text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+              <Clock3 className="h-3.5 w-3.5" />
+              Updated {lastUpdatedStr}
             </span>
-            Live
-          </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5">
-            <Clock3 className="h-3.5 w-3.5" />
-            Updated {lastUpdatedStr}
-          </span>
+          </div>
         </div>
-      </div>
+      </section>
 
       <QuickActionsBar
         serviceTypes={serviceTypes}

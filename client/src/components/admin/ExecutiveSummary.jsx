@@ -305,7 +305,7 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
             <div className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/10 p-4">
               <div className="flex items-center gap-2 mb-3">
                 <AlertTriangle className="w-4 h-4 text-rose-500" />
-                <h3 className="text-xs font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider">Critical Alerts â€” {highPriorityAlerts.length} require immediate action</h3>
+                <h3 className="text-xs font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wider">Critical Alerts — {highPriorityAlerts.length} require immediate action</h3>
               </div>
               <div className="grid gap-2">
                 {highPriorityAlerts.slice(0, 3).map((a, i) => <AlertCard key={i} alert={a} index={i} />)}
@@ -388,7 +388,7 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
                       <span className={`w-6 h-6 rounded-lg text-[10px] font-bold flex items-center justify-center ${i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}>{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-900 dark:text-white truncate">{l.name}</p>
-                        <p className="text-[10px] text-slate-400">{l.section} Â· {l.members} members</p>
+                        <p className="text-[10px] text-slate-400">{l.section} · {l.members} members</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold" style={{ color: l.attendanceRate >= 75 ? '#10b981' : l.attendanceRate >= 50 ? '#f59e0b' : '#ef4444' }}>{l.attendanceRate}%</p>
@@ -414,7 +414,7 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
                     </div>
                     <div className="flex-1">
                       <p className="text-xs font-medium text-slate-900 dark:text-white">{a.action}</p>
-                      <p className="text-[10px] text-slate-400 capitalize">{a.category} Â· {a.impact} impact</p>
+                      <p className="text-[10px] text-slate-400 capitalize">{a.category} · {a.impact} impact</p>
                     </div>
                     <Badge variant={a.priority === 'high' ? 'danger' : 'warning'}>{a.priority}</Badge>
                   </div>

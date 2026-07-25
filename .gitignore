@@ -12,6 +12,7 @@ server/.env
 temp/
 build/
 client/dist/
+client/dist-qa/
 server/backups/
 server/uploads/
 server/temp/

@@ -7,6 +7,7 @@ import { BreadcrumbProvider } from '../context/BreadcrumbContext';
 import Breadcrumbs from './ui/Breadcrumbs';
 import NotificationBell from './NotificationBell';
 import SearchModal from './admin/SearchModal';
+import BrandMark from './BrandMark';
 import { authAPI } from '../services/api';
 import { useQueryClient } from '@tanstack/react-query';
 import useEventStream from '../hooks/useEventStream';
@@ -14,7 +15,6 @@ import { useToast } from '../context/ToastContext';
 import {
   LayoutDashboard,
   Users,
-  UserCog,
   FileText,
   Clock,
   BarChart3,
@@ -24,12 +24,9 @@ import {
   ChevronRight,
   LogOut,
   Search,
-  Bell,
   Shield,
   ChevronDown,
   Menu,
-  X,
-  Church,
   Activity,
   ClipboardList,
   Eye,
@@ -47,26 +44,26 @@ import {
   Tag,
   UserPlus,
   RefreshCw,
-  Edit3,
   Award,
   Building2,
   Heart,
   Cross,
   DollarSign,
   Banknote,
-  Trash2,
   MapPin,
   Send,
   Droplets,
   TrendingUp,
   Crown,
-  Baby,
 } from 'lucide-react';
+
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
+const IDLE_WARNING_MS = 55 * 60 * 1000;
 
 const Layout = ({ children, showNav = true }) => {
   const { user, logout, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { isOnline, pendingCount, syncing, syncPending, conflicts } = useOffline();
+  const { isOnline, pendingCount, syncing, syncPending } = useOffline();
   const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -101,8 +98,6 @@ const Layout = ({ children, showNav = true }) => {
   // rolling timeout on the session cookie, but a tab left open without
   // network activity can sit idle for a long time. Any user input
   // (mousemove, keydown, click, scroll, touch) resets the timer.
-  const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
-  const IDLE_WARNING_MS = 55 * 60 * 1000; // warn 5 min before logout
   useEffect(() => {
     if (!user) return undefined;
     let warnTimer = null;
@@ -211,50 +206,48 @@ const Layout = ({ children, showNav = true }) => {
   // Navigation structure per role
   const navConfig = {
     admin: [
-      { section: 'MAIN', items: [
-        { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+      { section: 'OVERVIEW', items: [
+        { path: '/admin', label: 'Church Overview', icon: LayoutDashboard, exact: true },
       ]},
-      { section: 'CHURCH STRUCTURE', items: [
+      { section: 'MINISTRIES', items: [
         { path: '/admin/sections', label: 'Sections', icon: Layers },
         { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
         { path: '/admin/departments', label: 'Departments', icon: Building2 },
         { path: '/admin/leadership', label: 'Leadership', icon: Award },
         { path: '/admin/titles', label: 'Titles', icon: Tag },
       ]},
-      { section: 'PEOPLE', items: [
-        { path: '/admin/members', label: 'Members', icon: Users },
+      { section: 'PEOPLE & CARE', items: [
+        { path: '/admin/members', label: 'Member Directory', icon: Users },
         { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
         { path: '/admin/leaders', label: 'Leaders', icon: Crown },
         { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
-        { path: '/admin/rewards', label: 'Hall of Fame', icon: Trophy },
+        { path: '/admin/rewards', label: 'Recognition', icon: Trophy },
       ]},
-      { section: 'ATTENDANCE', items: [
-        { path: '/admin/attendance-dashboard', label: 'Attendance Dashboard', icon: BarChart3 },
-        { path: '/admin/attendance-corrections', label: 'Attendance Corrections', icon: CheckSquare },
-        { path: '/admin/history', label: 'Attendance History', icon: Clock },
-        { path: '/admin/attendance-analytics', label: 'Attendance Analytics', icon: TrendingUp },
+      { section: 'SERVICES & ATTENDANCE', items: [
+        { path: '/admin/attendance-dashboard', label: 'Attendance Overview', icon: BarChart3 },
+        { path: '/admin/attendance-corrections', label: 'Review Attendance', icon: CheckSquare },
+        { path: '/admin/history', label: 'Service History', icon: Clock },
+        { path: '/admin/attendance-analytics', label: 'Attendance Insights', icon: TrendingUp },
       ]},
-      { section: 'EVANGELISM', items: [
-        { path: '/admin/evangelism', label: 'Dashboard', icon: Heart, exact: true },
+      { section: 'OUTREACH', items: [
+        { path: '/admin/evangelism', label: 'Outreach Overview', icon: Heart, exact: true },
         { path: '/admin/evangelism', label: 'Outreach Events', icon: Send, search: '?subtab=outreach' },
-        { path: '/admin/evangelism', label: 'Souls Won', icon: Users, search: '?subtab=souls' },
-        { path: '/admin/follow-ups', label: 'Follow-Ups', icon: ClipboardCheck },
+        { path: '/admin/evangelism', label: 'New Believers', icon: Users, search: '?subtab=souls' },
+        { path: '/admin/follow-ups', label: 'Care Follow-Ups', icon: ClipboardCheck },
         { path: '/admin/evangelism', label: 'Baptism', icon: Droplets, search: '?subtab=baptism' },
-        { path: '/admin/evangelism', label: 'Reports', icon: FileText, search: '?subtab=reports' },
+        { path: '/admin/evangelism', label: 'Outreach Reports', icon: FileText, search: '?subtab=reports' },
       ]},
-      { section: 'FINANCE', items: [
-        { path: '/admin/finance', label: 'Finance Dashboard', icon: Banknote },
-      ]},
-      { section: 'COMMUNICATION', items: [
+      { section: 'OPERATIONS', items: [
+        { path: '/admin/finance', label: 'Finance', icon: Banknote },
         { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
         { path: '/admin/announcements', label: 'Announcements', icon: Megaphone },
       ]},
-      { section: 'REPORTING', items: [
+      { section: 'INSIGHTS', items: [
         { path: '/admin/reporting', label: 'Church Reports', icon: FileText },
         { path: '/admin/analytics', label: 'Analytics', icon: Activity },
-        { path: '/admin/audit', label: 'Audit Log', icon: ShieldCheck },
       ]},
-      { section: 'SYSTEM', items: [
+      { section: 'ADMINISTRATION', items: [
+        { path: '/admin/audit', label: 'Activity Log', icon: ShieldCheck },
         { path: '/admin/settings', label: 'Settings', icon: Settings },
       ]},
     ],
@@ -295,8 +288,8 @@ const Layout = ({ children, showNav = true }) => {
       ]},
       { section: 'EVANGELISM', items: [
         { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
-        { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
-        { path: '/evangelist/follow-ups', label: 'Follow-Ups', icon: MessageSquare },
+        { path: '/evangelist/souls', label: 'New Believers', icon: Users },
+        { path: '/evangelist/follow-ups', label: 'Care Follow-Ups', icon: MessageSquare },
         { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
       ]},
       { section: 'TEAM', items: [
@@ -323,7 +316,7 @@ const Layout = ({ children, showNav = true }) => {
       { section: 'EVANGELISM', items: [
         { path: '/evangelist', label: 'Evangelism Dashboard', icon: Heart, exact: true },
         { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
-        { path: '/evangelist/souls', label: 'Souls Won', icon: Users },
+        { path: '/evangelist/souls', label: 'New Believers', icon: Users },
         { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
       ]},
       { section: 'ACCOUNT', items: [
@@ -437,30 +430,25 @@ const Layout = ({ children, showNav = true }) => {
     accountant: 'bg-cyan-500/20 text-cyan-300',
   };
 
+  // Keep the mobile drawer expanded even when the desktop sidebar is collapsed.
+  const navCollapsed = collapsed && !mobileOpen;
+
   // --- Sidebar Content ---
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className={`flex items-center gap-3 px-4 h-16 shrink-0 border-b border-sidebar-border/30 ${collapsed ? 'justify-center' : ''}`}>
-        <div className="w-9 h-9 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
-          <Church className="w-5 h-5 text-white" />
-        </div>
-        {!collapsed && (
-          <div className="animate-fade-in overflow-hidden">
-            <h1 className="text-sm font-bold text-white tracking-tight leading-tight">Church</h1>
-            <p className="text-[10px] text-sidebar-text/50 font-medium">Attendance System</p>
-          </div>
-        )}
+      <div className={`flex h-[4.5rem] shrink-0 items-center border-b border-white/[0.06] px-4 ${navCollapsed ? 'justify-center' : ''}`}>
+        <BrandMark compact={navCollapsed} inverse />
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-1">
         {currentNav.map((group, gi) => (
           <div key={gi}>
-            {!collapsed && group.section !== 'MAIN' && (
+            {!navCollapsed && (
               <div className="sidebar-section-label">{group.section}</div>
             )}
-            {collapsed && gi > 0 && (
+            {navCollapsed && gi > 0 && (
               <div className="h-px bg-sidebar-border/20 mx-2 my-3" />
             )}
             {group.items.map((item) => {
@@ -470,15 +458,16 @@ const Layout = ({ children, showNav = true }) => {
                 <Link
                   key={item.path + (item.search || '')}
                   to={item.path + (item.search || '')}
-                  title={collapsed ? item.label : undefined}
-                  className={`sidebar-nav-item ${active ? 'active' : ''} ${collapsed ? 'justify-center px-0' : ''}`}
+                  onClick={() => setMobileOpen(false)}
+                  title={navCollapsed ? item.label : undefined}
+                  className={`sidebar-nav-item ${active ? 'active' : ''} ${navCollapsed ? 'justify-center px-0' : ''}`}
                 >
                   <Icon className="nav-icon" />
-                  {!collapsed && (
+                  {!navCollapsed && (
                     <span className="truncate">{item.label}</span>
                   )}
-                  {active && !collapsed && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-white rounded-r-full" />
+                  {active && !navCollapsed && (
+                    <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-accent-400" />
                   )}
                 </Link>
               );
@@ -500,9 +489,9 @@ const Layout = ({ children, showNav = true }) => {
       </div>
 
       {/* User Profile */}
-      <div className={`px-3 py-3 border-t border-sidebar-border/20 ${collapsed ? 'flex justify-center' : ''}`}>
+      <div className={`px-3 py-3 border-t border-sidebar-border/20 ${navCollapsed ? 'flex justify-center' : ''}`}>
         <div
-          className={`flex items-center gap-3 ${collapsed ? '' : 'p-2 rounded-xl hover:bg-sidebar-hover transition-colors cursor-pointer'}`}
+          className={`flex items-center gap-3 ${navCollapsed ? '' : 'p-2 rounded-xl hover:bg-sidebar-hover transition-colors cursor-pointer'}`}
           onClick={(e) => { e.stopPropagation(); setProfileDropdown(!profileDropdown); }}
         >
           {/* Avatar */}
@@ -521,7 +510,7 @@ const Layout = ({ children, showNav = true }) => {
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-sidebar" />
           </div>
 
-          {!collapsed && (
+          {!navCollapsed && (
             <div className="flex-1 min-w-0 animate-fade-in">
               <p className="text-sm font-semibold text-white truncate">{user?.full_name}</p>
               <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
@@ -538,30 +527,30 @@ const Layout = ({ children, showNav = true }) => {
             </div>
           )}
 
-          {!collapsed && <ChevronDown className="w-4 h-4 text-sidebar-text/50 shrink-0" />}
+          {!navCollapsed && <ChevronDown className="w-4 h-4 text-sidebar-text/50 shrink-0" />}
         </div>
 
         {/* Profile Dropdown */}
-        {profileDropdown && !collapsed && (
-          <div className="absolute bottom-20 left-3 right-3 bg-white rounded-xl shadow-elevated border border-slate-200 py-1 animate-scale-in z-50" onClick={(e) => e.stopPropagation()}>
+        {profileDropdown && !navCollapsed && (
+          <div className="absolute bottom-20 left-3 right-3 z-50 animate-scale-in rounded-xl border border-slate-200 bg-white py-1 shadow-elevated dark:border-white/10 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => { navigate(user?.role === 'admin' ? '/admin/settings' : '/change-password'); setProfileDropdown(false); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors dark:text-slate-200 dark:hover:bg-white/5"
             >
               <Settings className="w-4 h-4 text-slate-400" />
               Settings
             </button>
             <button
               onClick={() => { navigate('/change-password'); setProfileDropdown(false); }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors dark:text-slate-200 dark:hover:bg-white/5"
             >
               <Shield className="w-4 h-4 text-slate-400" />
               Change Password
             </button>
-            <div className="h-px bg-slate-100 my-1" />
+            <div className="my-1 h-px bg-slate-100 dark:bg-white/10" />
             <button
               onClick={logout}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors dark:text-rose-400 dark:hover:bg-rose-500/10"
             >
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -574,7 +563,7 @@ const Layout = ({ children, showNav = true }) => {
 
   if (!showNav || !user) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#070b16]">
+      <div className="app-canvas min-h-screen">
         <main className="max-w-7xl mx-auto px-4 py-8">
           {children}
         </main>
@@ -585,7 +574,7 @@ const Layout = ({ children, showNav = true }) => {
   return (
     <BreadcrumbProvider>
       <RealtimeBridge user={user}>
-        <div className="min-h-screen bg-slate-50 dark:bg-[#070b16] overflow-hidden">
+        <div className="app-canvas min-h-screen overflow-hidden">
         {/* Hidden file input for profile uploads */}
         <input type="file" id="profile-upload" className="hidden" accept="image/*" onChange={handleProfileUpload} disabled={uploading} />
 
@@ -616,13 +605,15 @@ const Layout = ({ children, showNav = true }) => {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileOpen(true)}
-              className="md:hidden btn-ghost p-2 -ml-2"
+              className="header-icon-button focus-ring -ml-2 md:hidden"
+              aria-label="Open navigation"
             >
               <Menu className="w-5 h-5" />
             </button>
 
             {/* Page title replaced with Breadcrumbs */}
-            <div>
+            <div className="min-w-0">
+              <p className="section-eyebrow hidden sm:block">{pageTitle}</p>
               <Breadcrumbs userRole={user?.role} userName={user?.full_name} />
             </div>
           </div>
@@ -632,21 +623,29 @@ const Layout = ({ children, showNav = true }) => {
             {/* Global search */}
             <button
               onClick={() => setSearchOpen(true)}
-              className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:shadow-none dark:hover:border-primary-400/50 dark:hover:bg-primary-500/10 dark:hover:text-white"
+              className="header-icon-button focus-ring sm:hidden"
+              title="Search"
+              aria-label="Search members, reports, and pages"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="focus-ring hidden h-10 min-w-[13rem] items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 text-slate-500 transition-all hover:border-slate-300 hover:bg-white hover:text-slate-900 sm:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-primary-400/40 dark:hover:bg-white/10 dark:hover:text-white"
               title="Search (Ctrl+K)"
             >
               <Search className="w-4 h-4" />
-              <span className="hidden md:inline text-xs font-medium">Search</span>
-              <kbd className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 rounded">
-                <span className="text-xs">⌘</span>K
+              <span className="text-xs font-medium">Search anything</span>
+              <kbd className="ml-auto hidden items-center rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-400 md:inline-flex dark:border-white/10 dark:bg-slate-900">
+                Ctrl K
               </kbd>
             </button>
             {/* Live time */}
-            <div className="hidden lg:flex items-center gap-2 text-sm text-slate-500 mr-2">
+            <div className="mr-1 hidden items-center gap-2 text-xs text-slate-500 xl:flex dark:text-slate-400">
               <span className="font-medium">
                 {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               </span>
-              <span className="text-slate-300">•</span>
+              <span className="text-slate-300 dark:text-slate-700">•</span>
               <span className="tabular-nums">
                 {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </span>
@@ -689,7 +688,7 @@ const Layout = ({ children, showNav = true }) => {
             <button
               onClick={handleRefreshApp}
               disabled={refreshingApp}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 disabled:cursor-wait disabled:opacity-70 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:shadow-none dark:hover:border-primary-400/50 dark:hover:bg-primary-500/10 dark:hover:text-white"
+              className="header-icon-button focus-ring hidden disabled:cursor-wait disabled:opacity-70 md:inline-flex"
               title="Refresh app"
               aria-label="Refresh app"
             >
@@ -707,8 +706,9 @@ const Layout = ({ children, showNav = true }) => {
             {/* Dark mode toggle */}
             <button
               onClick={toggleTheme}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 dark:border-white/10 dark:bg-slate-950/70 dark:text-slate-300 dark:shadow-none dark:hover:border-primary-400/50 dark:hover:bg-primary-500/10 dark:hover:text-white"
+              className="header-icon-button focus-ring"
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
               {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-300" /> : <Moon className="w-5 h-5" />}
             </button>
@@ -716,7 +716,8 @@ const Layout = ({ children, showNav = true }) => {
             {/* Settings link */}
             <button
               onClick={() => navigate(user?.role === 'admin' ? '/admin/settings' : '/change-password')}
-              className="btn-ghost p-2"
+              className="header-icon-button focus-ring hidden sm:inline-flex"
+              aria-label="Open settings"
             >
               <Settings className="w-5 h-5 text-slate-500" />
             </button>
@@ -724,8 +725,8 @@ const Layout = ({ children, showNav = true }) => {
         </header>
 
         {/* Page Content */}
-        <main className="p-6 lg:p-8 h-[calc(100vh-4rem)] overflow-y-auto scroll-smooth">
-          <div className="animate-fade-in">
+        <main className="h-[calc(100vh-4rem)] overflow-y-auto scroll-smooth px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+          <div className="mx-auto max-w-[96rem] animate-fade-in">
             {children}
           </div>
         </main>

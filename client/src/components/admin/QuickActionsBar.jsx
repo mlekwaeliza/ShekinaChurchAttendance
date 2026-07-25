@@ -1,36 +1,71 @@
 import React from 'react';
-import { MousePointer2, UserPlus, Megaphone, CalendarCheck, Clock, Check } from 'lucide-react';
+import { CalendarCheck, Clock, Megaphone, MousePointer2, UserPlus } from 'lucide-react';
 
-const QuickActionsBar = ({ serviceTypes, selectedServiceId, onServiceChange, onMarkAttendance, onAddMember, onSendAnnouncement, onViewFollowUps }) => {
+const QuickActionsBar = ({
+  serviceTypes,
+  selectedServiceId,
+  onServiceChange,
+  onMarkAttendance,
+  onAddMember,
+  onSendAnnouncement,
+  onViewFollowUps,
+}) => {
+  const actions = [
+    {
+      label: 'View attendance',
+      icon: MousePointer2,
+      onClick: onMarkAttendance,
+      style: 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300',
+    },
+    {
+      label: 'Add visitor',
+      icon: UserPlus,
+      onClick: onAddMember,
+      style: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+    },
+    {
+      label: 'Announcement',
+      icon: Megaphone,
+      onClick: onSendAnnouncement,
+      style: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300',
+    },
+    {
+      label: 'Follow-ups',
+      icon: CalendarCheck,
+      onClick: onViewFollowUps,
+      style: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+    },
+  ];
+
   return (
-    <div className="flex flex-col xl:flex-row items-center gap-4">
-      {/* Service Selector */}
-      <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200/60 dark:border-slate-700 shadow-sm shrink-0 no-scrollbar overflow-x-auto max-w-full">
-        <label className="pl-3 pr-1 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 flex items-center gap-1.5 shrink-0">
-          <Clock className="w-3 h-3" />
-          Plan
-        </label>
+    <section className="grid gap-4 xl:grid-cols-[auto_1fr]">
+      <div className="product-surface flex max-w-full items-center gap-2 overflow-x-auto p-2 scrollbar-hide">
+        <div className="flex shrink-0 items-center gap-1.5 px-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
+          <Clock className="h-3.5 w-3.5" />
+          Service
+        </div>
         <div className="flex gap-1">
-          {serviceTypes.map(service => (
+          {serviceTypes.map((service) => (
             <button
+              type="button"
               key={service.id}
               onClick={() => onServiceChange(service.id)}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all duration-300 whitespace-nowrap ${
+              className={`focus-ring whitespace-nowrap rounded-lg px-3 py-2 text-[11px] font-bold transition-colors ${
                 selectedServiceId === service.id
-                  ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white'
               }`}
             >
               {service.name === 'Main Service' ? 'Main' : service.name.split(' ')[0]}
             </button>
           ))}
-
           <button
+            type="button"
             onClick={() => onServiceChange('all')}
-            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all duration-300 whitespace-nowrap ${
+            className={`focus-ring rounded-lg px-3 py-2 text-[11px] font-bold transition-colors ${
               selectedServiceId === 'all'
-                ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white'
             }`}
           >
             All
@@ -38,49 +73,24 @@ const QuickActionsBar = ({ serviceTypes, selectedServiceId, onServiceChange, onM
         </div>
       </div>
 
-      {/* Primary Actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
-        <button
-          onClick={onMarkAttendance}
-          className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 hover:border-primary-500 dark:hover:border-primary-500 hover:shadow-lg transition-all group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center group-hover:bg-orange-600 transition-colors">
-            <MousePointer2 className="w-4 h-4 text-orange-600 group-hover:text-white" />
-          </div>
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">View Attendance</span>
-        </button>
-
-        <button
-          onClick={onAddMember}
-          className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-lg transition-all group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center group-hover:bg-emerald-600 transition-colors">
-            <UserPlus className="w-4 h-4 text-emerald-600 group-hover:text-white" />
-          </div>
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Add Visitor</span>
-        </button>
-
-        <button
-          onClick={onSendAnnouncement}
-          className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 hover:border-violet-500 dark:hover:border-violet-500 hover:shadow-lg transition-all group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center group-hover:bg-violet-600 transition-colors">
-            <Megaphone className="w-4 h-4 text-violet-600 group-hover:text-white" />
-          </div>
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Announcement</span>
-        </button>
-
-        <button
-          onClick={onViewFollowUps}
-          className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-500 hover:shadow-lg transition-all group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center group-hover:bg-amber-600 transition-colors">
-            <CalendarCheck className="w-4 h-4 text-amber-600 group-hover:text-white" />
-          </div>
-          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Follow-ups</span>
-        </button>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {actions.map(({ label, icon: Icon, onClick, style }) => (
+          <button
+            type="button"
+            key={label}
+            onClick={onClick}
+            className="product-surface focus-ring group flex min-h-14 items-center gap-3 px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card-hover dark:hover:border-white/20"
+          >
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${style}`}>
+              <Icon className="h-4 w-4" />
+            </span>
+            <span className="text-xs font-bold leading-4 text-slate-700 dark:text-slate-200 sm:text-[13px]">
+              {label}
+            </span>
+          </button>
+        ))}
       </div>
-    </div>
+    </section>
   );
 };
 

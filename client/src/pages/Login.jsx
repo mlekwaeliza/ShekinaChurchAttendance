@@ -1,57 +1,90 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  AlertCircle,
+  ArrowRight,
+  BarChart3,
+  Check,
+  Clock,
+  Eye,
+  EyeOff,
+  HeartHandshake,
+  ShieldCheck,
+  UsersRound,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
 import TwoFactorVerify from '../components/TwoFactorVerify';
+import BrandMark from '../components/BrandMark';
 import api from '../services/api';
-import { Church, ArrowRight, Sparkles, Clock } from 'lucide-react';
+
+const roleHome = (role) => {
+  if (role === 'admin') return '/admin';
+  if (role === 'accountant') return '/accountant';
+  if (role === 'evangelist') return '/evangelist';
+  if (role === 'pastor') return '/pastor';
+  return '/leader';
+};
+
+const featureCards = [
+  {
+    icon: UsersRound,
+    label: 'People',
+    description: 'One dependable record for every member and household.',
+  },
+  {
+    icon: BarChart3,
+    label: 'Insight',
+    description: 'See attendance, growth, and care needs as they happen.',
+  },
+  {
+    icon: HeartHandshake,
+    label: 'Care',
+    description: 'Help leaders turn follow-ups into meaningful connection.',
+  },
+];
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
   const [pendingUserId, setPendingUserId] = useState(null);
-  const { login, user, setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const expiredFlag = searchParams.get('expired') === '1';
   const navigate = useNavigate();
 
-  // Auto-clear the ?expired=1 query param after first render so a
-  // refresh of /login doesn't keep showing the banner.
   useEffect(() => {
-    if (expiredFlag) {
-      const t = setTimeout(() => {
-        const sp = new URLSearchParams(searchParams);
-        sp.delete('expired');
-        setSearchParams(sp, { replace: true });
-      }, 8000);
-      return () => clearTimeout(t);
-    }
-    return undefined;
+    if (!expiredFlag) return undefined;
+    const timer = setTimeout(() => {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('expired');
+      setSearchParams(nextParams, { replace: true });
+    }, 8000);
+    return () => clearTimeout(timer);
   }, [expiredFlag, searchParams, setSearchParams]);
 
   if (user && !requires2FA) {
-    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'evangelist' ? '/evangelist' : user.role === 'pastor' ? '/pastor' : '/leader';
-    return <Navigate to={redirectPath} />;
+    return <Navigate to={roleHome(user.role)} />;
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const res = await api.post('/auth/login', { username, password });
-      if (res.data.requires2FA) {
+      const response = await api.post('/auth/login', { username, password });
+      if (response.data.requires2FA) {
         setRequires2FA(true);
-        setPendingUserId(res.data.userId);
+        setPendingUserId(response.data.userId);
       } else {
-        // Use the user from the login response directly — no second API call needed
-        setUser(res.data.user);
+        setUser(response.data.user);
       }
-    } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+    } catch (requestError) {
+      setError(requestError.response?.data?.error || 'We could not sign you in. Check your details and try again.');
     } finally {
       setLoading(false);
     }
@@ -59,142 +92,164 @@ const Login = () => {
 
   const handle2FASuccess = (loggedInUser) => {
     setUser(loggedInUser);
-    const redirectPath = loggedInUser.role === 'admin' ? '/admin' : loggedInUser.role === 'accountant' ? '/accountant' : loggedInUser.role === 'evangelist' ? '/evangelist' : loggedInUser.role === 'pastor' ? '/pastor' : '/leader';
-    navigate(redirectPath);
+    navigate(roleHome(loggedInUser.role));
   };
 
   if (requires2FA) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div className="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
-        <TwoFactorVerify
-          userId={pendingUserId}
-          onSuccess={handle2FASuccess}
-          onBack={() => { setRequires2FA(false); setPendingUserId(null); }}
-        />
+      <div className="app-canvas flex min-h-screen items-center justify-center overflow-hidden p-4">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(20,168,150,0.12),transparent_28rem)]" />
+        <div className="relative z-10">
+          <TwoFactorVerify
+            userId={pendingUserId}
+            onSuccess={handle2FASuccess}
+            onBack={() => {
+              setRequires2FA(false);
+              setPendingUserId(null);
+            }}
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 relative overflow-hidden p-4">
-      {/* Animated background orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-      <div className="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-      <div className="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+    <main className="app-canvas min-h-screen p-3 sm:p-5 lg:p-7">
+      <div className="mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-[92rem] overflow-hidden rounded-[1.75rem] border border-slate-200/70 bg-white shadow-[0_30px_90px_rgba(10,22,40,0.14)] sm:min-h-[calc(100vh-2.5rem)] lg:grid-cols-[1.08fr_0.92fr] dark:border-white/10 dark:bg-slate-950">
+        <section className="relative hidden overflow-hidden bg-[#0a1628] px-12 py-10 text-white lg:flex lg:flex-col xl:px-16 xl:py-12">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_15%,rgba(20,168,150,0.25),transparent_22rem),radial-gradient(circle_at_10%_90%,rgba(242,184,75,0.12),transparent_26rem)]" />
+          <div className="absolute inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,.8)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.8)_1px,transparent_1px)] [background-size:48px_48px]" />
 
-      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-3xl overflow-hidden shadow-2xl relative z-10">
-        {/* Left side - Branding */}
-        <div className="hidden lg:flex flex-col justify-center items-center bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-12 text-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
-          <div className="relative z-10 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/20 backdrop-blur-sm mb-6 shadow-lg">
-              <Church className="w-10 h-10 text-white" />
+          <BrandMark inverse className="relative z-10" />
+
+          <div className="relative z-10 my-auto max-w-2xl py-12">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-primary-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent-400" />
+              One connected church workspace
             </div>
-            <h1 className="text-3xl font-bold tracking-tight mb-3">Church Attendance</h1>
-            <p className="text-white/80 text-lg mb-8">Track, manage, and grow your congregation</p>
-            <div className="space-y-3 text-left">
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
-                <Sparkles className="w-5 h-5 text-amber-300 shrink-0" />
-                <span className="text-sm">Real-time attendance tracking</span>
-              </div>
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
-                <Sparkles className="w-5 h-5 text-emerald-300 shrink-0" />
-                <span className="text-sm">Section leader management</span>
-              </div>
-              <div className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-3">
-                <Sparkles className="w-5 h-5 text-sky-300 shrink-0" />
-                <span className="text-sm">Analytics & insights dashboard</span>
-              </div>
+            <h1 className="max-w-xl font-display text-5xl font-semibold leading-[1.04] tracking-[-0.045em] xl:text-6xl">
+              Care for people.
+              <span className="mt-2 block text-primary-300">See the whole church.</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 xl:text-lg">
+              Attendance, people, leaders, finance, and pastoral care—designed to help every ministry act with clarity.
+            </p>
+
+            <div className="mt-10 grid gap-3 xl:grid-cols-3">
+              {featureCards.map(({ icon: Icon, label, description }) => (
+                <article key={label} className="rounded-2xl border border-white/[0.09] bg-white/[0.055] p-4 backdrop-blur-sm">
+                  <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-xl bg-primary-400/15 text-primary-200">
+                    <Icon className="h-4.5 w-4.5" />
+                  </div>
+                  <h2 className="text-sm font-bold">{label}</h2>
+                  <p className="mt-1.5 text-xs leading-5 text-slate-400">{description}</p>
+                </article>
+              ))}
             </div>
           </div>
-        </div>
 
-        {/* Right side - Login form */}
-        <div className="bg-white dark:bg-slate-800 p-8 sm:p-10 lg:p-12">
-          <div className="text-center mb-8">
-            <div className="lg:hidden inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 mb-4 shadow-lg shadow-indigo-500/20">
-              <Church className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Welcome back</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Sign in to your account</p>
+          <div className="relative z-10 flex items-center gap-2 text-xs text-slate-500">
+            <Check className="h-4 w-4 text-primary-400" />
+            Built for ministry teams, from Sunday service to weekday care.
           </div>
+        </section>
 
-          {expiredFlag && (
-            <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 px-4 py-3 rounded-xl mb-6 text-sm font-medium flex items-start gap-2">
-              <Clock className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span>Your session has expired. Please log in again.</span>
-            </div>
-          )}
+        <section className="relative flex items-center justify-center px-6 py-10 sm:px-12 lg:px-14 xl:px-20">
+          <div className="w-full max-w-md">
+            <BrandMark className="mb-12 lg:hidden" />
 
-          {error && (
-            <div className="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 px-4 py-3 rounded-xl mb-6 text-sm font-medium">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 text-sm font-semibold mb-2" htmlFor="username">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 text-slate-900 dark:text-white placeholder-slate-400"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                placeholder="Enter your username"
-              />
+            <div className="mb-8">
+              <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <p className="section-eyebrow">Secure staff portal</p>
+              <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.035em] text-slate-950 dark:text-white sm:text-4xl">
+                Welcome back
+              </h1>
+              <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                Sign in to continue to your Shekina workspace.
+              </p>
             </div>
 
-            <div>
-              <label className="block text-slate-700 dark:text-slate-300 text-sm font-semibold mb-2" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200 text-slate-900 dark:text-white placeholder-slate-400"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Enter your password"
-              />
+            {expiredFlag && (
+              <div className="mb-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>Your session expired for your security. Please sign in again.</span>
+              </div>
+            )}
+
+            {error && (
+              <div aria-live="polite" className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="input-label" htmlFor="username">Username</label>
+                <input
+                  id="username"
+                  type="text"
+                  className="input h-12"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  autoComplete="username"
+                  required
+                  placeholder="Enter your username"
+                />
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="password">Password</label>
+                  <span className="text-[11px] font-medium text-slate-400">Case sensitive</span>
+                </div>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="input h-12 pr-12"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    required
+                    placeholder="Enter your password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    className="focus-ring absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button type="submit" disabled={loading} className="btn-primary focus-ring h-12 w-full">
+                {loading ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Signing in
+                  </>
+                ) : (
+                  <>
+                    Continue to workspace
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="mt-8 flex items-center gap-3 border-t border-slate-100 pt-6 text-xs leading-5 text-slate-400 dark:border-white/10 dark:text-slate-500">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-primary-600 dark:text-primary-400" />
+              Access is restricted to authorized church staff and ministry leaders.
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                <>
-                  Sign In
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 text-center text-sm text-slate-400 dark:text-slate-500">
-            <p>Contact your administrator for login credentials</p>
           </div>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 

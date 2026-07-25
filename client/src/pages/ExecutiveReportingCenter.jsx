@@ -12,7 +12,7 @@ const REPORT_TYPES = [
   { id: 'membership', label: 'Membership', icon: Users, color: 'green' },
   { id: 'leadership', label: 'Leadership', icon: TrendingUp, color: 'purple' },
   { id: 'finance', label: 'Finance', icon: DollarSign, color: 'emerald' },
-  { id: 'evangelism', label: 'Evangelism', icon: Heart, color: 'rose' },
+  { id: 'evangelism', label: 'Outreach', icon: Heart, color: 'rose' },
   { id: 'newMembers', label: 'New Members', icon: Users, color: 'cyan' },
   { id: 'homeCells', label: 'Home Cells', icon: Home, color: 'amber' },
   { id: 'children', label: 'Children', icon: Baby, color: 'indigo' },
@@ -173,10 +173,23 @@ export default function ExecutiveReportingCenter() {
     }
   };
 
+  const statColors = {
+    slate: 'text-slate-900 dark:text-white',
+    blue: 'text-blue-700 dark:text-blue-300',
+    green: 'text-emerald-700 dark:text-emerald-300',
+    red: 'text-rose-700 dark:text-rose-300',
+    emerald: 'text-emerald-700 dark:text-emerald-300',
+    purple: 'text-violet-700 dark:text-violet-300',
+    indigo: 'text-indigo-700 dark:text-indigo-300',
+    cyan: 'text-cyan-700 dark:text-cyan-300',
+    amber: 'text-amber-700 dark:text-amber-300',
+    rose: 'text-rose-700 dark:text-rose-300',
+  };
+
   const renderStatCard = (label, value, subtitle, color = 'slate') => (
-    <div className="card p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className={`text-2xl font-bold text-${color}-600 dark:text-${color}-400`}>{value}</p>
+    <div className="product-surface p-4">
+      <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+      <p className={`mt-1 text-2xl font-bold tabular-nums ${statColors[color] || statColors.slate}`}>{value}</p>
       {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
     </div>
   );
@@ -205,8 +218,8 @@ export default function ExecutiveReportingCenter() {
   );
 
   if (loadError && !reportData) return (
-    <div className="card p-8 text-center">
-      <p className="font-semibold text-red-600">This report could not be loaded.</p>
+    <div className="product-surface p-8 text-center">
+      <p className="font-semibold text-rose-700 dark:text-rose-300">This report could not be loaded.</p>
       <p className="mt-2 text-sm text-slate-500">{loadError}</p>
       <button type="button" onClick={loadReport} className="btn-primary mt-4">
         Try again
@@ -216,34 +229,40 @@ export default function ExecutiveReportingCenter() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Executive Reporting Center</h1>
-          <p className="text-slate-500 dark:text-slate-400">Comprehensive reports and analytics</p>
+      <section className="product-surface overflow-hidden p-5 sm:p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="max-w-2xl">
+            <p className="section-eyebrow">Decision support</p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">Church Reports</h1>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+              Turn ministry activity into clear pastoral and operational decisions.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={loadReport} className="btn-secondary inline-flex items-center gap-2" disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+            <button type="button" onClick={handleExport} className="btn-secondary inline-flex items-center gap-2" disabled={exporting}>
+              <Download className="h-4 w-4" /> CSV
+            </button>
+            <button type="button" onClick={handlePDFExport} className="btn-secondary inline-flex items-center gap-2">
+              <FileText className="h-4 w-4" /> PDF
+            </button>
+            <button type="button" onClick={handlePresentation} className="btn-secondary inline-flex items-center gap-2" disabled={exporting}>
+              <Presentation className="h-4 w-4" /> Slides
+            </button>
+            <button type="button" onClick={handleFullPresentation} className="btn-primary inline-flex items-center gap-2" disabled={exporting}>
+              <Presentation className="h-4 w-4" /> Full church deck
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={loadReport} className="btn-secondary flex items-center gap-2" disabled={loading}>
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </button>
-          <button onClick={handleExport} className="btn-secondary flex items-center gap-2" disabled={exporting}>
-            <Download className="w-4 h-4" /> Export CSV
-          </button>
-          <button onClick={handlePDFExport} className="btn-primary flex items-center gap-2">
-            <FileText className="w-4 h-4" /> Export PDF
-          </button>
-          <button onClick={handlePresentation} className="btn-primary flex items-center gap-2" disabled={exporting}>
-            <Presentation className="w-4 h-4" /> Presentation
-          </button>
-          <button onClick={handleFullPresentation} className="btn-primary flex items-center gap-2" disabled={exporting}>
-            <Presentation className="w-4 h-4" /> Full Presentation
-          </button>
-        </div>
-      </div>
+      </section>
 
       {/* Report Type Tabs */}
-      <div className="tab-pills flex-wrap">
+      <div className="tab-pills flex-nowrap overflow-x-auto">
         {REPORT_TYPES.map(type => (
-          <button key={type.id} onClick={() => setSearchParams({ report: type.id })}
+          <button type="button" key={type.id} onClick={() => setSearchParams({ report: type.id })}
+            aria-pressed={activeReport === type.id}
             className={`tab-pill flex items-center gap-2 ${activeReport === type.id ? 'active' : ''}`}>
             <type.icon className="w-4 h-4" />
             {type.label}
@@ -252,15 +271,33 @@ export default function ExecutiveReportingCenter() {
       </div>
 
       {/* Date Range Filter */}
-      <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-        <Filter className="w-4 h-4 text-slate-400" />
-        <span className="text-sm text-slate-500">Period:</span>
-        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-          className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm" />
-        <span className="text-slate-400">to</span>
-        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-          className="px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-sm" />
-        <button onClick={loadReport} className="btn-secondary text-sm px-3 py-1.5">Apply</button>
+      <div className="product-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+        <div className="flex items-center gap-2 pb-2 sm:mr-2">
+          <Filter className="h-4 w-4 text-primary-600 dark:text-primary-300" />
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">Reporting period</span>
+        </div>
+        <label className="flex flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          From
+          <input
+            type="date"
+            value={startDate}
+            max={endDate}
+            onChange={event => setStartDate(event.target.value)}
+            className="input h-10 w-full text-sm"
+          />
+        </label>
+        <label className="flex flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          To
+          <input
+            type="date"
+            value={endDate}
+            min={startDate}
+            max={new Date().toISOString().split('T')[0]}
+            onChange={event => setEndDate(event.target.value)}
+            className="input h-10 w-full text-sm"
+          />
+        </label>
+        <span className="pb-2 text-xs font-medium text-slate-400 dark:text-slate-500">Updates automatically</span>
       </div>
 
       {/* Report Content */}
@@ -270,7 +307,7 @@ export default function ExecutiveReportingCenter() {
           {activeReport === 'attendance' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {renderStatCard('Total Attendees', reportData.overall?.total_attendees || 0, 'Unique members')}
+                {renderStatCard('Members Recorded', reportData.overall?.total_attendees || 0, 'Unique members')}
                 {renderStatCard('Present', reportData.overall?.present_count || 0, `${reportData.overall?.attendance_rate || 0}% rate`, 'green')}
                 {renderStatCard('Absent', reportData.overall?.absent_count || 0, '', 'red')}
                 {renderStatCard('Service Days', reportData.overall?.service_days || 0, 'In period', 'blue')}
@@ -285,7 +322,8 @@ export default function ExecutiveReportingCenter() {
 
               {reportData.topPerformers?.length > 0 && (
                 <div className="card p-4">
-                  <h3 className="font-semibold mb-4">Top Performers</h3>
+                  <h3 className="font-semibold mb-1">Consistent Attendance</h3>
+                  <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Members with the strongest recorded attendance in this period.</p>
                   <div className="space-y-2">
                     {reportData.topPerformers.slice(0, 10).map((p, i) => (
                       <div key={i} className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
@@ -303,15 +341,18 @@ export default function ExecutiveReportingCenter() {
 
               {reportData.riskMembers?.length > 0 && (
                 <div className="card p-4">
-                  <h3 className="font-semibold mb-4 text-red-600">At-Risk Members (Below 30% Attendance)</h3>
+                  <h3 className="font-semibold text-amber-700 dark:text-amber-300">Members Needing Care</h3>
+                  <p className="mb-4 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Below 30% recorded attendance. Use this as a conversation signal, not a judgment.
+                  </p>
                   <div className="space-y-2">
                     {reportData.riskMembers.map((m, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <div key={i} className="flex items-center justify-between rounded-lg bg-amber-50 p-2 dark:bg-amber-900/20">
                         <div className="flex items-center gap-2">
                           <span className="text-sm">{m.name}</span>
                           <Badge variant="info">{m.section_name}</Badge>
                         </div>
-                        <span className="text-sm font-bold text-red-600">{m.rate}%</span>
+                        <span className="text-sm font-bold text-amber-700 dark:text-amber-300">{m.rate}%</span>
                       </div>
                     ))}
                   </div>
@@ -381,7 +422,8 @@ export default function ExecutiveReportingCenter() {
 
               {reportData.rankings?.length > 0 && (
                 <div className="card p-4">
-                  <h3 className="font-semibold mb-4">Leader Rankings by Submissions</h3>
+                  <h3 className="font-semibold mb-1">Leadership Reporting Consistency</h3>
+                  <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Attendance submissions recorded by each ministry leader.</p>
                   <div className="space-y-2">
                     {reportData.rankings.slice(0, 15).map((l, i) => (
                       <div key={i} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg">
@@ -441,15 +483,15 @@ export default function ExecutiveReportingCenter() {
           {activeReport === 'evangelism' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {renderStatCard('Souls Won', reportData.overview?.total_souls_won || 0, 'In period', 'rose')}
-                {renderStatCard('Follow-ups Completed', reportData.overview?.follow_ups_completed || 0, '', 'green')}
-                {renderStatCard('Follow-ups Pending', reportData.overview?.follow_ups_pending || 0, '', 'amber')}
+                {renderStatCard('New Believers', reportData.overview?.total_souls_won || 0, 'In period', 'rose')}
+                {renderStatCard('Care Follow-Ups Completed', reportData.overview?.follow_ups_completed || 0, '', 'green')}
+                {renderStatCard('Care Follow-Ups Open', reportData.overview?.follow_ups_pending || 0, '', 'amber')}
                 {renderStatCard('Baptisms', reportData.baptisms?.completed || 0, 'Completed', 'blue')}
               </div>
 
               {reportData.byMonth?.length > 0 && (
                 <div className="card p-4">
-                  <h3 className="font-semibold mb-4">Souls Won by Month</h3>
+                  <h3 className="font-semibold mb-4">New Believers by Month</h3>
                   {renderBarChart(reportData.byMonth, 'month', 'souls_won', Math.max(...reportData.byMonth.map(m => m.souls_won)))}
                 </div>
               )}

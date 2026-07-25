@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
-import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock, Award, Plus, X as XIcon, UserCheck, Crown } from 'lucide-react';
+import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock, Award, Plus, X as XIcon, Crown, ShieldCheck } from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
 import { fdatetime } from '../../utils/date';
@@ -378,19 +378,29 @@ const MemberDirectory = ({
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 p-6 text-white shadow-xl shadow-pink-500/20">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
+      <div className="product-surface relative overflow-hidden p-6">
+        <div className="absolute -right-20 -top-24 h-56 w-56 rounded-full bg-primary-100/60 blur-3xl dark:bg-primary-500/10" />
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-            <Users className="h-5 w-5 text-white" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
+            <Users className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">People</h2>
-            <p className="text-sm text-white/80">
+            <p className="section-eyebrow">People &amp; care</p>
+            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">Member Directory</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {loading ? 'Loading members...' : `${allMembers.length} members · ${sections.length} sections`}
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-amber-950 dark:border-amber-700/40 dark:bg-amber-900/15 dark:text-amber-100">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
+        <div>
+          <p className="text-xs font-bold">Confidential member information</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-amber-800/80 dark:text-amber-200/70">
+            Use contact and attendance details only for authorized ministry care and administration.
+          </p>
         </div>
       </div>
 
@@ -450,7 +460,9 @@ const MemberDirectory = ({
           <button
             type="button"
             onClick={() => setShowBulkEdit(true)}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            disabled={selectedMembers.size === 0}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            title={selectedMembers.size === 0 ? 'Select members to edit' : 'Edit selected members'}
           >
             <Check className="w-4 h-4" />
             Bulk Edit
@@ -458,8 +470,9 @@ const MemberDirectory = ({
           <button
             type="button"
             onClick={() => setShowBulkDelete(true)}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 hover:shadow dark:border-rose-700/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30"
-            title="Soft-delete selected members (eligible for permanent deletion after 6 months)"
+            disabled={selectedMembers.size === 0}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-rose-700/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30"
+            title={selectedMembers.size === 0 ? 'Select members to remove' : 'Move selected members to pending deletion'}
           >
             <Trash2 className="w-4 h-4" />
             Bulk Delete
@@ -481,7 +494,7 @@ const MemberDirectory = ({
           <button
             type="button"
             onClick={onAdd}
-            className="group inline-flex h-11 items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-4 pr-5 text-sm font-semibold text-white shadow-lg shadow-violet-500/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-500/25 focus:outline-none focus:ring-2 focus:ring-violet-500/30 active:translate-y-0"
+            className="btn-primary group inline-flex h-11 items-center justify-center gap-3 px-4 pr-5 text-sm"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/18 ring-1 ring-white/20 transition-colors group-hover:bg-white/24">
               <UserPlus className="w-4 h-4" />
