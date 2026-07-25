@@ -6,7 +6,7 @@ const isFalsy = (value) => ['0', 'false', 'no', 'off'].includes(String(value || 
 function buildPoolConfig() {
   let connectionString = process.env.DATABASE_URL || null;
 
-  // Strip unsupported query params from Neon connection string:
+  // Strip unsupported query params from Neon/Supabase connection strings:
   // - channel_binding: not supported by the `pg` library
   // - options: Neon rejects search_path as a startup parameter
   if (connectionString) {
@@ -22,11 +22,9 @@ function buildPoolConfig() {
   const sslInUrl = /sslmode\s*=\s*(require|prefer|verify-ca|verify-full)/i.test(process.env.DATABASE_URL || '');
   const sslEnabled = isTruthy(process.env.PGSSL || process.env.POSTGRES_SSL) || sslInUrl;
 
-  // For Neon (sslmode=require), we need SSL but can't verify the cert
-  // because Neon uses SNI-based routing. Set rejectUnauthorized=false
-  // unless explicitly overridden.
+  // For Neon/Supabase (sslmode=require), we need SSL but may not verify the cert.
   const rejectUnauthorized = process.env.PG_REJECT_UNAUTHORIZED === undefined
-    ? false  // Neon requires false; override with PG_REJECT_UNAUTHORIZED=true for self-signed
+    ? false
     : !isFalsy(process.env.PG_REJECT_UNAUTHORIZED);
 
   const baseConfig = connectionString
@@ -41,6 +39,9 @@ function buildPoolConfig() {
 
   return {
     ...baseConfig,
+    // Force IPv4 — Supabase DNS may resolve to IPv6 which some
+    // hosting environments (Render) cannot reach.
+    family: 4,
     max: Number(process.env.PGPOOL_MAX || 10),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
     connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 15000),
