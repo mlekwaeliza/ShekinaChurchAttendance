@@ -2550,7 +2550,7 @@ const queries = {
         ) ranked
         WHERE rn <= 3
       `, [serviceIds])
-      : (() => {
+      : await (() => {
         // SQLite: single batched query with IN clause + ROW_NUMBER()
         // (supported since SQLite 3.25). Filter to 3 dates per service in JS.
         const placeholders = serviceIds.map(() => '?').join(',');
@@ -5718,6 +5718,42 @@ const queries = {
       ORDER BY f.updated_at DESC
     `, params);
   },
+
+  getFinanceSummary: (dateFrom, dateTo) => get(`
+    SELECT
+      COUNT(*) as day_count,
+      COALESCE(SUM(f.morning_offering), 0) as total_morning,
+      COALESCE(SUM(f.afternoon_offering), 0) as total_afternoon,
+      COALESCE(SUM(f.total_tithes), 0) as total_tithes,
+      COALESCE(SUM(f.total_income), 0) as total_income,
+      COALESCE(SUM(f.mission_fund), 0) as total_mission,
+      COALESCE(SUM(f.bishop_fund), 0) as total_bishop,
+      COALESCE(SUM(f.evangelism_offering), 0) as total_evangelism,
+      COALESCE(SUM(f.usable_church_funds), 0) as total_usable,
+      COALESCE(SUM((
+        SELECT COALESCE(SUM(fe.amount), 0)
+        FROM finance_expenses fe
+        WHERE fe.record_id = f.id
+      )), 0) as total_expenses
+    FROM finance_daily_records f
+    WHERE f.record_date BETWEEN ? AND ?
+  `, [dateFrom, dateTo]),
+
+  getFinanceYearTrend: (year) => all(`
+    SELECT
+      ${yearMonth('f.record_date')} as month,
+      COALESCE(SUM(f.total_income), 0) as total_income,
+      COALESCE(SUM(f.usable_church_funds), 0) as total_usable,
+      COALESCE(SUM((
+        SELECT COALESCE(SUM(fe.amount), 0)
+        FROM finance_expenses fe
+        WHERE fe.record_id = f.id
+      )), 0) as total_expenses
+    FROM finance_daily_records f
+    WHERE ${yearOnly('f.record_date')} = ?
+    GROUP BY ${yearMonth('f.record_date')}
+    ORDER BY month
+  `, [String(year)]),
 
   getMultiPeriodLeaders: (start, end) => all(`
     SELECT

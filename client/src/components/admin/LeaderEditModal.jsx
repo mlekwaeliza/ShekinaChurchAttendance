@@ -208,7 +208,7 @@ const LeaderEditModal = ({ isOpen, onClose, onSave, leader, sections, members = 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try { await onSave(formData); } catch (_) {}
+    try { await onSave(formData); } catch (_) { /* parent displays the save error */ }
   };
 
   const canSubmit = !!formData.full_name.trim();

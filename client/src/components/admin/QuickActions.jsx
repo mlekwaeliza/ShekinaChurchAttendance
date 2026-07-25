@@ -32,13 +32,9 @@ const QuickActions = ({ sections = [], leaders = [], showMessage }) => {
   };
 
   const handleSaveMember = async (memberId, data) => {
-    try {
-      await adminAPI.createMember(data);
-      showMessage?.('Member registered successfully');
-      setShowMemberModal(false);
-    } catch (error) {
-      throw error;
-    }
+    await adminAPI.createMember(data);
+    showMessage?.('Member registered successfully');
+    setShowMemberModal(false);
   };
 
   const handleSaveVisitor = async () => {

@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { all, get } = require('../database');
 const { yearMonth, dayOfWeek } = require('../utils/sqlDialect');
+const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
+
+router.use(isAuthenticated, requireRole(['admin']), validateDateRange());
 
 const isPostgres = () => String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
 
@@ -48,7 +51,7 @@ router.get('/types', async (req, res) => {
 // GET /api/admin/reports/attendance
 router.get('/attendance', async (req, res) => {
   try {
-    const { start_date, end_date, section_id, service_id } = req.query;
+    const { start_date, end_date } = req.query;
     const start = start_date || new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const end = end_date || new Date().toISOString().split('T')[0];
 
@@ -239,7 +242,7 @@ router.get('/leadership', async (req, res) => {
         LEFT JOIN sections s ON l.section_id = s.id
         LEFT JOIN submission_log sl ON l.id = sl.leader_id AND sl.date BETWEEN ? AND ?
         LEFT JOIN attendance a ON sl.date = a.date AND a.member_id IN (
-          SELECT member_id FROM members WHERE section_id = l.section_id AND is_active = 1
+          SELECT id FROM members WHERE section_id = l.section_id AND is_active = 1
         )
         GROUP BY l.id ORDER BY submissions DESC
       `, [start, end]),
@@ -259,10 +262,14 @@ router.get('/leadership', async (req, res) => {
         SELECT l.id, u.username,
           COALESCE(u.full_name, u.username) as name,
           COUNT(DISTINCT sl.date) as total_submissions,
-          COUNT(DISTINCT CASE WHEN sl.attendance_count > 0 THEN sl.date END) as days_with_attendance
+          COUNT(DISTINCT CASE WHEN a.status = 'present' THEN sl.date END) as days_with_attendance
         FROM leaders l
         JOIN users u ON l.user_id = u.id
         LEFT JOIN submission_log sl ON l.id = sl.leader_id AND sl.date BETWEEN ? AND ?
+        LEFT JOIN attendance a ON a.date = sl.date
+          AND a.member_id IN (
+            SELECT id FROM members WHERE section_id = l.section_id AND is_active = 1
+          )
         GROUP BY l.id ORDER BY total_submissions DESC
       `, [start, end]),
     ]);
@@ -311,15 +318,17 @@ router.get('/finance', async (req, res) => {
       `, [start, end]),
       all(`
         SELECT ${ymExpr} as month,
-          COALESCE(SUM(amount), 0) as total
-        FROM contributions WHERE payment_date BETWEEN ? AND ?
+          COALESCE(SUM(c.amount), 0) as total
+        FROM contributions c WHERE c.payment_date BETWEEN ? AND ?
         GROUP BY month ORDER BY month
       `, [start, end]),
       all(`
-        SELECT fdr.description, fdr.total_expenses as amount, fdr.record_date as date, 'expenses' as category
+        SELECT COALESCE(fe.description, fe.category) as description,
+          fe.amount, fdr.record_date as date, fe.category
         FROM finance_daily_records fdr
-        WHERE fdr.record_date BETWEEN ? AND ? AND fdr.total_expenses > 0
-        ORDER BY fdr.total_expenses DESC LIMIT 20
+        JOIN finance_expenses fe ON fe.record_id = fdr.id
+        WHERE fdr.record_date BETWEEN ? AND ?
+        ORDER BY fe.amount DESC LIMIT 20
       `, [start, end]),
       all(`
         SELECT m.id, m.full_name as name,
@@ -360,9 +369,9 @@ router.get('/evangelism', async (req, res) => {
       get(`
         SELECT 
           COUNT(*) as total_souls_won,
-          COUNT(CASE WHEN follow_up_status = 'completed' THEN 1 END) as follow_ups_completed,
-          COUNT(CASE WHEN follow_up_status = 'pending' THEN 1 END) as follow_ups_pending,
-          COUNT(CASE WHEN follow_up_status = 'in_progress' THEN 1 END) as follow_ups_in_progress
+          COUNT(CASE WHEN follow_up_status IN ('joined_cell', 'joined_church', 'baptized', 'active_member') THEN 1 END) as follow_ups_completed,
+          COUNT(CASE WHEN follow_up_status = 'new_convert' THEN 1 END) as follow_ups_pending,
+          COUNT(CASE WHEN follow_up_status = 'under_follow_up' THEN 1 END) as follow_ups_in_progress
         FROM souls_won WHERE date_saved BETWEEN ? AND ?
       `, [start, end]),
       all(`
@@ -373,8 +382,8 @@ router.get('/evangelism', async (req, res) => {
       `, [start, end]),
       all(`
         SELECT COUNT(*) as total,
-          COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
-          COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending
+          COUNT(CASE WHEN last_contact_date IS NOT NULL THEN 1 END) as completed,
+          COUNT(CASE WHEN last_contact_date IS NULL THEN 1 END) as pending
         FROM follow_ups WHERE created_at BETWEEN ? AND ?
       `, [start, end]),
       all(`
@@ -386,9 +395,12 @@ router.get('/evangelism', async (req, res) => {
         FROM baptism_tracking
       `),
       all(`
-        SELECT et.id, et.name as team_name,
-          (SELECT COUNT(*) FROM evangelism_team_members WHERE team_id = et.id) as member_count
-        FROM evangelism_team et ORDER BY member_count DESC
+        SELECT role as team_name, COUNT(*) as member_count,
+          COALESCE(SUM(souls_won), 0) as souls_won
+        FROM evangelism_team
+        WHERE is_active = 1
+        GROUP BY role
+        ORDER BY member_count DESC
       `),
     ]);
 
@@ -426,12 +438,15 @@ router.get('/new-members', async (req, res) => {
         FROM new_members WHERE created_at BETWEEN ? AND ?
       `, [start, end]),
       all(`
-        SELECT stage, COUNT(*) as count
+        SELECT COALESCE(pipeline_stage, 'received') as stage, COUNT(*) as count
         FROM new_members WHERE created_at BETWEEN ? AND ?
-        GROUP BY stage ORDER BY 
-          CASE stage 
-            WHEN 'visitor' THEN 1 WHEN 'first_timer' THEN 2 WHEN 'second_timer' THEN 3
-            WHEN 'third_timer' THEN 4 WHEN 'member' THEN 5 ELSE 6
+        GROUP BY COALESCE(pipeline_stage, 'received') ORDER BY
+          CASE COALESCE(pipeline_stage, 'received')
+            WHEN 'received' THEN 1 WHEN 'orientation_scheduled' THEN 2
+            WHEN 'orientation_in_progress' THEN 3 WHEN 'orientation_completed' THEN 4
+            WHEN 'home_cell_assigned' THEN 5 WHEN 'section_assigned' THEN 6
+            WHEN 'mentor_assigned' THEN 7 WHEN 'ministry_placement' THEN 8
+            WHEN 'graduation_review' THEN 9 WHEN 'permanent' THEN 10 ELSE 11
           END
       `, [start, end]),
       all(`
@@ -441,7 +456,9 @@ router.get('/new-members', async (req, res) => {
         GROUP BY month ORDER BY month
       `, [start, end]),
       all(`
-        SELECT nm.id, nm.full_name as name, nm.stage, nm.created_at as join_date,
+        SELECT nm.id, nm.full_name as name,
+          COALESCE(nm.pipeline_stage, 'received') as stage,
+          nm.created_at as join_date,
           nm.phone, nm.email
         FROM new_members nm
         WHERE nm.created_at BETWEEN ? AND ?
@@ -449,7 +466,7 @@ router.get('/new-members', async (req, res) => {
       `, [start, end]),
       all(`
         SELECT 
-          COUNT(CASE WHEN stage IN ('member', 'third_timer') THEN 1 END) * 100.0 / 
+          COUNT(CASE WHEN pipeline_stage = 'permanent' THEN 1 END) * 100.0 /
           NULLIF(COUNT(*), 0) as conversion_rate
         FROM new_members WHERE created_at BETWEEN ? AND ?
       `, [start, end]),
@@ -494,22 +511,22 @@ router.get('/home-cells', async (req, res) => {
       get(`
         SELECT 
           COUNT(DISTINCT hc.id) as total_cells,
-          COUNT(DISTINCT hcm.member_id) as total_members,
+          COUNT(DISTINCT hcm.id) as total_members,
           COUNT(DISTINCT hcl.leader_id) as total_leaders
         FROM home_cells hc
-        LEFT JOIN home_cell_members hcm ON hc.id = hcm.cell_id
+        LEFT JOIN home_cell_members hcm ON hc.id = hcm.cell_id AND hcm.is_active = 1
         LEFT JOIN home_cell_leaders hcl ON hc.id = hcl.cell_id
         WHERE hc.is_active = 1
       `),
       all(`
         SELECT hc.name as cell_name, hc.cell_number,
-          (SELECT COUNT(*) FROM home_cell_members WHERE cell_id = hc.id) as member_count,
+          (SELECT COUNT(*) FROM home_cell_members WHERE cell_id = hc.id AND is_active = 1) as member_count,
           ${leadersAgg} as leaders
         FROM home_cells hc WHERE hc.is_active = 1 ORDER BY member_count DESC
       `),
       all(`
         SELECT hc.name as cell_name,
-          (SELECT COUNT(*) FROM home_cell_members WHERE cell_id = hc.id) as member_count
+          (SELECT COUNT(*) FROM home_cell_members WHERE cell_id = hc.id AND is_active = 1) as member_count
         FROM home_cells hc WHERE hc.is_active = 1
         ORDER BY member_count DESC LIMIT 10
       `),

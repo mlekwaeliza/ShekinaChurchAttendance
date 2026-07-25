@@ -192,7 +192,7 @@ const LeaderboardRow = ({ item, rank, onClick, nameKey, subKey, scoreKey = 'over
 };
 
 // ─── Family Manager ───────────────────────────────────────────────────────
-const FamilyManager = ({ families, allMembers, onRefresh }) => {
+const FamilyManager = ({ families, allMembers, onRefresh, styles }) => {
   const [newName, setNewName] = useState('');
   const [newHead, setNewHead] = useState('');
   const [addMemberFamily, setAddMemberFamily] = useState('');
@@ -258,8 +258,8 @@ const FamilyManager = ({ families, allMembers, onRefresh }) => {
   };
 
   return (
-    <div style={s.section}>
-      <div style={s.sectionTitle}><Home size={14} /> Family Management</div>
+    <div style={styles.section}>
+      <div style={styles.sectionTitle}><Home size={14} /> Family Management</div>
 
       {/* Create new family */}
       <div style={{ marginBottom: 16, padding: 16, background: 'rgba(15,23,42,0.5)', borderRadius: 12, border: '1px solid rgba(71,85,105,0.25)' }}>
@@ -943,7 +943,7 @@ const RewardsView = () => {
       )}
 
       {activeTab === 'families' && (
-        <FamilyManager families={families} allMembers={allMembers} onRefresh={load} />
+        <FamilyManager families={families} allMembers={allMembers} onRefresh={load} styles={s} />
       )}
 
       {activeTab === 'awards' && (

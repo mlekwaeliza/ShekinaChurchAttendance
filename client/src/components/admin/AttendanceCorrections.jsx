@@ -81,7 +81,7 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
   const formatValue = (val) => {
     if (!val) return '—';
     if (typeof val === 'string') {
-      try { const parsed = JSON.parse(val); if (parsed && typeof parsed === 'object') return parsed; } catch (_) {}
+      try { const parsed = JSON.parse(val); if (parsed && typeof parsed === 'object') return parsed; } catch (_) { /* display the original value */ }
     }
     return val;
   };

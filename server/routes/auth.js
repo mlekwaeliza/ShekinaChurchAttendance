@@ -8,8 +8,6 @@ const { queries, get } = require('../database');
 
 const router = express.Router();
 
-const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const IP_LOGIN_MAX = 25;
 async function checkIpLoginBlocked(ip) {
   const state = await queries.getIpLoginState(ip);
   if (!state) return false;
@@ -98,7 +96,7 @@ router.post('/login', async (req, res) => {
       const attempts = (user.failed_login_attempts || 0) + 1;
       await queries.incrementFailedLogin(user.id);
       await recordIpLoginFailure(ip);
-      console.warn(`Login failed: wrong password for user "${username}" (attempt ${attempts})`);
+      console.warn(`Login failed: wrong password (attempt ${attempts})`);
 
       if (attempts >= 10) {
         const lockoutCount = (user.lockout_count || 0) + 1;
@@ -175,24 +173,6 @@ router.post('/logout', (req, res) => {
     recordSecurityEvent('logout', userId, null, req);
     res.clearCookie('sc.sid');
     res.json({ message: 'Logged out successfully' });
-  });
-});
-
-// Debug: inspect session + headers (dev only, remove after debugging)
-router.get('/debug-session', (req, res) => {
-  res.json({
-    sessionUserId: req.session.userId || null,
-    sessionUserRole: req.session.user?.role || null,
-    sessionUser: req.session.user ? { id: req.session.user.id, username: req.session.user.username, role: req.session.user.role } : null,
-    cookies: req.cookies ? Object.keys(req.cookies) : [],
-    headers: {
-      cookie: req.headers.cookie ? '[present, length=' + req.headers.cookie.length + ']' : '[none]',
-      authorization: req.headers.authorization || '[none]',
-      'x-forwarded-for': req.headers['x-forwarded-for'] || '[none]',
-      'x-user-id': req.headers['x-user-id'] || '[none]',
-      'x-user-role': req.headers['x-user-role'] || '[none]',
-    },
-    isAuthenticated: !!(req.session.userId && req.session.user),
   });
 });
 

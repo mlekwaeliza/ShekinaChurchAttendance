@@ -1,46 +1,46 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { adminAPI } from '../services/api';
 import useAdminData from '../hooks/useAdminData';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
-import MemberEditModal from '../components/MemberEditModal';
+import { CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
 
-// Admin sub-views
-import DashboardOverview from '../components/admin/DashboardOverview';
-import ExecutiveCommandCenter from '../components/admin/ExecutiveCommandCenter';
-import MemberDirectory from '../components/admin/MemberDirectory';
-import LeaderDirectory from '../components/admin/LeaderDirectory';
-import AttendanceReports from '../components/admin/AttendanceReports';
-import SubmissionHistory from '../components/admin/SubmissionHistory';
-import AnalyticsView from '../components/admin/AnalyticsView';
-import RewardsView from '../components/admin/RewardsView';
-import SettingsView from '../components/admin/SettingsView';
-import LeaderDrilldown from '../components/admin/LeaderDrilldown';
-import LeaderProfile from '../components/admin/LeaderProfile';
-import SectionProfile from '../components/admin/SectionProfile';
-import SectionManagement from '../components/admin/SectionManagement';
-import LeaderEditModal from '../components/admin/LeaderEditModal';
-import AuditLog from '../components/admin/AuditLog';
-import BirthdayModule from '../components/admin/BirthdayModule';
-import ServiceAssignmentsModal from '../components/admin/ServiceAssignmentsModal';
-import AnnouncementCenter from '../components/admin/AnnouncementCenter';
-import FollowUpsView from '../components/admin/FollowUpsView';
-import AttendanceCorrections from '../components/admin/AttendanceCorrections';
-import ChurchCalendar from '../components/ChurchCalendar';
-import HomeCellsView from '../components/admin/HomeCellsView';
-import TitleManager from '../components/admin/TitleManager';
-import LeadershipDirectory from '../components/admin/LeadershipDirectory';
-import DepartmentsView from '../components/admin/DepartmentsView';
-import NewMemberPipeline from '../components/admin/NewMemberPipeline';
-import ContributionsView from '../components/admin/ContributionsView';
-import FinanceView from '../components/admin/FinanceView';
-import TrashView from '../components/admin/TrashView';
-import EvangelistDashboard from './EvangelistDashboard';
-import ChildrensMinistry from './ChildrensMinistry';
-import ExecutiveReportingCenter from './ExecutiveReportingCenter';
-
-import { CheckCircle2, AlertTriangle, X, ShieldAlert } from 'lucide-react';
+// Admin has many large reporting and management surfaces. Load each surface
+// only when its tab is opened so the initial admin route stays responsive.
+const MemberEditModal = lazy(() => import('../components/MemberEditModal'));
+const DashboardOverview = lazy(() => import('../components/admin/DashboardOverview'));
+const ExecutiveCommandCenter = lazy(() => import('../components/admin/ExecutiveCommandCenter'));
+const MemberDirectory = lazy(() => import('../components/admin/MemberDirectory'));
+const LeaderDirectory = lazy(() => import('../components/admin/LeaderDirectory'));
+const AttendanceReports = lazy(() => import('../components/admin/AttendanceReports'));
+const SubmissionHistory = lazy(() => import('../components/admin/SubmissionHistory'));
+const AnalyticsView = lazy(() => import('../components/admin/AnalyticsView'));
+const RewardsView = lazy(() => import('../components/admin/RewardsView'));
+const SettingsView = lazy(() => import('../components/admin/SettingsView'));
+const LeaderDrilldown = lazy(() => import('../components/admin/LeaderDrilldown'));
+const LeaderProfile = lazy(() => import('../components/admin/LeaderProfile'));
+const SectionProfile = lazy(() => import('../components/admin/SectionProfile'));
+const SectionManagement = lazy(() => import('../components/admin/SectionManagement'));
+const LeaderEditModal = lazy(() => import('../components/admin/LeaderEditModal'));
+const ServiceAssignmentsModal = lazy(() => import('../components/admin/ServiceAssignmentsModal'));
+const AuditLog = lazy(() => import('../components/admin/AuditLog'));
+const BirthdayModule = lazy(() => import('../components/admin/BirthdayModule'));
+const AnnouncementCenter = lazy(() => import('../components/admin/AnnouncementCenter'));
+const FollowUpsView = lazy(() => import('../components/admin/FollowUpsView'));
+const AttendanceCorrections = lazy(() => import('../components/admin/AttendanceCorrections'));
+const ChurchCalendar = lazy(() => import('../components/ChurchCalendar'));
+const HomeCellsView = lazy(() => import('../components/admin/HomeCellsView'));
+const TitleManager = lazy(() => import('../components/admin/TitleManager'));
+const LeadershipDirectory = lazy(() => import('../components/admin/LeadershipDirectory'));
+const DepartmentsView = lazy(() => import('../components/admin/DepartmentsView'));
+const NewMemberPipeline = lazy(() => import('../components/admin/NewMemberPipeline'));
+const ContributionsView = lazy(() => import('../components/admin/ContributionsView'));
+const FinanceView = lazy(() => import('../components/admin/FinanceView'));
+const TrashView = lazy(() => import('../components/admin/TrashView'));
+const EvangelistDashboard = lazy(() => import('./EvangelistDashboard'));
+const ChildrensMinistry = lazy(() => import('./ChildrensMinistry'));
+const ExecutiveReportingCenter = lazy(() => import('./ExecutiveReportingCenter'));
 
 const AdminDashboard = () => {
   const { tab } = useParams();
@@ -49,29 +49,16 @@ const AdminDashboard = () => {
   const activeTab = tab || 'dashboard';
   const { user } = useAuth();
   const data = useAdminData();
+  const { loadExecutiveDataOnce } = data;
   const { setCrumbs, clearCrumbs } = useBreadcrumbs();
-
-  // Core data migration on load
-  React.useEffect(() => {
-    // Legacy route redirects removed to support individual nav items directly
-  }, [tab]);
-
-  // One-time migration: renumber all membership IDs to sequential numbers
-  React.useEffect(() => {
-    if (!localStorage.getItem('membership_ids_renumbered_shacm')) {
-      adminAPI.renumberMembershipIds()
-        .then(() => localStorage.setItem('membership_ids_renumbered_shacm', '1'))
-        .catch(() => {});
-    }
-  }, []);
 
   // Load heavy executive analytics only when the dashboard tab is active.
   // This prevents the 10-call analytics burst from hitting on every admin mount.
   React.useEffect(() => {
     if (activeTab === 'dashboard') {
-      data.loadExecutiveDataOnce();
+      loadExecutiveDataOnce();
     }
-  }, [activeTab, data.loadExecutiveDataOnce]);
+  }, [activeTab, loadExecutiveDataOnce]);
 
   // Handle Dynamic Breadcrumbs for Sections
   React.useEffect(() => {
@@ -412,35 +399,55 @@ const AdminDashboard = () => {
       )}
 
       {/* Active Tab Content */}
-      {renderTab()}
+      <Suspense
+        fallback={(
+          <div className="flex min-h-64 items-center justify-center" role="status" aria-live="polite">
+            <span className="text-sm font-medium text-slate-500">Loading section...</span>
+          </div>
+        )}
+      >
+        {renderTab()}
+      </Suspense>
 
       {/* Leader Drilldown */}
-      <LeaderDrilldown
-        drilldownData={data.drilldownData}
-        onClose={() => data.setDrilldownData(null)}
-      />
+      {data.drilldownData && (
+        <Suspense fallback={null}>
+          <LeaderDrilldown
+            drilldownData={data.drilldownData}
+            onClose={() => data.setDrilldownData(null)}
+          />
+        </Suspense>
+      )}
 
       {/* Member Edit Modal */}
-      <MemberEditModal
-        isOpen={isModalOpen}
-        member={editingMember}
-        mode={memberMode}
-        sections={data.sections}
-        leaders={data.leaders}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveMember}
-      />
+      {isModalOpen && (
+        <Suspense fallback={null}>
+          <MemberEditModal
+            isOpen
+            member={editingMember}
+            mode={memberMode}
+            sections={data.sections}
+            leaders={data.leaders}
+            onClose={() => setIsModalOpen(false)}
+            onSave={handleSaveMember}
+          />
+        </Suspense>
+      )}
 
       {/* Leader Edit Modal */}
-      <LeaderEditModal
-        isOpen={data.isLeaderModalOpen}
-        leader={data.editingLeader}
-        sections={data.sections}
-        members={data.allMembers}
-        loading={data.leaderSaving}
-        onClose={() => data.setIsLeaderModalOpen(false)}
-        onSave={data.handleLeaderSave}
-      />
+      {data.isLeaderModalOpen && (
+        <Suspense fallback={null}>
+          <LeaderEditModal
+            isOpen
+            leader={data.editingLeader}
+            sections={data.sections}
+            members={data.allMembers}
+            loading={data.leaderSaving}
+            onClose={() => data.setIsLeaderModalOpen(false)}
+            onSave={data.handleLeaderSave}
+          />
+        </Suspense>
+      )}
 
       {/* Delete Leader Confirmation */}
       {data.deletingLeader && (
@@ -509,18 +516,22 @@ const AdminDashboard = () => {
       )}
 
       {/* Service Assignments Modal */}
-      <ServiceAssignmentsModal
-        isOpen={data.isAssignmentModalOpen}
-        onClose={() => data.setIsAssignmentModalOpen(false)}
-        selectedDate={data.selectedInstanceDate}
-        selectedServiceId={data.selectedServiceId}
-        serviceTypes={data.serviceTypes}
-        leaders={data.leaders}
-        sections={data.sections}
-        assignedLeaderIds={data.assignedLeaderIds}
-        onSave={data.handleSaveServiceAssignments}
-        loading={data.assignmentsLoading}
-      />
+      {data.isAssignmentModalOpen && (
+        <Suspense fallback={null}>
+          <ServiceAssignmentsModal
+            isOpen
+            onClose={() => data.setIsAssignmentModalOpen(false)}
+            selectedDate={data.selectedInstanceDate}
+            selectedServiceId={data.selectedServiceId}
+            serviceTypes={data.serviceTypes}
+            leaders={data.leaders}
+            sections={data.sections}
+            assignedLeaderIds={data.assignedLeaderIds}
+            onSave={data.handleSaveServiceAssignments}
+            loading={data.assignmentsLoading}
+          />
+        </Suspense>
+      )}
     </>
   );
 };

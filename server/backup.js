@@ -97,9 +97,9 @@ function backupPostgres() {
               console.log(`pg_dump: resolved ${hostname} -> ${address} (IPv4)`);
               return u.toString();
             }
-          } catch (_) {}
+          } catch (_) { /* use the original hostname */ }
         }
-      } catch (_) {}
+      } catch (_) { /* use the original connection URL */ }
       return url;
     };
 

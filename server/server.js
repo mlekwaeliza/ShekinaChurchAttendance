@@ -15,6 +15,7 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 const { csrfProtect } = require('./middleware/csrf');
 const { auditLog } = require('./middleware/audit');
+const { isAuthenticated, requireRole } = require('./middleware/auth');
 const { addDays, formatLocalDate, startOfLocalDay } = require('./utils/date');
 const path = require('path');
 const fs = require('fs');
@@ -74,7 +75,6 @@ if (!fs.existsSync(financeUploadsDir)) {
 }
 
 const { queries, db, all, run, get, ensureHomeCellSchema, ensureEvangelismSchema, createChildrensMinistryTables, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
-const { backupDatabase } = require('./backup');
 const { startScheduler } = require('./scheduler');
 const { invalidate: invalidateCache } = require('./utils/cache');
 const authRoutes = require('./routes/auth');
@@ -193,13 +193,8 @@ app.use(cors({
   credentials: true
 }));
 
-// L8-fix: helper to construct rate limiters with a bounded IP tracker.
-// express-rate-limit's default MemoryStore grows unbounded if an
-// attacker rotates source IPs (each unique IP creates a new bucket).
-// We pass a default `max` to bound the bucket count per limiter, and
-// use the safe `ipKeyGenerator` helper for IPv6-aware keying.
-const { ipKeyGenerator } = require('express-rate-limit');
-const RL_MAX_KEYS = 10_000; // 10k unique IPs per limiter is plenty
+// Shared rate-limit defaults. express-rate-limit v7 supplies the
+// request-aware IP key generator; ipKeyGenerator is a v8-only export.
 const rateLimitDefaults = {
   standardHeaders: 'draft-7',
   legacyHeaders: false
@@ -208,8 +203,6 @@ const rateLimitDefaults = {
 function buildLimiter(opts) {
   return rateLimit({
     ...rateLimitDefaults,
-    keyGenerator: ipKeyGenerator,
-    max: RL_MAX_KEYS,
     ...opts
   });
 }
@@ -262,22 +255,6 @@ const leaderMgmtLimiter = buildLimiter({
   skip: isLocalRequest
 });
 
-// Per-IP failed-login counter (database-backed). Complements the per-account
-// 5-attempts lockout by protecting against credential-stuffing
-// distributed across many usernames from a single source IP.
-const IP_LOGIN_WINDOW_MS = 15 * 60 * 1000;
-const IP_LOGIN_MAX = 25;
-async function getIpLoginState(ip) {
-  const state = await queries.getIpLoginState(ip);
-  if (!state) return { count: 0, lockedUntil: null };
-  return { count: state.count, lockedUntil: state.locked_until ? new Date(state.locked_until).getTime() : null };
-}
-async function recordIpLoginFailure(ip) {
-  await queries.recordIpLoginFailure(ip);
-}
-async function resetIpLoginState(ip) {
-  await queries.resetIpLoginState(ip);
-}
 // Cleanup old IP login failures periodically
 setInterval(() => {
   queries.cleanupIpLoginFailures().catch(err => console.error('Cleanup IP login failures error:', err.message));
@@ -416,7 +393,6 @@ app.use('/api/', (req, res, next) => {
   if (req.session && req.session.userId && req.session.createdAt) {
     const age = Date.now() - new Date(req.session.createdAt).getTime();
     if (age > MAX_SESSION_AGE_MS) {
-      const sid = req.session.id;
       req.session.destroy(() => {
         res.status(401).json({ error: 'Session expired (max age reached). Please log in again.' });
       });
@@ -518,12 +494,14 @@ app.use('/api/admin/leaders', leaderMgmtLimiter);
 app.use('/api/admin/upload-csv', uploadLimiter);
 app.use('/api/2fa/regenerate-backup-codes', bulkOpLimiter);
 
-// Static uploads serving
+// Static uploads serving. These files contain member photos and financial
+// receipts, so require an authenticated session instead of exposing them
+// as public static content.
 // M7-fix: dotfiles: 'deny' blocks requests for hidden files
 // (.env, .git, .htaccess, etc.) and index: false prevents
 // directory listings. fallthrough: false makes unknown files
 // return 404 instead of falling through to the SPA index.
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+const uploadStaticOptions = {
   dotfiles: 'deny',
   index: false,
   fallthrough: false,
@@ -537,7 +515,18 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
       res.setHeader('Cache-Control', 'no-store');
     }
   }
-}));
+};
+app.use(
+  '/uploads/profiles',
+  isAuthenticated,
+  express.static(path.join(__dirname, 'uploads', 'profiles'), uploadStaticOptions)
+);
+app.use(
+  '/uploads/finance',
+  isAuthenticated,
+  requireRole(['admin', 'accountant']),
+  express.static(path.join(__dirname, 'uploads', 'finance'), uploadStaticOptions)
+);
 
 // Serve production client build
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
@@ -549,8 +538,9 @@ app.use(express.static(clientDist, {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
-    } else if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
-      res.setHeader('Cache-Control', 'public, max-age=86400');
+    } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+      // Vite fingerprints assets by content, so they are safe to cache for a year.
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   }
 }));
@@ -635,33 +625,24 @@ app.get('/api/health', async (req, res) => {
 
 // Public diagnostic endpoint — shows DB client + user count + sample usernames.
 // Helps diagnose "can't login" issues without authentication.
-app.get('/api/db-check', async (req, res) => {
+app.get('/api/db-check', isAuthenticated, requireRole(['admin']), async (req, res) => {
   try {
     const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
-    const dbUrlSet = !!process.env.DATABASE_URL;
-    const dbUrlPreview = process.env.DATABASE_URL
-      ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':***@').substring(0, 60) + '...'
-      : null;
     let userCount = 0;
-    let sampleUsers = [];
     try {
       const countRow = await get('SELECT COUNT(*) as cnt FROM users');
       userCount = countRow ? countRow.cnt : 0;
-      const samples = await all('SELECT username, role FROM users ORDER BY id LIMIT 5');
-      sampleUsers = samples.map(u => ({ username: u.username, role: u.role }));
     } catch (e) {
-      sampleUsers = [{ error: e.message }];
+      return res.status(503).json({ error: 'Database check failed' });
     }
     res.json({
       timestamp: new Date().toISOString(),
       dbClient,
-      DATABASE_URL_set: dbUrlSet,
-      DATABASE_URL_preview: dbUrlPreview,
-      userCount,
-      sampleUsers
+      databaseUrlConfigured: !!process.env.DATABASE_URL,
+      userCount
     });
   } catch (err) {
-    res.json({ error: err.message });
+    res.status(500).json({ error: 'Database check failed' });
   }
 });
 
@@ -919,8 +900,29 @@ async function generateNotifications() {
 }
 
 // ── Auto-seed finance records on first boot ────────────────────────────────
-// Runs only when the finance_daily_records table is empty (fresh deploy).
+// Runs only when explicitly enabled in development and the table is empty.
+function calculateSampleFinance(morning, afternoon, tithes) {
+  const total = morning + afternoon + tithes;
+  const mission = Math.round(total * 0.1 * 100) / 100;
+  const remaining = Math.round((total - mission) * 100) / 100;
+  const bishop = Math.round(remaining * 0.1 * 100) / 100;
+  const usable = Math.round((remaining - bishop) * 100) / 100;
+  return { total, mission, remaining, bishop, usable };
+}
+
+function randomRoundedAmount(min, max) {
+  return Math.round((Math.random() * (max - min) + min) / 1000) * 1000;
+}
+
 async function seedFinanceRecords() {
+  if (String(process.env.SEED_SAMPLE_FINANCE || '').toLowerCase() !== 'true') {
+    return;
+  }
+  if (isProduction) {
+    console.warn('SEED_SAMPLE_FINANCE is ignored in production.');
+    return;
+  }
+
   try {
     const existing = await get('SELECT COUNT(*) as cnt FROM finance_daily_records');
     const count = Number(existing?.cnt || existing?.count || 0);
@@ -928,16 +930,6 @@ async function seedFinanceRecords() {
 
     const adminUser = await get("SELECT id FROM users WHERE role IN ('admin','accountant') LIMIT 1");
     const userId = adminUser ? adminUser.id : 1;
-
-    function calcFin(m, a, t) {
-      const total = m + a + t;
-      const mission  = Math.round(total * 0.1  * 100) / 100;
-      const remaining= Math.round((total - mission) * 100) / 100;
-      const bishop   = Math.round(remaining * 0.1  * 100) / 100;
-      const usable   = Math.round((remaining - bishop) * 100) / 100;
-      return { total, mission, remaining, bishop, usable };
-    }
-    function rnd(min, max) { return Math.round((Math.random()*(max-min)+min)/1000)*1000; }
 
     // Generate last 24 Sundays
     const sundays = [];
@@ -951,9 +943,11 @@ async function seedFinanceRecords() {
     const expCats = ['Food','Water','Fruits','Sugar','Media','Transport'];
     let seeded = 0;
     for (const date of sundays) {
-      const m = rnd(80000, 250000), a = rnd(40000, 150000), t = rnd(120000, 400000);
-      const ev = rnd(10000, 50000);
-      const c = calcFin(m, a, t);
+      const m = randomRoundedAmount(80000, 250000);
+      const a = randomRoundedAmount(40000, 150000);
+      const t = randomRoundedAmount(120000, 400000);
+      const ev = randomRoundedAmount(10000, 50000);
+      const c = calculateSampleFinance(m, a, t);
       try {
         await run(`
           INSERT INTO finance_daily_records
@@ -972,7 +966,7 @@ async function seedFinanceRecords() {
           for (let e=0; e<numExp; e++) {
             const cat = expCats[Math.floor(Math.random()*expCats.length)];
             await run(`INSERT INTO finance_expenses (record_id,category,amount,description) VALUES (?,?,?,?)`,
-              [rec.id, cat, rnd(5000,40000), `${cat} for Sunday service`]);
+              [rec.id, cat, randomRoundedAmount(5000, 40000), `${cat} for Sunday service`]);
           }
         }
         seeded++;
@@ -998,36 +992,27 @@ async function startServer() {
     });
     console.log('Database connection established');
 
-    // Ensure the current role can CREATE in the public schema (PostgreSQL 15+
-    // removed the default CREATE grant on public). Also set the database-level
-    // and role-level search_path so Neon's pooler doesn't reset it to empty.
+    // Verify schema visibility without mutating database-wide privileges at
+    // application startup. Grants and search_path changes belong in a
+    // DBA-controlled migration.
     if (String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres') {
       try {
         const pgPool = require('./db/postgres').pool;
-        const pgClient = await pgPool.connect();
-        try {
-          await pgClient.query('GRANT ALL ON SCHEMA public TO PUBLIC');
-          await pgClient.query('ALTER ROLE CURRENT_USER SET search_path TO public');
-          // Database-level default persists across all new sessions, including
-          // through PgBouncer's transaction pooler.
-          const dbResult = await pgClient.query('SELECT current_database() AS db');
-          const dbName = dbResult.rows[0].db;
-          await pgClient.query(`ALTER DATABASE "${dbName}" SET search_path TO public`);
-          console.log(`PostgreSQL schema permissions and search_path configured (database: ${dbName}).`);
-        } finally {
-          pgClient.release();
+        const schemaResult = await pgPool.query('SELECT current_schema() AS schema');
+        if (schemaResult.rows[0]?.schema !== 'public') {
+          console.warn('PostgreSQL current_schema is not public; configure search_path during deployment.');
         }
       } catch (e) {
-        console.warn('Schema permission setup skipped:', e.message);
+        console.warn('PostgreSQL schema check failed:', e.message);
       }
     }
 
-    // Reset all account locks and IP blocks on startup (crash recovery)
+    // Preserve active lockouts across restarts and purge only expired entries.
     try {
-      await run('UPDATE users SET failed_login_attempts = 0, locked_until = NULL, lockout_count = 0');
-      await run('DELETE FROM ip_login_failures');
-      console.log('Account locks and IP blocks cleared (startup reset).');
-    } catch (e) { console.warn('Lock reset skipped:', e.message); }
+      await queries.cleanupIpLoginFailures();
+    } catch (e) {
+      console.warn('Expired IP lock cleanup skipped:', e.message);
+    }
 
     await ensureHomeCellSchema();
     await ensureEvangelismSchema();
@@ -1040,7 +1025,7 @@ async function startServer() {
     await initializeUsers();
     await seedFinanceRecords();
     await generateNotifications();
-    setInterval(generateNotifications, 24 * 60 * 60 * 1000);
+    setInterval(generateNotifications, 24 * 60 * 60 * 1000).unref?.();
     startScheduler();
     // Start the Postgres LISTEN/NOTIFY bridge for cross-instance SSE
     // delivery. No-op when DATABASE_URL is unset (e.g. SQLite mode).

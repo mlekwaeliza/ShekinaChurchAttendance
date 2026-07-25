@@ -1,9 +1,9 @@
-const CACHE_NAME = 'church-attendance-v6';
+const CACHE_NAME = 'church-attendance-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.ico',
+  '/favicon.svg',
 ];
 
 self.addEventListener('install', (event) => {
@@ -61,17 +61,16 @@ self.addEventListener('fetch', (event) => {
 
     if (url.pathname.startsWith('/assets/')) {
       event.respondWith(
-        fetch(request, { cache: 'no-store' })
-          .then((response) => {
+        caches.match(request).then((cached) => {
+          if (cached) return cached;
+          return fetch(request).then((response) => {
             if (response.ok) {
               const responseClone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseClone);
-              });
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
             }
             return response;
-          })
-          .catch(() => caches.match(request))
+          });
+        })
       );
       return;
     }

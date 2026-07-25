@@ -21,9 +21,9 @@ function forceIPv4(url) {
           console.log(`Resolved ${hostname} -> ${address} (IPv4)`);
           return u.toString();
         }
-      } catch (_) {}
+      } catch (_) { /* use the original hostname */ }
     }
-  } catch (_) {}
+  } catch (_) { /* use the original connection URL */ }
   return url;
 }
 

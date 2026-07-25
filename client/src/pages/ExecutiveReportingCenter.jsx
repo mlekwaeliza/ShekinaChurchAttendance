@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { adminAPI } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { PDFReportGenerator } from '../utils/pdfReportGenerator';
 import { PresentationGenerator } from '../utils/presentationGenerator';
 import Badge from '../components/ui/Badge';
-import { BarChart3, Download, FileText, Users, Calendar, TrendingUp, Heart, Baby, Home, DollarSign, Filter, RefreshCw, Presentation } from 'lucide-react';
+import { Download, FileText, Users, Calendar, TrendingUp, Heart, Baby, Home, DollarSign, Filter, RefreshCw, Presentation } from 'lucide-react';
 
 const REPORT_TYPES = [
   { id: 'attendance', label: 'Attendance', icon: Calendar, color: 'blue' },
@@ -23,39 +23,44 @@ export default function ExecutiveReportingCenter() {
   const activeReport = searchParams.get('report') || 'attendance';
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState(null);
+  const [loadError, setLoadError] = useState('');
   const [startDate, setStartDate] = useState(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [exporting, setExporting] = useState(false);
   const { showToast } = useToast();
 
-  useEffect(() => { loadReport(); }, [activeReport, startDate, endDate]);
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError('');
+      setReportData(null);
       const params = { start_date: startDate, end_date: endDate };
-      let data;
+      let response;
       
       switch (activeReport) {
-        case 'attendance': data = await adminAPI.reports.getAttendance(params); break;
-        case 'membership': data = await adminAPI.reports.getMembership(params); break;
-        case 'leadership': data = await adminAPI.reports.getLeadership(params); break;
-        case 'finance': data = await adminAPI.reports.getFinance(params); break;
-        case 'evangelism': data = await adminAPI.reports.getEvangelism(params); break;
-        case 'newMembers': data = await adminAPI.reports.getNewMembers(params); break;
-        case 'homeCells': data = await adminAPI.reports.getHomeCells(params); break;
-        case 'children': data = await adminAPI.reports.getChildren(params); break;
-        default: data = await adminAPI.reports.getAttendance(params);
+        case 'attendance': response = await adminAPI.reports.getAttendance(params); break;
+        case 'membership': response = await adminAPI.reports.getMembership(params); break;
+        case 'leadership': response = await adminAPI.reports.getLeadership(params); break;
+        case 'finance': response = await adminAPI.reports.getFinance(params); break;
+        case 'evangelism': response = await adminAPI.reports.getEvangelism(params); break;
+        case 'newMembers': response = await adminAPI.reports.getNewMembers(params); break;
+        case 'homeCells': response = await adminAPI.reports.getHomeCells(params); break;
+        case 'children': response = await adminAPI.reports.getChildren(params); break;
+        default: response = await adminAPI.reports.getAttendance(params);
       }
       
-      setReportData(data);
+      setReportData(response.data);
     } catch (error) {
       console.error('Failed to load report:', error);
-      showToast('Failed to load report', 'error');
+      const message = error.message || 'Failed to load report';
+      setLoadError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeReport, endDate, showToast, startDate]);
+
+  useEffect(() => { loadReport(); }, [loadReport]);
 
   const handleExport = async () => {
     try {
@@ -116,44 +121,6 @@ export default function ExecutiveReportingCenter() {
     }
   };
 
-  const handleFullReport = async () => {
-    try {
-      setExporting(true);
-      showToast('Generating full report...', 'info');
-      const params = { start_date: startDate, end_date: endDate };
-      const allData = await Promise.allSettled([
-        adminAPI.reports.getAttendance(params),
-        adminAPI.reports.getMembership(params),
-        adminAPI.reports.getLeadership(params),
-        adminAPI.reports.getFinance(params),
-        adminAPI.reports.getEvangelism(params),
-        adminAPI.reports.getNewMembers(params),
-        adminAPI.reports.getHomeCells(params),
-        adminAPI.reports.getChildren(params),
-      ]);
-      const gen = new PDFReportGenerator();
-      const labels = ['Attendance', 'Membership', 'Leadership', 'Finance', 'Evangelism', 'New Members', 'Home Cells', 'Children'];
-      const generators = [
-        'generateAttendanceReport', 'generateMembershipReport', 'generateLeadershipReport',
-        'generateFinanceReport', 'generateEvangelismReport', 'generateNewMembersReport',
-        'generateHomeCellsReport', 'generateChildrenReport',
-      ];
-      allData.forEach((result, i) => {
-        if (result.status === 'fulfilled' && result.value) {
-          gen.doc.addPage();
-          gen[generators[i]](result.value);
-        }
-      });
-      gen.save(`full_executive_report_${startDate}_to_${endDate}.pdf`);
-      showToast('Full report exported successfully', 'success');
-    } catch (error) {
-      console.error('Full report error:', error);
-      showToast('Failed to export full report', 'error');
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const handlePresentation = () => {
     if (!reportData) {
       showToast('No data to export', 'error');
@@ -162,7 +129,6 @@ export default function ExecutiveReportingCenter() {
     try {
       setExporting(true);
       const gen = new PresentationGenerator();
-      const dateRange = `${startDate} to ${endDate}`;
       gen.setTitle(`${activeReport.charAt(0).toUpperCase() + activeReport.slice(1)} Report`);
       gen[activeReport === 'newMembers' ? 'generateNewMembersReport' : `generate${activeReport.charAt(0).toUpperCase() + activeReport.slice(1)}Report`](reportData);
       gen.save(`${activeReport}_presentation_${startDate}_to_${endDate}.pptx`);
@@ -193,7 +159,7 @@ export default function ExecutiveReportingCenter() {
       const keys = ['attendance', 'membership', 'leadership', 'finance', 'evangelism', 'newMembers', 'homeCells', 'children'];
       const dataObj = {};
       allData.forEach((result, i) => {
-        dataObj[keys[i]] = { data: result.status === 'fulfilled' ? result.value : null };
+        dataObj[keys[i]] = { data: result.status === 'fulfilled' ? result.value.data : null };
       });
       const gen = new PresentationGenerator();
       gen.generateFullPresentation(dataObj);
@@ -235,6 +201,16 @@ export default function ExecutiveReportingCenter() {
   if (loading && !reportData) return (
     <div className="flex items-center justify-center h-64">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+    </div>
+  );
+
+  if (loadError && !reportData) return (
+    <div className="card p-8 text-center">
+      <p className="font-semibold text-red-600">This report could not be loaded.</p>
+      <p className="mt-2 text-sm text-slate-500">{loadError}</p>
+      <button type="button" onClick={loadReport} className="btn-primary mt-4">
+        Try again
+      </button>
     </div>
   );
 

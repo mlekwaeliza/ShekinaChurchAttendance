@@ -70,11 +70,10 @@ function validateExpenses(expenses) {
   }
 }
 
-function calcFinance(morning, afternoon, tithes, evangelism = 0) {
+function calcFinance(morning, afternoon, tithes) {
   const m = Number(morning) || 0;
   const a = Number(afternoon) || 0;
   const t = Number(tithes) || 0;
-  const e = Number(evangelism) || 0;
   const total = m + a + t;
   const mission = Math.round(total * 0.1 * 100) / 100;
   const remaining = Math.round((total - mission) * 100) / 100;
@@ -86,7 +85,6 @@ function calcFinance(morning, afternoon, tithes, evangelism = 0) {
 router.post('/finance/records', async (req, res) => {
   try {
     const { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries, expenses, notes } = req.body;
-    console.error('[finance POST] received body:', JSON.stringify(req.body));
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
     validateExpenses(expenses);
 
@@ -117,7 +115,7 @@ router.post('/finance/records', async (req, res) => {
 
     const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [record_date]);
     const auto_tithes = tithesResult?.total || 0;
-    const c = calcFinance(morning_offering, afternoon_offering, auto_tithes, evangelism_offering);
+    const c = calcFinance(morning_offering, afternoon_offering, auto_tithes);
     const recordData = {
       record_date, morning_offering: Number(morning_offering) || 0, afternoon_offering: Number(afternoon_offering) || 0,
       evangelism_offering: Number(evangelism_offering) || 0,
@@ -152,7 +150,10 @@ router.post('/finance/records', async (req, res) => {
       }
     }
 
-    res.status(existing ? 200 : 201).json({ message: existing ? 'Record updated' : 'Record created', record: createdRecord, debug_received: { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries_count: tithe_entries?.length, expenses_count: expenses?.length, bodyKeys: req.body ? Object.keys(req.body) : null } });
+    res.status(existing ? 200 : 201).json({
+      message: existing ? 'Record updated' : 'Record created',
+      record: createdRecord
+    });
   } catch (err) {
     const isUnique = /unique|duplicate key/i.test(err.message || '');
     if (isUnique) return res.status(409).json({ error: 'A record for this date already exists' });
@@ -257,8 +258,7 @@ router.put('/finance/records/:id', async (req, res) => {
     const c = calcFinance(
       data.morning_offering ?? existing.morning_offering,
       data.afternoon_offering ?? existing.afternoon_offering,
-      auto_tithes,
-      data.evangelism_offering ?? existing.evangelism_offering
+      auto_tithes
     );
     Object.assign(data, {
       total_income: c.total, mission_fund: c.mission,
@@ -410,7 +410,7 @@ router.put('/finance/records/:id/recalculate', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Record not found' });
     const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [existing.record_date]);
     const auto_tithes = tithesResult?.total || 0;
-    const c = calcFinance(existing.morning_offering, existing.afternoon_offering, auto_tithes, existing.evangelism_offering);
+    const c = calcFinance(existing.morning_offering, existing.afternoon_offering, auto_tithes);
     await queries.updateFinanceRecord(req.params.id, {
       total_tithes: auto_tithes, total_income: c.total, mission_fund: c.mission,
       remaining_after_mission: c.remaining, bishop_fund: c.bishop, usable_church_funds: c.usable

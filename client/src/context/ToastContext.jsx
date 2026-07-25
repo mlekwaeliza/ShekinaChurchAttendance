@@ -35,15 +35,18 @@ export function ToastProvider({ children, maxToasts = 4 }) {
     }
   }, []);
 
-  const showToast = useCallback((opts) => {
+  const showToast = useCallback((opts, legacyType) => {
+    const normalized = typeof opts === 'string'
+      ? { message: opts, type: legacyType || 'info' }
+      : (opts || {});
     const id = nextId();
     const toast = {
       id,
-      type: opts.type || 'info',
-      title: opts.title || '',
-      message: opts.message || '',
-      duration: opts.duration ?? 5000,
-      action: opts.action || null,
+      type: normalized.type || 'info',
+      title: normalized.title || '',
+      message: normalized.message || '',
+      duration: normalized.duration ?? 5000,
+      action: normalized.action || null,
       createdAt: Date.now()
     };
     setToasts((current) => {
