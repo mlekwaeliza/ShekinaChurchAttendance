@@ -683,7 +683,7 @@ async function getGroupProfile(entityType, entityId, season) {
         SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
       FROM attendance WHERE date BETWEEN ? AND ?
       GROUP BY member_id
-    )
+    ) sub
   `, [season.start, season.end]);
   const churchAvg = Math.round(Number(churchAvgRow?.avg_att) || 0);
 
@@ -865,7 +865,7 @@ async function getProfile(entityType, entityId, filter, userId) {
           SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present
         FROM attendance WHERE date BETWEEN ? AND ?
         GROUP BY member_id
-      )
+      ) sub
     `, [season.start, season.end]),
     all(attByMonthQuery, [attParamId, yearStart, yearEnd]),
     all(outQuery, [outParamId, yearStart, yearEnd]),
@@ -922,7 +922,7 @@ async function getProfile(entityType, entityId, filter, userId) {
         JOIN sections s ON s.id = m.section_id
         WHERE a.date BETWEEN ? AND ? AND s.name = ?
         GROUP BY a.member_id
-      )
+      ) sub
     `, [season.start, season.end, entity.section_name]);
     sectionAvg = Math.round(Number(secRow?.avg_att) || 0);
   }
