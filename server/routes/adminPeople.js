@@ -921,16 +921,19 @@ router.get('/children-leaders', async (req, res) => {
 router.get('/members-for-children-leader', async (req, res) => {
   try {
     const { q } = req.query;
+    const usedUserIds = `(SELECT user_id FROM children_leaders)`;
     let sql = `
       SELECT u.id, u.username, u.full_name, u.email, u.profile_picture, m.phone
       FROM users u
       LEFT JOIN members m ON m.user_id = u.id
-      WHERE u.role = 'leader'
-        AND u.id NOT IN (SELECT user_id FROM children_leaders)
+      WHERE u.id NOT IN ${usedUserIds}
+        AND u.role != 'admin'
     `;
     const params = [];
     if (q && q.trim()) {
-      sql += ` AND (u.full_name ILIKE ? OR u.username ILIKE ? OR u.email ILIKE ?)`;
+      const useIlike = String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
+      const op = useIlike ? 'ILIKE' : 'LIKE';
+      sql += ` AND (u.full_name ${op} ? OR u.username ${op} ? OR u.email ${op} ?)`;
       const term = `%${q.trim()}%`;
       params.push(term, term, term);
     }

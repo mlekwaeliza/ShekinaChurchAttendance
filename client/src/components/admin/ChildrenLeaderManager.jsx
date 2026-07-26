@@ -54,12 +54,20 @@ export default function ChildrenLeaderManager({ showMessage }) {
     l.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const filteredMembers = memberSearch.trim()
+    ? availableMembers.filter(m =>
+        m.full_name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
+        m.username?.toLowerCase().includes(memberSearch.toLowerCase()) ||
+        m.email?.toLowerCase().includes(memberSearch.toLowerCase()) ||
+        m.phone?.includes(memberSearch)
+      )
+    : availableMembers;
+
   const fetchAvailableMembers = useCallback(async (q) => {
     setLoadingMembers(true);
     try {
       const res = await adminAPI.childrenLeaders.getAvailableMembers(q);
       setAvailableMembers(res.data);
-      setShowMemberDropdown(true);
     } catch (err) {
       console.error('Failed to fetch members:', err);
     } finally {
@@ -69,11 +77,9 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
   useEffect(() => {
     if (!showModal || editingLeader) return;
-    const timer = setTimeout(() => {
-      fetchAvailableMembers(memberSearch);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [memberSearch, showModal, editingLeader, fetchAvailableMembers]);
+    fetchAvailableMembers(memberSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberSearch, showModal, editingLeader]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -406,10 +412,10 @@ export default function ChildrenLeaderManager({ showMessage }) {
                         <input
                           ref={memberSearchRef}
                           className="input pl-9"
-                          placeholder="Search members by name or username..."
+                          placeholder="Type a name, username, or email..."
                           value={memberSearch}
                           onChange={(e) => setMemberSearch(e.target.value)}
-                          onFocus={() => { if (availableMembers.length > 0) setShowMemberDropdown(true); }}
+                          onFocus={() => { setShowMemberDropdown(true); if (availableMembers.length === 0) fetchAvailableMembers(''); }}
                           autoFocus
                         />
                         {loadingMembers && (
@@ -418,29 +424,34 @@ export default function ChildrenLeaderManager({ showMessage }) {
                       </div>
                       {showMemberDropdown && (
                         <div className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
-                          {availableMembers.length === 0 ? (
+                          {loadingMembers && filteredMembers.length === 0 ? (
+                            <div className="px-4 py-6 text-center">
+                              <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
+                              <p className="mt-2 text-sm text-slate-400">Loading members...</p>
+                            </div>
+                          ) : filteredMembers.length === 0 ? (
                             <div className="px-4 py-6 text-center">
                               <User className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
                               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                {memberSearch ? 'No members found' : 'Start typing to search members'}
+                                {memberSearch ? 'No members match your search' : 'No available members'}
                               </p>
                             </div>
                           ) : (
-                            availableMembers.map(member => (
+                            filteredMembers.map(member => (
                               <button
                                 key={member.id}
                                 type="button"
                                 onClick={() => selectMember(member)}
                                 className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700 last:border-0"
                               >
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
                                   <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
                                     {member.full_name?.charAt(0)?.toUpperCase()}
                                   </span>
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{member.full_name}</p>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{member.username} {member.email ? `· ${member.email}` : ''}</p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{member.username}{member.email ? ` · ${member.email}` : ''}{member.phone ? ` · ${member.phone}` : ''}</p>
                                 </div>
                               </button>
                             ))
