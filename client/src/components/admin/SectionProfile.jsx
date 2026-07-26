@@ -344,9 +344,9 @@ const SectionProfile = ({ sectionId, sectionName, onBack }) => {
         body: asArray(rankings).map((s, i) => [
           `#${i + 1}`,
           s.name || 'N/A',
-          String(s.members || 0),
+          String(s.member_count || s.members || 0),
           `${R(s.attendanceRate || s.attendance_rate)}%`,
-          String(s.present || 0),
+          String(s.total_present || s.present || 0),
         ]),
         ...tableDefaults,
         styles: { fontSize: 8, cellPadding: 2 },
@@ -730,7 +730,7 @@ const SectionAnalytics = ({ ranking, compData, rankings, trends }) => {
         <StatBox label="Attendance Rate (90d)" value={`${attRate}%`}    color={attRate >= 75 ? 'emerald' : attRate >= 50 ? 'amber' : 'rose'} />
         <StatBox label="Present"               value={totalPresent}      color="blue" />
         <StatBox label="Absent"                value={totalAbsent}       color="rose" />
-        <StatBox label="Members"               value={ranking?.members || 0} color="indigo" />
+        <StatBox label="Members"               value={ranking?.member_count || ranking?.members || 0} color="indigo" />
         {compData && <StatBox label="Trend vs Prev" value={`${compData.trend >= 0 ? '+' : ''}${R(compData.trend)}%`} color={compData.trend >= 0 ? 'emerald' : 'rose'} />}
         {compData && <StatBox label="Prev Rate" value={`${R(compData.prev_attendance_rate || compData.prevRate)}%`} color="slate" />}
         <StatBox label="Services Tracked" value={asArray(trends).length} color="violet" />
@@ -798,11 +798,11 @@ const SectionAnalytics = ({ ranking, compData, rankings, trends }) => {
                   <tr key={s.id || i} className={`border-b border-slate-100 dark:border-slate-700/50 ${Number(s.id) === Number(ranking?.id) ? 'bg-violet-50 dark:bg-violet-950/20 font-semibold' : ''}`}>
                     <td className="py-2 px-3 text-slate-400">#{i + 1}</td>
                     <td className="py-2 px-3 text-slate-900 dark:text-white">{s.name}</td>
-                    <td className="py-2 px-3 text-right text-slate-500">{s.members}</td>
+                    <td className="py-2 px-3 text-right text-slate-500">{s.member_count || s.members || 0}</td>
                     <td className="py-2 px-3 text-right font-bold" style={{ color: (s.attendanceRate || s.attendance_rate) >= 75 ? '#10b981' : (s.attendanceRate || s.attendance_rate) >= 50 ? '#f59e0b' : '#ef4444' }}>
                       {R(s.attendanceRate || s.attendance_rate)}%
                     </td>
-                    <td className="py-2 px-3 text-right text-slate-500">{s.present || 0}</td>
+                    <td className="py-2 px-3 text-right text-slate-500">{s.total_present || s.present || 0}</td>
                   </tr>
                 ))}
               </tbody>
@@ -932,9 +932,9 @@ const SectionPerformance = ({ performance, ranking }) => {
           <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Ranking Summary</h3>
           <div className="space-y-1.5">
             <InfoRow label="Attendance Rate" value={`${R(ranking.attendanceRate || ranking.attendance_rate)}%`} />
-            <InfoRow label="Members"        value={ranking.members || 0} />
-            <InfoRow label="Present"        value={ranking.present || 0} />
-            <InfoRow label="Absent"         value={ranking.absent || 0} />
+            <InfoRow label="Members"        value={ranking.member_count || ranking.members || 0} />
+            <InfoRow label="Present"        value={ranking.total_present || ranking.present || 0} />
+            <InfoRow label="Absent"         value={ranking.total_absent || ranking.absent || 0} />
             <InfoRow label="Status"         value={ranking.status || '—'} />
             <InfoRow label="Performance Score" value={`${R(ranking.performance_score)}/100`} />
           </div>
