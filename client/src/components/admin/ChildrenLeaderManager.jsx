@@ -1,11 +1,139 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { adminAPI } from '../../services/api';
 import {
   ShieldCheck, Plus, Pencil, Trash2, KeyRound,
-  CheckCircle, XCircle, Loader2, Users, X, Search, User
+  CheckCircle, XCircle, Loader2, Users, X, Search
 } from 'lucide-react';
 
 const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
+
+// ── Member Search Combobox (same pattern as LeaderEditModal) ───────────────
+const MemberSearchInput = ({ members = [], selected, onSelect }) => {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(0);
+  const containerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const filtered = query.trim().length < 1
+    ? []
+    : members.filter(m =>
+        m.full_name?.toLowerCase().includes(query.toLowerCase()) ||
+        m.phone?.includes(query) ||
+        m.email?.toLowerCase().includes(query.toLowerCase())
+      ).slice(0, 10);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    if (!selected) setQuery('');
+  }, [selected]);
+
+  const pickMember = useCallback((member) => {
+    setQuery('');
+    setOpen(false);
+    onSelect(member);
+  }, [onSelect]);
+
+  const clearSelection = useCallback(() => {
+    setQuery('');
+    setOpen(false);
+    onSelect(null);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [onSelect]);
+
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    if (selected) onSelect(null);
+    setQuery(val);
+    setHighlighted(0);
+    setOpen(val.trim().length > 0);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!open || filtered.length === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHighlighted(h => Math.min(h + 1, filtered.length - 1)); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); setHighlighted(h => Math.max(h - 1, 0)); }
+    if (e.key === 'Enter') { e.preventDefault(); if (filtered[highlighted]) pickMember(filtered[highlighted]); }
+    if (e.key === 'Escape') { setOpen(false); }
+  };
+
+  const inputValue = selected ? selected.full_name : query;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 z-10" />
+      <input
+        ref={inputRef}
+        type="text"
+        autoComplete="off"
+        value={inputValue}
+        onChange={handleInputChange}
+        onFocus={() => { if (!selected && query.trim().length > 0) setOpen(true); }}
+        onKeyDown={handleKeyDown}
+        placeholder="Search by name, phone or email..."
+        className={`input pl-10 pr-9 transition-all ${selected ? 'border-emerald-400 dark:border-emerald-500 ring-1 ring-emerald-200 dark:ring-emerald-900/50' : ''}`}
+      />
+      {(selected || query) && (
+        <button
+          type="button"
+          onClick={clearSelection}
+          tabIndex={-1}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+      {selected && (
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+          <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            <strong>{selected.full_name}</strong> selected
+            {selected.phone ? ` · ${selected.phone}` : ''}
+            {selected.email ? ` · ${selected.email}` : ''}
+          </span>
+        </div>
+      )}
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto">
+          {filtered.map((m, i) => (
+            <li
+              key={m.id}
+              onMouseDown={(e) => { e.preventDefault(); pickMember(m); }}
+              onMouseEnter={() => setHighlighted(i)}
+              className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer text-sm transition-colors ${
+                i === highlighted
+                  ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
+                {m.full_name?.charAt(0)?.toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold truncate leading-tight">{m.full_name}</p>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                  {[m.phone, m.email].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && query.trim().length > 0 && filtered.length === 0 && (
+        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl px-4 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">
+          No members match "<span className="font-medium text-slate-600 dark:text-slate-400">{query}</span>"
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function ChildrenLeaderManager({ showMessage }) {
   const [leaders, setLeaders] = useState([]);
@@ -24,17 +152,12 @@ export default function ChildrenLeaderManager({ showMessage }) {
     user_id: null
   });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-
-  const [memberSearch, setMemberSearch] = useState('');
-  const [availableMembers, setAvailableMembers] = useState([]);
-  const [loadingMembers, setLoadingMembers] = useState(false);
-  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [allMembers, setAllMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
-  const memberSearchRef = useRef(null);
-  const dropdownRef = useRef(null);
 
   useEffect(() => {
     loadLeaders();
+    loadMembers();
   }, []);
 
   const loadLeaders = async () => {
@@ -48,68 +171,47 @@ export default function ChildrenLeaderManager({ showMessage }) {
     }
   };
 
+  const loadMembers = async () => {
+    try {
+      const res = await adminAPI.getMembers();
+      setAllMembers(res.data);
+    } catch (err) {
+      console.error('Failed to load members:', err);
+    }
+  };
+
   const filteredLeaders = leaders.filter(l =>
     l.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     l.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     l.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredMembers = memberSearch.trim()
-    ? availableMembers.filter(m =>
-        m.full_name?.toLowerCase().includes(memberSearch.toLowerCase()) ||
-        m.username?.toLowerCase().includes(memberSearch.toLowerCase()) ||
-        m.email?.toLowerCase().includes(memberSearch.toLowerCase()) ||
-        m.phone?.includes(memberSearch)
-      )
-    : availableMembers;
+  const availableMembers = useMemo(() => {
+    const assignedUserIds = new Set(leaders.map(l => l.user_id));
+    return allMembers.filter(m => !assignedUserIds.has(m.user_id) && m.role !== 'admin');
+  }, [allMembers, leaders]);
 
-  const fetchAvailableMembers = useCallback(async (q) => {
-    setLoadingMembers(true);
-    try {
-      const res = await adminAPI.childrenLeaders.getAvailableMembers(q);
-      setAvailableMembers(res.data);
-    } catch (err) {
-      console.error('Failed to fetch members:', err);
-    } finally {
-      setLoadingMembers(false);
+  const handleMemberSelect = useCallback((member) => {
+    if (member) {
+      setSelectedMember(member);
+      setFormData(prev => ({
+        ...prev,
+        full_name: member.full_name || '',
+        phone: member.phone || '',
+        email: member.email || '',
+        user_id: member.user_id || member.id,
+        username: member.username || ''
+      }));
+    } else {
+      setSelectedMember(null);
+      setFormData(prev => ({ ...prev, full_name: '', phone: '', email: '', user_id: null, username: '' }));
     }
   }, []);
-
-  useEffect(() => {
-    if (!showModal || editingLeader) return;
-    fetchAvailableMembers(memberSearch);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memberSearch, showModal, editingLeader]);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
-          memberSearchRef.current && !memberSearchRef.current.contains(e.target)) {
-        setShowMemberDropdown(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const selectMember = (member) => {
-    setSelectedMember(member);
-    setFormData({
-      username: member.username,
-      full_name: member.full_name,
-      phone: member.phone || '',
-      email: member.email || '',
-      is_head: false,
-      user_id: member.id
-    });
-    setShowMemberDropdown(false);
-    setMemberSearch('');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.full_name.trim()) { setError('Full name is required'); return; }
-    if (!editingLeader && !formData.username.trim()) { setError('Please select a member from the list'); return; }
+    if (!editingLeader && !selectedMember) { setError('Please select a member from the list'); return; }
     setSaving(true); setError('');
     try {
       if (editingLeader) {
@@ -168,8 +270,6 @@ export default function ChildrenLeaderManager({ showMessage }) {
   const openCreateModal = () => {
     setEditingLeader(null);
     setSelectedMember(null);
-    setMemberSearch('');
-    setAvailableMembers([]);
     setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false, user_id: null });
     setError('');
     setShowModal(true);
@@ -382,84 +482,15 @@ export default function ChildrenLeaderManager({ showMessage }) {
               )}
 
               {!editingLeader && (
-                <div className="relative" ref={dropdownRef}>
+                <div>
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Select Member <span className="text-rose-500">*</span>
                   </label>
-                  {selectedMember ? (
-                    <div className="flex items-center gap-3 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 dark:border-primary-800 dark:bg-primary-900/20">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40">
-                        <span className="text-sm font-bold text-primary-700 dark:text-primary-300">
-                          {selectedMember.full_name?.charAt(0)?.toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{selectedMember.full_name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{selectedMember.username}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setSelectedMember(null); setFormData(f => ({ ...f, username: '', full_name: '', phone: '', email: '', user_id: null })); }}
-                        className="rounded-lg p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <input
-                          ref={memberSearchRef}
-                          className="input pl-9"
-                          placeholder="Type a name, username, or email..."
-                          value={memberSearch}
-                          onChange={(e) => setMemberSearch(e.target.value)}
-                          onFocus={() => { setShowMemberDropdown(true); if (availableMembers.length === 0) fetchAvailableMembers(''); }}
-                          autoFocus
-                        />
-                        {loadingMembers && (
-                          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
-                        )}
-                      </div>
-                      {showMemberDropdown && (
-                        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
-                          {loadingMembers && filteredMembers.length === 0 ? (
-                            <div className="px-4 py-6 text-center">
-                              <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
-                              <p className="mt-2 text-sm text-slate-400">Loading members...</p>
-                            </div>
-                          ) : filteredMembers.length === 0 ? (
-                            <div className="px-4 py-6 text-center">
-                              <User className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
-                              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                                {memberSearch ? 'No members match your search' : 'No available members'}
-                              </p>
-                            </div>
-                          ) : (
-                            filteredMembers.map(member => (
-                              <button
-                                key={member.id}
-                                type="button"
-                                onClick={() => selectMember(member)}
-                                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700 last:border-0"
-                              >
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
-                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                                    {member.full_name?.charAt(0)?.toUpperCase()}
-                                  </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{member.full_name}</p>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{member.username}{member.email ? ` · ${member.email}` : ''}{member.phone ? ` · ${member.phone}` : ''}</p>
-                                </div>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
+                  <MemberSearchInput
+                    members={availableMembers}
+                    selected={selectedMember}
+                    onSelect={handleMemberSelect}
+                  />
                 </div>
               )}
 
