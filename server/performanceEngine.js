@@ -744,6 +744,7 @@ async function getGroupProfile(entityType, entityId, season) {
 
 async function getProfile(entityType, entityId, filter, userId) {
   const season = getFilterRange(filter);
+  console.error(`[profile-debug] START getProfile(${entityType}, ${entityId}, ${filter}) season=${season.start}..${season.end}`);
 
   // ── Group profile (section / department / cell) ──
   if (entityType === 'section' || entityType === 'department' || entityType === 'cell') {
@@ -751,6 +752,7 @@ async function getProfile(entityType, entityId, filter, userId) {
   }
 
   const weights = await loadWeights();
+  console.error(`[profile-debug] weights loaded`);
   let scored = [];
   if (entityType === 'leader') {
     try {
@@ -799,11 +801,18 @@ async function getProfile(entityType, entityId, filter, userId) {
   entity.totalEntities = allScores.length;
   const prev = prevSeasonOf(season);
   if (prev) {
-    const prevScores = await scoreForSeason(prev);
-    const map = entityType === 'leader' ? prevScores?.leaders : prevScores?.members;
-    const prevRank = map ? (map.get(Number(entityId)) || map.get(entityId) || map.get(String(entityId))) : null;
-    entity.prevRank = prevRank || null;
-    entity.rankDelta = entity.prevRank ? entity.prevRank - entity.rank : 0;
+    console.error(`[profile-debug] computing rank delta for prev season ${prev.start}..${prev.end}`);
+    try {
+      const prevScores = await scoreForSeason(prev);
+      const map = entityType === 'leader' ? prevScores?.leaders : prevScores?.members;
+      const prevRank = map ? (map.get(Number(entityId)) || map.get(entityId) || map.get(String(entityId))) : null;
+      entity.prevRank = prevRank || null;
+      entity.rankDelta = entity.prevRank ? entity.prevRank - entity.rank : 0;
+    } catch (e) {
+      console.error(`[profile-debug] scoreForSeason threw:`, e?.message);
+      entity.prevRank = null;
+      entity.rankDelta = 0;
+    }
   } else {
     entity.prevRank = null;
     entity.rankDelta = 0;
@@ -855,7 +864,10 @@ async function getProfile(entityType, entityId, filter, userId) {
   const outParamId = isLeader ? entityId : targetMemberId;
 
   // Parallelize all independent queries
-  const [attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements] = await withTimeout(Promise.all([
+  console.error(`[profile-debug] running parallel queries for ${entityType}/${entityId}, targetMemberId=${targetMemberId}`);
+  let attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements;
+  try {
+    [attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements] = await withTimeout(Promise.all([
     all(attQuery, [attParamId]),
     all(`SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`, [targetMemberId]),
     get(`
@@ -880,6 +892,11 @@ async function getProfile(entityType, entityId, filter, userId) {
       [entityType, entityId]
     ),
   ]), 20000, 'Profile queries timed out');
+  } catch (pqErr) {
+    console.error(`[profile-debug] parallel queries threw:`, pqErr?.message, pqErr?.stack);
+    throw pqErr;
+  }
+  console.error(`[profile-debug] parallel queries done: attRows=${attRows.length}, departments=${departments.length}`);
   // Leader attRows come in DESC order (LIMIT 500) — reverse to ASC for streak processing
   if (isLeader) attRows.reverse();
   const presentCount = attRows.filter(r => (r.status || '').toLowerCase() === 'present').length;
