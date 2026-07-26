@@ -100,7 +100,7 @@ router.get('/attendance', async (req, res) => {
           ROUND(CAST(COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) AS NUMERIC), 1) as rate
         FROM members m JOIN attendance a ON m.id = a.member_id JOIN sections s ON m.section_id = s.id
         WHERE a.date BETWEEN ? AND ? AND m.is_active = 1
-        GROUP BY m.id ORDER BY rate DESC LIMIT 20
+        GROUP BY m.id, m.full_name, s.name ORDER BY rate DESC LIMIT 20
       `, [start, end]),
       all(`
         SELECT m.id, m.full_name as name, s.name as section_name,
@@ -109,7 +109,9 @@ router.get('/attendance', async (req, res) => {
           ROUND(CAST(COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) AS NUMERIC), 1) as rate
         FROM members m JOIN attendance a ON m.id = a.member_id JOIN sections s ON m.section_id = s.id
         WHERE a.date BETWEEN ? AND ? AND m.is_active = 1
-        GROUP BY m.id HAVING rate < 30 ORDER BY rate ASC LIMIT 20
+        GROUP BY m.id, m.full_name, s.name
+        HAVING ROUND(CAST(COUNT(CASE WHEN a.status = 'present' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) AS NUMERIC), 1) < 30
+        ORDER BY rate ASC LIMIT 20
       `, [start, end]),
     ]);
 
@@ -244,7 +246,7 @@ router.get('/leadership', async (req, res) => {
         LEFT JOIN attendance a ON sl.date = a.date AND a.member_id IN (
           SELECT id FROM members WHERE section_id = l.section_id AND is_active = 1
         )
-        GROUP BY l.id ORDER BY submissions DESC
+        GROUP BY l.id, u.username, u.full_name, s.name ORDER BY submissions DESC
       `, [start, end]),
       all(`
         SELECT l.id, u.username,
@@ -270,7 +272,7 @@ router.get('/leadership', async (req, res) => {
           AND a.member_id IN (
             SELECT id FROM members WHERE section_id = l.section_id AND is_active = 1
           )
-        GROUP BY l.id ORDER BY total_submissions DESC
+        GROUP BY l.id, u.username, u.full_name ORDER BY total_submissions DESC
       `, [start, end]),
     ]);
 
@@ -336,7 +338,7 @@ router.get('/finance', async (req, res) => {
           COUNT(*) as contribution_count
         FROM members m JOIN contributions c ON m.id = c.member_id
         WHERE c.payment_date BETWEEN ? AND ? AND m.is_active = 1
-        GROUP BY m.id ORDER BY total_contributed DESC LIMIT 20
+        GROUP BY m.id, m.full_name ORDER BY total_contributed DESC LIMIT 20
       `, [start, end]),
     ]);
 
