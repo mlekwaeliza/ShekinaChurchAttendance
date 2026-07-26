@@ -229,27 +229,63 @@ const SectionProfile = ({ sectionId, sectionName, onBack }) => {
         const [, wk] = String(w).split('-W').map(Number);
         return wk ? `W${wk}` : w;
       });
-      const numCols = weeksList.length + 1;
-      const nameColWidth = 22;
-      const availWidth = pw - m * 2 - nameColWidth;
-      const weekColWidth = Math.max(5, Math.floor(availWidth / weeksList.length));
-      const weekColStyles = {};
-      weeksList.forEach((_, i) => { weekColStyles[i + 1] = { cellWidth: weekColWidth }; });
-      autoTableMod.default(doc, {
-        startY: y,
-        head: ['Member', ...weekHeaders],
-        body: matrixData.map(row => {
-          const weekly = asArray(row.weekly);
-          const cells = weeksList.map((_, i) => STATUS_SHORT[weekly[i]] || '·');
-          return [row.full_name || 'N/A', ...cells];
-        }),
-        ...tableDefaults,
-        tableWidth: pw - m * 2,
-        styles: { fontSize: 6, cellPadding: 1, halign: 'center', overflow: 'ellipsize' },
-        columnStyles: { 0: { halign: 'left', cellWidth: nameColWidth }, ...weekColStyles },
-        headStyles: { fillColor: [124, 58, 237], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 6 },
+      const nameW = 30;
+      const weekW = Math.floor((pw - m * 2 - nameW) / weeksList.length);
+      const rowH = 5.5;
+      const headerH = 6;
+      const headerY = y;
+
+      doc.setFillColor(124, 58, 237);
+      doc.rect(m, headerY, pw - m * 2, headerH, 'F');
+      doc.setFontSize(5.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('Member', m + 1, headerY + 4.2);
+      weekHeaders.forEach((wh, i) => {
+        doc.text(wh, m + nameW + i * weekW + weekW / 2, headerY + 4.2, { align: 'center' });
       });
-      y = doc.lastAutoTable.finalY + 12;
+      y = headerY + headerH + 1;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      matrixData.forEach((row, ri) => {
+        if (y + rowH > doc.internal.pageSize.getHeight() - 15) {
+          doc.addPage();
+          y = 20;
+          doc.setFillColor(124, 58, 237);
+          doc.rect(m, y, pw - m * 2, headerH, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(5.5);
+          doc.text('Member', m + 1, y + 4.2);
+          weekHeaders.forEach((wh, i) => {
+            doc.text(wh, m + nameW + i * weekW + weekW / 2, y + 4.2, { align: 'center' });
+          });
+          y += headerH + 1;
+          doc.setFont('helvetica', 'normal');
+        }
+        if (ri % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(m, y, pw - m * 2, rowH, 'F');
+        }
+        doc.setTextColor(51, 51, 51);
+        doc.setFontSize(5.5);
+        const name = (row.full_name || 'N/A').length > 20 ? (row.full_name || 'N/A').slice(0, 18) + '..' : (row.full_name || 'N/A');
+        doc.text(name, m + 1, y + 4);
+        const weekly = asArray(row.weekly);
+        weeksList.forEach((_, i) => {
+          const status = STATUS_SHORT[weekly[i]] || '·';
+          if (status === 'P') doc.setTextColor(16, 185, 129);
+          else if (status === 'A') doc.setTextColor(239, 68, 68);
+          else if (status === 'E') doc.setTextColor(245, 158, 11);
+          else doc.setTextColor(148, 163, 184);
+          doc.setFont('helvetica', 'bold');
+          doc.text(status, m + nameW + i * weekW + weekW / 2, y + 4, { align: 'center' });
+        });
+        doc.setFont('helvetica', 'normal');
+        y += rowH;
+      });
+      y += 8;
     }
 
     if (asArray(submissions).length > 0) {
