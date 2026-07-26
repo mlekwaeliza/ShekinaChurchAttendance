@@ -60,7 +60,7 @@ router.get('/performance/profile/:entityType/:entityId', async (req, res) => {
   } catch (e) {
     console.error(`[profile-error] ${entityType}/${entityId} filter=${filter}:`, e?.message || e);
     console.error(e?.stack);
-    res.status(500).json({ error: 'Failed to load profile' });
+    res.status(500).json({ error: 'Failed to load profile', detail: e?.message || String(e) });
   }
 });
 
