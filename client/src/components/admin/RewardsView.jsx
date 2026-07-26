@@ -10,6 +10,7 @@ import {
   Sparkles, Building2, Home, UserPlus, Trash2, Search
 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
+import { fdate } from '../../utils/date';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const getRankMedal = (rank) => {
@@ -1219,7 +1220,7 @@ const RewardsView = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 8, marginBottom: 18 }}>
                     {[
                       { label: 'Attendance', value: `${ai.lifetimeAttendance || e.churchAttendance || 0}%`, sub: ai.currentStreak ? `${ai.currentStreak} streak` : '', color: '#6366F1' },
-                      { label: 'Last Present', value: ai.lastPresent || '—', sub: '', color: '#34D399' },
+                      { label: 'Last Present', value: ai.lastPresent ? fdate(ai.lastPresent) : '—', sub: '', color: '#34D399' },
                       { label: 'Consec. Absent', value: ai.total && ai.absent ? `${ai.absent}` : '0', sub: '', color: ai.absent > 2 ? '#F87171' : '#34D399' },
                       { label: 'Lifetime', value: `${ai.presentCount || 0}`, sub: `of ${ai.total || 0} services`, color: '#818CF8' },
                       { label: 'Ministries', value: `${e.ministryCount || 0}`, sub: (e.departments || []).join(', ') || 'None', color: '#A78BFA' },
@@ -1307,7 +1308,7 @@ const RewardsView = () => {
                     <MetricRow label="Current Streak" value={`${ai.currentStreak || 0} services`} color="#818CF8" />
                     <MetricRow label="Longest Streak" value={`${ai.longestStreak || 0} services`} />
                     <MetricRow label="Lifetime Attendance" value={`${ai.lifetimeAttendance || 0}%`} color="#6366F1" />
-                    <MetricRow label="Last Absent" value={ai.lastAbsent || 'Never'} />
+                    <MetricRow label="Last Absent" value={ai.lastAbsent ? fdate(ai.lastAbsent) : 'Never'} />
                     <MetricRow label="Trend" value={ai.trend || '—'} color={ai.trend === 'Improving' ? '#34D399' : ai.trend === 'Declining' ? '#F87171' : '#FBBF24'} />
                     <MetricRow label="Attendance Rank" value={e.rank ? `#${e.rank} of ${e.totalEntities || '?'}` : '—'} />
                   </div>
