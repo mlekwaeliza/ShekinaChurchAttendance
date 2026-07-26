@@ -823,8 +823,8 @@ async function getProfile(entityType, entityId, filter, userId) {
   if (entityType === 'leader') {
     const mRow = await get(
       `SELECT m.id FROM members m
-       JOIN leaders l ON l.user_id = m.user_id
-       WHERE l.id = ? AND m.user_id IS NOT NULL`,
+       WHERE m.leader_id = ? AND m.is_active = 1
+       ORDER BY m.id LIMIT 1`,
       [entityId]
     );
     if (mRow) targetMemberId = mRow.id;
