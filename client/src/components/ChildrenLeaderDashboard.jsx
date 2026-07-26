@@ -10,6 +10,8 @@ import {
 
 const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
 
+const AGE_GROUPS = ['Nursery', 'Toddler', 'Preschool', 'Primary', 'Pre-Teen', 'Youth'];
+
 export default function ChildrenLeaderDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [dashboard, setDashboard] = useState(null);
@@ -20,17 +22,18 @@ export default function ChildrenLeaderDashboard() {
   const [trends, setTrends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [ageGroupFilter, setAgeGroupFilter] = useState('');
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'children') loadChildren();
+    if (activeTab === 'children') loadChildren(ageGroupFilter);
     if (activeTab === 'attendance') {
       loadClasses();
-      loadChildren();
-      loadAttendance(selectedDate);
+      loadChildren(ageGroupFilter);
+      loadAttendance(selectedDate, ageGroupFilter);
     }
     if (activeTab === 'history') loadHistory();
     if (activeTab === 'trends') loadTrends();
@@ -38,9 +41,10 @@ export default function ChildrenLeaderDashboard() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab === 'attendance') loadAttendance(selectedDate);
+    if (activeTab === 'attendance') loadAttendance(selectedDate, ageGroupFilter);
+    if (activeTab === 'children') loadChildren(ageGroupFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate]);
+  }, [selectedDate, ageGroupFilter]);
 
   const loadDashboard = async () => {
     try {
@@ -53,9 +57,11 @@ export default function ChildrenLeaderDashboard() {
     }
   };
 
-  const loadChildren = async () => {
+  const loadChildren = async (ageGroup) => {
     try {
-      const res = await childrenLeaderAPI.getChildren();
+      const params = {};
+      if (ageGroup) params.age_group = ageGroup;
+      const res = await childrenLeaderAPI.getChildren(params);
       setChildren(res.data);
     } catch (err) {
       console.error('Failed to load children:', err);
@@ -71,9 +77,11 @@ export default function ChildrenLeaderDashboard() {
     }
   };
 
-  const loadAttendance = async (date) => {
+  const loadAttendance = async (date, ageGroup) => {
     try {
-      const res = await childrenLeaderAPI.getAttendance(date);
+      const params = {};
+      if (ageGroup) params.age_group = ageGroup;
+      const res = await childrenLeaderAPI.getAttendance(date, params);
       setAttendance(res.data.attendance || []);
     } catch (err) {
       console.error('Failed to load attendance:', err);
@@ -243,7 +251,17 @@ export default function ChildrenLeaderDashboard() {
 
       {activeTab === 'children' && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Children in Your Ministry</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Children in Your Ministry</h2>
+            <select
+              value={ageGroupFilter}
+              onChange={(e) => setAgeGroupFilter(e.target.value)}
+              className="input w-auto min-w-[160px]"
+            >
+              <option value="">All Age Groups</option>
+              {AGE_GROUPS.map(ag => <option key={ag} value={ag}>{ag}</option>)}
+            </select>
+          </div>
           <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
             <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
               <thead className="bg-slate-50 dark:bg-slate-800/50">
@@ -275,16 +293,26 @@ export default function ChildrenLeaderDashboard() {
 
       {activeTab === 'attendance' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Record Attendance</h2>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Date:</label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="input w-auto"
-              />
+            <div className="flex items-center gap-3">
+              <select
+                value={ageGroupFilter}
+                onChange={(e) => setAgeGroupFilter(e.target.value)}
+                className="input w-auto min-w-[160px]"
+              >
+                <option value="">All Age Groups</option>
+                {AGE_GROUPS.map(ag => <option key={ag} value={ag}>{ag}</option>)}
+              </select>
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">Date:</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="input w-auto"
+                />
+              </div>
             </div>
           </div>
 

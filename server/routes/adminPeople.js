@@ -917,47 +917,115 @@ router.get('/children-leaders', async (req, res) => {
   }
 });
 
+// GET members available to be assigned as children leaders
+router.get('/members-for-children-leader', async (req, res) => {
+  try {
+    const { q } = req.query;
+    let sql = `
+      SELECT u.id, u.username, u.full_name, u.email, u.profile_picture, m.phone
+      FROM users u
+      LEFT JOIN members m ON m.user_id = u.id
+      WHERE u.role = 'leader'
+        AND u.id NOT IN (SELECT user_id FROM children_leaders)
+    `;
+    const params = [];
+    if (q && q.trim()) {
+      sql += ` AND (u.full_name ILIKE ? OR u.username ILIKE ? OR u.email ILIKE ?)`;
+      const term = `%${q.trim()}%`;
+      params.push(term, term, term);
+    }
+    sql += ` ORDER BY u.full_name LIMIT 50`;
+    const rows = await new Promise((resolve, reject) => {
+      db.all(sql, params, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    });
+    res.json(rows);
+  } catch (error) {
+    console.error('Fetch available members error:', error);
+    res.status(500).json({ error: 'Failed to fetch available members' });
+  }
+});
+
 // POST create children's ministry leader
 router.post('/children-leaders', async (req, res) => {
   try {
-    const { username, full_name, phone, email, is_head } = req.body;
-    if (!username || !full_name) {
-      return res.status(400).json({ error: 'Username and full name are required' });
+    const { username, full_name, phone, email, is_head, user_id } = req.body;
+    if (!full_name) {
+      return res.status(400).json({ error: 'Full name is required' });
     }
-    const existingUser = await queries.findUserByUsername(username);
-    if (existingUser) {
-      return res.status(400).json({ error: 'Username already taken' });
-    }
-    const setToken = crypto.randomBytes(24).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
-    const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
 
-    const userId = await transaction(async (tx) => {
-      const userResult = await tx.run(
-        'INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)',
-        [username, placeholderHash, 'children_leader', full_name, null]
-      );
-      const insertedUserId = userResult.lastID;
-      await tx.run(
-        'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
-        [insertedUserId, phone, email, is_head ? 1 : 0]
-      );
-      await tx.run(
-        'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
-        [tokenHash, expiresAt, insertedUserId]
-      );
-      return insertedUserId;
-    });
+    if (user_id) {
+      const user = await queries.findUserByUsername(username);
+      if (!user) {
+        return res.status(400).json({ error: 'Selected user not found' });
+      }
+      const existingLeader = await new Promise((resolve, reject) => {
+        const db = require('../database').db;
+        db.get('SELECT id FROM children_leaders WHERE user_id = ?', [user_id], (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        });
+      });
+      if (existingLeader) {
+        return res.status(400).json({ error: 'This member is already assigned as a children leader' });
+      }
 
-    const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
-    const responseBody = { message: 'Children leader created. A password-set link has been queued for email delivery.', userId, expires_at: expiresAt };
-    if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
-      responseBody.set_url = setUrl;
+      const leaderId = await transaction(async (tx) => {
+        await tx.run(
+          'UPDATE users SET role = ? WHERE id = ?',
+          ['children_leader', user_id]
+        );
+        const result = await tx.run(
+          'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
+          [user_id, phone || null, email || null, is_head ? 1 : 0]
+        );
+        return result.lastID;
+      });
+
+      invalidate('admin-');
+      invalidate('admin-children-');
+      res.json({ message: 'Children leader assigned successfully', leaderId });
+    } else {
+      if (!username) {
+        return res.status(400).json({ error: 'Username is required when creating a new user' });
+      }
+      const existingUser = await queries.findUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: 'Username already taken' });
+      }
+      const setToken = crypto.randomBytes(24).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+      const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+
+      const userId = await transaction(async (tx) => {
+        const userResult = await tx.run(
+          'INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)',
+          [username, placeholderHash, 'children_leader', full_name, null]
+        );
+        const insertedUserId = userResult.lastID;
+        await tx.run(
+          'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
+          [insertedUserId, phone || null, email || null, is_head ? 1 : 0]
+        );
+        await tx.run(
+          'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
+          [tokenHash, expiresAt, insertedUserId]
+        );
+        return insertedUserId;
+      });
+
+      const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
+      const responseBody = { message: 'Children leader created. A password-set link has been queued for email delivery.', userId, expires_at: expiresAt };
+      if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
+        responseBody.set_url = setUrl;
+      }
+      invalidate('admin-');
+      invalidate('admin-children-');
+      res.json(responseBody);
     }
-    invalidate('admin-');
-    invalidate('admin-children-');
-    res.json(responseBody);
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
       return res.status(400).json({ error: 'Username already taken' });

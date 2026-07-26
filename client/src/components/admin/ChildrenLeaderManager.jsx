@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { adminAPI } from '../../services/api';
 import {
   ShieldCheck, Plus, Pencil, Trash2, KeyRound,
-  CheckCircle, XCircle, Loader2, Users, X, Search
+  CheckCircle, XCircle, Loader2, Users, X, Search, User
 } from 'lucide-react';
 
 const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
@@ -20,9 +20,18 @@ export default function ChildrenLeaderManager({ showMessage }) {
     full_name: '',
     phone: '',
     email: '',
-    is_head: false
+    is_head: false,
+    user_id: null
   });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const [memberSearch, setMemberSearch] = useState('');
+  const [availableMembers, setAvailableMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const memberSearchRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     loadLeaders();
@@ -45,10 +54,56 @@ export default function ChildrenLeaderManager({ showMessage }) {
     l.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const fetchAvailableMembers = useCallback(async (q) => {
+    setLoadingMembers(true);
+    try {
+      const res = await adminAPI.childrenLeaders.getAvailableMembers(q);
+      setAvailableMembers(res.data);
+      setShowMemberDropdown(true);
+    } catch (err) {
+      console.error('Failed to fetch members:', err);
+    } finally {
+      setLoadingMembers(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showModal || editingLeader) return;
+    const timer = setTimeout(() => {
+      fetchAvailableMembers(memberSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [memberSearch, showModal, editingLeader, fetchAvailableMembers]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+          memberSearchRef.current && !memberSearchRef.current.contains(e.target)) {
+        setShowMemberDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectMember = (member) => {
+    setSelectedMember(member);
+    setFormData({
+      username: member.username,
+      full_name: member.full_name,
+      phone: member.phone || '',
+      email: member.email || '',
+      is_head: false,
+      user_id: member.id
+    });
+    setShowMemberDropdown(false);
+    setMemberSearch('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.full_name.trim()) { setError('Full name is required'); return; }
-    if (!editingLeader && !formData.username.trim()) { setError('Username is required'); return; }
+    if (!editingLeader && !formData.username.trim()) { setError('Please select a member from the list'); return; }
     setSaving(true); setError('');
     try {
       if (editingLeader) {
@@ -58,7 +113,8 @@ export default function ChildrenLeaderManager({ showMessage }) {
       }
       setShowModal(false);
       setEditingLeader(null);
-      setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false });
+      setSelectedMember(null);
+      setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false, user_id: null });
       loadLeaders();
       showMessage(editingLeader ? 'Leader updated successfully' : 'Leader created successfully');
     } catch (err) {
@@ -90,12 +146,14 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
   const openEditModal = (leader) => {
     setEditingLeader(leader);
+    setSelectedMember(null);
     setFormData({
       username: leader.username,
       full_name: leader.full_name,
       phone: leader.phone || '',
       email: leader.leader_email || leader.email || '',
-      is_head: !!leader.is_head
+      is_head: !!leader.is_head,
+      user_id: leader.user_id
     });
     setError('');
     setShowModal(true);
@@ -103,7 +161,10 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
   const openCreateModal = () => {
     setEditingLeader(null);
-    setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false });
+    setSelectedMember(null);
+    setMemberSearch('');
+    setAvailableMembers([]);
+    setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false, user_id: null });
     setError('');
     setShowModal(true);
   };
@@ -288,7 +349,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowModal(false); setError(''); } }}>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowModal(false); setError(''); setSelectedMember(null); } }}>
           <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-slate-200 p-5 dark:border-slate-700">
               <div className="flex items-center gap-3">
@@ -300,7 +361,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
                 </h2>
               </div>
               <button
-                onClick={() => { setShowModal(false); setError(''); }}
+                onClick={() => { setShowModal(false); setError(''); setSelectedMember(null); }}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
               >
                 <X className="h-4 w-4" />
@@ -314,30 +375,92 @@ export default function ChildrenLeaderManager({ showMessage }) {
                 </div>
               )}
 
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Full Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  className="input"
-                  placeholder="e.g. Jane Doe"
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  required
-                  autoFocus
-                />
-              </div>
-
               {!editingLeader && (
+                <div className="relative" ref={dropdownRef}>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Select Member <span className="text-rose-500">*</span>
+                  </label>
+                  {selectedMember ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 dark:border-primary-800 dark:bg-primary-900/20">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/40">
+                        <span className="text-sm font-bold text-primary-700 dark:text-primary-300">
+                          {selectedMember.full_name?.charAt(0)?.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{selectedMember.full_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{selectedMember.username}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedMember(null); setFormData(f => ({ ...f, username: '', full_name: '', phone: '', email: '', user_id: null })); }}
+                        className="rounded-lg p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          ref={memberSearchRef}
+                          className="input pl-9"
+                          placeholder="Search members by name or username..."
+                          value={memberSearch}
+                          onChange={(e) => setMemberSearch(e.target.value)}
+                          onFocus={() => { if (availableMembers.length > 0) setShowMemberDropdown(true); }}
+                          autoFocus
+                        />
+                        {loadingMembers && (
+                          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+                        )}
+                      </div>
+                      {showMemberDropdown && (
+                        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                          {availableMembers.length === 0 ? (
+                            <div className="px-4 py-6 text-center">
+                              <User className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
+                              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                                {memberSearch ? 'No members found' : 'Start typing to search members'}
+                              </p>
+                            </div>
+                          ) : (
+                            availableMembers.map(member => (
+                              <button
+                                key={member.id}
+                                type="button"
+                                onClick={() => selectMember(member)}
+                                className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700 last:border-0"
+                              >
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
+                                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                                    {member.full_name?.charAt(0)?.toUpperCase()}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{member.full_name}</p>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate">@{member.username} {member.email ? `· ${member.email}` : ''}</p>
+                                </div>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {editingLeader && (
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Username <span className="text-rose-500">*</span>
+                    Full Name <span className="text-rose-500">*</span>
                   </label>
                   <input
                     className="input"
-                    placeholder="e.g. jane.doe"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                     required
                   />
                 </div>
@@ -380,10 +503,10 @@ export default function ChildrenLeaderManager({ showMessage }) {
               </label>
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowModal(false); setError(''); }} className="btn-secondary flex-1">
+                <button type="button" onClick={() => { setShowModal(false); setError(''); setSelectedMember(null); }} className="btn-secondary flex-1">
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} className="btn-primary flex-1">
+                <button type="submit" disabled={saving || (!editingLeader && !selectedMember)} className="btn-primary flex-1">
                   {saving ? 'Saving...' : editingLeader ? 'Save Changes' : 'Create Leader'}
                 </button>
               </div>

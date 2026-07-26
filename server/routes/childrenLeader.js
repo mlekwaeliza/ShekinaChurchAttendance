@@ -99,14 +99,33 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
-// GET children list for this leader
+// GET children list for this leader (supports ?age_group= filter)
 router.get('/children', async (req, res) => {
   try {
     const userId = req.session.userId;
     const childrenLeader = await queries.getChildrenLeaderByUserId(userId);
     if (!childrenLeader) return res.status(404).json({ error: 'Children leader not found' });
 
-    const children = await queries.getChildrenByLeader(childrenLeader.id);
+    const { age_group, class_id } = req.query;
+    let sql = `
+      SELECT c.*, cl.name as class_name
+      FROM children c
+      LEFT JOIN children_classes cl ON c.class_id = cl.id
+      WHERE c.leader_id = ? AND c.is_active = 1
+    `;
+    const params = [childrenLeader.id];
+
+    if (age_group) {
+      sql += ` AND c.age_group = ?`;
+      params.push(age_group);
+    }
+    if (class_id) {
+      sql += ` AND c.class_id = ?`;
+      params.push(class_id);
+    }
+    sql += ` ORDER BY c.full_name`;
+
+    const children = await all(sql, params);
     res.json(children);
   } catch (error) {
     console.error('Get children error:', error);
@@ -146,7 +165,7 @@ router.get('/classes', async (req, res) => {
   }
 });
 
-// GET attendance for a specific date
+// GET attendance for a specific date (supports ?age_group= filter)
 router.get('/attendance', async (req, res) => {
   try {
     const date = req.query.date || formatLocalDate(new Date());
@@ -154,22 +173,32 @@ router.get('/attendance', async (req, res) => {
     const childrenLeader = await queries.getChildrenLeaderByUserId(userId);
     if (!childrenLeader) return res.status(404).json({ error: 'Children leader not found' });
 
+    const { age_group } = req.query;
+
     const attendance = await all(`
-      SELECT ca.*, c.full_name, c.date_of_birth, c.gender, cl.name as class_name
+      SELECT ca.*, c.full_name, c.date_of_birth, c.gender, c.age_group, cl.name as class_name
       FROM children_attendance ca
       JOIN children c ON ca.child_id = c.id
       LEFT JOIN children_classes cl ON ca.class_id = cl.id
       WHERE c.leader_id = ? AND ca.date = ?
+      ${age_group ? 'AND c.age_group = ?' : ''}
       ORDER BY cl.name, c.full_name
-    `, [childrenLeader.id, date]);
+    `, age_group ? [childrenLeader.id, date, age_group] : [childrenLeader.id, date]);
 
-    const children = await all(`
-      SELECT c.id, c.full_name, c.date_of_birth, c.gender, c.class_id, cl.name as class_name
+    let childrenSql = `
+      SELECT c.id, c.full_name, c.date_of_birth, c.gender, c.age_group, c.class_id, cl.name as class_name
       FROM children c
       LEFT JOIN children_classes cl ON c.class_id = cl.id
       WHERE c.leader_id = ? AND c.is_active = 1
-      ORDER BY cl.name, c.full_name
-    `, [childrenLeader.id]);
+    `;
+    const childrenParams = [childrenLeader.id];
+    if (age_group) {
+      childrenSql += ` AND c.age_group = ?`;
+      childrenParams.push(age_group);
+    }
+    childrenSql += ` ORDER BY cl.name, c.full_name`;
+
+    const children = await all(childrenSql, childrenParams);
 
     res.json({ attendance, children });
   } catch (error) {

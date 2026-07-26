@@ -271,6 +271,7 @@ export const adminAPI = {
   // Children's Ministry Leaders
   childrenLeaders: {
     getLeaders: () => api.get('/admin/children-leaders'),
+    getAvailableMembers: (q) => api.get('/admin/members-for-children-leader', { params: { q } }),
     createLeader: (data) => api.post('/admin/children-leaders', data),
     updateLeader: (id, data) => api.put(`/admin/children-leaders/${id}`, data),
     deleteLeader: (id, data) => api.delete(`/admin/children-leaders/${id}`, { data }),
@@ -281,9 +282,9 @@ export const adminAPI = {
 // Children Leader Dashboard API
 export const childrenLeaderAPI = {
   getDashboard: () => api.get('/children-leader/dashboard'),
-  getChildren: () => api.get('/children-leader/children'),
+  getChildren: (params = {}) => api.get('/children-leader/children', { params }),
   getClasses: () => api.get('/children-leader/classes'),
-  getAttendance: (date) => api.get('/children-leader/attendance', { params: { date } }),
+  getAttendance: (date, params = {}) => api.get('/children-leader/attendance', { params: { date, ...params } }),
   recordAttendance: (data) => api.post('/children-leader/attendance', data),
   bulkRecordAttendance: (data) => api.post('/children-leader/attendance/bulk', data),
   getHistory: (params = {}) => api.get('/children-leader/history', { params }),
