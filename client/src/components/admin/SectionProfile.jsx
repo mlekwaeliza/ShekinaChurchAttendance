@@ -344,9 +344,9 @@ const SectionProfile = ({ sectionId, sectionName, onBack }) => {
         body: asArray(rankings).map((s, i) => [
           `#${i + 1}`,
           s.name || 'N/A',
-          String(s.member_count || s.members || 0),
-          `${R(s.attendanceRate || s.attendance_rate)}%`,
-          String(s.total_present || s.present || 0),
+          String(s.member_count || 0),
+          `${R(s.attendance_rate)}%`,
+          String(s.total_present || 0),
         ]),
         ...tableDefaults,
         styles: { fontSize: 8, cellPadding: 2 },
@@ -722,6 +722,8 @@ const SectionAnalytics = ({ ranking, compData, rankings, trends }) => {
   const totalExcused = asArray(trends).reduce((s, t) => s + R(t.excused_count), 0);
   const totalRecords = totalPresent + totalAbsent + totalExcused;
   const attRate      = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : R(ranking?.attendance_rate || ranking?.attendanceRate || 0);
+  const prevRate     = R(ranking?.prev_rate || compData?.prev_rate || compData?.prev_attendance_rate || compData?.prevRate || 0);
+  const rateDiff     = prevRate > 0 ? attRate - prevRate : 0;
 
   return (
     <div className="space-y-4">
@@ -731,8 +733,8 @@ const SectionAnalytics = ({ ranking, compData, rankings, trends }) => {
         <StatBox label="Present"               value={totalPresent}      color="blue" />
         <StatBox label="Absent"                value={totalAbsent}       color="rose" />
         <StatBox label="Members"               value={ranking?.member_count || ranking?.members || 0} color="indigo" />
-        {compData && <StatBox label="Trend vs Prev" value={`${compData.trend >= 0 ? '+' : ''}${R(compData.trend)}%`} color={compData.trend >= 0 ? 'emerald' : 'rose'} />}
-        {compData && <StatBox label="Prev Rate" value={`${R(compData.prev_attendance_rate || compData.prevRate)}%`} color="slate" />}
+        {prevRate > 0 && <StatBox label="Trend vs Prev" value={`${rateDiff >= 0 ? '+' : ''}${rateDiff}%`} color={rateDiff >= 0 ? 'emerald' : 'rose'} />}
+        {prevRate > 0 && <StatBox label="Prev Rate" value={`${prevRate}%`} color="slate" />}
         <StatBox label="Services Tracked" value={asArray(trends).length} color="violet" />
         <StatBox label="Rank Among Sections" value={ranking ? `#${rankings.indexOf(ranking) + 1}` : '—'} color="amber" />
       </div>
@@ -798,11 +800,11 @@ const SectionAnalytics = ({ ranking, compData, rankings, trends }) => {
                   <tr key={s.id || i} className={`border-b border-slate-100 dark:border-slate-700/50 ${Number(s.id) === Number(ranking?.id) ? 'bg-violet-50 dark:bg-violet-950/20 font-semibold' : ''}`}>
                     <td className="py-2 px-3 text-slate-400">#{i + 1}</td>
                     <td className="py-2 px-3 text-slate-900 dark:text-white">{s.name}</td>
-                    <td className="py-2 px-3 text-right text-slate-500">{s.member_count || s.members || 0}</td>
-                    <td className="py-2 px-3 text-right font-bold" style={{ color: (s.attendanceRate || s.attendance_rate) >= 75 ? '#10b981' : (s.attendanceRate || s.attendance_rate) >= 50 ? '#f59e0b' : '#ef4444' }}>
-                      {R(s.attendanceRate || s.attendance_rate)}%
+                    <td className="py-2 px-3 text-right text-slate-500">{s.member_count || 0}</td>
+                    <td className="py-2 px-3 text-right font-bold" style={{ color: (s.attendance_rate || 0) >= 75 ? '#10b981' : (s.attendance_rate || 0) >= 50 ? '#f59e0b' : '#ef4444' }}>
+                      {R(s.attendance_rate)}%
                     </td>
-                    <td className="py-2 px-3 text-right text-slate-500">{s.total_present || s.present || 0}</td>
+                    <td className="py-2 px-3 text-right text-slate-500">{s.total_present || 0}</td>
                   </tr>
                 ))}
               </tbody>
@@ -865,13 +867,13 @@ const SectionPerformance = ({ performance, ranking }) => {
     </div>
   );
 
-  const score      = performance?.entity?.overallScore ?? performance?.overallScore ?? performance?.score ?? ranking?.attendance_rate ?? 0;
-  const breakdown  = performance?.breakdown || [];
+  const score      = performance?.entity?.overallScore ?? performance?.overallScore ?? performance?.score ?? ranking?.attendance_rate ?? ranking?.performance_score ?? 0;
+  const breakdown  = performance?.breakdown || performance?.reliability || [];
   const achievements = performance?.achievements || performance?.entity?.badges || [];
 
   const breakdownItems = Array.isArray(breakdown)
-    ? breakdown.map(item => ({ key: item.key, label: item.label || item.key?.replace(/_/g, ' '), score: item.score ?? item.points ?? 0, max: item.max || 100 }))
-    : Object.entries(breakdown).map(([k, v]) => ({ key: k, label: k.replace(/_/g, ' '), score: typeof v === 'object' ? (v.score ?? 0) : Number(v) || 0, max: typeof v === 'object' ? v.max : 100 }));
+    ? breakdown.map(item => ({ key: item.key, label: item.label || item.key?.replace(/_/g, ' '), score: item.score ?? item.points ?? 0, max: item.max || item.weight ? 100 : 100 }))
+    : (breakdown && typeof breakdown === 'object' ? Object.entries(breakdown).map(([k, v]) => ({ key: k, label: k.replace(/_/g, ' '), score: typeof v === 'object' ? (v.score ?? 0) : Number(v) || 0, max: typeof v === 'object' ? (v.max || 100) : 100 })) : []);
 
   return (
     <div className="space-y-4">
@@ -931,11 +933,11 @@ const SectionPerformance = ({ performance, ranking }) => {
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Ranking Summary</h3>
           <div className="space-y-1.5">
-            <InfoRow label="Attendance Rate" value={`${R(ranking.attendanceRate || ranking.attendance_rate)}%`} />
-            <InfoRow label="Members"        value={ranking.member_count || ranking.members || 0} />
-            <InfoRow label="Present"        value={ranking.total_present || ranking.present || 0} />
-            <InfoRow label="Absent"         value={ranking.total_absent || ranking.absent || 0} />
-            <InfoRow label="Status"         value={ranking.status || '—'} />
+            <InfoRow label="Attendance Rate" value={`${R(ranking.attendance_rate)}%`} />
+            <InfoRow label="Members"        value={ranking.member_count || 0} />
+            <InfoRow label="Present"        value={ranking.total_present || 0} />
+            <InfoRow label="Absent"         value={ranking.total_absent || 0} />
+            <InfoRow label="Retention"      value={`${R(ranking.retention_rate)}%`} />
             <InfoRow label="Performance Score" value={`${R(ranking.performance_score)}/100`} />
           </div>
         </div>
