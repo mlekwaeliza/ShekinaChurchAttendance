@@ -13,6 +13,7 @@
     "react/react-in-jsx-scope": "off",
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     "no-console": "off",
+    "no-dupe-keys": "warn",
     "react/prop-types": "off",
     "react/no-unescaped-entities": "off"
   },

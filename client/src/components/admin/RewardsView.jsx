@@ -384,7 +384,7 @@ const RewardsView = () => {
         if (axios.isCancel(err)) {
           setProfileErrorMessage('Request timed out. The server may be busy.');
         } else {
-          setProfileErrorMessage(err?.response?.data?.error || err?.message || 'Unknown error');
+          setProfileErrorMessage(err?.response?.data?.detail || err?.response?.data?.error || err?.message || 'Unknown error');
         }
       })
       .finally(() => { setProfileLoading(false); clearTimeout(timeout); });

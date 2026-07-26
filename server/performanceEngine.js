@@ -891,7 +891,7 @@ async function getProfile(entityType, entityId, filter, userId) {
       `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,
       [entityType, entityId]
     ),
-  ]), 20000, 'Profile queries timed out');
+  ]), 45000, 'Profile queries timed out');
   } catch (pqErr) {
     console.error(`[profile-debug] parallel queries threw:`, pqErr?.message, pqErr?.stack);
     throw pqErr;
