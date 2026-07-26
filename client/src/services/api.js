@@ -433,7 +433,7 @@ export const analyticsAPI = {
   getFinanceAnalytics: (year) => api.get('/analytics/finance-analytics', { params: { year } }),
   getExecutiveComparison: (data) => api.post('/analytics/executive-comparison', data),
   getExecutiveSummary: (days = 90) => api.get('/analytics/executive-summary', { params: { days } }),
-  getMemberWeeklyMatrix: ({ weeks = 12, serviceId = 'all', startDate, endDate, sectionId, leaderId } = {}) => api.get('/analytics/member-weekly-matrix', {
+  getMemberWeeklyMatrix: ({ weeks = 12, serviceId = 'all', startDate, endDate, sectionId, leaderId, memberId } = {}) => api.get('/analytics/member-weekly-matrix', {
     params: {
       weeks,
       ...(serviceId !== undefined ? { service_id: serviceId } : {}),
@@ -441,6 +441,7 @@ export const analyticsAPI = {
       ...(endDate ? { endDate } : {}),
       ...(sectionId ? { section_id: sectionId } : {}),
       ...(leaderId ? { leader_id: leaderId } : {}),
+      ...(memberId ? { member_id: memberId } : {}),
     }
   }),
 };

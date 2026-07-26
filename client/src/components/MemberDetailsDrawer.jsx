@@ -5,6 +5,7 @@ import { adminAPI, leaderAPI, analyticsAPI, contributionAPI } from '../services/
 import { useAuth } from '../context/AuthContext';
 import { fdate, fdatetime } from '../utils/date';
 import Badge from './ui/Badge';
+import WeeklyAttendanceMatrix from './admin/WeeklyAttendanceMatrix';
 
 const avatarColors = [
   'from-violet-500 to-purple-600',
@@ -109,6 +110,7 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'attendance', label: 'Attendance', icon: Activity },
+    { id: 'matrix', label: 'Weekly Matrix', icon: Calendar },
     { id: 'departments', label: 'Depts & Titles', icon: Award },
     ...(canViewFinancials ? [{ id: 'financials', label: 'Financials', icon: DollarSign }] : []),
     ...(isAdmin ? [{ id: 'audit', label: 'Audit Trail', icon: Shield }] : [])
@@ -414,6 +416,13 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
                       Attendance data unavailable.
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Weekly Matrix Tab */}
+              {activeTab === 'matrix' && (
+                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">
+                  <WeeklyAttendanceMatrix memberId={member.id} title={`Weekly Attendance Matrix - ${member.full_name}`} />
                 </div>
               )}
 

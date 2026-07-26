@@ -17,7 +17,7 @@ const weekToDate = (weekStr) => {
 
 const asArray = (v) => Array.isArray(v) ? v : [];
 
-const WeeklyAttendanceMatrix = ({ sectionId, leaderId, title = 'Weekly Attendance Matrix' }) => {
+const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly Attendance Matrix' }) => {
   const [weeksCount, setWeeksCount] = useState(12);
   const [serviceId, setServiceId]   = useState('all');
   const [search, setSearch]         = useState('');
@@ -41,6 +41,7 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, title = 'Weekly Attendanc
         serviceId: serviceId === 'all' ? undefined : serviceId,
         sectionId: sectionId || undefined,
         leaderId: leaderId || undefined,
+        memberId: memberId || undefined,
       });
       setMatrixData(asArray(res.data?.matrix));
       setWeeksList(asArray(res.data?.weeks));

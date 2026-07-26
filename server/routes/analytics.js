@@ -605,11 +605,15 @@ router.get('/member-weekly-matrix', async (req, res) => {
 
     const sectionIdParam = req.query.section_id;
     const leaderIdParam  = req.query.leader_id;
+    const memberIdParam  = req.query.member_id;
 
     let memberWhere = 'm.is_active = 1';
     const memberParams = [];
 
-    if (sectionIdParam) {
+    if (memberIdParam) {
+      memberWhere += ' AND m.id = ?';
+      memberParams.push(parseInt(memberIdParam));
+    } else if (sectionIdParam) {
       memberWhere += ' AND m.section_id = ?';
       memberParams.push(parseInt(sectionIdParam));
     } else if (leaderIdParam) {
