@@ -250,28 +250,27 @@ const LeaderProfile = ({ leaderId, onBack, allMembers = [] }) => {
     if (matrixData.length > 0 && weeksList.length > 0) {
       addSectionHeader('Weekly Attendance Matrix (12 Weeks)');
       const weekHeaders = weeksList.map(w => {
-        const [yr, wk] = String(w).split('-W').map(Number);
-        if (!yr || !wk) return w;
-        const simple = new Date(Date.UTC(yr, 0, 1 + (wk - 1) * 7));
-        const day = simple.getUTCDay();
-        if (day <= 4) simple.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
-        else simple.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
-        const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${simple.getUTCDate()} ${MONTHS[simple.getUTCMonth() + 1]}`;
+        const [, wk] = String(w).split('-W').map(Number);
+        return wk ? `W${wk}` : w;
       });
-      const headRow = ['Member', ...weekHeaders];
+      const nameColWidth = 22;
+      const availWidth = pw - m * 2 - nameColWidth;
+      const weekColWidth = Math.max(5, Math.floor(availWidth / weeksList.length));
+      const weekColStyles = {};
+      weeksList.forEach((_, i) => { weekColStyles[i + 1] = { cellWidth: weekColWidth }; });
       autoTableMod.default(doc, {
         startY: y,
-        head: [headRow],
+        head: ['Member', ...weekHeaders],
         body: matrixData.map(row => {
           const weekly = asArray(row.weekly);
           const cells = weeksList.map((_, i) => STATUS_SHORT[weekly[i]] || '·');
           return [row.full_name || 'N/A', ...cells];
         }),
         ...tableDefaults,
-        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center' },
-        columnStyles: { 0: { halign: 'left', cellWidth: 35 } },
-        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold', halign: 'center' },
+        tableWidth: pw - m * 2,
+        styles: { fontSize: 6, cellPadding: 1, halign: 'center', overflow: 'ellipsize' },
+        columnStyles: { 0: { halign: 'left', cellWidth: nameColWidth }, ...weekColStyles },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 6 },
       });
       y = doc.lastAutoTable.finalY + 12;
     }
