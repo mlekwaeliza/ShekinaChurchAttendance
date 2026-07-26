@@ -5,7 +5,7 @@ import { fdate, fdatetime } from '../../utils/date';
 import {
   ArrowLeft, Phone, Mail, Users, Calendar, TrendingUp, Award, Clock,
   UserCheck, UserX, Activity, Target, ChevronRight, Loader2, AlertTriangle,
-  Crown, ClipboardList, Flame, CheckCircle2, Layers
+  Crown, ClipboardList, Flame, CheckCircle2, Layers, Download
 } from 'lucide-react';
 
 import WeeklyAttendanceMatrix from './WeeklyAttendanceMatrix';
@@ -81,6 +81,190 @@ const LeaderProfile = ({ leaderId, onBack, allMembers = [] }) => {
   const leadershipScore = performance?.score || ranking?.leadership_score || ranking?.efficiency_score || ranking?.performance_score || Math.round(attendanceRate * 0.6 + submissionRate * 0.4);
   const activeMembers = asArray(roster).filter(m => m.is_active === 1 || m.is_active === true).length;
 
+  const exportLeaderPDF = async () => {
+    const [{ default: jsPDF }, autoTableMod] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+    const m = 20;
+    let y = 20;
+
+    const leaderName = leader.full_name || 'Leader Report';
+    const today = new Date().toLocaleDateString();
+
+    const addSectionHeader = (title) => {
+      if (y > 250) { doc.addPage(); y = 20; }
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(99, 102, 241);
+      doc.text(title, m, y);
+      y += 2;
+      doc.setDrawColor(99, 102, 241);
+      doc.setLineWidth(0.5);
+      doc.line(m, y, pw - m, y);
+      y += 6;
+      doc.setTextColor(51, 51, 51);
+    };
+
+    const tableDefaults = {
+      margin: { left: m, right: m },
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    };
+
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 0, pw, 38, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(leaderName, m, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Shekina Church · ${today} · ${leader.section_name || ''}`, m, 28);
+    doc.setFontSize(9);
+    doc.text(`Attendance: ${R(attendanceRate)}% · Score: ${R(leadershipScore)}/100 · Rank: ${rank ? '#' + rank : 'N/A'}`, m, 34);
+    y = 48;
+
+    addSectionHeader('Leader Information');
+    autoTableMod.default(doc, {
+      startY: y,
+      head: [['Field', 'Value']],
+      body: [
+        ['Full Name', leader.full_name || 'N/A'],
+        ['Username', leader.username || 'N/A'],
+        ['Section', leader.section_name || 'N/A'],
+        ['Head Leader', leader.is_head ? 'Yes' : 'No'],
+        ['Status', leader.is_active ? 'Active' : 'Inactive'],
+        ['Phone', leader.phone || 'N/A'],
+        ['Email', leader.email || 'N/A'],
+      ],
+      ...tableDefaults,
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
+    addSectionHeader('Performance Summary');
+    autoTableMod.default(doc, {
+      startY: y,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Attendance Rate', `${R(attendanceRate)}%`],
+        ['Submission Rate', `${R(submissionRate)}%`],
+        ['Leadership Score', `${R(leadershipScore)}/100`],
+        ['Active Members', String(activeMembers)],
+        ['Submissions (90d)', String(asArray(history).length)],
+        ['Rank', rank ? `#${rank}` : 'N/A'],
+      ],
+      ...tableDefaults,
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
+    const breakdownItems = performance?.breakdown
+      ? (Array.isArray(performance.breakdown)
+          ? performance.breakdown.map(item => ({ label: item.label || item.key?.replace(/_/g, ' '), score: item.score ?? item.points ?? 0, max: item.max || 100 }))
+          : Object.entries(performance.breakdown).map(([k, v]) => ({ label: k.replace(/_/g, ' '), score: typeof v === 'object' ? (v.score ?? 0) : Number(v) || 0, max: typeof v === 'object' ? v.max : 100 }))
+        )
+      : [];
+
+    if (breakdownItems.length > 0) {
+      addSectionHeader('Score Breakdown');
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['Category', 'Score', 'Max']],
+        body: breakdownItems.map(item => [item.label, String(R(item.score)), String(item.max)]),
+        ...tableDefaults,
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    const achievements = performance?.achievements || performance?.entity?.badges || [];
+    if (asArray(achievements).length > 0) {
+      addSectionHeader('Achievements');
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['Badge']],
+        body: asArray(achievements).map(a => [a.name || a.key || String(a)]),
+        ...tableDefaults,
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    if (asArray(roster).length > 0) {
+      addSectionHeader('Members');
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['#', 'Name', 'Phone', 'Status', 'Points']],
+        body: asArray(roster).map((mb, i) => [
+          String(i + 1),
+          mb.full_name || 'N/A',
+          mb.phone || 'N/A',
+          mb.is_active ? 'Active' : 'Inactive',
+          String(R(mb.hall_of_fame_points || 0)),
+        ]),
+        ...tableDefaults,
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    if (asArray(trends).length > 0) {
+      addSectionHeader('Attendance Trends (90 Days)');
+      const trendsSorted = [...asArray(trends)].reverse();
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['Date', 'Present', 'Absent', 'Excused', 'Total', 'Rate']],
+        body: trendsSorted.map(t => {
+          const tot = R(t.present_count) + R(t.absent_count) + R(t.excused_count);
+          const pct = tot > 0 ? Math.round((R(t.present_count) / tot) * 100) : 0;
+          const date = t.date instanceof Date ? t.date.toISOString().slice(0, 10) : String(t.date).slice(0, 10);
+          return [fdate(date), String(R(t.present_count)), String(R(t.absent_count)), String(R(t.excused_count)), String(tot), `${pct}%`];
+        }),
+        ...tableDefaults,
+        styles: { fontSize: 8, cellPadding: 2 },
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    if (asArray(history).length > 0) {
+      addSectionHeader('Submission History');
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['Date', 'Records']],
+        body: asArray(history).map(h => {
+          const date = h.date instanceof Date ? h.date.toISOString().slice(0, 10) : String(h.date).slice(0, 10);
+          return [fdate(date), String(R(h.records_count) || 0)];
+        }),
+        ...tableDefaults,
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    if (ranking) {
+      addSectionHeader('Ranking Details');
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['Metric', 'Value']],
+        body: [
+          ['Rank', ranking.rank ? `#${ranking.rank}` : 'N/A'],
+          ['Attendance Rate', `${R(ranking.attendance_rate || ranking.attendanceRate)}%`],
+          ['Submission Rate', `${R(ranking.submissionRate || ranking.leader_submission_rate)}%`],
+          ['Active Members', String(ranking.members || ranking.assigned_members || 0)],
+          ['Retention Rate', `${R(ranking.retention_rate)}%`],
+          ['Status', ranking.status?.label || '—'],
+        ],
+        ...tableDefaults,
+      });
+    }
+
+    const pc = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pc; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Page ${i} of ${pc} · ${leaderName} · Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+    }
+
+    doc.save(`${leaderName.replace(/\s+/g, '_')}_report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <div className="space-y-4">
       {/* Back button */}
@@ -111,12 +295,17 @@ const LeaderProfile = ({ leaderId, onBack, allMembers = [] }) => {
               </div>
             </div>
           </div>
-          {rank && (
-            <div className="text-right">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Rank</p>
-              <p className="text-2xl font-black">#{rank}</p>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <button onClick={exportLeaderPDF} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-xs font-semibold transition-colors">
+              <Download className="w-3.5 h-3.5" /> PDF
+            </button>
+            {rank && (
+              <div className="text-right">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">Rank</p>
+                <p className="text-2xl font-black">#{rank}</p>
+              </div>
+            )}
+          </div>
         </div>
         {/* Quick KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
