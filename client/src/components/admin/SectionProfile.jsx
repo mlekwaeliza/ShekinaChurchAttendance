@@ -6,7 +6,8 @@ import {
   ArrowLeft, Users, TrendingUp, Award, Crown, Layers,
   Activity, Target, Loader2, AlertTriangle, Flame,
   CheckCircle2, UserCheck, Phone, Mail, Calendar,
-  ClipboardList, ChevronRight, Shield, Search, BarChart2
+  ClipboardList, ChevronRight, Shield, Search, BarChart2,
+  Download
 } from 'lucide-react';
 import WeeklyAttendanceMatrix from './WeeklyAttendanceMatrix';
 
@@ -82,8 +83,186 @@ const SectionProfile = ({ sectionId, sectionName, onBack }) => {
 
   const totalTrendRecords = asArray(trends).reduce((s, t) => s + R(t.present_count) + R(t.absent_count) + R(t.excused_count), 0);
   const totalTrendPresent = asArray(trends).reduce((s, t) => s + R(t.present_count), 0);
+  const totalTrendAbsent  = asArray(trends).reduce((s, t) => s + R(t.absent_count), 0);
+  const totalTrendExcused = asArray(trends).reduce((s, t) => s + R(t.excused_count), 0);
   const attendanceRate    = totalTrendRecords > 0 ? Math.round((totalTrendPresent / totalTrendRecords) * 100) : R(ranking?.attendance_rate || ranking?.attendanceRate || 0);
   const performanceScore  = performance?.score || ranking?.performance_score || 0;
+
+  const exportSectionPDF = async () => {
+    const [{ default: jsPDF }, autoTableMod] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+    const m = 20;
+    let y = 20;
+
+    doc.setFillColor(124, 58, 237);
+    doc.rect(0, 0, pw, 38, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(section.name || sectionName || 'Section Report', m, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Shekina Church · ${new Date().toLocaleDateString()} · ${activeMembers.length} active members`, m, 28);
+    doc.setFontSize(9);
+    doc.text(`Attendance: ${attendanceRate}% · Performance: ${R(performanceScore)}/100 · Leaders: ${asArray(leaders).length}`, m, 34);
+    y = 48;
+
+    doc.setTextColor(51, 51, 51);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Section Summary', m, y);
+    y += 8;
+    doc.setDrawColor(124, 58, 237);
+    doc.setLineWidth(0.5);
+    doc.line(m, y, pw - m, y);
+    y += 5;
+
+    autoTableMod.default(doc, {
+      startY: y,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Active Members', String(activeMembers.length)],
+        ['Inactive Members', String(inactiveMembers.length)],
+        ['Total Members', String(asArray(members).length)],
+        ['Attendance Rate (90d)', `${attendanceRate}%`],
+        ['Present (90d)', String(totalTrendPresent)],
+        ['Absent (90d)', String(totalTrendAbsent)],
+        ['Excused (90d)', String(totalTrendExcused)],
+        ['Performance Score', `${R(performanceScore)}/100`],
+        ['Leaders', String(asArray(leaders).length)],
+        ['Submissions (90d)', String(asArray(submissions).length)],
+        ['Rank', rank ? `#${rank}` : 'N/A'],
+      ],
+      margin: { left: m, right: m },
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [124, 58, 237], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
+    if (asArray(leaders).length > 0) {
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Section Leaders', m, y);
+      y += 8;
+      doc.setDrawColor(124, 58, 237);
+      doc.line(m, y, pw - m, y);
+      y += 5;
+
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['Name', 'Role', 'Phone']],
+        body: asArray(leaders).map(l => [
+          l.full_name || 'N/A',
+          l.is_head ? 'Head Leader' : 'Leader',
+          l.phone || 'N/A',
+        ]),
+        margin: { left: m, right: m },
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [124, 58, 237], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    if (asArray(members).length > 0) {
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Members', m, y);
+      y += 8;
+      doc.setDrawColor(124, 58, 237);
+      doc.line(m, y, pw - m, y);
+      y += 5;
+
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['Name', 'Member ID', 'Phone', 'Leader', 'Status']],
+        body: asArray(members).map(mb => [
+          mb.full_name || 'N/A',
+          mb.membership_id || 'N/A',
+          mb.phone || 'N/A',
+          mb.leader_name || 'N/A',
+          mb.is_active ? 'Active' : 'Inactive',
+        ]),
+        margin: { left: m, right: m },
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        headStyles: { fillColor: [124, 58, 237], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+    }
+
+    const pc = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pc; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+    }
+
+    doc.save(`${(section.name || 'section').replace(/\s+/g, '_')}_report_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const exportLeadersPDF = async () => {
+    const [{ default: jsPDF }, autoTableMod] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+    const m = 20;
+    let y = 20;
+
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 0, pw, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Section Leaders', m, 18);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${section.name || sectionName || ''} · ${new Date().toLocaleDateString()} · ${asArray(leaders).length} leaders`, m, 28);
+    y = 45;
+
+    doc.setTextColor(51, 51, 51);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Leadership Roster', m, y);
+    y += 8;
+    doc.setDrawColor(99, 102, 241);
+    doc.setLineWidth(0.5);
+    doc.line(m, y, pw - m, y);
+    y += 5;
+
+    if (asArray(leaders).length === 0) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(148, 163, 184);
+      doc.text('No leaders assigned to this section.', m, y);
+    } else {
+      autoTableMod.default(doc, {
+        startY: y,
+        head: [['#', 'Name', 'Role', 'Phone']],
+        body: asArray(leaders).map((l, i) => [
+          String(i + 1),
+          l.full_name || 'N/A',
+          l.is_head ? 'Head Leader' : 'Leader',
+          l.phone || 'N/A',
+        ]),
+        margin: { left: m, right: m },
+        styles: { fontSize: 9, cellPadding: 3 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+      });
+    }
+
+    const pc = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pc; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+    }
+
+    doc.save(`${(section.name || 'section').replace(/\s+/g, '_')}_leaders_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   return (
     <div className="space-y-4">
@@ -122,6 +301,16 @@ const SectionProfile = ({ sectionId, sectionName, onBack }) => {
               <p className="text-2xl font-black">#{rank}</p>
             </div>
           )}
+        </div>
+
+        {/* Export buttons */}
+        <div className="relative flex gap-2 mt-3">
+          <button onClick={exportSectionPDF} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-xs font-semibold transition-colors">
+            <Download className="w-3.5 h-3.5" /> Section Report
+          </button>
+          <button onClick={exportLeadersPDF} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 backdrop-blur-sm text-xs font-semibold transition-colors">
+            <Download className="w-3.5 h-3.5" /> Leaders PDF
+          </button>
         </div>
 
         {/* KPI Row */}
