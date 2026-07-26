@@ -15,6 +15,7 @@ const LeaderDashboard = lazy(() => import('./pages/LeaderDashboard.jsx'));
 const PastorDashboard = lazy(() => import('./pages/PastorDashboard.jsx'));
 const EvangelistDashboard = lazy(() => import('./pages/EvangelistDashboard.jsx'));
 const AccountantDashboard = lazy(() => import('./pages/AccountantDashboard.jsx'));
+const ChildrenLeaderDashboard = lazy(() => import('./components/ChildrenLeaderDashboard.jsx'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage.jsx'));
 const ChurchCalendar = lazy(() => import('./components/ChurchCalendar.jsx'));
 
@@ -42,7 +43,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (!allowedRoles || !allowedRoles.includes(user.role)) {
-    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'pastor' ? '/pastor' : user.role === 'evangelist' ? '/evangelist' : '/leader';
+    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'pastor' ? '/pastor' : user.role === 'evangelist' ? '/evangelist' : user.role === 'children_leader' ? '/children-leader' : '/leader';
     return <Navigate to={redirectPath} />;
   }
 
@@ -56,7 +57,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'evangelist' ? '/evangelist' : user.role === 'leader' ? '/leader' : '/pastor'} /> : <Login />} />
+        <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'evangelist' ? '/evangelist' : user.role === 'children_leader' ? '/children-leader' : user.role === 'leader' ? '/leader' : '/pastor'} /> : <Login />} />
 
         {/* Admin Routes */}
         <Route path="/admin/:tab?" element={
@@ -103,8 +104,17 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
+        {/* Children Leader Routes */}
+        <Route path="/children-leader/:tab?" element={
+          <ProtectedRoute allowedRoles={['children_leader', 'admin']}>
+            <Layout>
+              <ChildrenLeaderDashboard />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
         <Route path="/change-password" element={
-          <ProtectedRoute allowedRoles={['admin', 'accountant', 'leader', 'pastor', 'evangelist']}>
+          <ProtectedRoute allowedRoles={['admin', 'accountant', 'leader', 'pastor', 'evangelist', 'children_leader']}>
             <Layout>
               <ChangePasswordPage />
             </Layout>
@@ -112,7 +122,7 @@ function AppRoutes() {
         } />
 
         <Route path="/calendar" element={
-          <ProtectedRoute allowedRoles={['admin', 'accountant', 'leader', 'pastor', 'evangelist']}>
+          <ProtectedRoute allowedRoles={['admin', 'accountant', 'leader', 'pastor', 'evangelist', 'children_leader']}>
             <Layout>
               <ChurchCalendar />
             </Layout>

@@ -268,6 +268,26 @@ export const adminAPI = {
     logAction: (data) => api.post('/admin/audit-trail', data),
     export: (params = {}) => api.get('/admin/audit-trail/export', { params }),
   },
+  // Children's Ministry Leaders
+  childrenLeaders: {
+    getLeaders: () => api.get('/admin/children-leaders'),
+    createLeader: (data) => api.post('/admin/children-leaders', data),
+    updateLeader: (id, data) => api.put(`/admin/children-leaders/${id}`, data),
+    deleteLeader: (id, data) => api.delete(`/admin/children-leaders/${id}`, { data }),
+    resetPassword: (id, data) => api.post(`/admin/children-leaders/${id}/reset-password`, data),
+  },
+};
+
+// Children Leader Dashboard API
+export const childrenLeaderAPI = {
+  getDashboard: () => api.get('/children-leader/dashboard'),
+  getChildren: () => api.get('/children-leader/children'),
+  getClasses: () => api.get('/children-leader/classes'),
+  getAttendance: (date) => api.get('/children-leader/attendance', { params: { date } }),
+  recordAttendance: (data) => api.post('/children-leader/attendance', data),
+  bulkRecordAttendance: (data) => api.post('/children-leader/attendance/bulk', data),
+  getHistory: (params = {}) => api.get('/children-leader/history', { params }),
+  getTrends: (params = {}) => api.get('/children-leader/trends', { params }),
 };
 
 // Shared church calendar API

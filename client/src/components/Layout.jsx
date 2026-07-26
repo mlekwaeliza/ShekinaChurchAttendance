@@ -55,6 +55,7 @@ import {
   Droplets,
   TrendingUp,
   Crown,
+  Baby,
 } from 'lucide-react';
 
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
@@ -220,6 +221,7 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/admin/members', label: 'Member Directory', icon: Users },
         { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
         { path: '/admin/leaders', label: 'Leaders', icon: Crown },
+        { path: '/admin/children-leaders', label: 'Children Leaders', icon: Baby },
         { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
         { path: '/admin/rewards', label: 'Recognition', icon: Trophy },
       ]},
@@ -323,6 +325,22 @@ const Layout = ({ children, showNav = true }) => {
         { path: '/pastor/calendar', label: 'Calendar', icon: Calendar },
       ]},
     ],
+    children_leader: [
+      { section: 'DASHBOARD', items: [
+        { path: '/children-leader', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+      ]},
+      { section: 'MY WORK', items: [
+        { path: '/children-leader/children', label: 'My Children', icon: Users },
+        { path: '/children-leader/attendance', label: 'Take Attendance', icon: ClipboardList },
+      ]},
+      { section: 'REPORTS', items: [
+        { path: '/children-leader/history', label: 'History', icon: Clock },
+        { path: '/children-leader/trends', label: 'Trends', icon: BarChart3 },
+      ]},
+      { section: 'ACCOUNT', items: [
+        { path: '/children-leader/calendar', label: 'Calendar', icon: Calendar },
+      ]},
+    ],
     accountant: [
       { section: 'DASHBOARD', items: [
         { path: '/accountant', label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -420,6 +438,7 @@ const Layout = ({ children, showNav = true }) => {
     pastor: 'Pastor',
     evangelist: 'Evangelist Pastor',
     accountant: 'Accountant',
+    children_leader: 'Children\'s Ministry Leader',
   };
 
   const roleBadgeColor = {
@@ -428,6 +447,7 @@ const Layout = ({ children, showNav = true }) => {
     pastor: 'bg-accent-500/20 text-accent-300',
     evangelist: 'bg-amber-500/20 text-amber-300',
     accountant: 'bg-cyan-500/20 text-cyan-300',
+    children_leader: 'bg-pink-500/20 text-pink-300',
   };
 
   // Keep the mobile drawer expanded even when the desktop sidebar is collapsed.

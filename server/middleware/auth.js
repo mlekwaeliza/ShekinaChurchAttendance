@@ -1,10 +1,11 @@
 const { queries, get } = require('../database');
 
 const rolePermissions = {
-  admin: ['admin', 'leader', 'pastor', 'evangelist'],
+  admin: ['admin', 'leader', 'pastor', 'evangelist', 'children_leader'],
   leader: ['leader'],
   pastor: ['pastor'],
-  evangelist: ['evangelist']
+  evangelist: ['evangelist'],
+  children_leader: ['children_leader']
 };
 
 function requireRole(allowedRoles) {

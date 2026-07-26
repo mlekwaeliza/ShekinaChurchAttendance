@@ -897,7 +897,147 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
   }
 });
 
-// GET leaders list (for admin management)
+// GET children's ministry leaders list (for admin management)
+router.get('/children-leaders', async (req, res) => {
+  try {
+    const childrenLeaders = await withCache('admin-children-leaders', 300000, () => new Promise((resolve, reject) => {
+      db.all(`
+        SELECT cl.id, cl.user_id, u.username, u.full_name, u.email, u.profile_picture, cl.phone, cl.email as leader_email, cl.is_head, cl.is_active
+        FROM children_leaders cl
+        JOIN users u ON cl.user_id = u.id
+        ORDER BY u.full_name
+      `, (err, rows) => {
+        if (err) reject(err);
+        else resolve(rows);
+      });
+    }));
+    res.json(childrenLeaders);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch children leaders' });
+  }
+});
+
+// POST create children's ministry leader
+router.post('/children-leaders', async (req, res) => {
+  try {
+    const { username, full_name, phone, email, is_head } = req.body;
+    if (!username || !full_name) {
+      return res.status(400).json({ error: 'Username and full name are required' });
+    }
+    const existingUser = await queries.findUserByUsername(username);
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username already taken' });
+    }
+    const setToken = crypto.randomBytes(24).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+    const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+
+    const userId = await transaction(async (tx) => {
+      const userResult = await tx.run(
+        'INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)',
+        [username, placeholderHash, 'children_leader', full_name, null]
+      );
+      const insertedUserId = userResult.lastID;
+      await tx.run(
+        'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
+        [insertedUserId, phone, email, is_head ? 1 : 0]
+      );
+      await tx.run(
+        'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
+        [tokenHash, expiresAt, insertedUserId]
+      );
+      return insertedUserId;
+    });
+
+    const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
+    const responseBody = { message: 'Children leader created. A password-set link has been queued for email delivery.', userId, expires_at: expiresAt };
+    if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
+      responseBody.set_url = setUrl;
+    }
+    invalidate('admin-');
+    invalidate('admin-children-');
+    res.json(responseBody);
+  } catch (error) {
+    if (error.message.includes('UNIQUE')) {
+      return res.status(400).json({ error: 'Username already taken' });
+    }
+    console.error('Create children leader error:', error);
+    res.status(500).json({ error: 'Failed to create children leader' });
+  }
+});
+
+// PUT update children's ministry leader
+router.put('/children-leaders/:id', async (req, res) => {
+  try {
+    const { full_name, phone, email, is_head, is_active } = req.body;
+    const { id } = req.params;
+    const leader = await get('SELECT user_id FROM children_leaders WHERE id = ?', [id]);
+    if (!leader) return res.status(404).json({ error: 'Children leader not found' });
+
+    await transaction(async (tx) => {
+      await tx.run('UPDATE users SET full_name = ? WHERE id = ?', [full_name, leader.user_id]);
+      await tx.run('UPDATE children_leaders SET phone = ?, email = ?, is_head = ?, is_active = ? WHERE id = ?', [phone, email, is_head ? 1 : 0, is_active ? 1 : 0, id]);
+    });
+    invalidate('admin-');
+    invalidate('admin-children-');
+    res.json({ message: 'Children leader updated' });
+  } catch (error) {
+    console.error('Update children leader error:', error);
+    res.status(500).json({ error: 'Failed to update children leader' });
+  }
+});
+
+// DELETE children's ministry leader
+router.delete('/children-leaders/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { confirm } = req.body;
+    if (confirm !== 'DELETE') {
+      return res.status(400).json({ error: 'Confirmation required: send { confirm: "DELETE" }' });
+    }
+    const leader = await get('SELECT user_id FROM children_leaders WHERE id = ?', [id]);
+    if (!leader) return res.status(404).json({ error: 'Children leader not found' });
+
+    await transaction(async (tx) => {
+      await tx.run('DELETE FROM children_leaders WHERE id = ?', [id]);
+      await tx.run('DELETE FROM users WHERE id = ?', [leader.user_id]);
+    });
+    invalidate('admin-');
+    invalidate('admin-children-');
+    res.json({ message: 'Children leader deleted' });
+  } catch (error) {
+    console.error('Delete children leader error:', error);
+    res.status(500).json({ error: 'Failed to delete children leader' });
+  }
+});
+
+// POST reset children leader password
+router.post('/children-leaders/:id/reset-password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const leader = await get('SELECT cl.user_id, u.username FROM children_leaders cl JOIN users u ON cl.user_id = u.id WHERE cl.id = ?', [id]);
+    if (!leader) return res.status(404).json({ error: 'Children leader not found' });
+
+    const resetToken = crypto.randomBytes(24).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    await run('UPDATE users SET password_reset_token = ?, password_reset_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [tokenHash, expiresAt, leader.user_id]);
+
+    const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${resetToken}`;
+    const responseBody = { message: 'Password reset link generated', expires_at: expiresAt };
+    if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
+      responseBody.set_url = setUrl;
+    }
+    res.json(responseBody);
+  } catch (error) {
+    console.error('Reset children leader password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+});
+
+// GET children's ministry leaders list (for admin management)
 router.get('/leaders', async (req, res) => {
   try {
     const leaders = await withCache('admin-leaders', 300000, () => new Promise((resolve, reject) => {

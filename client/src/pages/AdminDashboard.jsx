@@ -40,6 +40,7 @@ const FinanceView = lazy(() => import('../components/admin/FinanceView'));
 const TrashView = lazy(() => import('../components/admin/TrashView'));
 const EvangelistDashboard = lazy(() => import('./EvangelistDashboard'));
 const ChildrensMinistry = lazy(() => import('./ChildrensMinistry'));
+const ChildrenLeaderManager = lazy(() => import('../components/admin/ChildrenLeaderManager'));
 const ExecutiveReportingCenter = lazy(() => import('./ExecutiveReportingCenter'));
 
 const AdminDashboard = () => {
@@ -269,6 +270,9 @@ const AdminDashboard = () => {
 
       case 'children':
         return <ChildrensMinistry />;
+
+      case 'children-leaders':
+        return <ChildrenLeaderManager showMessage={data.showMessage} />;
 
       case 'reporting':
         return <ExecutiveReportingCenter />;
