@@ -5,11 +5,8 @@ import {
   CheckCircle, XCircle, AlertCircle
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  PieChart, Pie, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
-
-const COLORS = ['#10B981', '#EF4444', '#F59E0B'];
 
 export default function ChildrenLeaderDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -94,7 +91,7 @@ export default function ChildrenLeaderDashboard() {
 
   const recordAttendance = async (childId, status) => {
     try {
-      await childrenLeaderAPI.recordAttendance({ child_id: childId, date: selectedDate, status });
+      await childrenLeaderAPI.recordAttendance({ date: selectedDate, records: [{ child_id: childId, status }] });
       loadAttendance(selectedDate);
     } catch (err) {
       console.error('Failed to record attendance:', err);
@@ -143,49 +140,40 @@ export default function ChildrenLeaderDashboard() {
       {activeTab === 'overview' && dashboard && (
         <div className="overview">
           <div className="stats-grid">
-            <StatCard icon={Baby} label="Total Children" value={dashboard.totalChildren} color="blue" />
-            <StatCard icon={CheckCircle} label="Present Today" value={dashboard.presentToday} color="green" />
-            <StatCard icon={XCircle} label="Absent Today" value={dashboard.absentToday} color="red" />
-            <StatCard icon={AlertCircle} label="Excused Today" value={dashboard.excusedToday} color="yellow" />
+            <StatCard icon={Baby} label="Total Children" value={dashboard.stats?.totalChildren || 0} color="blue" />
+            <StatCard icon={CheckCircle} label="Present Today" value={dashboard.todayAttendance?.length || 0} color="green" />
+            <StatCard icon={XCircle} label="Absent This Week" value={dashboard.stats?.totalAbsent || 0} color="red" />
+            <StatCard icon={AlertCircle} label="Excused This Week" value={dashboard.stats?.totalExcused || 0} color="yellow" />
           </div>
           <div className="charts-grid">
             <div className="chart-card">
               <h3>Weekly Attendance Trend</h3>
-              {dashboard.weeklyTrend && (
-                <BarChart width={600} height={300} data={dashboard.weeklyTrend}>
+              {dashboard.weeklyStats?.length > 0 ? (
+                <BarChart width={600} height={300} data={dashboard.weeklyStats}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="present" fill="#10B981" />
-                  <Bar dataKey="absent" fill="#EF4444" />
-                  <Bar dataKey="excused" fill="#F59E0B" />
+                  <Bar dataKey="present_count" name="Present" fill="#10B981" />
+                  <Bar dataKey="absent_count" name="Absent" fill="#EF4444" />
+                  <Bar dataKey="excused_count" name="Excused" fill="#F59E0B" />
                 </BarChart>
+              ) : (
+                <p className="empty-state">No attendance data yet</p>
               )}
             </div>
             <div className="chart-card">
-              <h3>Class Distribution</h3>
-              {dashboard.classDistribution && (
-                <PieChart width={400} height={300}>
-                  <Pie
-                    data={dashboard.classDistribution}
-                    cx={200}
-                    cy={150}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="count"
-                    nameKey="class_name"
-                    label
-                  >
-                    {dashboard.classDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              )}
+              <h3>Attendance Rate</h3>
+              <div className="rate-display">
+                <span className="rate-value">{dashboard.stats?.attendanceRate || 0}%</span>
+                <span className="rate-label">Weekly attendance rate</span>
+              </div>
+              <div className="stat-row">
+                <span className="stat-item green">Present: {dashboard.stats?.totalPresent || 0}</span>
+                <span className="stat-item red">Absent: {dashboard.stats?.totalAbsent || 0}</span>
+                <span className="stat-item yellow">Excused: {dashboard.stats?.totalExcused || 0}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -208,11 +196,11 @@ export default function ChildrenLeaderDashboard() {
               <tbody>
                 {children.map(child => (
                   <tr key={child.id}>
-                    <td>{child.name}</td>
-                    <td>{child.age}</td>
+                    <td>{child.full_name}</td>
+                    <td>{child.age_group || child.date_of_birth}</td>
                     <td>{child.class_name}</td>
-                    <td>{child.parent_name}</td>
-                    <td>{child.parent_phone}</td>
+                    <td>{child.parent_guardian_name}</td>
+                    <td>{child.parent_guardian_phone}</td>
                   </tr>
                 ))}
               </tbody>
@@ -241,7 +229,7 @@ export default function ChildrenLeaderDashboard() {
                     const record = attendance.find(a => a.child_id === child.id);
                     return (
                       <div key={child.id} className="child-card">
-                        <span className="child-name">{child.name}</span>
+                        <span className="child-name">{child.full_name}</span>
                         <div className="status-buttons">
                           <button
                             className={`status-btn present ${record?.status === 'present' ? 'active' : ''}`}
@@ -280,18 +268,18 @@ export default function ChildrenLeaderDashboard() {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Child</th>
-                  <th>Status</th>
-                  <th>Recorded By</th>
+                  <th>Class</th>
+                  <th>Records Count</th>
+                  <th>Submitted At</th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((record, idx) => (
                   <tr key={idx}>
                     <td>{new Date(record.date).toLocaleDateString()}</td>
-                    <td>{record.child_name}</td>
-                    <td><span className={`status-badge ${record.status}`}>{record.status}</span></td>
-                    <td>{record.recorded_by}</td>
+                    <td>{record.class_name || 'All Classes'}</td>
+                    <td>{record.records_count}</td>
+                    <td>{new Date(record.created_at).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

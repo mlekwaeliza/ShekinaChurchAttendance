@@ -4,6 +4,8 @@ const { isAuthenticated, requireRole } = require('../middleware/auth');
 const { formatLocalDate, addDays } = require('../utils/date');
 const { invalidate } = require('../utils/cache');
 
+const isPostgres = String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
+
 const router = express.Router();
 
 router.use(isAuthenticated);
@@ -145,9 +147,9 @@ router.get('/classes', async (req, res) => {
 });
 
 // GET attendance for a specific date
-router.get('/attendance/:date', async (req, res) => {
+router.get('/attendance', async (req, res) => {
   try {
-    const { date } = req.params;
+    const date = req.query.date || formatLocalDate(new Date());
     const userId = req.session.userId;
     const childrenLeader = await queries.getChildrenLeaderByUserId(userId);
     if (!childrenLeader) return res.status(404).json({ error: 'Children leader not found' });
@@ -217,10 +219,14 @@ router.post('/attendance', async (req, res) => {
       }
 
       // Log submission
-      await run(`
-        INSERT OR REPLACE INTO children_submission_log (children_leader_id, date, class_id, records_count, created_at)
-        VALUES (?, ?, ?, ?, ?)
-      `, [leaderId, date, null, recordsCount, new Date().toISOString()]);
+      await run(isPostgres
+        ? `INSERT INTO children_submission_log (children_leader_id, date, class_id, records_count, created_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(children_leader_id, date, class_id) DO UPDATE SET
+             records_count = EXCLUDED.records_count, created_at = EXCLUDED.created_at`
+        : `INSERT OR REPLACE INTO children_submission_log (children_leader_id, date, class_id, records_count, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+      [leaderId, date, null, recordsCount, new Date().toISOString()]);
 
       await run('COMMIT');
       invalidate('admin-children-');
