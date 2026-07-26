@@ -173,7 +173,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
   const loadMembers = async () => {
     try {
-      const res = await adminAPI.childrenLeaders.getAvailableMembers('');
+      const res = await adminAPI.getMembers();
       setAllMembers(res.data);
     } catch (err) {
       console.error('Failed to load members:', err);
@@ -187,9 +187,8 @@ export default function ChildrenLeaderManager({ showMessage }) {
   );
 
   const availableMembers = useMemo(() => {
-    const assignedUserIds = new Set(leaders.map(l => l.user_id));
-    return allMembers.filter(m => !assignedUserIds.has(m.id || m.user_id));
-  }, [allMembers, leaders]);
+    return allMembers;
+  }, [allMembers]);
 
   const handleMemberSelect = useCallback((member) => {
     if (member) {
