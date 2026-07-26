@@ -960,7 +960,7 @@ router.post('/children-leaders', async (req, res) => {
     }
 
     if (user_id) {
-      const user = await queries.findUserByUsername(username);
+      const user = await get('SELECT id, username, full_name FROM users WHERE id = ?', [user_id]);
       if (!user) {
         return res.status(400).json({ error: 'Selected user not found' });
       }

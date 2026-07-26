@@ -173,7 +173,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
   const loadMembers = async () => {
     try {
-      const res = await adminAPI.getMembers();
+      const res = await adminAPI.childrenLeaders.getAvailableMembers('');
       setAllMembers(res.data);
     } catch (err) {
       console.error('Failed to load members:', err);
@@ -188,7 +188,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
   const availableMembers = useMemo(() => {
     const assignedUserIds = new Set(leaders.map(l => l.user_id));
-    return allMembers.filter(m => !assignedUserIds.has(m.user_id) && m.role !== 'admin');
+    return allMembers.filter(m => !assignedUserIds.has(m.id || m.user_id));
   }, [allMembers, leaders]);
 
   const handleMemberSelect = useCallback((member) => {
@@ -199,7 +199,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
         full_name: member.full_name || '',
         phone: member.phone || '',
         email: member.email || '',
-        user_id: member.user_id || member.id,
+        user_id: member.id,
         username: member.username || ''
       }));
     } else {
