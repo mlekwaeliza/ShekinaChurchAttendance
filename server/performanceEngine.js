@@ -847,11 +847,11 @@ async function getProfile(entityType, entityId, filter, userId) {
     : `SELECT a.date, a.status FROM attendance a WHERE a.member_id = ? ORDER BY a.date ASC`;
   const attParamId = isLeader ? entityId : targetMemberId;
   const attByMonthQuery = isLeader
-    ? `SELECT ${ymFn} AS ym, COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present FROM attendance a JOIN members m ON m.id = a.member_id WHERE m.leader_id = ? AND a.date BETWEEN ? AND ? GROUP BY ym`
-    : `SELECT ${ymFn} AS ym, COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ? GROUP BY ym`;
+    ? `SELECT ${ymFn} AS ym, COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present FROM attendance a JOIN members m ON m.id = a.member_id WHERE m.leader_id = ? AND a.date BETWEEN ? AND ? GROUP BY ${ymFn}`
+    : `SELECT ${ymFn} AS ym, COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(status))='present' THEN 1 ELSE 0 END) AS present FROM attendance WHERE member_id = ? AND date BETWEEN ? AND ? GROUP BY ${ymFn}`;
   const outQuery = isLeader
-    ? `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt FROM outreach_logs WHERE leader_id = ? AND created_at BETWEEN ? AND ? GROUP BY ym`
-    : `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt FROM outreach_logs WHERE member_id = ? AND created_at BETWEEN ? AND ? GROUP BY ym`;
+    ? `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt FROM outreach_logs WHERE leader_id = ? AND created_at BETWEEN ? AND ? GROUP BY ${ymCreated}`
+    : `SELECT ${ymCreated} AS ym, COUNT(*) AS cnt FROM outreach_logs WHERE member_id = ? AND created_at BETWEEN ? AND ? GROUP BY ${ymCreated}`;
   const outParamId = isLeader ? entityId : targetMemberId;
 
   // Parallelize all independent queries
@@ -872,7 +872,7 @@ async function getProfile(entityType, entityId, filter, userId) {
     all(
       `SELECT ${ymPayment} AS ym, COUNT(*) AS cnt
        FROM contributions WHERE member_id = ? AND payment_date BETWEEN ? AND ?
-       GROUP BY ym`,
+       GROUP BY ${ymPayment}`,
       [targetMemberId, yearStart, yearEnd]
     ),
     all(
