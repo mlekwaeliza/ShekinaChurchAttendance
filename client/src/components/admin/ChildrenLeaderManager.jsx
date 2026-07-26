@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../../services/api';
 import {
-  Plus, Pencil, Trash2, KeyRound, ShieldCheck, CheckCircle, XCircle
+  ShieldCheck, Plus, Pencil, Trash2, KeyRound,
+  CheckCircle, XCircle, Loader2, Users, X, Search
 } from 'lucide-react';
+
+const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
 
 export default function ChildrenLeaderManager({ showMessage }) {
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingLeader, setEditingLeader] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     username: '',
     full_name: '',
@@ -33,29 +39,39 @@ export default function ChildrenLeaderManager({ showMessage }) {
     }
   };
 
+  const filteredLeaders = leaders.filter(l =>
+    l.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    l.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    l.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.full_name.trim()) { setError('Full name is required'); return; }
+    if (!editingLeader && !formData.username.trim()) { setError('Username is required'); return; }
+    setSaving(true); setError('');
     try {
       if (editingLeader) {
         await adminAPI.childrenLeaders.updateLeader(editingLeader.id, formData);
-        showMessage('Children leader updated successfully');
       } else {
         await adminAPI.childrenLeaders.createLeader(formData);
-        showMessage('Children leader created successfully');
       }
       setShowModal(false);
       setEditingLeader(null);
       setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false });
       loadLeaders();
+      showMessage(editingLeader ? 'Leader updated successfully' : 'Leader created successfully');
     } catch (err) {
-      showMessage(err.response?.data?.error || 'Failed to save leader', 'error');
+      setError(err.response?.data?.error || 'Failed to save leader');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (leader) => {
     try {
       await adminAPI.childrenLeaders.deleteLeader(leader.id, { confirm: 'DELETE' });
-      showMessage('Children leader deleted successfully');
+      showMessage('Leader deleted successfully');
       setDeleteConfirm(null);
       loadLeaders();
     } catch (err) {
@@ -81,143 +97,295 @@ export default function ChildrenLeaderManager({ showMessage }) {
       email: leader.leader_email || leader.email || '',
       is_head: !!leader.is_head
     });
+    setError('');
     setShowModal(true);
   };
 
   const openCreateModal = () => {
     setEditingLeader(null);
     setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false });
+    setError('');
     setShowModal(true);
   };
 
-  if (loading) return <div className="loading"><div className="spinner" /></div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      </div>
+    );
+  }
 
   return (
-    <div className="children-leader-manager">
-      <div className="section-header">
-        <h2><ShieldCheck size={20} /> Children's Ministry Leaders</h2>
-        <button className="btn btn-primary" onClick={openCreateModal}>
-          <Plus size={16} /> Add Leader
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary-600" />
+            Children's Ministry Leaders
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Manage leaders assigned to the children's ministry</p>
+        </div>
+        <button onClick={openCreateModal} className="btn-primary flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Add Leader
         </button>
       </div>
 
-      <div className="table-container">
-        <table>
-          <thead>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className={STAT_STYLE}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 dark:bg-primary-900/30">
+              <Users className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{leaders.length}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Leaders</p>
+            </div>
+          </div>
+        </div>
+        <div className={STAT_STYLE}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+              <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{leaders.filter(l => l.is_active !== false).length}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active</p>
+            </div>
+          </div>
+        </div>
+        <div className={STAT_STYLE}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/30">
+              <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{leaders.filter(l => l.is_head).length}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Head Leaders</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search leaders..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="input pl-9 w-full max-w-sm"
+        />
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+          <thead className="bg-slate-50 dark:bg-slate-800/50">
             <tr>
-              <th>Name</th>
-              <th>Username</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Head</th>
-              <th>Active</th>
-              <th>Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Username</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Phone</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Role</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Actions</th>
             </tr>
           </thead>
-          <tbody>
-            {leaders.map(leader => (
-              <tr key={leader.id}>
-                <td>{leader.full_name}</td>
-                <td>{leader.username}</td>
-                <td>{leader.email || leader.leader_email || '—'}</td>
-                <td>{leader.phone || '—'}</td>
-                <td>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+            {filteredLeaders.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="px-4 py-12 text-center">
+                  <Users className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
+                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    {searchTerm ? 'No leaders match your search' : "No children's ministry leaders yet"}
+                  </p>
+                </td>
+              </tr>
+            ) : filteredLeaders.map(leader => (
+              <tr key={leader.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                <td className="whitespace-nowrap px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30">
+                      <span className="text-xs font-bold text-primary-700 dark:text-primary-300">
+                        {leader.full_name?.charAt(0)?.toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{leader.full_name}</span>
+                  </div>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{leader.username}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{leader.email || leader.leader_email || '—'}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">{leader.phone || '—'}</td>
+                <td className="whitespace-nowrap px-4 py-3">
                   {leader.is_head ? (
-                    <span className="badge badge-success"><CheckCircle size={14} /> Yes</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                      <ShieldCheck className="h-3 w-3" /> Head
+                    </span>
                   ) : (
-                    <span className="badge badge-secondary"><XCircle size={14} /> No</span>
+                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                      Leader
+                    </span>
                   )}
                 </td>
-                <td>
-                  {leader.is_active ? (
-                    <span className="badge badge-success">Active</span>
+                <td className="whitespace-nowrap px-4 py-3">
+                  {leader.is_active !== false ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      <CheckCircle className="h-3 w-3" /> Active
+                    </span>
                   ) : (
-                    <span className="badge badge-warning">Inactive</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                      <XCircle className="h-3 w-3" /> Inactive
+                    </span>
                   )}
                 </td>
-                <td>
-                  <div className="action-buttons">
-                    <button className="btn btn-sm btn-secondary" onClick={() => openEditModal(leader)} title="Edit">
-                      <Pencil size={14} />
+                <td className="whitespace-nowrap px-4 py-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => openEditModal(leader)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors"
+                      title="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
                     </button>
-                    <button className="btn btn-sm btn-secondary" onClick={() => handleResetPassword(leader)} title="Reset Password">
-                      <KeyRound size={14} />
+                    <button
+                      onClick={() => handleResetPassword(leader)}
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors"
+                      title="Reset Password"
+                    >
+                      <KeyRound className="h-4 w-4" />
                     </button>
                     {deleteConfirm === leader.id ? (
-                      <>
-                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(leader)}>Confirm</button>
-                        <button className="btn btn-sm btn-secondary" onClick={() => setDeleteConfirm(null)}>Cancel</button>
-                      </>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDelete(leader)}
+                          className="rounded-lg bg-rose-600 px-2 py-1 text-xs font-medium text-white hover:bg-rose-700 transition-colors"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     ) : (
-                      <button className="btn btn-sm btn-danger" onClick={() => setDeleteConfirm(leader.id)} title="Delete">
-                        <Trash2 size={14} />
+                      <button
+                        onClick={() => setDeleteConfirm(leader.id)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20 dark:hover:text-rose-400 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     )}
                   </div>
                 </td>
               </tr>
             ))}
-            {leaders.length === 0 && (
-              <tr><td colSpan="7" className="text-center">No children's ministry leaders found</td></tr>
-            )}
           </tbody>
         </table>
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{editingLeader ? 'Edit' : 'Add'} Children's Ministry Leader</h3>
-            <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Full Name *</label>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowModal(false); setError(''); } }}>
+          <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 p-5 dark:border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-100 dark:bg-primary-900/30">
+                  <ShieldCheck className="h-4 w-4 text-primary-600 dark:text-primary-400" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  {editingLeader ? 'Edit Leader' : 'Add Children\'s Ministry Leader'}
+                </h2>
+              </div>
+              <button
+                onClick={() => { setShowModal(false); setError(''); }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+              {error && (
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+                  {error}
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
                 <input
-                  type="text"
+                  className="input"
+                  placeholder="e.g. Jane Doe"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                   required
+                  autoFocus
                 />
               </div>
+
               {!editingLeader && (
-                <div className="form-group">
-                  <label>Username *</label>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Username <span className="text-rose-500">*</span>
+                  </label>
                   <input
-                    type="text"
+                    className="input"
+                    placeholder="e.g. jane.doe"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     required
                   />
                 </div>
               )}
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label>Phone</label>
-                <input
-                  type="text"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label className="checkbox-label">
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Email
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={formData.is_head}
-                    onChange={(e) => setFormData({ ...formData, is_head: e.target.checked })}
+                    type="email"
+                    className="input"
+                    placeholder="jane@church.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   />
-                  Head of Children's Ministry
-                </label>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Phone
+                  </label>
+                  <input
+                    className="input"
+                    placeholder="+254 700 000 000"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
               </div>
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">{editingLeader ? 'Update' : 'Create'}</button>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_head}
+                  onChange={(e) => setFormData({ ...formData, is_head: e.target.checked })}
+                  className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Head of Children's Ministry</span>
+              </label>
+
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowModal(false); setError(''); }} className="btn-secondary flex-1">
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="btn-primary flex-1">
+                  {saving ? 'Saving...' : editingLeader ? 'Save Changes' : 'Create Leader'}
+                </button>
               </div>
             </form>
           </div>
