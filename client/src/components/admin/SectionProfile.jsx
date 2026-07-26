@@ -90,9 +90,18 @@ const SectionProfile = ({ sectionId, sectionName, onBack }) => {
 
   const exportSectionPDF = async () => {
     const [{ default: jsPDF }, autoTableMod] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
-    const doc = new jsPDF();
+
+    let matrixData = [];
+    let weeksList = [];
+    try {
+      const matrixRes = await analyticsAPI.getMemberWeeklyMatrix({ sectionId, weeks: 12 });
+      matrixData = asArray(matrixRes.data?.matrix);
+      weeksList = asArray(matrixRes.data?.weeks);
+    } catch (_) { /* matrix may not load */ }
+
+    const doc = new jsPDF({ orientation: weeksList.length > 8 ? 'landscape' : 'portrait' });
     const pw = doc.internal.pageSize.getWidth();
-    const m = 20;
+    const m = 15;
     let y = 20;
 
     const sectionTitle = section.name || sectionName || 'Section Report';
@@ -209,6 +218,35 @@ const SectionProfile = ({ sectionId, sectionName, onBack }) => {
         }),
         ...tableDefaults,
         styles: { fontSize: 8, cellPadding: 2 },
+      });
+      y = doc.lastAutoTable.finalY + 12;
+    }
+
+    const STATUS_SHORT = { present: 'P', absent: 'A', excused: 'E' };
+    if (matrixData.length > 0 && weeksList.length > 0) {
+      addSectionHeader('Weekly Attendance Matrix (12 Weeks)');
+      const weekHeaders = weeksList.map(w => {
+        const [yr, wk] = String(w).split('-W').map(Number);
+        if (!yr || !wk) return w;
+        const simple = new Date(Date.UTC(yr, 0, 1 + (wk - 1) * 7));
+        const day = simple.getUTCDay();
+        if (day <= 4) simple.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
+        else simple.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+        const MONTHS = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${simple.getUTCDate()} ${MONTHS[simple.getUTCMonth() + 1]}`;
+      });
+      autoTableMod.default(doc, {
+        startY: y,
+        head: ['Member', ...weekHeaders],
+        body: matrixData.map(row => {
+          const weekly = asArray(row.weekly);
+          const cells = weeksList.map((_, i) => STATUS_SHORT[weekly[i]] || '·');
+          return [row.full_name || 'N/A', ...cells];
+        }),
+        ...tableDefaults,
+        styles: { fontSize: 7, cellPadding: 1.5, halign: 'center' },
+        columnStyles: { 0: { halign: 'left', cellWidth: 35 } },
+        headStyles: { fillColor: [124, 58, 237], textColor: 255, fontStyle: 'bold', halign: 'center' },
       });
       y = doc.lastAutoTable.finalY + 12;
     }
