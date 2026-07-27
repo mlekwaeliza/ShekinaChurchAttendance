@@ -965,29 +965,28 @@ router.post('/children-leaders', async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ error: 'Username already taken' });
     }
-    const setToken = crypto.randomBytes(24).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
-    const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+    let rawPassword = '';
+    const randomBytes = crypto.randomBytes(12);
+    for (let i = 0; i < 12; i++) {
+      rawPassword += chars[randomBytes[i] % chars.length];
+    }
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
 
     const userId = await transaction(async (tx) => {
       const userResult = await tx.run(
         'INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)',
-        [username, placeholderHash, 'children_leader', full_name, null]
+        [username, passwordHash, 'children_leader', full_name, null]
       );
       const insertedUserId = userResult.lastID;
       await tx.run(
         'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
         [insertedUserId, phone || null, email || null, is_head ? 1 : 0]
       );
-      await tx.run(
-        'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
-        [tokenHash, expiresAt, insertedUserId]
-      );
       return insertedUserId;
     });
 
-    const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
     invalidate('admin-');
     invalidate('admin-children-');
     invalidate('admin-children-leaders');
@@ -995,8 +994,7 @@ router.post('/children-leaders', async (req, res) => {
       message: 'Children leader created successfully',
       userId,
       username,
-      expires_at: expiresAt,
-      set_url: setUrl
+      password: rawPassword
     });
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
@@ -1059,18 +1057,21 @@ router.post('/children-leaders/:id/reset-password', async (req, res) => {
     const leader = await get('SELECT cl.user_id, u.username FROM children_leaders cl JOIN users u ON cl.user_id = u.id WHERE cl.id = ?', [id]);
     if (!leader) return res.status(404).json({ error: 'Children leader not found' });
 
-    const resetToken = crypto.randomBytes(24).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-
-    await run('UPDATE users SET password_reset_token = ?, password_reset_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [tokenHash, expiresAt, leader.user_id]);
-
-    const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${resetToken}`;
-    const responseBody = { message: 'Password reset link generated', expires_at: expiresAt };
-    if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
-      responseBody.set_url = setUrl;
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+    let rawPassword = '';
+    const randomBytes = crypto.randomBytes(12);
+    for (let i = 0; i < 12; i++) {
+      rawPassword += chars[randomBytes[i] % chars.length];
     }
-    res.json(responseBody);
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
+
+    await run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [passwordHash, leader.user_id]);
+
+    res.json({
+      message: 'Password reset successfully',
+      username: leader.username,
+      password: rawPassword
+    });
   } catch (error) {
     console.error('Reset children leader password error:', error);
     res.status(500).json({ error: 'Failed to reset password' });

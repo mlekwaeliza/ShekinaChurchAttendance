@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { adminAPI } from '../../services/api';
 import {
   ShieldCheck, Plus, Pencil, Trash2, KeyRound,
-  CheckCircle, XCircle, Loader2, Users, X, Search, AtSign, Copy, ExternalLink
+  CheckCircle, XCircle, Loader2, Users, X, Search, AtSign, Copy
 } from 'lucide-react';
 
 const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
@@ -228,11 +228,11 @@ export default function ChildrenLeaderManager({ showMessage }) {
       setSelectedMember(null);
       setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false, user_id: null });
       loadLeaders();
-      if (!editingLeader && res.data?.set_url) {
+      if (!editingLeader && res.data?.password) {
         setCreatedCredentials({
           username: res.data.username || formData.username,
-          full_name: formData.full_name,
-          set_url: res.data.set_url
+          password: res.data.password,
+          full_name: formData.full_name
         });
       } else {
         showMessage(editingLeader ? 'Leader updated successfully' : 'Leader created successfully');
@@ -258,7 +258,11 @@ export default function ChildrenLeaderManager({ showMessage }) {
   const handleResetPassword = async (leader) => {
     try {
       const res = await adminAPI.childrenLeaders.resetPassword(leader.id);
-      showMessage(`Password reset link generated. Expires: ${new Date(res.data.expires_at).toLocaleString()}`);
+      setCreatedCredentials({
+        username: res.data.username || leader.username,
+        password: res.data.password,
+        full_name: leader.full_name
+      });
     } catch (err) {
       showMessage(err.response?.data?.error || 'Failed to reset password', 'error');
     }
@@ -495,22 +499,14 @@ export default function ChildrenLeaderManager({ showMessage }) {
               <p className="mt-1 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">{createdCredentials.username}</p>
             </div>
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Password Set Link</p>
-              <a
-                href={createdCredentials.set_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline break-all"
-              >
-                <ExternalLink className="h-3 w-3 shrink-0" />
-                {createdCredentials.set_url}
-              </a>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Password</p>
+              <p className="mt-1 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">{createdCredentials.password}</p>
             </div>
           </div>
           <div className="mt-3 flex items-center gap-2">
             <button
               onClick={() => {
-                navigator.clipboard.writeText(`Username: ${createdCredentials.username}\nSet Password: ${createdCredentials.set_url}`);
+                navigator.clipboard.writeText(`Username: ${createdCredentials.username}\nPassword: ${createdCredentials.password}`);
                 showMessage('Credentials copied to clipboard');
               }}
               className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
