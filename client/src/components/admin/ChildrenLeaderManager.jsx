@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { adminAPI } from '../../services/api';
 import {
   ShieldCheck, Plus, Pencil, Trash2, KeyRound,
-  CheckCircle, XCircle, Loader2, Users, X, Search
+  CheckCircle, XCircle, Loader2, Users, X, Search, AtSign
 } from 'lucide-react';
 
 const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
@@ -193,13 +193,16 @@ export default function ChildrenLeaderManager({ showMessage }) {
   const handleMemberSelect = useCallback((member) => {
     if (member) {
       setSelectedMember(member);
+      const autoUsername = member.full_name
+        ? member.full_name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)
+        : '';
       setFormData(prev => ({
         ...prev,
         full_name: member.full_name || '',
         phone: member.phone || '',
         email: member.email || '',
         user_id: member.id,
-        username: member.username || ''
+        username: autoUsername
       }));
     } else {
       setSelectedMember(null);
@@ -504,6 +507,28 @@ export default function ChildrenLeaderManager({ showMessage }) {
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                     required
                   />
+                </div>
+              )}
+
+              {!editingLeader && (
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Username <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <AtSign className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <input
+                      type="text"
+                      required
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      placeholder="e.g. jdoe_leader"
+                      className="input pl-10"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                    Used for system login. Permanent once set.
+                  </p>
                 </div>
               )}
 
