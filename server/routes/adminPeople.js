@@ -988,13 +988,16 @@ router.post('/children-leaders', async (req, res) => {
     });
 
     const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
-    const responseBody = { message: 'Children leader created. A password-set link has been queued for email delivery.', userId, expires_at: expiresAt };
-    if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
-      responseBody.set_url = setUrl;
-    }
     invalidate('admin-');
     invalidate('admin-children-');
-    res.json(responseBody);
+    invalidate('admin-children-leaders');
+    res.json({
+      message: 'Children leader created successfully',
+      userId,
+      username,
+      expires_at: expiresAt,
+      set_url: setUrl
+    });
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
       return res.status(400).json({ error: 'Username already taken' });

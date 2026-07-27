@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { adminAPI } from '../../services/api';
 import {
   ShieldCheck, Plus, Pencil, Trash2, KeyRound,
-  CheckCircle, XCircle, Loader2, Users, X, Search, AtSign
+  CheckCircle, XCircle, Loader2, Users, X, Search, AtSign, Copy, ExternalLink
 } from 'lucide-react';
 
 const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
@@ -154,6 +154,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [allMembers, setAllMembers] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
+  const [createdCredentials, setCreatedCredentials] = useState(null);
 
   useEffect(() => {
     loadLeaders();
@@ -216,17 +217,26 @@ export default function ChildrenLeaderManager({ showMessage }) {
     if (!editingLeader && !selectedMember) { setError('Please select a member from the list'); return; }
     setSaving(true); setError('');
     try {
+      let res;
       if (editingLeader) {
-        await adminAPI.childrenLeaders.updateLeader(editingLeader.id, formData);
+        res = await adminAPI.childrenLeaders.updateLeader(editingLeader.id, formData);
       } else {
-        await adminAPI.childrenLeaders.createLeader(formData);
+        res = await adminAPI.childrenLeaders.createLeader(formData);
       }
       setShowModal(false);
       setEditingLeader(null);
       setSelectedMember(null);
       setFormData({ username: '', full_name: '', phone: '', email: '', is_head: false, user_id: null });
       loadLeaders();
-      showMessage(editingLeader ? 'Leader updated successfully' : 'Leader created successfully');
+      if (!editingLeader && res.data?.set_url) {
+        setCreatedCredentials({
+          username: res.data.username || formData.username,
+          full_name: formData.full_name,
+          set_url: res.data.set_url
+        });
+      } else {
+        showMessage(editingLeader ? 'Leader updated successfully' : 'Leader created successfully');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save leader');
     } finally {
@@ -455,6 +465,68 @@ export default function ChildrenLeaderManager({ showMessage }) {
           </tbody>
         </table>
       </div>
+
+      {createdCredentials && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 p-5 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
+                <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                  {createdCredentials.full_name} — Login Credentials
+                </h3>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  Share these credentials with the leader so they can access their dashboard.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setCreatedCredentials(null)}
+              className="rounded-lg p-1.5 text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-800/50"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Username</p>
+              <p className="mt-1 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">{createdCredentials.username}</p>
+            </div>
+            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Password Set Link</p>
+              <a
+                href={createdCredentials.set_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline break-all"
+              >
+                <ExternalLink className="h-3 w-3 shrink-0" />
+                {createdCredentials.set_url}
+              </a>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`Username: ${createdCredentials.username}\nSet Password: ${createdCredentials.set_url}`);
+                showMessage('Credentials copied to clipboard');
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+            >
+              <Copy className="h-3 w-3" />
+              Copy Credentials
+            </button>
+            <button
+              onClick={() => setCreatedCredentials(null)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowModal(false); setError(''); setSelectedMember(null); } }}>
