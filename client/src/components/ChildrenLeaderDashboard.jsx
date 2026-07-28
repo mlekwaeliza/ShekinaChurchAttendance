@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { childrenLeaderAPI } from '../services/api';
 import {
   Baby, CalendarCheck, BarChart3,
@@ -13,7 +14,9 @@ const STAT_STYLE = 'rounded-2xl border border-slate-200/70 bg-white dark:bg-slat
 const AGE_GROUPS = ['Nursery', 'Toddler', 'Preschool', 'Primary', 'Pre-Teen', 'Youth'];
 
 export default function ChildrenLeaderDashboard() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const { tab } = useParams();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(tab || 'overview');
   const [dashboard, setDashboard] = useState(null);
   const [children, setChildren] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -45,6 +48,18 @@ export default function ChildrenLeaderDashboard() {
     if (activeTab === 'children') loadChildren(ageGroupFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, ageGroupFilter]);
+
+  useEffect(() => {
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  const setTab = (newTab) => {
+    setActiveTab(newTab);
+    navigate(`/children-leader/${newTab === 'overview' ? '' : newTab}`);
+  };
 
   const loadDashboard = async () => {
     try {
@@ -141,7 +156,7 @@ export default function ChildrenLeaderDashboard() {
           <button
             key={tab.id}
             className={`tab-pill flex items-center gap-2 ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => setTab(tab.id)}
           >
             <tab.icon className="h-4 w-4" />
             {tab.label}
