@@ -2275,6 +2275,7 @@ async function createChildrensMinistryTables() {
         medical_notes TEXT,
         allergies TEXT,
         class_id INTEGER,
+        children_leader_id INTEGER,
         age_group TEXT,
         photo_consent INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
@@ -2379,11 +2380,24 @@ async function createChildrensMinistryTables() {
       await run(`ALTER TABLE children ADD COLUMN leader_id INTEGER`);
     }
 
+    // Add children_leader_id to children table if missing
+    const childrenLeaderCols = await all(usePostgres
+      ? `SELECT column_name FROM information_schema.columns WHERE table_name = 'children' AND column_name = 'children_leader_id'`
+      : `PRAGMA table_info(children)`
+    );
+    const hasChildrenLeaderId = usePostgres
+      ? childrenLeaderCols.some(c => c.column_name === 'children_leader_id')
+      : childrenLeaderCols.some(c => c.name === 'children_leader_id');
+    if (!hasChildrenLeaderId) {
+      await run(`ALTER TABLE children ADD COLUMN children_leader_id INTEGER`);
+    }
+
     // Add indexes for children_leaders and children_submission_log
     await run('CREATE INDEX IF NOT EXISTS idx_children_leaders_user ON children_leaders(user_id)');
     await run('CREATE INDEX IF NOT EXISTS idx_children_submission_log_leader ON children_submission_log(children_leader_id)');
     await run('CREATE INDEX IF NOT EXISTS idx_children_submission_log_date ON children_submission_log(date)');
     await run('CREATE INDEX IF NOT EXISTS idx_children_leader ON children(leader_id)');
+    await run('CREATE INDEX IF NOT EXISTS idx_children_children_leader ON children(children_leader_id)');
   } catch (e) {
     console.warn('Children\'s Ministry tables migration skipped (non-fatal):', e.message);
   }
@@ -2538,7 +2552,7 @@ const queries = {
     SELECT c.*, cl.name as class_name
     FROM children c
     LEFT JOIN children_classes cl ON c.class_id = cl.id
-    WHERE c.leader_id = ? AND c.is_active = 1
+    WHERE c.children_leader_id = ? AND c.is_active = 1
     ORDER BY c.full_name
   `, [leaderId]),
   getChildrenSubmissionLog: (leaderId, startDate, endDate) => all(`

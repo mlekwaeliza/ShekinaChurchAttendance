@@ -37,7 +37,7 @@ router.get('/dashboard', async (req, res) => {
         FROM children_attendance ca
         JOIN children c ON ca.child_id = c.id
         LEFT JOIN children_classes cl ON ca.class_id = cl.id
-        WHERE c.leader_id = ? AND ca.date = ?
+        WHERE c.children_leader_id = ? AND ca.date = ?
         ORDER BY cl.name, c.full_name
       `, [leaderId, today]),
       // Recent submission history
@@ -52,7 +52,7 @@ router.get('/dashboard', async (req, res) => {
           SUM(CASE WHEN ca.status = 'late' THEN 1 ELSE 0 END) as late_count
         FROM children_attendance ca
         JOIN children c ON ca.child_id = c.id
-        WHERE c.leader_id = ? AND ca.date >= ?
+        WHERE c.children_leader_id = ? AND ca.date >= ?
         GROUP BY DATE(ca.date)
         ORDER BY date DESC
       `, [leaderId, weekAgo])
@@ -111,7 +111,7 @@ router.get('/children', async (req, res) => {
       SELECT c.*, cl.name as class_name
       FROM children c
       LEFT JOIN children_classes cl ON c.class_id = cl.id
-      WHERE c.leader_id = ? AND c.is_active = 1
+      WHERE c.children_leader_id = ? AND c.is_active = 1
     `;
     const params = [childrenLeader.id];
 
@@ -145,7 +145,7 @@ router.get('/children/by-class/:classId', async (req, res) => {
       SELECT c.*, cl.name as class_name
       FROM children c
       LEFT JOIN children_classes cl ON c.class_id = cl.id
-      WHERE c.leader_id = ? AND c.class_id = ? AND c.is_active = 1
+      WHERE c.children_leader_id = ? AND c.class_id = ? AND c.is_active = 1
       ORDER BY c.full_name
     `, [childrenLeader.id, classId]);
     res.json(children);
@@ -180,7 +180,7 @@ router.get('/attendance', async (req, res) => {
       FROM children_attendance ca
       JOIN children c ON ca.child_id = c.id
       LEFT JOIN children_classes cl ON ca.class_id = cl.id
-      WHERE c.leader_id = ? AND ca.date = ?
+      WHERE c.children_leader_id = ? AND ca.date = ?
       ${age_group ? 'AND c.age_group = ?' : ''}
       ORDER BY cl.name, c.full_name
     `, age_group ? [childrenLeader.id, date, age_group] : [childrenLeader.id, date]);
@@ -189,7 +189,7 @@ router.get('/attendance', async (req, res) => {
       SELECT c.id, c.full_name, c.date_of_birth, c.gender, c.age_group, c.class_id, cl.name as class_name
       FROM children c
       LEFT JOIN children_classes cl ON c.class_id = cl.id
-      WHERE c.leader_id = ? AND c.is_active = 1
+      WHERE c.children_leader_id = ? AND c.is_active = 1
     `;
     const childrenParams = [childrenLeader.id];
     if (age_group) {
@@ -229,7 +229,7 @@ router.post('/attendance', async (req, res) => {
         if (!child_id || !status) continue;
 
         // Verify child belongs to this leader
-        const child = await get('SELECT id FROM children WHERE id = ? AND leader_id = ?', [child_id, leaderId]);
+        const child = await get('SELECT id FROM children WHERE id = ? AND children_leader_id = ?', [child_id, leaderId]);
         if (!child) continue;
 
         const classId = class_id || child.class_id;
@@ -307,10 +307,10 @@ router.get('/trends', async (req, res) => {
         SUM(CASE WHEN ca.status = 'late' THEN 1 ELSE 0 END) as late_count
       FROM children_attendance ca
       JOIN children c ON ca.child_id = c.id
-      WHERE c.leader_id = ? AND ca.date >= ?
-      GROUP BY DATE(ca.date)
-      ORDER BY date DESC
-    `, [childrenLeader.id, startDate]);
+        WHERE c.children_leader_id = ? AND ca.date >= ?
+        GROUP BY DATE(ca.date)
+        ORDER BY date DESC
+      `, [childrenLeader.id, startDate]);
 
     res.json(trends);
   } catch (error) {
