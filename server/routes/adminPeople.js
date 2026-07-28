@@ -997,11 +997,11 @@ router.post('/children-leaders', async (req, res) => {
       password: rawPassword
     });
   } catch (error) {
-    if (error.message.includes('UNIQUE')) {
+    console.error('Create children leader error details:', error.message, error.stack);
+    if (error.message.includes('UNIQUE') || error.message.includes('unique')) {
       return res.status(400).json({ error: 'Username already taken' });
     }
-    console.error('Create children leader error:', error);
-    res.status(500).json({ error: 'Failed to create children leader' });
+    res.status(500).json({ error: error.message });
   }
 });
 

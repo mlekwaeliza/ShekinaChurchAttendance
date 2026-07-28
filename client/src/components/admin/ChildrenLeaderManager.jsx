@@ -238,7 +238,8 @@ export default function ChildrenLeaderManager({ showMessage }) {
         showMessage(editingLeader ? 'Leader updated successfully' : 'Leader created successfully');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to save leader');
+      const msg = err.response?.data?.error || err.message || 'Failed to save leader';
+      setError(msg);
     } finally {
       setSaving(false);
     }
