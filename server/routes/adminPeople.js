@@ -963,7 +963,26 @@ router.post('/children-leaders', async (req, res) => {
     }
     const existingUser = await queries.findUserByUsername(username);
     if (existingUser) {
-      return res.status(400).json({ error: 'Username already taken' });
+      if (existingUser.children_leader_id) {
+        return res.status(400).json({ error: 'This user is already a children leader' });
+      }
+      // User exists but is not yet a children leader — reassign them
+      await transaction(async (tx) => {
+        await tx.run('UPDATE users SET role = ? WHERE id = ?', ['children_leader', existingUser.id]);
+        await tx.run(
+          'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
+          [existingUser.id, phone || null, email || null, is_head ? 1 : 0]
+        );
+      });
+      invalidate('admin-');
+      invalidate('admin-children-');
+      invalidate('admin-children-leaders');
+      return res.json({
+        message: 'Children leader created successfully (reassigned existing user)',
+        userId: existingUser.id,
+        username,
+        password: 'Use the password they already set or reset it below'
+      });
     }
 
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
