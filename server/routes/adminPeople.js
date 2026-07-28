@@ -900,19 +900,21 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
 // GET children's ministry leaders list (for admin management)
 router.get('/children-leaders', async (req, res) => {
   try {
-    const childrenLeaders = await withCache('admin-children-leaders', 300000, () => new Promise((resolve, reject) => {
+    const childrenLeaders = await withCache('admin-children-leaders', 10000, () => new Promise((resolve, reject) => {
+      console.log('[children-leaders GET] Querying database for children leaders');
       db.all(`
         SELECT cl.id, cl.user_id, u.username, u.full_name, u.email, u.profile_picture, cl.phone, cl.email as leader_email, cl.is_head, cl.is_active
         FROM children_leaders cl
         JOIN users u ON cl.user_id = u.id
         ORDER BY u.full_name
       `, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
+        if (err) { console.error('[children-leaders GET] db.all error:', err.message); reject(err); }
+        else { console.log('[children-leaders GET] Found', rows.length, 'leaders'); resolve(rows); }
       });
     }));
     res.json(childrenLeaders);
   } catch (error) {
+    console.error('Fetch children leaders error:', error);
     res.status(500).json({ error: 'Failed to fetch children leaders' });
   }
 });
