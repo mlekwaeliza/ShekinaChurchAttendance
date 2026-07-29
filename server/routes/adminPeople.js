@@ -577,7 +577,11 @@ router.post('/leaders', async (req, res) => {
         'INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)',
         [username, placeholderHash, 'leader', full_name, null]
       );
-      const insertedUserId = userResult.lastID;
+      let insertedUserId = userResult?.lastID || userResult?.insertId || userResult?.id;
+      if (!insertedUserId) {
+        const uRow = await tx.get('SELECT id FROM users WHERE username = ?', [username]);
+        insertedUserId = uRow?.id;
+      }
       await tx.run(
         'INSERT INTO leaders (user_id, section_id, phone, email, is_head) VALUES (?, ?, ?, ?, ?)',
         [insertedUserId, section_id, phone, email, is_head ? 1 : 0]
@@ -901,12 +905,74 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
 // GET children's ministry leaders list (for admin management)
 router.get('/children-leaders', async (req, res) => {
   try {
+    // Diagnostic: first check raw children_leaders count
+    const rawCount = await all(`SELECT COUNT(*) as cnt FROM children_leaders`);
+    const rawRows = await all(`SELECT cl.id, cl.user_id, cl.is_head, cl.is_active FROM children_leaders cl LIMIT 10`);
+    console.log(`[children-leaders-diag] Raw count: ${rawCount?.[0]?.cnt || 0}, rows:`, JSON.stringify(rawRows));
+
+    // Diagnostic: check users table
+    const userCount = await all(`SELECT COUNT(*) as cnt FROM users WHERE role = 'children_leader'`);
+    console.log(`[children-leaders-diag] Users with role children_leader: ${userCount?.[0]?.cnt || 0}`);
+
+    // Auto-repair: users with role='children_leader' but no children_leaders row
+    const missingLeaders = await all(`
+      SELECT u.id, u.username, u.full_name
+      FROM users u
+      LEFT JOIN children_leaders cl ON cl.user_id = u.id
+      WHERE u.role = 'children_leader' AND cl.id IS NULL
+    `);
+    if (missingLeaders && missingLeaders.length > 0) {
+      console.log(`[children-leaders-diag] Found ${missingLeaders.length} users with role children_leader but no children_leaders row — auto-creating`);
+      for (const user of missingLeaders) {
+        try {
+          await run(
+            'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, 0)',
+            [user.id, null, null]
+          );
+          console.log(`[children-leaders-diag] Auto-created children_leaders row for user_id=${user.id} (${user.username})`);
+        } catch (insErr) {
+          console.warn(`[children-leaders-diag] Failed to auto-create for user_id=${user.id}:`, insErr.message);
+        }
+      }
+    }
+
     const childrenLeaders = await all(`
       SELECT cl.id, cl.user_id, u.username, u.full_name, u.email, u.profile_picture, cl.phone, cl.email as leader_email, cl.is_head, cl.is_active
       FROM children_leaders cl
       JOIN users u ON cl.user_id = u.id
       ORDER BY u.full_name
     `);
+    console.log(`[children-leaders-diag] JOIN result count: ${childrenLeaders?.length || 0}`);
+
+    // If JOIN returned empty but raw data exists, include diagnostic in response
+    const rawCnt = rawCount?.[0]?.cnt || 0;
+    if (rawCnt > 0 && (!childrenLeaders || childrenLeaders.length === 0)) {
+      // Orphaned or mislinked records — try a LEFT JOIN to see what's there
+      const orphaned = await all(`
+        SELECT cl.id, cl.user_id, cl.is_head, cl.is_active, u.id as matched_user_id
+        FROM children_leaders cl
+        LEFT JOIN users u ON cl.user_id = u.id
+        ORDER BY cl.id
+      `);
+      console.log(`[children-leaders-diag] Orphaned diagnostic:`, JSON.stringify(orphaned));
+      // Auto-repair: delete orphaned records (user_id has no matching user)
+      for (const row of orphaned) {
+        if (!row.matched_user_id) {
+          await run('DELETE FROM children_leaders WHERE id = ?', [row.id]);
+          console.log(`[children-leaders-diag] Auto-deleted orphaned children_leaders id=${row.id} user_id=${row.user_id}`);
+        }
+      }
+      // Re-query after cleanup
+      const cleanLeaders = await all(`
+        SELECT cl.id, cl.user_id, u.username, u.full_name, u.email, u.profile_picture, cl.phone, cl.email as leader_email, cl.is_head, cl.is_active
+        FROM children_leaders cl
+        JOIN users u ON cl.user_id = u.id
+        ORDER BY u.full_name
+      `);
+      console.log(`[children-leaders-diag] After cleanup JOIN result count: ${cleanLeaders?.length || 0}`);
+      return res.json(cleanLeaders);
+    }
+
     res.json(childrenLeaders);
   } catch (error) {
     console.error('Fetch children leaders error:', error);
@@ -995,7 +1061,11 @@ router.post('/children-leaders', async (req, res) => {
         'INSERT INTO users (username, password_hash, role, full_name, profile_picture) VALUES (?, ?, ?, ?, ?)',
         [username, passwordHash, 'children_leader', full_name, null]
       );
-      const insertedUserId = userResult.lastID;
+      let insertedUserId = userResult?.lastID || userResult?.insertId || userResult?.id;
+      if (!insertedUserId) {
+        const uRow = await tx.get('SELECT id FROM users WHERE username = ?', [username]);
+        insertedUserId = uRow?.id;
+      }
       await tx.run(
         'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
         [insertedUserId, phone || null, email || null, is_head ? 1 : 0]
@@ -1097,12 +1167,29 @@ router.post('/children-leaders/:id/reset-password', async (req, res) => {
 // GET children's ministry leaders list (for admin management)
 router.get('/leaders', async (req, res) => {
   try {
+    // Auto-repair users with role='leader' missing a row in leaders table
+    const missingLeaders = await all(`
+      SELECT u.id, u.username, u.full_name
+      FROM users u
+      LEFT JOIN leaders l ON l.user_id = u.id
+      WHERE u.role = 'leader' AND l.id IS NULL
+    `);
+    if (missingLeaders && missingLeaders.length > 0) {
+      const defaultSection = await get('SELECT id FROM sections ORDER BY id ASC LIMIT 1');
+      const sectionId = defaultSection?.id || 1;
+      for (const user of missingLeaders) {
+        try {
+          await run('INSERT INTO leaders (user_id, section_id, is_head, is_active) VALUES (?, ?, 0, 1)', [user.id, sectionId]);
+        } catch (_) {}
+      }
+    }
+
     const leaders = await withCache('admin-leaders', 300000, () => new Promise((resolve, reject) => {
       db.all(`
-        SELECT l.id, l.section_id, u.username, u.full_name, s.name as section_name, l.phone, l.email, l.is_head
+        SELECT l.id, l.section_id, u.username, u.full_name, COALESCE(s.name, 'Unassigned') as section_name, l.phone, l.email, l.is_head
         FROM leaders l
         JOIN users u ON l.user_id = u.id
-        JOIN sections s ON l.section_id = s.id
+        LEFT JOIN sections s ON l.section_id = s.id
         ORDER BY s.name, u.full_name
       `, (err, rows) => {
         if (err) reject(err);

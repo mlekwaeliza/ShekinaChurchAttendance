@@ -214,7 +214,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.full_name.trim()) { setError('Full name is required'); return; }
-    if (!editingLeader && !selectedMember) { setError('Please select a member from the list'); return; }
+    if (!editingLeader && !formData.username.trim()) { setError('Username is required'); return; }
     setSaving(true); setError('');
     try {
       let res;
@@ -555,7 +555,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
               {!editingLeader && (
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Select Member <span className="text-rose-500">*</span>
+                    Select Member <span className="text-slate-400 font-normal">(Optional Auto-fill)</span>
                   </label>
                   <MemberSearchInput
                     members={availableMembers}
@@ -565,19 +565,18 @@ export default function ChildrenLeaderManager({ showMessage }) {
                 </div>
               )}
 
-              {editingLeader && (
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Full Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    className="input"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    required
-                  />
-                </div>
-              )}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  Full Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  className="input"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  placeholder="e.g. Jane Doe"
+                  required
+                />
+              </div>
 
               {!editingLeader && (
                 <div>

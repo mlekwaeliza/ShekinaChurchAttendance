@@ -2398,6 +2398,28 @@ async function createChildrensMinistryTables() {
     await run('CREATE INDEX IF NOT EXISTS idx_children_submission_log_date ON children_submission_log(date)');
     await run('CREATE INDEX IF NOT EXISTS idx_children_leader ON children(leader_id)');
     await run('CREATE INDEX IF NOT EXISTS idx_children_children_leader ON children(children_leader_id)');
+
+    // Repair orphaned children_leaders records on PostgreSQL/Supabase.
+    // Before the user_id fix, existing users were reassigned as children leaders
+    // without a matching children_leaders row with correct user_id = users.id.
+    // This migration finds such orphaned records and removes them so they do not
+    // silently hide from the admin children-leaders list.
+    try {
+      const orphaned = await all(
+        `SELECT cl.id, cl.user_id FROM children_leaders cl
+         LEFT JOIN users u ON cl.user_id = u.id
+         WHERE u.id IS NULL`
+      );
+      if (orphaned && orphaned.length > 0) {
+        for (const row of orphaned) {
+          await run('DELETE FROM children_leaders WHERE id = ?', [row.id]);
+          console.log(`[children-leaders-repair] Removed orphaned children_leaders row id=${row.id} (user_id=${row.user_id} does not exist in users)`);
+        }
+        console.log(`[children-leaders-repair] Removed ${orphaned.length} orphaned children_leaders record(s)`);
+      }
+    } catch (repairErr) {
+      console.warn('[children-leaders-repair] Skipped:', repairErr.message);
+    }
   } catch (e) {
     console.warn('Children\'s Ministry tables migration skipped (non-fatal):', e.message);
   }
@@ -4478,11 +4500,11 @@ const queries = {
 
   // Leader queries (additional)
   getAllLeaders: () => all(`
-    SELECT l.*, u.username, u.full_name, l.email as user_email, s.name as section_name
+    SELECT l.*, u.username, u.full_name, l.email as user_email, COALESCE(s.name, 'Unassigned') as section_name
     FROM leaders l
     JOIN users u ON l.user_id = u.id
-    JOIN sections s ON l.section_id = s.id
-    WHERE l.is_active = 1
+    LEFT JOIN sections s ON l.section_id = s.id
+    WHERE COALESCE(l.is_active, 1) = 1
     ORDER BY s.name, u.full_name
   `),
 
