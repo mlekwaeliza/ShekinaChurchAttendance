@@ -2063,7 +2063,7 @@ async function migrateUsersRoleConstraint() {
       console.log('PostgreSQL users role constraint migrated.');
     } else {
       const row = await get(`SELECT sql FROM sqlite_master WHERE type='table' AND name='users'`);
-      if (row && row.sql && (!row.sql.includes('accountant') || !row.sql.includes('children_leader'))) {
+      if (row && row.sql && (!row.sql.includes('children_leader') || !row.sql.includes('accountant'))) {
         await run(`PRAGMA foreign_keys=OFF`);
         await run(`BEGIN TRANSACTION`);
         await run(`CREATE TABLE users_new (
