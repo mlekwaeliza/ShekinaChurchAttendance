@@ -937,7 +937,7 @@ router.get('/children-leaders', async (req, res) => {
     }
 
     const childrenLeaders = await all(`
-      SELECT cl.id, cl.user_id, u.username, u.full_name, u.email, u.profile_picture, cl.phone, cl.email as leader_email, cl.is_head, cl.is_active
+      SELECT cl.id, cl.user_id, u.username, u.full_name, u.profile_picture, cl.phone, cl.email as leader_email, cl.is_head, cl.is_active
       FROM children_leaders cl
       JOIN users u ON cl.user_id = u.id
       ORDER BY u.full_name
@@ -964,7 +964,7 @@ router.get('/children-leaders', async (req, res) => {
       }
       // Re-query after cleanup
       const cleanLeaders = await all(`
-        SELECT cl.id, cl.user_id, u.username, u.full_name, u.email, u.profile_picture, cl.phone, cl.email as leader_email, cl.is_head, cl.is_active
+        SELECT cl.id, cl.user_id, u.username, u.full_name, u.profile_picture, cl.phone, cl.email as leader_email, cl.is_head, cl.is_active
         FROM children_leaders cl
         JOIN users u ON cl.user_id = u.id
         ORDER BY u.full_name
@@ -986,7 +986,7 @@ router.get('/members-for-children-leader', async (req, res) => {
     const { q } = req.query;
     const usedUserIds = `(SELECT user_id FROM children_leaders)`;
     let sql = `
-      SELECT u.id, u.username, u.full_name, u.email, u.profile_picture, m.phone
+      SELECT u.id, u.username, u.full_name, u.profile_picture, m.phone
       FROM users u
       LEFT JOIN members m ON m.user_id = u.id
       WHERE u.id NOT IN ${usedUserIds}
@@ -996,9 +996,9 @@ router.get('/members-for-children-leader', async (req, res) => {
     if (q && q.trim()) {
       const useIlike = String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
       const op = useIlike ? 'ILIKE' : 'LIKE';
-      sql += ` AND (u.full_name ${op} ? OR u.username ${op} ? OR u.email ${op} ?)`;
+      sql += ` AND (u.full_name ${op} ? OR u.username ${op} ?)`;
       const term = `%${q.trim()}%`;
-      params.push(term, term, term);
+      params.push(term, term);
     }
     sql += ` ORDER BY u.full_name LIMIT 50`;
     const rows = await new Promise((resolve, reject) => {
