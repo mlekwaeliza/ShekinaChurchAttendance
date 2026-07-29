@@ -464,7 +464,7 @@ const AdminDashboard = () => {
               <h3 className="text-lg font-bold text-slate-900 mb-2">Remove Leader?</h3>
               <p className="text-sm text-slate-500 mb-8">
                 Are you sure you want to remove <strong className="text-slate-800">{data.deletingLeader.full_name}</strong>?
-                <br /><small className="text-rose-600 font-medium mt-1 inline-block">This will also deactivate their login account.</small>
+                <br /><small className="text-amber-600 font-medium mt-1 inline-block">Their login account will be kept but their children leader role will be removed.</small>
               </p>
               <div className="flex gap-3">
                 <button

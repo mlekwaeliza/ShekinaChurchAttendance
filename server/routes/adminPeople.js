@@ -1116,20 +1116,17 @@ router.put('/children-leaders/:id', async (req, res) => {
 router.delete('/children-leaders/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { confirm } = req.body;
-    if (confirm !== 'DELETE') {
-      return res.status(400).json({ error: 'Confirmation required: send { confirm: "DELETE" }' });
-    }
     const leader = await get('SELECT user_id FROM children_leaders WHERE id = ?', [id]);
     if (!leader) return res.status(404).json({ error: 'Children leader not found' });
 
     await transaction(async (tx) => {
+      // Remove from children_leaders — revert user role to 'accountant' (preserve login account)
       await tx.run('DELETE FROM children_leaders WHERE id = ?', [id]);
-      await tx.run('DELETE FROM users WHERE id = ?', [leader.user_id]);
+      await tx.run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [leader.user_id]);
     });
     invalidate('admin-');
     invalidate('admin-children-');
-    res.json({ message: 'Children leader deleted' });
+    res.json({ message: 'Children leader removed. Their login account has been kept with a standard role.' });
   } catch (error) {
     console.error('Delete children leader error:', error);
     res.status(500).json({ error: 'Failed to delete children leader' });

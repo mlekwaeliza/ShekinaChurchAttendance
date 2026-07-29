@@ -247,7 +247,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
   const handleDelete = async (leader) => {
     try {
-      await adminAPI.childrenLeaders.deleteLeader(leader.id, { confirm: 'DELETE' });
+      await adminAPI.childrenLeaders.deleteLeader(leader.id);
       showMessage('Leader deleted successfully');
       setDeleteConfirm(null);
       loadLeaders();
