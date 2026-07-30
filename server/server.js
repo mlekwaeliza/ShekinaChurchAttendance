@@ -272,9 +272,9 @@ app.use(require('compression')({
 // (including the global error handler and the audit logger).
 app.use(require('./middleware/requestId').requestId());
 
-// Body parsing
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Body parsing – 10 mb limit to support base64-encoded profile pictures
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Cookie parser (needed for CSRF token validation)
 app.use(cookieParser());
