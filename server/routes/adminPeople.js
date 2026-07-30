@@ -226,13 +226,50 @@ router.put('/members/bulk-update', async (req, res) => {
   }
 });
 
+// POST upload member photo
+const photoStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = path.join(__dirname, '../uploads/profiles/');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = crypto.randomBytes(16).toString('hex');
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, 'member-' + (req.params.id || Date.now()) + '-' + uniqueSuffix + ext);
+  }
+});
+const uploadPhoto = multer({
+  storage: photoStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype && file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  }
+});
+
+router.post('/members/:id/photo', uploadPhoto.single('photo'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Image file is required' });
+    }
+    const photoUrl = `/uploads/profiles/${req.file.filename}`;
+    await queries.updateMemberPhoto(req.params.id, photoUrl);
+    invalidate('admin-');
+    res.json({ message: 'Profile photo updated successfully', profile_picture: photoUrl });
+  } catch (error) {
+    console.error('Member photo upload error:', error);
+    res.status(500).json({ error: error.message || 'Failed to upload member photo' });
+  }
+});
+
 // PUT update member
 router.put('/members/:id', async (req, res) => {
   try {
     const { 
       full_name, phone, email, gender, marital_status, occupation, age_group, 
       date_of_birth, show_age_to_leaders, hide_from_birthday_list, 
-      opt_out_services, section_id, leader_id
+      opt_out_services, section_id, leader_id, profile_picture
     } = req.body;
     const { id } = req.params;
 
@@ -264,7 +301,8 @@ router.put('/members/:id', async (req, res) => {
       req.body.address || null,
       sectionId,
       leaderId,
-      id
+      id,
+      profile_picture || null
     );
 
     await syncChurchMemberHomeCell(id, req.body.home_cell_id || null, req.session.userId);
@@ -1185,7 +1223,7 @@ router.get('/leaders', async (req, res) => {
       for (const user of missingLeaders) {
         try {
           await run('INSERT INTO leaders (user_id, section_id, is_head, is_active) VALUES (?, ?, 0, 1)', [user.id, sectionId]);
-        } catch (_) {}
+        } catch (_) { void 0; }
       }
     }
 
@@ -1409,7 +1447,8 @@ router.post('/members', async (req, res) => {
       show_age_to_leaders ? 1 : 0, 
       hide_from_birthday_list ? 1 : 0,
       JSON.stringify(req.body.opt_out_services || []),
-      address || null
+      address || null,
+      req.body.profile_picture || null
     );
 
     let memberId = created.lastID;

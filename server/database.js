@@ -96,6 +96,7 @@ db.serialize(() => {
       show_age_to_leaders INTEGER DEFAULT 0,
       hide_from_birthday_list INTEGER DEFAULT 0,
       opt_out_services TEXT DEFAULT '[]',
+      profile_picture TEXT,
       visitor_date DATE,
       status TEXT DEFAULT 'Active',
       flags TEXT DEFAULT '[]',
@@ -632,6 +633,13 @@ db.serialize(() => {
 
   // Migration: Add profile_picture to users if it doesn't exist
   db.run(`ALTER TABLE users ADD COLUMN profile_picture TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.log('Migration note:', err.message);
+    }
+  });
+
+  // Migration: Add profile_picture to members if it doesn't exist
+  db.run(`ALTER TABLE members ADD COLUMN profile_picture TEXT`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
       console.log('Migration note:', err.message);
     }
@@ -2940,17 +2948,19 @@ const queries = {
       ORDER BY s.name, m.full_name LIMIT 1000
     `, likePatterns);
   },
-  createMember: (membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob = null, showAge = 0, hideBday = 0, optOuts = '[]', address = null) =>
+  createMember: (membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob = null, showAge = 0, hideBday = 0, optOuts = '[]', address = null, profilePicture = null) =>
     run(`
-      INSERT INTO members (membership_id, full_name, section_id, leader_id, phone, email, gender, marital_status, occupation, age_group, date_of_birth, show_age_to_leaders, hide_from_birthday_list, opt_out_services, address)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address]),
-  updateMember: (fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId) =>
+      INSERT INTO members (membership_id, full_name, section_id, leader_id, phone, email, gender, marital_status, occupation, age_group, date_of_birth, show_age_to_leaders, hide_from_birthday_list, opt_out_services, address, profile_picture)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, profilePicture]),
+  updateMember: (fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId, profilePicture = null) =>
     run(`
       UPDATE members
-      SET full_name = ?, phone = ?, email = ?, gender = ?, marital_status = ?, occupation = ?, age_group = ?, date_of_birth = ?, show_age_to_leaders = ?, hide_from_birthday_list = ?, opt_out_services = ?, address = ?, section_id = ?, leader_id = ?, updated_at = CURRENT_TIMESTAMP
+      SET full_name = ?, phone = ?, email = ?, gender = ?, marital_status = ?, occupation = ?, age_group = ?, date_of_birth = ?, show_age_to_leaders = ?, hide_from_birthday_list = ?, opt_out_services = ?, address = ?, section_id = ?, leader_id = ?, profile_picture = COALESCE(?, profile_picture), updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId]),
+    `, [fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, profilePicture, memberId]),
+  updateMemberPhoto: (memberId, photoUrl) =>
+    run('UPDATE members SET profile_picture = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [photoUrl, memberId]),
   deleteMember: (id) => run('DELETE FROM members WHERE id = ?', [id]),
   getMemberByMembershipId: (membershipId) => get('SELECT * FROM members WHERE membership_id = ?', [membershipId]),
   findActiveMemberByName: (fullName, excludeMemberId = null) => get(`

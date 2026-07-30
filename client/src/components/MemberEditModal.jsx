@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { adminAPI } from '../services/api';
-import { History, User, Calendar, Sparkles, ChevronDown, RotateCcw, Users } from 'lucide-react';
+import { History, User, Calendar, Sparkles, ChevronDown, RotateCcw, Users, Camera, Upload, X } from 'lucide-react';
 import { useModalA11y } from '../hooks/useModalA11y';
 import { handlePhoneChange, capitalizeName } from '../utils/phone';
 
@@ -20,6 +20,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
     home_cell_id: '',
     date_of_birth: '',
     address: '',
+    profile_picture: '',
     show_age_to_leaders: false,
     hide_from_birthday_list: false,
     opt_out_services: []
@@ -41,7 +42,22 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
   const [auditLoading, setAuditLoading] = useState(false);
   const [showHistory, setShowHistory]   = useState(false);
   const dialogRef = useRef(null);
+  const fileInputRef = useRef(null);
   useModalA11y(dialogRef, isOpen, onClose);
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Photo must be smaller than 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFormData(prev => ({ ...prev, profile_picture: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
 
   // ── On open ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -62,6 +78,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
         home_cell_id:  member.home_cell_id || '',
         date_of_birth: member.date_of_birth || '',
         address:       member.address || '',
+        profile_picture: member.profile_picture || '',
         show_age_to_leaders:    !!member.show_age_to_leaders,
         hide_from_birthday_list: !!member.hide_from_birthday_list,
         opt_out_services: member.opt_out_services ? JSON.parse(member.opt_out_services) : []
@@ -272,6 +289,57 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               <div className="w-1.5 h-1.5 rounded-full bg-primary-500"></div>
               Identity &amp; Assignment
             </h3>
+
+            {/* Profile Photo Uploader */}
+            <div className="flex items-center gap-4 mb-5 p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+              <div className="relative group w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xl font-black shrink-0 overflow-hidden shadow-sm border-2 border-white dark:border-slate-700">
+                {formData.profile_picture ? (
+                  <img src={formData.profile_picture} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span>{(formData.full_name || '').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || <User className="w-7 h-7 opacity-80" />}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Change photo"
+                >
+                  <Camera className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Member Profile Photo</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Visible to section leaders when taking attendance</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 hover:bg-primary-100 transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    {formData.profile_picture ? 'Change Photo' : 'Upload Photo'}
+                  </button>
+                  {formData.profile_picture && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, profile_picture: '' }))}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoSelect}
+                className="hidden"
+              />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
               {/* Membership ID */}

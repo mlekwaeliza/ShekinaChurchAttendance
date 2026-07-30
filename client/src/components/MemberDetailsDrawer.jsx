@@ -134,8 +134,12 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
           
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white text-2xl font-bold shadow-lg shrink-0">
-                {initials}
+              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white text-2xl font-bold shadow-lg shrink-0 overflow-hidden">
+                {member.profile_picture ? (
+                  <img src={member.profile_picture} alt={member.full_name} className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
               </div>
               <div className="min-w-0">
                 <h2 className="text-xl md:text-2xl font-bold leading-tight truncate">{member.full_name}</h2>

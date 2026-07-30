@@ -100,14 +100,24 @@ const TakeAttendance = ({
         )}
 
         <div className="mb-4 relative z-10 pt-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+          {/* Avatar */}
+          <div className="flex justify-center mb-3">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xl font-black shadow-md border-2 border-white dark:border-slate-700 shrink-0">
+              {member.profile_picture ? (
+                <img src={member.profile_picture} alt={member.full_name} className="w-full h-full object-cover" />
+              ) : (
+                <span>{member.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}</span>
+              )}
+            </div>
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5 text-center">
             ID: {member.membership_id}
           </p>
-          <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
+          <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 text-center leading-tight">
             {member.full_name}
           </h4>
           {member.phone && (
-            <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mt-0.5">
+            <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mt-0.5 text-center">
               {member.phone}
             </p>
           )}

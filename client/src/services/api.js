@@ -117,6 +117,7 @@ export const adminAPI = {
   deleteLeader: (id) => api.delete(`/admin/leaders/${id}`),
   resetLeaderPassword: (leaderId) => api.post(`/admin/leaders/${leaderId}/reset-password`),
   createMember: (data) => api.post('/admin/members', data),
+  uploadMemberPhoto: (id, formData) => api.post(`/admin/members/${id}/photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getSuggestAssignment: () => api.get('/admin/members/suggest-assignment'),
   getNextMembershipId: () => api.get('/admin/members/next-id'),
   renumberMembershipIds: () => api.post('/admin/members/renumber-ids'),

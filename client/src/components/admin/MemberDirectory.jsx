@@ -822,9 +822,13 @@ const MemberDirectory = ({
                         {/* Member */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
-                              {getInitials(member.full_name)}
-                            </div>
+                        <div className={`w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                          {member.profile_picture ? (
+                            <img src={member.profile_picture} alt={member.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            getInitials(member.full_name)
+                          )}
+                        </div>
                             <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate max-w-[160px]">
                               {member.full_name}
                             </span>
