@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { fdate, fdatetime } from '../utils/date';
 import Badge from './ui/Badge';
 import WeeklyAttendanceMatrix from './admin/WeeklyAttendanceMatrix';
+import PhotoViewer from './PhotoViewer';
 
 const avatarColors = [
   'from-violet-500 to-purple-600',
@@ -28,6 +29,7 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
   const [auditLog, setAuditLog] = useState([]);
   const [contributions, setContributions] = useState([]);
   const [error, setError] = useState(null);
+  const [viewingPhoto, setViewingPhoto] = useState(false);
 
   const isAdmin = user?.role === 'admin' || user?.role === 'pastor';
   const apiGroup = isAdmin ? adminAPI : leaderAPI;
@@ -116,7 +118,16 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
     ...(isAdmin ? [{ id: 'audit', label: 'Audit Trail', icon: Shield }] : [])
   ];
 
-  return createPortal(
+  return (
+    <>
+    {viewingPhoto && member.profile_picture && (
+      <PhotoViewer
+        src={member.profile_picture}
+        alt={member.full_name}
+        onClose={() => setViewingPhoto(false)}
+      />
+    )}
+    {createPortal(
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
       {/* Overlay */}
       <div 
@@ -134,7 +145,11 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
           
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white text-2xl font-bold shadow-lg shrink-0 overflow-hidden">
+              <div
+                className={`w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white text-2xl font-bold shadow-lg shrink-0 overflow-hidden ${member.profile_picture ? 'cursor-pointer hover:ring-2 hover:ring-white/60 transition-all' : ''}`}
+                onClick={() => member.profile_picture && setViewingPhoto(true)}
+                title={member.profile_picture ? 'Click to view full photo' : undefined}
+              >
                 {member.profile_picture ? (
                   <img src={member.profile_picture} alt={member.full_name} className="w-full h-full object-cover" />
                 ) : (
@@ -610,6 +625,8 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
       </div>
     </div>,
     document.body
+    )}
+    </>
   );
 };
 

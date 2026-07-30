@@ -4,6 +4,7 @@ import { adminAPI } from '../services/api';
 import { History, User, Calendar, Sparkles, ChevronDown, RotateCcw, Users, Camera, Upload, X } from 'lucide-react';
 import { useModalA11y } from '../hooks/useModalA11y';
 import { handlePhoneChange, capitalizeName } from '../utils/phone';
+import PhotoViewer from './PhotoViewer';
 
 const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], isOpen, onClose, onSave }) => {
   const [formData, setFormData] = useState({
@@ -41,6 +42,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
   const [auditHistory, setAuditHistory] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [showHistory, setShowHistory]   = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState(false);
   const dialogRef = useRef(null);
   const fileInputRef = useRef(null);
   useModalA11y(dialogRef, isOpen, onClose);
@@ -321,14 +323,23 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                     {formData.profile_picture ? 'Change Photo' : 'Upload Photo'}
                   </button>
                   {formData.profile_picture && (
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, profile_picture: '' }))}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                      Remove
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setViewingPhoto(true)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        View Photo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, profile_picture: '' }))}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Remove
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -844,6 +855,14 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
           </div>
         </form>
       </div>
+
+      {viewingPhoto && formData.profile_picture && (
+        <PhotoViewer
+          src={formData.profile_picture}
+          alt={formData.full_name || 'Member Photo'}
+          onClose={() => setViewingPhoto(false)}
+        />
+      )}
     </div>,
     document.body
   );
