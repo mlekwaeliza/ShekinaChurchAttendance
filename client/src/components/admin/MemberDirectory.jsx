@@ -622,6 +622,7 @@ const MemberDirectory = ({
             Clear
           </button>
         </div>
+      )}
       {genderFilter !== 'all' && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-700 dark:border-cyan-800/60 dark:bg-cyan-900/20 dark:text-cyan-300">
           <span className="font-semibold">Filtered by gender:</span>
