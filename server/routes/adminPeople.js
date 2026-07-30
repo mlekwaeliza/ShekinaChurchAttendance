@@ -269,7 +269,8 @@ router.put('/members/:id', async (req, res) => {
     const { 
       full_name, phone, email, gender, marital_status, occupation, age_group, 
       date_of_birth, show_age_to_leaders, hide_from_birthday_list, 
-      opt_out_services, section_id, leader_id, profile_picture, education_level
+      opt_out_services, section_id, leader_id, profile_picture, education_level,
+      secondary_phone
     } = req.body;
     const { id } = req.params;
 
@@ -303,7 +304,8 @@ router.put('/members/:id', async (req, res) => {
       leaderId,
       id,
       profile_picture || null,
-      education_level || null
+      education_level || null,
+      secondary_phone || null
     );
 
     await syncChurchMemberHomeCell(id, req.body.home_cell_id || null, req.session.userId);
@@ -1397,7 +1399,8 @@ router.post('/members', async (req, res) => {
     const { 
       membership_id, full_name, section_id, leader_id, 
       phone, email, gender, marital_status, occupation, age_group, 
-      date_of_birth, show_age_to_leaders, hide_from_birthday_list, address, education_level 
+      date_of_birth, show_age_to_leaders, hide_from_birthday_list, address, education_level,
+      secondary_phone
     } = req.body;
     
     if (!membership_id || !full_name || !section_id || !leader_id) {
@@ -1450,7 +1453,8 @@ router.post('/members', async (req, res) => {
       JSON.stringify(req.body.opt_out_services || []),
       address || null,
       req.body.profile_picture || null,
-      education_level || null
+      education_level || null,
+      secondary_phone || null
     );
 
     let memberId = created.lastID;

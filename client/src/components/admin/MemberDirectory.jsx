@@ -268,6 +268,7 @@ const MemberDirectory = ({
           m.full_name?.toLowerCase().includes(term) ||
           m.membership_id?.toLowerCase().includes(term) ||
           m.phone?.toLowerCase().includes(term) ||
+          m.secondary_phone?.toLowerCase().includes(term) ||
           m.email?.toLowerCase().includes(term) ||
           m.education_level?.toLowerCase().includes(term)
       );

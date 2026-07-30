@@ -247,7 +247,8 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <ProfileItem icon={User} label="Full Name" value={member.full_name} />
                         <ProfileItem icon={Shield} label="Membership ID" value={member.membership_id || '—'} />
-                        <ProfileItem icon={Phone} label="Phone Number" value={member.phone || '—'} isPhone />
+                        <ProfileItem icon={Phone} label="Primary Phone" value={member.phone || '—'} isPhone />
+                        <ProfileItem icon={Phone} label="Secondary Phone" value={member.secondary_phone || '—'} isPhone />
                         <ProfileItem icon={Mail} label="Email Address" value={member.email || '—'} isEmail />
                       </div>
                     </div>

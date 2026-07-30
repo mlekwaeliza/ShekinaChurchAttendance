@@ -23,6 +23,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
     address: '',
     profile_picture: '',
     education_level: '',
+    secondary_phone: '',
     show_age_to_leaders: false,
     hide_from_birthday_list: false,
     opt_out_services: []
@@ -83,6 +84,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
         address:       member.address || '',
         profile_picture: member.profile_picture || '',
         education_level: member.education_level || '',
+        secondary_phone: member.secondary_phone || '',
         show_age_to_leaders:    !!member.show_age_to_leaders,
         hide_from_birthday_list: !!member.hide_from_birthday_list,
         opt_out_services: member.opt_out_services ? JSON.parse(member.opt_out_services) : []
@@ -631,13 +633,25 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Phone</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Primary Phone</label>
                 <input
                   type="tel"
                   name="phone"
                   placeholder="+255 XXX XXX XXX"
                   value={formData.phone}
                   onChange={e => setFormData(p => ({ ...p, phone: handlePhoneChange(e.target.value) }))}
+                  className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Secondary Phone</label>
+                <input
+                  type="tel"
+                  name="secondary_phone"
+                  placeholder="+255 XXX XXX XXX"
+                  value={formData.secondary_phone}
+                  onChange={e => setFormData(p => ({ ...p, secondary_phone: handlePhoneChange(e.target.value) }))}
                   className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                 />
               </div>
