@@ -678,7 +678,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
             </div>
 
             {/* Section 4: Address */}
-            <div className="bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-100 dark:border-slate-700">
+            <div className="flex flex-col bg-slate-50 dark:bg-slate-900/40 p-5 rounded-2xl border border-slate-100 dark:border-slate-700">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-violet-500"></div>
                 Residential Address
@@ -687,8 +687,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                rows={4}
-                className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none h-full"
+                className="w-full flex-1 min-h-[110px] border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all resize-none"
                 placeholder="Enter member's residential address..."
               />
             </div>
