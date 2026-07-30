@@ -449,13 +449,13 @@ const useAdminData = () => {
     setLeaderSaving(true);
     try {
       await adminAPI.deleteLeader(deletingLeader.id);
-      showMessage(`Leader ${deletingLeader.full_name} and all associated records deleted`);
-      setDeletingLeader(null);
+      showMessage(`Leader ${deletingLeader.full_name} removed successfully`);
       loadLeaders();
-      loadCoreData(); // Members might have changed (unassigned)
+      loadCoreData();
     } catch (error) {
       showMessage(error.response?.data?.error || 'Failed to delete leader');
     } finally {
+      setDeletingLeader(null);
       setLeaderSaving(false);
     }
   }, [deletingLeader, loadLeaders, loadCoreData, showMessage]);

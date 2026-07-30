@@ -644,25 +644,32 @@ router.put('/leaders/:id', async (req, res) => {
 // DELETE leader
 router.delete('/leaders/:id', async (req, res) => {
   try {
-    // H2-fix: require typed confirmation for cascading destructive delete.
-    // Deleting a leader cascades to their members, attendance, and follow-ups.
-    if (String(req.body?.confirm || '').toUpperCase() !== 'DELETE') {
-      return res.status(400).json({
-        error: 'Confirmation required',
-        details: 'Send { "confirm": "DELETE" } in the request body to delete a leader. This action cascades to their members, attendance records, and follow-ups.'
-      });
-    }
     const { id } = req.params;
-    const db = require('../database').get;
-    const leader = await db('SELECT user_id FROM leaders WHERE id = ?', [id]);
-    if (!leader) return res.status(404).json({ error: 'Leader not found' });
+    let leader = await get('SELECT id, user_id FROM leaders WHERE id = ?', [id]);
+    
+    // If not found in main leaders table, check children_leaders table
+    if (!leader) {
+      const childLeader = await get('SELECT id, user_id FROM children_leaders WHERE id = ?', [id]);
+      if (childLeader) {
+        await run('DELETE FROM children_leaders WHERE id = ?', [id]);
+        if (childLeader.user_id) {
+          await run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [childLeader.user_id]);
+        }
+        invalidate('admin-');
+        return res.json({ message: 'Leader removed successfully' });
+      }
+      return res.status(404).json({ error: 'Leader not found' });
+    }
 
-    // Deleting the user will securely cascade delete the leader and members
-    await queries.deleteUserAndCascade(leader.user_id);
+    await run('DELETE FROM leaders WHERE id = ?', [id]);
+    if (leader.user_id) {
+      await run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [leader.user_id]);
+    }
     invalidate('admin-');
-    res.json({ message: 'Leader deleted successfully along with associated records' });
+    res.json({ message: 'Leader removed successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete leader' });
+    console.error('Delete leader error:', error);
+    res.status(500).json({ error: 'Failed to delete leader: ' + error.message });
   }
 });
 
