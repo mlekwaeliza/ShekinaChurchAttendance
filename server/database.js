@@ -1889,6 +1889,7 @@ async function ensureHomeCellSchema() {
       await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS pending_deletion_at TIMESTAMPTZ');
       await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS deletion_confirmed_at TIMESTAMPTZ');
       await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS visitor_date DATE');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS profile_picture TEXT');
       await run('CREATE INDEX IF NOT EXISTS idx_members_pending_deletion ON members(soft_deleted_at, pending_deletion_at) WHERE is_active = 0');
     } catch (e) {
       console.warn('members column migration failed (non-fatal):', e.message);
