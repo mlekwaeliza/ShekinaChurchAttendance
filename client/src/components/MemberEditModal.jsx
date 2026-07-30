@@ -22,6 +22,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
     date_of_birth: '',
     address: '',
     profile_picture: '',
+    education_level: '',
     show_age_to_leaders: false,
     hide_from_birthday_list: false,
     opt_out_services: []
@@ -81,6 +82,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
         date_of_birth: member.date_of_birth || '',
         address:       member.address || '',
         profile_picture: member.profile_picture || '',
+        education_level: member.education_level || '',
         show_age_to_leaders:    !!member.show_age_to_leaders,
         hide_from_birthday_list: !!member.hide_from_birthday_list,
         opt_out_services: member.opt_out_services ? JSON.parse(member.opt_out_services) : []
@@ -707,6 +709,25 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                   <option value="Youth">Youth</option>
                   <option value="Adult">Adult</option>
                   <option value="Senior">Senior</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Education Level</label>
+                <select
+                  name="education_level"
+                  value={formData.education_level}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
+                >
+                  <option value="">Select Level...</option>
+                  <option value="Primary">Primary</option>
+                  <option value="Secondary">Secondary</option>
+                  <option value="Certificate">Certificate</option>
+                  <option value="Diploma">Diploma</option>
+                  <option value="Degree">Degree</option>
+                  <option value="Masters">Masters</option>
+                  <option value="PhD">PhD</option>
                 </select>
               </div>
             </div>

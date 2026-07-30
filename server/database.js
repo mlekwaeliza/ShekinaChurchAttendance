@@ -1890,6 +1890,7 @@ async function ensureHomeCellSchema() {
       await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS deletion_confirmed_at TIMESTAMPTZ');
       await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS visitor_date DATE');
       await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS profile_picture TEXT');
+      await run('ALTER TABLE members ADD COLUMN IF NOT EXISTS education_level TEXT');
       await run('CREATE INDEX IF NOT EXISTS idx_members_pending_deletion ON members(soft_deleted_at, pending_deletion_at) WHERE is_active = 0');
     } catch (e) {
       console.warn('members column migration failed (non-fatal):', e.message);
@@ -2949,17 +2950,17 @@ const queries = {
       ORDER BY s.name, m.full_name LIMIT 1000
     `, likePatterns);
   },
-  createMember: (membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob = null, showAge = 0, hideBday = 0, optOuts = '[]', address = null, profilePicture = null) =>
+  createMember: (membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob = null, showAge = 0, hideBday = 0, optOuts = '[]', address = null, profilePicture = null, educationLevel = null) =>
     run(`
-      INSERT INTO members (membership_id, full_name, section_id, leader_id, phone, email, gender, marital_status, occupation, age_group, date_of_birth, show_age_to_leaders, hide_from_birthday_list, opt_out_services, address, profile_picture)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, profilePicture]),
-  updateMember: (fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId, profilePicture = null) =>
+      INSERT INTO members (membership_id, full_name, section_id, leader_id, phone, email, gender, marital_status, occupation, age_group, date_of_birth, show_age_to_leaders, hide_from_birthday_list, opt_out_services, address, profile_picture, education_level)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, profilePicture, educationLevel]),
+  updateMember: (fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, memberId, profilePicture = null, educationLevel = null) =>
     run(`
       UPDATE members
-      SET full_name = ?, phone = ?, email = ?, gender = ?, marital_status = ?, occupation = ?, age_group = ?, date_of_birth = ?, show_age_to_leaders = ?, hide_from_birthday_list = ?, opt_out_services = ?, address = ?, section_id = ?, leader_id = ?, profile_picture = COALESCE(?, profile_picture), updated_at = CURRENT_TIMESTAMP
+      SET full_name = ?, phone = ?, email = ?, gender = ?, marital_status = ?, occupation = ?, age_group = ?, date_of_birth = ?, show_age_to_leaders = ?, hide_from_birthday_list = ?, opt_out_services = ?, address = ?, section_id = ?, leader_id = ?, profile_picture = COALESCE(?, profile_picture), education_level = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, profilePicture, memberId]),
+    `, [fullName, phone, email, gender, maritalStatus, occupation, ageGroup, dob, showAge, hideBday, optOuts, address, sectionId, leaderId, profilePicture, educationLevel, memberId]),
   updateMemberPhoto: (memberId, photoUrl) =>
     run('UPDATE members SET profile_picture = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [photoUrl, memberId]),
   deleteMember: (id) => run('DELETE FROM members WHERE id = ?', [id]),

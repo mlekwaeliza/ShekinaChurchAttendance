@@ -295,6 +295,10 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
                           <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{member.age_group || '—'}</span>
                         </div>
                         <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                          <span className="text-xs font-medium text-slate-550 dark:text-slate-400">Education Level</span>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{member.education_level || '—'}</span>
+                        </div>
+                        <div className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
                           <span className="text-xs font-medium text-slate-550 dark:text-slate-400">Attendance Rate</span>
                           <span className={`text-xs font-bold ${
                             attendance?.stats?.attendance_rate >= 80 ? 'text-emerald-500' : attendance?.stats?.attendance_rate >= 50 ? 'text-amber-500' : 'text-rose-500'
