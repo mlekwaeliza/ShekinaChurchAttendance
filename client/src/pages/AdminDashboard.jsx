@@ -104,7 +104,7 @@ const AdminDashboard = () => {
         await adminAPI.createMember(updatedData);
         data.showMessage('Member added successfully');
       }
-      data.loadCoreData();
+      await data.loadCoreData();
     } catch (error) {
       alert(`Failed to save: ${error.response?.data?.error || error.message}`);
       throw error;

@@ -250,6 +250,9 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
                         <ProfileItem icon={Phone} label="Primary Phone" value={member.phone || '—'} isPhone />
                         <ProfileItem icon={Phone} label="Secondary Phone" value={member.secondary_phone || '—'} isPhone />
                         <ProfileItem icon={Mail} label="Email Address" value={member.email || '—'} isEmail />
+                        <ProfileItem icon={Calendar} label="Date of Birth" value={member.date_of_birth ? fdate(member.date_of_birth) : '—'} />
+                        <ProfileItem icon={Heart} label="Marital Status" value={member.marital_status || '—'} />
+                        <ProfileItem icon={User} label="Occupation" value={member.occupation || '—'} />
                       </div>
                     </div>
 

@@ -68,6 +68,16 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
     if (!isOpen) return;
 
     if (mode === 'edit' && member) {
+      let parsedOptOut = [];
+      try {
+        parsedOptOut = member.opt_out_services
+          ? (Array.isArray(member.opt_out_services)
+              ? member.opt_out_services
+              : JSON.parse(member.opt_out_services))
+          : [];
+      } catch (_) {
+        parsedOptOut = [];
+      }
       setFormData({
         membership_id: member.membership_id || '',
         full_name:     member.full_name || '',
@@ -87,7 +97,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
         secondary_phone: member.secondary_phone || '',
         show_age_to_leaders:    !!member.show_age_to_leaders,
         hide_from_birthday_list: !!member.hide_from_birthday_list,
-        opt_out_services: member.opt_out_services ? JSON.parse(member.opt_out_services) : []
+        opt_out_services: parsedOptOut
       });
       loadAuditHistory(member.id);
     } else if (mode === 'add') {
@@ -110,6 +120,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
           full_name: '', phone: '', email: '', gender: '', marital_status: '',
           occupation: '', age_group: '', section_id: '', leader_id: '',
           home_cell_id: '', date_of_birth: '', address: '',
+          profile_picture: '', education_level: '', secondary_phone: '',
           show_age_to_leaders: false, hide_from_birthday_list: false,
           opt_out_services: []
         });

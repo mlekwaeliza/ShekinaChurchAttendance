@@ -34,6 +34,7 @@ const TakeAttendance = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('all');
   const [editReason, setEditReason] = useState('');
+  const [selectedPhotoMember, setSelectedPhotoMember] = useState(null);
   const isEditable = !submitted || editMode;
   const currentService = serviceTypes.find(s => s.id === selectedServiceId);
   const serviceName = currentService?.name || 'Main Service';
