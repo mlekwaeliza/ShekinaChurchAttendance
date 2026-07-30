@@ -275,6 +275,31 @@ const MemberDirectory = ({
     if (leaderFilter) {
       result = result.filter((m) => m.leader_name === leaderFilter);
     }
+    if (ageGroupFilter && ageGroupFilter !== 'all') {
+      result = result.filter((m) => {
+        const ag = String(m.age_group || '').toLowerCase();
+        switch (ageGroupFilter) {
+          case 'children':
+            return /(child|infant|toddler|pre-teen|kid)/.test(ag);
+          case 'youth':
+            return /(teen|youth)/.test(ag);
+          case 'adult':
+            return /adult/.test(ag);
+          case 'senior':
+            return /(senior|elder|grand)/.test(ag);
+          default:
+            return ag === ageGroupFilter;
+        }
+      });
+    }
+    if (genderFilter && genderFilter !== 'all') {
+      result = result.filter((m) => {
+        const g = String(m.gender || '').trim().toLowerCase();
+        if (genderFilter === 'male') return g.startsWith('m') || g === 'man';
+        if (genderFilter === 'female') return g.startsWith('f') || g.startsWith('w') || g === 'woman';
+        return g === genderFilter;
+      });
+    }
     // Sort
     result.sort((a, b) => {
       const aVal = (a[sortField] || '').toLowerCase();
@@ -283,7 +308,7 @@ const MemberDirectory = ({
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return result;
-  }, [allMembers, searchTerm, sectionFilter, leaderFilter, sortField, sortDir]);
+  }, [allMembers, searchTerm, sectionFilter, leaderFilter, ageGroupFilter, genderFilter, sortField, sortDir]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -502,6 +527,43 @@ const MemberDirectory = ({
             <span className="whitespace-nowrap tracking-tight">Add Member</span>
           </button>
         </div>
+
+      {/* Age Group Filter Pills */}
+      <div className="flex flex-wrap items-center gap-1.5 py-1">
+        {[
+          { id: 'all', label: 'All Ages' },
+          { id: 'children', label: 'Children' },
+          { id: 'youth', label: 'Youth' },
+          { id: 'adult', label: 'Adult' },
+          { id: 'senior', label: 'Senior' },
+        ].map((ag) => {
+          const isActive = ageGroupFilter === ag.id;
+          return (
+            <button
+              key={ag.id}
+              type="button"
+              onClick={() => setAgeGroupFilter(ag.id)}
+              className={`rounded-xl px-3 py-1.5 text-xs font-semibold border transition-all whitespace-nowrap shadow-xs ${
+                isActive
+                  ? 'border-primary-600 bg-primary-600 text-white dark:bg-primary-500 dark:border-primary-500 shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              {ag.label}
+            </button>
+          );
+        })}
+        {ageGroupFilter !== 'all' && (
+          <button
+            type="button"
+            onClick={() => setAgeGroupFilter('all')}
+            className="rounded-xl px-2 py-1.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            title="Clear age group filter"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
 
       {/* Search & Filters */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">

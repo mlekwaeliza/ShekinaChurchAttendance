@@ -2911,6 +2911,35 @@ const queries = {
     WHERE m.is_active = 1
     ORDER BY s.name, m.full_name LIMIT 1000
   `),
+  getMembersByAgeGroup: (ageGroup) => {
+    const isPg = String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
+    const likeClause = isPg ? 'ILIKE' : 'LIKE';
+    const patterns = {
+      children: ['%child%', '%infant%', '%toddler%', '%pre-teen%', '%children%'],
+      youth: ['%teen%', '%youth%'],
+      adult: ['%adult%'],
+      senior: ['%senior%', '%elder%', '%grand%'],
+    };
+    const likePatterns = patterns[ageGroup] || [`%${ageGroup}%`];
+    return all(`
+      SELECT
+        m.*,
+        s.name as section_name,
+        u.full_name as leader_name,
+        u.role as user_role,
+        hcm.cell_id as home_cell_id,
+        hc.name as home_cell_name
+      FROM members m
+      LEFT JOIN sections s ON m.section_id = s.id
+      LEFT JOIN leaders l ON m.leader_id = l.id
+      LEFT JOIN users u ON l.user_id = u.id
+      LEFT JOIN home_cell_members hcm ON hcm.church_member_id = m.id AND hcm.is_active = 1
+      LEFT JOIN home_cells hc ON hc.id = hcm.cell_id
+      WHERE m.is_active = 1
+        AND (${likePatterns.map(() => `m.age_group ${likeClause} ?`).join(' OR ')})
+      ORDER BY s.name, m.full_name LIMIT 1000
+    `, likePatterns);
+  },
   createMember: (membershipId, fullName, sectionId, leaderId, phone, email, gender, maritalStatus, occupation, ageGroup, dob = null, showAge = 0, hideBday = 0, optOuts = '[]', address = null) =>
     run(`
       INSERT INTO members (membership_id, full_name, section_id, leader_id, phone, email, gender, marital_status, occupation, age_group, date_of_birth, show_age_to_leaders, hide_from_birthday_list, opt_out_services, address)
