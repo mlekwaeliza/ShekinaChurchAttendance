@@ -145,7 +145,7 @@ router.delete('/sections/:id', async (req, res) => {
 // GET all members (with optional filters)
 router.get('/members', async (req, res) => {
   try {
-    const { section_id, leader_id, membership_id } = req.query;
+    const { section_id, leader_id, membership_id, age_group } = req.query;
 
     if (membership_id) {
       const member = await queries.getMemberByMembershipId(membership_id);
@@ -153,7 +153,9 @@ router.get('/members', async (req, res) => {
     }
 
     let members;
-    if (section_id) {
+    if (age_group) {
+      members = await withCache(`admin-members-agegroup:${age_group}`, 120000, () => queries.getMembersByAgeGroup(age_group));
+    } else if (section_id) {
       members = await withCache(`admin-members-section:${section_id}`, 30000, () => queries.getMembersBySection(section_id));
     } else if (leader_id) {
       const membersByLeader = await withCache(`admin-members-leader:${leader_id}`, 30000, () => queries.getMembersByLeader(leader_id));
@@ -1119,17 +1121,16 @@ router.delete('/children-leaders/:id', async (req, res) => {
     const leader = await get('SELECT user_id FROM children_leaders WHERE id = ?', [id]);
     if (!leader) return res.status(404).json({ error: 'Children leader not found' });
 
-    await transaction(async (tx) => {
-      // Remove from children_leaders — revert user role to 'accountant' (preserve login account)
-      await tx.run('DELETE FROM children_leaders WHERE id = ?', [id]);
-      await tx.run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [leader.user_id]);
-    });
+    // Remove the children_leaders row and revert user role (preserve login account)
+    await run('DELETE FROM children_leaders WHERE id = ?', [id]);
+    await run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [leader.user_id]);
+
     invalidate('admin-');
     invalidate('admin-children-');
-    res.json({ message: 'Children leader removed. Their login account has been kept with a standard role.' });
+    res.json({ message: 'Children leader removed successfully.' });
   } catch (error) {
     console.error('Delete children leader error:', error);
-    res.status(500).json({ error: 'Failed to delete children leader' });
+    res.status(500).json({ error: 'Failed to delete children leader: ' + error.message });
   }
 });
 
