@@ -529,7 +529,7 @@ const MemberDirectory = ({
             Filters
             {hasActiveFilters && (
               <span className="w-5 h-5 rounded-full bg-primary-600 text-white text-[10px] font-bold flex items-center justify-center">
-                {[sectionFilter, leaderFilter].filter(Boolean).length}
+                {[sectionFilter, leaderFilter, ageGroupFilter !== 'all' ? ageGroupFilter : null, genderFilter !== 'all' ? genderFilter : null].filter(Boolean).length}
               </span>
             )}
           </button>
@@ -559,9 +559,31 @@ const MemberDirectory = ({
               ))}
             </select>
 
+            <select
+              value={genderFilter}
+              onChange={(e) => setGenderFilter(e.target.value)}
+              className="select w-auto text-sm h-9 rounded-lg font-medium"
+            >
+              <option value="all">All Genders</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+
+            <select
+              value={ageGroupFilter}
+              onChange={(e) => setAgeGroupFilter(e.target.value)}
+              className="select w-auto text-sm h-9 rounded-lg"
+            >
+              <option value="all">All Ages</option>
+              <option value="children">Children</option>
+              <option value="youth">Youth</option>
+              <option value="adult">Adult</option>
+              <option value="senior">Senior</option>
+            </select>
+
             {hasActiveFilters && (
               <button
-                onClick={() => { handleSectionFilterChange(''); handleLeaderFilterChange(''); }}
+                onClick={() => { handleSectionFilterChange(''); handleLeaderFilterChange(''); setAgeGroupFilter('all'); setGenderFilter('all'); }}
                 className="flex items-center gap-1 text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 font-medium"
               >
                 <X className="w-3.5 h-3.5" />
@@ -595,6 +617,19 @@ const MemberDirectory = ({
             type="button"
             onClick={() => handleLeaderFilterChange('')}
             className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-slate-800 dark:text-primary-300"
+          >
+            <X className="h-3 w-3" />
+            Clear
+          </button>
+        </div>
+      {genderFilter !== 'all' && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-700 dark:border-cyan-800/60 dark:bg-cyan-900/20 dark:text-cyan-300">
+          <span className="font-semibold">Filtered by gender:</span>
+          <span className="capitalize">{genderFilter}</span>
+          <button
+            type="button"
+            onClick={() => setGenderFilter('all')}
+            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-cyan-700 shadow-sm hover:bg-cyan-100 dark:bg-slate-800 dark:text-cyan-300"
           >
             <X className="h-3 w-3" />
             Clear
