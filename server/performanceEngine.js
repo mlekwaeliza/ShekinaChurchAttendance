@@ -760,7 +760,10 @@ async function getProfile(entityType, entityId, filter, userId) {
       console.error(`[profile-debug] scoreLeaders returned ${scored.length} entities for season ${season.start}..${season.end}`);
     } catch (e) {
       console.error(`[profile-debug] scoreLeaders threw:`, e?.message, e?.stack);
-      throw e;
+      // A profile should still render when an aggregate ranking query has a
+      // transient/schema issue. The direct leader lookup below provides the
+      // identity and the remaining metrics can safely use zero values.
+      scored = [];
     }
   } else {
     scored = await scoreMembers(season.start, season.end, 'all');
@@ -866,11 +869,17 @@ async function getProfile(entityType, entityId, filter, userId) {
   // Parallelize all independent queries
   console.error(`[profile-debug] running parallel queries for ${entityType}/${entityId}, targetMemberId=${targetMemberId}`);
   let attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements;
+  const optionalQuery = (query, params, fallback) => Promise.resolve()
+    .then(() => query(params))
+    .catch((queryErr) => {
+      console.error(`[profile-debug] optional ${entityType} query failed:`, queryErr?.message || queryErr);
+      return fallback;
+    });
   try {
     [attRows, departments, churchAvgRow, attRowsByMonth, outRows, conRows, achievements] = await withTimeout(Promise.all([
-    all(attQuery, [attParamId]),
-    all(`SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`, [targetMemberId]),
-    get(`
+    optionalQuery((p) => all(attQuery, p), [attParamId], []),
+    optionalQuery((p) => all(`SELECT d.name FROM departments d JOIN department_members dm ON dm.department_id = d.id WHERE dm.member_id = ?`, p), [targetMemberId], []),
+    optionalQuery((p) => get(`
       SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
       FROM (
         SELECT member_id, COUNT(*) AS total,
@@ -878,19 +887,19 @@ async function getProfile(entityType, entityId, filter, userId) {
         FROM attendance WHERE date BETWEEN ? AND ?
         GROUP BY member_id
       ) sub
-    `, [season.start, season.end]),
-    all(attByMonthQuery, [attParamId, yearStart, yearEnd]),
-    all(outQuery, [outParamId, yearStart, yearEnd]),
-    all(
+    `, p), [season.start, season.end], null),
+    optionalQuery((p) => all(attByMonthQuery, p), [attParamId, yearStart, yearEnd], []),
+    optionalQuery((p) => all(outQuery, p), [outParamId, yearStart, yearEnd], []),
+    optionalQuery((p) => all(
       `SELECT ${ymPayment} AS ym, COUNT(*) AS cnt
        FROM contributions WHERE member_id = ? AND payment_date BETWEEN ? AND ?
        GROUP BY ${ymPayment}`,
-      [targetMemberId, yearStart, yearEnd]
-    ),
-    all(
+      p
+    ), [targetMemberId, yearStart, yearEnd], []),
+    optionalQuery((p) => all(
       `SELECT a.* FROM entity_achievements ea JOIN achievements a ON a.key=ea.achievement_key WHERE ea.entity_type=? AND ea.entity_id=? ORDER BY ea.earned_at DESC`,
-      [entityType, entityId]
-    ),
+      p
+    ), [entityType, entityId], []),
   ]), 45000, 'Profile queries timed out');
   } catch (pqErr) {
     console.error(`[profile-debug] parallel queries threw:`, pqErr?.message, pqErr?.stack);
@@ -929,19 +938,23 @@ async function getProfile(entityType, entityId, filter, userId) {
   // Section average
   let sectionAvg = churchAvg;
   if (entity.section_name) {
-    const secRow = await get(`
-      SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
-      FROM (
-        SELECT a.member_id, COUNT(*) AS total,
-          SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END) AS present
-        FROM attendance a
-        JOIN members m ON m.id = a.member_id
-        JOIN sections s ON s.id = m.section_id
-        WHERE a.date BETWEEN ? AND ? AND s.name = ?
-        GROUP BY a.member_id
-      ) sub
-    `, [season.start, season.end, entity.section_name]);
-    sectionAvg = Math.round(Number(secRow?.avg_att) || 0);
+    try {
+      const secRow = await get(`
+        SELECT AVG(CASE WHEN total > 0 THEN CAST(present AS FLOAT) / total * 100 ELSE 0 END) AS avg_att
+        FROM (
+          SELECT a.member_id, COUNT(*) AS total,
+            SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END) AS present
+          FROM attendance a
+          JOIN members m ON m.id = a.member_id
+          JOIN sections s ON s.id = m.section_id
+          WHERE a.date BETWEEN ? AND ? AND s.name = ?
+          GROUP BY a.member_id
+        ) sub
+      `, [season.start, season.end, entity.section_name]);
+      sectionAvg = Math.round(Number(secRow?.avg_att) || 0);
+    } catch (sectionErr) {
+      console.error('[profile-debug] section average query failed:', sectionErr?.message || sectionErr);
+    }
   }
   const attByMonth = {};
   attRowsByMonth.forEach(r => { attByMonth[r.ym] = { total: Number(r.total), present: Number(r.present) }; });
