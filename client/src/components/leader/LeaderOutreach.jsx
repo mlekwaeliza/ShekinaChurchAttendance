@@ -456,7 +456,7 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
             <div className="p-5 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/50 flex items-center justify-between cursor-pointer" onClick={() => setLogForm({...logForm, add_to_hall_of_fame: !logForm.add_to_hall_of_fame})}>
               <label className="flex items-center gap-3 font-medium text-amber-800 dark:text-amber-400 cursor-pointer pointer-events-none">
                 <input type="checkbox" checked={logForm.add_to_hall_of_fame} readOnly className="rounded text-amber-600 w-5 h-5 border-amber-300 focus:ring-amber-500" />
-                Submit to Hall of Fame
+                Submit for Recognition
               </label>
               {logForm.add_to_hall_of_fame && <span className="text-sm font-bold bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-200 px-2.5 py-1 rounded-full animate-scale-in">+{logForm.contact_method === 'Visitor Follow-up' ? 20 : logForm.contact_method === 'Hospital Visit' ? 15 : logForm.contact_method === 'Counseling' ? 10 : 5} pts</span>}
             </div>

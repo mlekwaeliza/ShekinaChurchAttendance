@@ -174,6 +174,11 @@ const LeaderboardRow = ({ item, rank, onClick, nameKey, subKey, scoreKey = 'over
                 ⏰ Avg: {item.avgSubmissionTime}
               </span>
             )}
+            {item.leader_name && (
+              <span style={{ padding: '1px 5px', borderRadius: 4, background: 'rgba(167,139,250,0.12)', color: '#A78BFA', fontSize: 9, fontWeight: 700 }}>
+                Reports {item.submitted_days || 0}/{item.assigned_days || 0} · Members {item.components?.member_attendance || 0}%
+              </span>
+            )}
           </p>
         )}
       </div>

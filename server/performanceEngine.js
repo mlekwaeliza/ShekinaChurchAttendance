@@ -272,7 +272,7 @@ async function scoreLeaders(start, end, serviceId) {
     const evangelism = Math.min(100, evCount * 25);
     const retention = 0; const cell_growth = 0; const reports = 0;
     const components = { submission_rate, member_attendance, retention, cell_growth, evangelism, followups, reports };
-    return { id: l.id, full_name: l.full_name, section_name: l.section_name, components, submission_rate, assigned_days: serviceDays, submitted_days: submittedDays, followups, evCount };
+    return { id: l.id, full_name: l.full_name, leader_name: l.full_name, section_name: l.section_name, components, submission_rate, assigned_days: serviceDays, submitted_days: submittedDays, followups, evCount };
   });
 }
 

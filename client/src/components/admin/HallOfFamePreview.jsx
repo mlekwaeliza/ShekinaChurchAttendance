@@ -24,7 +24,7 @@ const HallOfFamePreview = ({ topMembers = [], onViewAll }) => {
               <Trophy className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold leading-tight">Hall of Fame 2026</h3>
+              <h3 className="text-sm font-bold leading-tight">Recognition 2026</h3>
               <p className="text-[10px] uppercase tracking-wider text-white/80">Season standings</p>
             </div>
           </div>

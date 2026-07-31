@@ -51,7 +51,7 @@ const Breadcrumbs = ({ userRole, userName }) => {
     reports: { label: 'Reports', icon: FileText },
     history: { label: 'History', icon: Clock },
     analytics: { label: 'Analytics', icon: BarChart3 },
-    rewards: { label: 'Hall of Fame', icon: Trophy },
+    rewards: { label: 'Recognition', icon: Trophy },
     settings: { label: 'Settings', icon: Settings },
     attendance: { label: 'Attendance', icon: ClipboardList },
     overview: { label: 'Overview', icon: Eye },

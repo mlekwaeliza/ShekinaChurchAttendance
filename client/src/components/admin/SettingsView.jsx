@@ -163,7 +163,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     setSettingsLoading(true);
     try {
       await adminAPI.updateSettingsConfig(hallOfFameSettings);
-      showMessage('Hall of Fame configuration updated');
+      showMessage('Recognition configuration updated');
     } catch (e) {
       showMessage('Failed to update settings');
     } finally {
@@ -473,7 +473,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
           <div className="card p-6">
             <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
               <Trophy className="w-4.5 h-4.5 text-amber-500" />
-              Hall of Fame & Points Configuration
+              Recognition & Points Configuration
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
               Configure how points are awarded to members. These points contribute to the yearly leaderboard.

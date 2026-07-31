@@ -206,7 +206,7 @@ const ExecutiveCommandCenter = (props) => {
     { label: 'Send SMS', icon: Send, to: '/admin/announcements' },
     { label: 'Send WhatsApp', icon: Smartphone, to: '/admin/announcements' },
     { label: 'Manage Events', icon: Calendar, to: '/admin/calendar' },
-    { label: 'View Hall of Fame', icon: Trophy, to: '/admin/rewards' },
+    { label: 'View Recognition', icon: Trophy, to: '/admin/rewards' },
   ];
 
   if (loading) {
@@ -532,9 +532,9 @@ const ExecutiveCommandCenter = (props) => {
         </div>
       </SectionCard>
 
-      {/* ── Hall of Fame Preview ── */}
+      {/* ── Recognition Preview ── */}
       {hallOfFame && (
-        <SectionCard title="Hall of Fame" icon={Trophy}
+        <SectionCard title="Recognition" icon={Trophy}
           action={<button onClick={() => navigate('/admin/rewards')} className="text-[10px] text-blue-600 font-semibold">View all</button>}>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {hallOfFame.kpis?.topMember && (
