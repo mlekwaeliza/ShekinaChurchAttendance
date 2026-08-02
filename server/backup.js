@@ -4,9 +4,10 @@ const https = require('https');
 const http = require('http');
 const { URL } = require('url');
 const { execFile } = require('child_process');
-const { db } = require('./database');
+const { db, all } = require('./database');
 
 const BACKUP_DIR = path.join(__dirname, 'backups');
+const JSON_BACKUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 
 if (!fs.existsSync(BACKUP_DIR)) {
   fs.mkdirSync(BACKUP_DIR, { recursive: true });
@@ -50,6 +51,56 @@ function backupDatabase() {
       }
     });
   });
+}
+
+// Portable seven-day snapshot. Credentials and session/security material are
+// deliberately redacted so the JSON export is safer to download and store.
+async function backupDatabaseJson() {
+  const isPg = String(process.env.DB_CLIENT || '').toLowerCase() === 'postgres';
+  const tableRows = isPg
+    ? await all(`SELECT tablename AS name FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename <> 'session' ORDER BY tablename`)
+    : await all(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> 'sessions' ORDER BY name`);
+  const sensitive = /password|secret|token|backup.?code|session|failed.?login|locked.?until/i;
+  const tables = {};
+  for (const row of tableRows) {
+    const name = row.name;
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) continue;
+    const rows = await all(`SELECT * FROM "${name}"`);
+    tables[name] = rows.map((record) => Object.fromEntries(
+      Object.entries(record).filter(([key]) => !sensitive.test(key))
+    ));
+  }
+  const timestamp = new Date().toISOString();
+  const fileName = `backup-${timestamp.replace(/[:.]/g, '-')}.json`;
+  const backupPath = path.join(BACKUP_DIR, fileName);
+  fs.writeFileSync(backupPath, JSON.stringify({
+    format: 'shekina-church-attendance-json-v1',
+    generated_at: timestamp,
+    database_client: isPg ? 'postgres' : 'sqlite',
+    redacted_fields: 'Credential, session, token, and login-security fields are omitted.',
+    tables
+  }, null, 2), 'utf8');
+  console.log(`JSON database backup created: ${backupPath}`);
+  cleanupOldBackups();
+  return backupPath;
+}
+
+function shouldCreateJsonBackup() {
+  try {
+    const files = fs.readdirSync(BACKUP_DIR).filter((file) => file.toLowerCase().endsWith('.json'));
+    if (!files.length) return true;
+    const latest = Math.max(...files.map((file) => fs.statSync(path.join(BACKUP_DIR, file)).mtimeMs));
+    return Date.now() - latest >= JSON_BACKUP_INTERVAL_MS;
+  } catch (error) {
+    console.error('Could not check JSON backup age:', error.message);
+    return true;
+  }
+}
+
+async function maybeCreateJsonBackup() {
+  if (!shouldCreateJsonBackup()) return null;
+  try { return await backupDatabaseJson(); }
+  catch (error) { console.error('Scheduled JSON backup failed:', error.message); return null; }
 }
 
 function findPgDump() {
@@ -230,7 +281,7 @@ function safeBackupName(input) {
   if (!safe || safe !== str || !/^[\w.-]+$/.test(safe)) {
     throw new Error('Invalid backup filename');
   }
-  if (!/\.(sqlite|sql)$/i.test(safe)) {
+  if (!/\.(sqlite|sql|json)$/i.test(safe)) {
     throw new Error('Invalid backup file extension');
   }
   // L6-fix: confirm the resolved absolute path stays inside the backup
@@ -257,6 +308,9 @@ function restoreDatabase(backupFile) {
       safeName = safeBackupName(backupFile);
     } catch (err) {
       return reject(err);
+    }
+    if (/\.json$/i.test(safeName)) {
+      return reject(new Error('JSON snapshots are export-only and cannot be restored directly.'));
     }
     const backupPath = path.join(BACKUP_DIR, safeName);
     const dbPath = process.env.DB_PATH || path.join(__dirname, 'database.sqlite');
@@ -300,7 +354,7 @@ function restoreDatabase(backupFile) {
 function listBackups() {
   try {
     const files = fs.readdirSync(BACKUP_DIR)
-      .filter(f => f.endsWith('.sqlite') || f.endsWith('.sql'))
+      .filter(f => f.endsWith('.sqlite') || f.endsWith('.sql') || f.endsWith('.json'))
       .map(f => {
         const filePath = path.join(BACKUP_DIR, f);
         const stat = fs.statSync(filePath);
@@ -346,7 +400,7 @@ function getBackupStatus() {
   if (fs.existsSync(BACKUP_DIR)) {
     try {
       const files = fs.readdirSync(BACKUP_DIR)
-        .filter(f => f.endsWith('.sqlite') || f.endsWith('.sql'));
+        .filter(f => f.endsWith('.sqlite') || f.endsWith('.sql') || f.endsWith('.json'));
       totalBackups = files.length;
       for (const f of files) {
         try {
@@ -417,4 +471,10 @@ setInterval(() => {
   backupDatabase().catch(err => console.error('Scheduled backup failed:', err.message));
 }, 6 * 60 * 60 * 1000);
 
-module.exports = { backupDatabase, restoreDatabase, listBackups, deleteBackup, safeBackupName, uploadBackupToRemote, getBackupStatus };
+// Check daily, but create a JSON snapshot only when the previous one is at
+// least seven days old. Delay the first check until schema initialization has
+// completed so a fresh deployment cannot produce an empty snapshot.
+setTimeout(maybeCreateJsonBackup, 30 * 1000).unref?.();
+setInterval(maybeCreateJsonBackup, 24 * 60 * 60 * 1000).unref?.();
+
+module.exports = { backupDatabase, backupDatabaseJson, restoreDatabase, listBackups, deleteBackup, safeBackupName, uploadBackupToRemote, getBackupStatus };

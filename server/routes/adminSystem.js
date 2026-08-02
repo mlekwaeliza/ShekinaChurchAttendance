@@ -237,7 +237,7 @@ router.get('/rewards/top-leaders', async (req, res) => {
   }
 });
 
-const { listBackups, deleteBackup, backupDatabase, restoreDatabase, safeBackupName, getBackupStatus } = require('../backup');
+const { listBackups, deleteBackup, backupDatabase, backupDatabaseJson, restoreDatabase, safeBackupName, getBackupStatus } = require('../backup');
 
 const requireAdmin = requireRole('admin');
 
@@ -273,6 +273,15 @@ router.post('/backups/create', requireAdmin, async (req, res) => {
   }
 });
 
+router.post('/backups/create-json', requireAdmin, async (req, res) => {
+  try {
+    const backupPath = await backupDatabaseJson();
+    res.json({ message: 'Redacted JSON backup created successfully', backup: backupPath });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create JSON backup' });
+  }
+});
+
 // GET /api/admin/backups/download/:filename
 // Stream the backup file directly to the admin as a binary download.
 // This is the primary "get my data out" mechanism on Render, where the
@@ -293,7 +302,7 @@ router.get('/backups/download/:filename', requireAdmin, async (req, res) => {
       return res.status(404).json({ error: 'Backup file not found' });
     }
     const stat = fs.statSync(filePath);
-    res.setHeader('Content-Type', 'application/sql');
+    res.setHeader('Content-Type', safeName.endsWith('.json') ? 'application/json' : 'application/sql');
     res.setHeader('Content-Length', stat.size);
     res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
     fs.createReadStream(filePath).pipe(res);
