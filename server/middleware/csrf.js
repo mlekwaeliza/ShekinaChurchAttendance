@@ -78,10 +78,15 @@ function csrfProtect(options = {}) {
       const allowed = String(process.env.CLIENT_URL || '').replace(/\/$/, '');
       const origin = String(req.get('origin') || '').replace(/\/$/, '');
       const referer = String(req.get('referer') || '').replace(/\/$/, '');
-      if (allowed && origin && origin !== allowed) {
+      // The production app serves the SPA and API from the same host. Allow
+      // that request origin even if CLIENT_URL was left pointing at an old
+      // preview/local URL during a deployment.
+      const requestOrigin = `${req.protocol}://${req.get('host')}`.replace(/\/$/, '');
+      const sameRequestOrigin = origin && origin === requestOrigin;
+      if (allowed && origin && origin !== allowed && !sameRequestOrigin) {
         return res.status(403).json({ error: 'Cross-origin login blocked' });
       }
-      if (allowed && !origin && referer && !referer.startsWith(allowed)) {
+      if (allowed && !origin && referer && !referer.startsWith(allowed) && !referer.startsWith(requestOrigin)) {
         return res.status(403).json({ error: 'Cross-origin login blocked' });
       }
     }

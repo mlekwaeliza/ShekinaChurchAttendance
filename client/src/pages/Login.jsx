@@ -84,7 +84,13 @@ const Login = () => {
         setUser(response.data.user);
       }
     } catch (requestError) {
-      setError(requestError.response?.data?.error || 'We could not sign you in. Check your details and try again.');
+      setError(
+        requestError.response?.data?.error ||
+        requestError.data?.error ||
+        requestError.original?.response?.data?.error ||
+        requestError.message ||
+        'We could not sign you in. Check your details and try again.'
+      );
     } finally {
       setLoading(false);
     }
