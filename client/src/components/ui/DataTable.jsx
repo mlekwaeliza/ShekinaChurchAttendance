@@ -80,14 +80,14 @@ const DataTable = React.memo(({
       )}
 
       <div className="overflow-hidden">
-        <div className="max-h-[68vh] overflow-auto scrollbar-thin">
+        <div className="max-h-[68vh] overflow-auto scrollbar-thin" style={{ WebkitOverflowScrolling: 'touch' }}>
           <table className="min-w-full divide-y divide-slate-100 dark:divide-white/5">
             <thead className="sticky top-0 z-10 bg-slate-50/90 dark:bg-slate-800/90 dark:backdrop-blur-xl">
               <tr>
                 {columns.map((col) => (
                   <th
                     key={col.accessor || col.id}
-                    className={`px-6 py-3.5 text-left text-label uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold ${col.sortable ? 'cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300 transition-colors' : ''} ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}`}
+                    className={`px-3 sm:px-6 py-3.5 text-left text-label uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold whitespace-nowrap ${col.sortable ? 'cursor-pointer select-none hover:text-slate-600 dark:hover:text-slate-300 transition-colors' : ''} ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}`}
                     style={col.width ? { width: col.width } : undefined}
                     onClick={() => col.sortable && toggleSort(col.accessor)}
                   >
@@ -116,7 +116,7 @@ const DataTable = React.memo(({
                     {columns.map((col) => (
                       <td
                         key={col.accessor || col.id}
-                        className={`px-6 py-4 text-sm text-slate-600 dark:text-slate-400 ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}`}
+                        className={`px-3 sm:px-6 py-4 text-sm text-slate-600 dark:text-slate-400 ${col.align === 'center' ? 'text-center' : col.align === 'right' ? 'text-right' : ''}`}
                       >
                         {col.render
                           ? col.render(row)

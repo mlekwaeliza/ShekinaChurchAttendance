@@ -108,13 +108,13 @@ const Modal = ({
         {/* Header */}
         {title && (
           <div className="modal-header">
-            <div>
-              <h2 id={titleId} className="text-lg font-bold text-slate-900 dark:text-slate-100">{title}</h2>
-              {subtitle && <p id={subtitleId} className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+            <div className="min-w-0 flex-1">
+              <h2 id={titleId} className="truncate">{title}</h2>
+              {subtitle && <p id={subtitleId} className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{subtitle}</p>}
             </div>
             <button
               onClick={onClose}
-              className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90"
+              className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 shrink-0"
               aria-label="Close dialog"
               type="button"
             >

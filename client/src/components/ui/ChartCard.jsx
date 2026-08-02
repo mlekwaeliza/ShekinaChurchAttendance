@@ -18,19 +18,19 @@ const ChartCard = ({
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} border ${borderColor} p-6 shadow-sm ${className}`}>
       {/* Header */}
-      <div className="flex items-start justify-between mb-6 relative z-10">
-        <div className="flex items-center gap-3">
+      <div className={`flex flex-wrap items-start justify-between gap-3 mb-6 relative z-10`}>
+        <div className="flex items-center gap-3 min-w-0">
           {Icon && (
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md shadow-violet-500/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md shadow-violet-500/20 shrink-0">
               <Icon className="w-4 h-4 text-white" />
             </div>
           )}
-          <div>
-            {title && <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h3>}
-            {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
+          <div className="min-w-0">
+            {title && <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">{title}</h3>}
+            {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{subtitle}</p>}
           </div>
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
 
       {/* Chart area */}

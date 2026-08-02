@@ -1912,27 +1912,31 @@ async function ensureHomeCellSchema() {
 
     // Additional indexes — use pool directly to bypass the enqueue queue
     // (CREATE INDEX can take minutes on large tables and would block all queries)
-    try {
-      const pgPool = require('./db/postgres').pool;
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_attendance_service_type_id ON attendance(service_type_id)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_leaders_user_id ON leaders(user_id)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_leaders_section ON leaders(section_id)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_created_at ON members(created_at)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_submission_log_leader_id ON submission_log(leader_id)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_submission_log_leader_date ON submission_log(leader_id, date)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_attendance_date_service ON attendance(date, service_type_id)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_followups_absence_date ON absent_followups(absence_date)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_followups_created ON absent_followups(created_at)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_visitor_intake_created ON visitor_intake(created_at)');
-      // Critical for leader profile: filter members by leader_id
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_leader ON members(leader_id)');
-      // Critical for leader profile: join attendance by member_id + date range
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_attendance_member_date ON attendance(member_id, date)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_attendance_submitted_by ON attendance(submitted_by)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_email ON members(email)');
-      await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_phone ON members(phone)');
-    } catch (e) {
-      console.warn('Additional index creation failed (non-fatal):', e.message);
+    // PG-only: the pool is not available in sqlite mode; running this
+    // unconditionally would open a pg connection on every sqlite boot.
+    if (usePostgres) {
+      try {
+        const pgPool = require('./db/postgres').pool;
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_attendance_service_type_id ON attendance(service_type_id)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_leaders_user_id ON leaders(user_id)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_leaders_section ON leaders(section_id)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_created_at ON members(created_at)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_submission_log_leader_id ON submission_log(leader_id)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_submission_log_leader_date ON submission_log(leader_id, date)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_attendance_date_service ON attendance(date, service_type_id)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_followups_absence_date ON absent_followups(absence_date)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_followups_created ON absent_followups(created_at)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_visitor_intake_created ON visitor_intake(created_at)');
+        // Critical for leader profile: filter members by leader_id
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_leader ON members(leader_id)');
+        // Critical for leader profile: join attendance by member_id + date range
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_attendance_member_date ON attendance(member_id, date)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_attendance_submitted_by ON attendance(submitted_by)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_email ON members(email)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_phone ON members(phone)');
+      } catch (e) {
+        console.warn('Additional index creation failed (non-fatal):', e.message);
+      }
     }
 
     try {

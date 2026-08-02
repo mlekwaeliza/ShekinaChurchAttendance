@@ -18,11 +18,10 @@ const OfflineFallback = () => {
           <WifiOff className="w-8 h-8 text-slate-400" />
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-          You're Offline
-        </h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">You're Offline</h1>
         <p className="text-slate-500 dark:text-slate-400 mb-6">
-          It looks like you've lost your internet connection. Some features may not be available until you're back online.
+          It looks like you've lost your internet connection. Some features may not be available
+          until you're back online.
         </p>
 
         <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4 mb-6 text-left">
@@ -36,18 +35,18 @@ const OfflineFallback = () => {
           </ul>
         </div>
 
-        <div className="flex gap-3 justify-center">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={handleRetry}
             disabled={retrying}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center gap-2 justify-center"
           >
             <RefreshCw className={`w-4 h-4 ${retrying ? 'animate-spin-slow' : ''}`} />
             {retrying ? 'Retrying...' : 'Try Again'}
           </button>
           <button
             onClick={() => navigate('/')}
-            className="btn-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2 justify-center"
           >
             <Home className="w-4 h-4" />
             Go Home

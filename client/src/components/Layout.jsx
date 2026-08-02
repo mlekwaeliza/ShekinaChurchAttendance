@@ -80,7 +80,7 @@ const Layout = ({ children, showNav = true }) => {
   // Global search keyboard shortcut (Ctrl+K or Cmd+K)
   useEffect(() => {
     const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'k')) {
         e.preventDefault();
         setSearchOpen(true);
       }
@@ -612,34 +612,34 @@ const Layout = ({ children, showNav = true }) => {
 
       {/* Sidebar - Mobile */}
       <aside
-        className={`sidebar md:hidden w-sidebar transform transition-transform duration-350 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`sidebar md:hidden w-sidebar max-w-[85vw] transform transition-transform duration-350 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         {sidebarContent}
       </aside>
 
       {/* Main Content */}
-      <div className={`transition-all duration-350 ${collapsed ? 'md:ml-sidebar-collapsed' : 'md:ml-sidebar'} h-screen overflow-hidden`}>
+      <div className={`transition-all duration-350 ${collapsed ? 'md:ml-sidebar-collapsed' : 'md:ml-sidebar'} app-shell overflow-hidden`}>
         {/* Header */}
         <header className="app-header">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileOpen(true)}
-              className="header-icon-button focus-ring -ml-2 md:hidden"
+              className="header-icon-button focus-ring -ml-1 sm:-ml-2 md:hidden"
               aria-label="Open navigation"
             >
               <Menu className="w-5 h-5" />
             </button>
 
             {/* Page title replaced with Breadcrumbs */}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1 overflow-hidden">
               <p className="section-eyebrow hidden sm:block">{pageTitle}</p>
               <Breadcrumbs userRole={user?.role} userName={user?.full_name} />
             </div>
           </div>
 
           {/* Right side controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {/* Global search */}
             <button
               onClick={() => setSearchOpen(true)}
@@ -745,7 +745,7 @@ const Layout = ({ children, showNav = true }) => {
         </header>
 
         {/* Page Content */}
-        <main className="h-[calc(100vh-4rem)] overflow-y-auto scroll-smooth px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+        <main className="app-shell-scroll overflow-y-auto scroll-smooth px-3 py-4 sm:px-6 lg:px-8 lg:py-7">
           <div className="mx-auto max-w-[96rem] animate-fade-in">
             {children}
           </div>

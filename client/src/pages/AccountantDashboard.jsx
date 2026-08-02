@@ -9,9 +9,12 @@ import { Loader2, HandCoins, Building2, Calendar, Users } from 'lucide-react';
 const AccountantDashboard = () => {
   const { tab } = useParams();
   const { showToast } = useToast();
-  const showMessage = useCallback((msg) => {
-    showToast({ type: 'success', message: msg });
-  }, [showToast]);
+  const showMessage = useCallback(
+    (msg) => {
+      showToast({ type: 'success', message: msg });
+    },
+    [showToast]
+  );
 
   if (!tab || tab === 'dashboard') {
     return <AccountantOverview showMessage={showMessage} />;
@@ -29,56 +32,150 @@ const AccountantDashboard = () => {
 };
 
 const AccountantOverview = ({ showMessage }) => {
-  const [data, setData] = useState({ contributions: [], finance: [], members: 0, memberContributions: [] });
+  const [data, setData] = useState({
+    contributions: [],
+    finance: [],
+    members: 0,
+    memberContributions: []
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
         const today = new Date().toISOString().split('T')[0];
-        const firstDay = new Date(); firstDay.setDate(1);
+        const firstDay = new Date();
+        firstDay.setDate(1);
         const from = firstDay.toISOString().split('T')[0];
         const [conRes, finRes, memRes, memberConRes] = await Promise.all([
           contributionAPI.getSummary({ date_from: from, date_to: today }),
           financeAPI.getRecords({ date_from: from, date_to: today }),
           adminAPI.getMembers({}),
-          contributionAPI.getContributions({ date_from: from, date_to: today }),
+          contributionAPI.getContributions({ date_from: from, date_to: today })
         ]);
         setData({
           contributions: conRes.data?.rows || [],
           finance: finRes.data || [],
           members: memRes.data?.length || 0,
-          memberContributions: memberConRes.data || [],
+          memberContributions: memberConRes.data || []
         });
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>;
+  if (loading)
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      </div>
+    );
 
-  const financeContributions = data.memberContributions.filter(c => String(c.reference_number || '').startsWith('finance-'));
+  const financeContributions = data.memberContributions.filter((c) =>
+    String(c.reference_number || '').startsWith('finance-')
+  );
   const financeTithes = financeContributions.reduce((s, c) => s + Number(c.amount), 0);
   const totalContributions = data.memberContributions.reduce((s, c) => s + Number(c.amount), 0);
   const totalIncome = data.finance.reduce((s, record) => s + Number(record.total_income || 0), 0);
-  const totalExpenses = data.finance.reduce((s, record) => s + Number(record.total_expenses || 0), 0);
-  const usableFunds = data.finance.reduce((s, record) => s + Number(record.usable_church_funds || 0), 0);
-  const uniqueContributors = new Set(data.memberContributions.map(c => c.member_id)).size;
+  const totalExpenses = data.finance.reduce(
+    (s, record) => s + Number(record.total_expenses || 0),
+    0
+  );
+  const usableFunds = data.finance.reduce(
+    (s, record) => s + Number(record.usable_church_funds || 0),
+    0
+  );
+  const uniqueContributors = new Set(data.memberContributions.map((c) => c.member_id)).size;
 
   const cards = [
-    { label: 'Finance Tithes', value: `TZS ${financeTithes.toLocaleString()}`, icon: HandCoins, border: 'border-violet-200/70', darkBorder: 'dark:border-violet-700', textColor: 'text-violet-600', darkText: 'dark:text-violet-400', iconColor: 'text-violet-500' },
-    { label: 'All Contributions', value: `TZS ${totalContributions.toLocaleString()}`, icon: HandCoins, border: 'border-emerald-200/70', darkBorder: 'dark:border-emerald-700', textColor: 'text-emerald-600', darkText: 'dark:text-emerald-400', iconColor: 'text-emerald-500' },
-    { label: 'Finance Income', value: `TZS ${totalIncome.toLocaleString()}`, icon: Building2, border: 'border-blue-200/70', darkBorder: 'dark:border-blue-700', textColor: 'text-blue-600', darkText: 'dark:text-blue-400', iconColor: 'text-blue-500' },
-    { label: 'Finance Expenses', value: `TZS ${totalExpenses.toLocaleString()}`, icon: Building2, border: 'border-rose-200/70', darkBorder: 'dark:border-rose-700', textColor: 'text-rose-600', darkText: 'dark:text-rose-400', iconColor: 'text-rose-500' },
-    { label: 'Available Funds', value: `TZS ${(usableFunds - totalExpenses).toLocaleString()}`, icon: Building2, border: 'border-teal-200/70', darkBorder: 'dark:border-teal-700', textColor: 'text-teal-600', darkText: 'dark:text-teal-400', iconColor: 'text-teal-500' },
-    { label: 'Finance Entries', value: data.finance.length.toString(), icon: Building2, border: 'border-blue-200/70', darkBorder: 'dark:border-blue-700', textColor: 'text-blue-600', darkText: 'dark:text-blue-400', iconColor: 'text-blue-500' },
-    { label: 'Contributors (This Month)', value: uniqueContributors.toString(), icon: Users, border: 'border-violet-200/70', darkBorder: 'dark:border-violet-700', textColor: 'text-violet-600', darkText: 'dark:text-violet-400', iconColor: 'text-violet-500' },
-    { label: 'Total Members', value: data.members.toLocaleString(), icon: Calendar, border: 'border-amber-200/70', darkBorder: 'dark:border-amber-700', textColor: 'text-amber-600', darkText: 'dark:text-amber-400', iconColor: 'text-amber-500' },
+    {
+      label: 'Finance Tithes',
+      value: `TZS ${financeTithes.toLocaleString()}`,
+      icon: HandCoins,
+      border: 'border-violet-200/70',
+      darkBorder: 'dark:border-violet-700',
+      textColor: 'text-violet-600',
+      darkText: 'dark:text-violet-400',
+      iconColor: 'text-violet-500'
+    },
+    {
+      label: 'All Contributions',
+      value: `TZS ${totalContributions.toLocaleString()}`,
+      icon: HandCoins,
+      border: 'border-emerald-200/70',
+      darkBorder: 'dark:border-emerald-700',
+      textColor: 'text-emerald-600',
+      darkText: 'dark:text-emerald-400',
+      iconColor: 'text-emerald-500'
+    },
+    {
+      label: 'Finance Income',
+      value: `TZS ${totalIncome.toLocaleString()}`,
+      icon: Building2,
+      border: 'border-blue-200/70',
+      darkBorder: 'dark:border-blue-700',
+      textColor: 'text-blue-600',
+      darkText: 'dark:text-blue-400',
+      iconColor: 'text-blue-500'
+    },
+    {
+      label: 'Finance Expenses',
+      value: `TZS ${totalExpenses.toLocaleString()}`,
+      icon: Building2,
+      border: 'border-rose-200/70',
+      darkBorder: 'dark:border-rose-700',
+      textColor: 'text-rose-600',
+      darkText: 'dark:text-rose-400',
+      iconColor: 'text-rose-500'
+    },
+    {
+      label: 'Available Funds',
+      value: `TZS ${(usableFunds - totalExpenses).toLocaleString()}`,
+      icon: Building2,
+      border: 'border-teal-200/70',
+      darkBorder: 'dark:border-teal-700',
+      textColor: 'text-teal-600',
+      darkText: 'dark:text-teal-400',
+      iconColor: 'text-teal-500'
+    },
+    {
+      label: 'Finance Entries',
+      value: data.finance.length.toString(),
+      icon: Building2,
+      border: 'border-blue-200/70',
+      darkBorder: 'dark:border-blue-700',
+      textColor: 'text-blue-600',
+      darkText: 'dark:text-blue-400',
+      iconColor: 'text-blue-500'
+    },
+    {
+      label: 'Contributors (This Month)',
+      value: uniqueContributors.toString(),
+      icon: Users,
+      border: 'border-violet-200/70',
+      darkBorder: 'dark:border-violet-700',
+      textColor: 'text-violet-600',
+      darkText: 'dark:text-violet-400',
+      iconColor: 'text-violet-500'
+    },
+    {
+      label: 'Total Members',
+      value: data.members.toLocaleString(),
+      icon: Calendar,
+      border: 'border-amber-200/70',
+      darkBorder: 'dark:border-amber-700',
+      textColor: 'text-amber-600',
+      darkText: 'dark:text-amber-400',
+      iconColor: 'text-amber-500'
+    }
   ];
 
   const contributionsByType = {};
-  data.memberContributions.forEach(c => {
+  data.memberContributions.forEach((c) => {
     const type = c.contribution_type_name || 'Other';
     contributionsByType[type] = (contributionsByType[type] || 0) + Number(c.amount);
   });
@@ -87,41 +184,61 @@ const AccountantOverview = ({ showMessage }) => {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Accountant Dashboard</h1>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         {cards.map((card, i) => (
-          <div key={i} className={`rounded-2xl border ${card.border} bg-white dark:bg-slate-800 ${card.darkBorder} p-4 shadow-sm`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">{card.label}</span>
-              <card.icon className={`w-4 h-4 ${card.iconColor}`} />
+          <div
+            key={i}
+            className={`rounded-2xl border ${card.border} bg-white dark:bg-slate-800 ${card.darkBorder} p-4 shadow-sm`}
+          >
+            <div className="flex items-center justify-between mb-2 gap-2">
+              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
+                {card.label}
+              </span>
+              <card.icon className={`w-4 h-4 shrink-0 ${card.iconColor}`} />
             </div>
-            <p className={`text-2xl font-bold ${card.textColor} ${card.darkText}`}>{card.value}</p>
+            <p className={`text-2xl font-bold truncate ${card.textColor} ${card.darkText}`}>
+              {card.value}
+            </p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">All Contributions by Type (This Month)</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
+            All Contributions by Type (This Month)
+          </h3>
           {Object.keys(contributionsByType).length === 0 ? (
             <p className="text-slate-400 text-sm py-8 text-center">No contributions this month</p>
           ) : (
             <div className="space-y-3">
               {Object.entries(contributionsByType).map(([type, total]) => (
-                <div key={type} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{type}</span>
-                  <span className="text-sm font-bold text-emerald-600">TZS {total.toLocaleString()}</span>
+                <div
+                  key={type}
+                  className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700 last:border-0"
+                >
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {type}
+                  </span>
+                  <span className="text-sm font-bold text-emerald-600">
+                    TZS {total.toLocaleString()}
+                  </span>
                 </div>
               ))}
               <div className="flex items-center justify-between py-2 pt-3 border-t-2 border-slate-200 dark:border-slate-600">
                 <span className="text-sm font-bold text-slate-900 dark:text-white">Total</span>
-                <span className="text-sm font-bold text-emerald-600">TZS {totalContributions.toLocaleString()}</span>
+                <span className="text-sm font-bold text-emerald-600">
+                  TZS {totalContributions.toLocaleString()}
+                </span>
               </div>
             </div>
           )}
         </div>
 
         <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">Recent Contributions</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
+            Recent Contributions
+          </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -132,15 +249,27 @@ const AccountantOverview = ({ showMessage }) => {
                 </tr>
               </thead>
               <tbody>
-                {data.memberContributions.slice(0, 10).map(c => (
+                {data.memberContributions.slice(0, 10).map((c) => (
                   <tr key={c.id} className="border-b border-slate-100 dark:border-slate-700">
-                    <td className="py-2 px-2 text-slate-900 dark:text-white">{c.full_name || 'Unknown'}</td>
-                    <td className="py-2 px-2"><span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{c.contribution_type_name}</span></td>
-                    <td className="py-2 px-2 text-right font-semibold text-emerald-600">TZS {Number(c.amount).toLocaleString()}</td>
+                    <td className="py-2 px-2 text-slate-900 dark:text-white">
+                      {c.full_name || 'Unknown'}
+                    </td>
+                    <td className="py-2 px-2">
+                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                        {c.contribution_type_name}
+                      </span>
+                    </td>
+                    <td className="py-2 px-2 text-right font-semibold text-emerald-600">
+                      TZS {Number(c.amount).toLocaleString()}
+                    </td>
                   </tr>
                 ))}
                 {data.memberContributions.length === 0 && (
-                  <tr><td colSpan={3} className="text-center py-8 text-slate-400">No contributions yet this month</td></tr>
+                  <tr>
+                    <td colSpan={3} className="text-center py-8 text-slate-400">
+                      No contributions yet this month
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

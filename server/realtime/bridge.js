@@ -28,6 +28,13 @@ let onDispatch = null; // function (target, userId|null, type, data)
 async function startBridge() {
   if (started || starting) return;
   starting = true;
+  // Only meaningful in postgres mode. DATABASE_URL alone is not a reliable
+  // indicator: dotenv repopulates it from .env even when running SQLite,
+  // which would open (and then leak) a Neon LISTEN connection per boot.
+  if (String(process.env.DB_CLIENT || '').toLowerCase() !== 'postgres') {
+    starting = false;
+    return;
+  }
   const url = process.env.DATABASE_URL;
   if (!url) {
     starting = false;

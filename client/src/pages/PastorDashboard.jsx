@@ -11,7 +11,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Cell,
+  Cell
 } from 'recharts';
 import {
   Activity,
@@ -22,7 +22,7 @@ import {
   FileText,
   ShieldAlert,
   TrendingUp,
-  Users,
+  Users
 } from 'lucide-react';
 
 import { pastorAPI } from '../services/api';
@@ -47,10 +47,12 @@ function numberOrZero(value) {
 }
 
 function sanitizeFilename(value) {
-  return String(value || 'ministry-report')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'ministry-report';
+  return (
+    String(value || 'ministry-report')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'ministry-report'
+  );
 }
 
 function rateVariant(rate) {
@@ -75,7 +77,7 @@ const PastorDashboard = () => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [dateRange, setDateRange] = useState(() => ({
     start: formatLocalDate(addDays(new Date(), -30)),
-    end: formatLocalDate(),
+    end: formatLocalDate()
   }));
 
   const loadAllData = useCallback(async () => {
@@ -85,14 +87,14 @@ const PastorDashboard = () => {
     try {
       const filters = {
         start_date: dateRange.start,
-        end_date: dateRange.end,
+        end_date: dateRange.end
       };
 
       const [statsRes, trendsRes, leadersRes, atRiskRes] = await Promise.all([
         pastorAPI.getDashboardStats(filters),
         pastorAPI.getTrends(filters),
         pastorAPI.getLeaderMetrics(filters),
-        pastorAPI.getAtRiskMembers(),
+        pastorAPI.getAtRiskMembers()
       ]);
 
       setStats(statsRes.data);
@@ -128,39 +130,44 @@ const PastorDashboard = () => {
       .sort((left, right) => left.date.localeCompare(right.date))
       .map((row) => ({
         date: row.date,
-        attendance_rate: row.total > 0 ? Number(((row.present / row.total) * 100).toFixed(1)) : 0,
+        attendance_rate: row.total > 0 ? Number(((row.present / row.total) * 100).toFixed(1)) : 0
       }));
   }, [trends]);
 
   const sectionBreakdown = useMemo(
-    () => [...(stats?.sectionBreakdown || [])].sort(
-      (left, right) => numberOrZero(right.attendance_rate) - numberOrZero(left.attendance_rate)
-    ),
+    () =>
+      [...(stats?.sectionBreakdown || [])].sort(
+        (left, right) => numberOrZero(right.attendance_rate) - numberOrZero(left.attendance_rate)
+      ),
     [stats]
   );
 
   const rankedLeaders = useMemo(
-    () => [...leaderMetrics].sort(
-      (left, right) => numberOrZero(right.attendance_rate) - numberOrZero(left.attendance_rate)
-    ),
+    () =>
+      [...leaderMetrics].sort(
+        (left, right) => numberOrZero(right.attendance_rate) - numberOrZero(left.attendance_rate)
+      ),
     [leaderMetrics]
   );
 
   const prioritizedMembers = useMemo(
-    () => [...atRiskMembers].sort(
-      (left, right) => numberOrZero(right.absence_count) - numberOrZero(left.absence_count)
-    ),
+    () =>
+      [...atRiskMembers].sort(
+        (left, right) => numberOrZero(right.absence_count) - numberOrZero(left.absence_count)
+      ),
     [atRiskMembers]
   );
 
   const summaryMetrics = useMemo(() => {
     const attendanceRows = stats?.overallAttendance || [];
     const averageAttendance = attendanceRows.length
-      ? Math.round(attendanceRows.reduce((sum, row) => {
-          const present = numberOrZero(row.present_count ?? row.present);
-          const total = numberOrZero(row.total_members ?? row.total);
-          return total > 0 ? sum + (present / total) * 100 : sum;
-        }, 0) / attendanceRows.length)
+      ? Math.round(
+          attendanceRows.reduce((sum, row) => {
+            const present = numberOrZero(row.present_count ?? row.present);
+            const total = numberOrZero(row.total_members ?? row.total);
+            return total > 0 ? sum + (present / total) * 100 : sum;
+          }, 0) / attendanceRows.length
+        )
       : 0;
 
     return {
@@ -169,7 +176,7 @@ const PastorDashboard = () => {
       submissionRate: numberOrZero(stats?.completion?.rate),
       leadersSubmitted: numberOrZero(stats?.completion?.leadersSubmitted),
       totalLeaders: numberOrZero(stats?.completion?.totalLeaders),
-      trackedSections: sectionBreakdown.length,
+      trackedSections: sectionBreakdown.length
     };
   }, [sectionBreakdown.length, stats]);
 
@@ -177,35 +184,56 @@ const PastorDashboard = () => {
     const strongestSection = sectionBreakdown[0] || null;
     const weakestSection = sectionBreakdown[sectionBreakdown.length - 1] || null;
     const topLeader = rankedLeaders[0] || null;
-    const trendDelta = overviewTrend.length >= 2
-      ? Number((overviewTrend[overviewTrend.length - 1].attendance_rate - overviewTrend[0].attendance_rate).toFixed(1))
-      : 0;
+    const trendDelta =
+      overviewTrend.length >= 2
+        ? Number(
+            (
+              overviewTrend[overviewTrend.length - 1].attendance_rate -
+              overviewTrend[0].attendance_rate
+            ).toFixed(1)
+          )
+        : 0;
 
-    const completionGap = Math.max(summaryMetrics.totalLeaders - summaryMetrics.leadersSubmitted, 0);
+    const completionGap = Math.max(
+      summaryMetrics.totalLeaders - summaryMetrics.leadersSubmitted,
+      0
+    );
     const actionItems = [];
 
     if (completionGap > 0) {
-      actionItems.push(`Follow up with ${completionGap} leader${completionGap === 1 ? '' : 's'} who have not submitted in the selected range.`);
+      actionItems.push(
+        `Follow up with ${completionGap} leader${completionGap === 1 ? '' : 's'} who have not submitted in the selected range.`
+      );
     }
 
     if (trendDelta <= -3) {
-      actionItems.push(`Review the ${Math.abs(trendDelta)} point attendance slide across the current reporting window.`);
+      actionItems.push(
+        `Review the ${Math.abs(trendDelta)} point attendance slide across the current reporting window.`
+      );
     }
 
     if (weakestSection && numberOrZero(weakestSection.attendance_rate) < 75) {
-      actionItems.push(`Coach ${weakestSection.section_name} on consistency after its ${weakestSection.attendance_rate}% attendance rate.`);
+      actionItems.push(
+        `Coach ${weakestSection.section_name} on consistency after its ${weakestSection.attendance_rate}% attendance rate.`
+      );
     }
 
     if (prioritizedMembers.length > 0) {
-      actionItems.push(`Prioritize pastoral follow-up for ${Math.min(prioritizedMembers.length, 10)} members showing repeated recent absences.`);
+      actionItems.push(
+        `Prioritize pastoral follow-up for ${Math.min(prioritizedMembers.length, 10)} members showing repeated recent absences.`
+      );
     }
 
     if (topLeader && numberOrZero(topLeader.attendance_rate) >= 90) {
-      actionItems.push(`Recognize ${topLeader.leader_name} and ${topLeader.section_name} for sustained strong reporting discipline.`);
+      actionItems.push(
+        `Recognize ${topLeader.leader_name} and ${topLeader.section_name} for sustained strong reporting discipline.`
+      );
     }
 
     if (actionItems.length === 0) {
-      actionItems.push('Maintain the current follow-up rhythm and keep section reporting steady through the next review cycle.');
+      actionItems.push(
+        'Maintain the current follow-up rhythm and keep section reporting steady through the next review cycle.'
+      );
     }
 
     return {
@@ -216,43 +244,55 @@ const PastorDashboard = () => {
       atRiskMembers: prioritizedMembers.slice(0, 12),
       trendDelta,
       actionItems,
-      windowLabel: `${formatDisplayDate(dateRange.start)} to ${formatDisplayDate(dateRange.end)}`,
+      windowLabel: `${formatDisplayDate(dateRange.start)} to ${formatDisplayDate(dateRange.end)}`
     };
-  }, [dateRange.end, dateRange.start, overviewTrend, prioritizedMembers, rankedLeaders, sectionBreakdown, summaryMetrics.leadersSubmitted, summaryMetrics.totalLeaders]);
+  }, [
+    dateRange.end,
+    dateRange.start,
+    overviewTrend,
+    prioritizedMembers,
+    rankedLeaders,
+    sectionBreakdown,
+    summaryMetrics.leadersSubmitted,
+    summaryMetrics.totalLeaders
+  ]);
 
   const exportData = useCallback(() => {
     pastorAPI.exportAttendance({
       start_date: dateRange.start,
-      end_date: dateRange.end,
+      end_date: dateRange.end
     });
   }, [dateRange.end, dateRange.start]);
 
-  const generateReport = useCallback(async (form) => {
-    setReportLoading(true);
+  const generateReport = useCallback(
+    async (form) => {
+      setReportLoading(true);
 
-    try {
-      const { generateReportPdf } = await import('../utils/pdfWorker');
-      await generateReportPdf({
-        report: 'pastor',
-        form,
-        reportSummary,
-        summaryMetrics,
-        sectionBreakdown,
-        prioritizedMembers,
-        generatedOn: formatDisplayDate(formatLocalDate()),
-        formatDisplayDate,
-        formatLocalDate,
-        sanitizeFilename,
-        numberOrZero,
-      });
-      setIsReportModalOpen(false);
-    } catch (err) {
-      console.error('Pastor report PDF generation failed:', err);
-      alert('Failed to generate PDF: ' + (err.message || err));
-    } finally {
-      setReportLoading(false);
-    }
-  }, [prioritizedMembers.length, reportSummary, sectionBreakdown, summaryMetrics, prioritizedMembers]);
+      try {
+        const { generateReportPdf } = await import('../utils/pdfWorker');
+        await generateReportPdf({
+          report: 'pastor',
+          form,
+          reportSummary,
+          summaryMetrics,
+          sectionBreakdown,
+          prioritizedMembers,
+          generatedOn: formatDisplayDate(formatLocalDate()),
+          formatDisplayDate,
+          formatLocalDate,
+          sanitizeFilename,
+          numberOrZero
+        });
+        setIsReportModalOpen(false);
+      } catch (err) {
+        console.error('Pastor report PDF generation failed:', err);
+        alert('Failed to generate PDF: ' + (err.message || err));
+      } finally {
+        setReportLoading(false);
+      }
+    },
+    [prioritizedMembers.length, reportSummary, sectionBreakdown, summaryMetrics, prioritizedMembers]
+  );
 
   const renderOverview = () => {
     if (loading) {
@@ -283,7 +323,9 @@ const PastorDashboard = () => {
               <span>{reportSummary.windowLabel}</span>
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Welcome, Pst. {user?.full_name || 'Jeremiah'}</h2>
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                Welcome, Pst. {user?.full_name || 'Jeremiah'}
+              </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Attendance health, leader reporting, and follow-up priorities in one working view.
               </p>
@@ -296,7 +338,9 @@ const PastorDashboard = () => {
                 type="date"
                 value={dateRange.start}
                 max={dateRange.end}
-                onChange={(event) => setDateRange((current) => ({ ...current, start: event.target.value }))}
+                onChange={(event) =>
+                  setDateRange((current) => ({ ...current, start: event.target.value }))
+                }
                 className="bg-transparent border-none p-0 focus:ring-0 text-sm text-slate-700 dark:text-slate-300"
               />
               <span className="text-slate-300 dark:text-slate-600 text-sm">to</span>
@@ -304,7 +348,9 @@ const PastorDashboard = () => {
                 type="date"
                 value={dateRange.end}
                 min={dateRange.start}
-                onChange={(event) => setDateRange((current) => ({ ...current, end: event.target.value }))}
+                onChange={(event) =>
+                  setDateRange((current) => ({ ...current, end: event.target.value }))
+                }
                 className="bg-transparent border-none p-0 focus:ring-0 text-sm text-slate-700 dark:text-slate-300"
               />
             </div>
@@ -327,33 +373,62 @@ const PastorDashboard = () => {
         </div>
 
         {error && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-900/40 px-5 py-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 text-rose-700 dark:text-rose-300">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-900/40 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3 text-rose-700 dark:text-rose-300 min-w-0">
               <AlertTriangle className="w-5 h-5 shrink-0" />
-              <span className="text-sm font-medium">{error}</span>
+              <span className="text-sm font-medium break-words">{error}</span>
             </div>
-            <button onClick={loadAllData} className="btn-secondary btn-sm">
+            <button
+              onClick={loadAllData}
+              className="btn-secondary btn-sm shrink-0 self-start sm:self-auto"
+            >
               Retry
             </button>
           </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
-          <StatCard icon={CalendarRange} label="Latest Attendance Day" value={summaryMetrics.latestDateLabel} variant="info" />
-          <StatCard icon={Activity} label="Average Attendance" value={`${summaryMetrics.averageAttendance}%`} variant={rateVariant(summaryMetrics.averageAttendance)} />
-          <StatCard icon={CheckCircle2} label="Submission Rate" value={`${summaryMetrics.submissionRate}%`} trendLabel={`${summaryMetrics.leadersSubmitted}/${summaryMetrics.totalLeaders} leaders`} variant={rateVariant(summaryMetrics.submissionRate)} />
-          <StatCard icon={AlertTriangle} label="At-Risk Members" value={prioritizedMembers.length} variant={prioritizedMembers.length > 0 ? 'danger' : 'success'} />
+          <StatCard
+            icon={CalendarRange}
+            label="Latest Attendance Day"
+            value={summaryMetrics.latestDateLabel}
+            variant="info"
+          />
+          <StatCard
+            icon={Activity}
+            label="Average Attendance"
+            value={`${summaryMetrics.averageAttendance}%`}
+            variant={rateVariant(summaryMetrics.averageAttendance)}
+          />
+          <StatCard
+            icon={CheckCircle2}
+            label="Submission Rate"
+            value={`${summaryMetrics.submissionRate}%`}
+            trendLabel={`${summaryMetrics.leadersSubmitted}/${summaryMetrics.totalLeaders} leaders`}
+            variant={rateVariant(summaryMetrics.submissionRate)}
+          />
+          <StatCard
+            icon={AlertTriangle}
+            label="At-Risk Members"
+            value={prioritizedMembers.length}
+            variant={prioritizedMembers.length > 0 ? 'danger' : 'success'}
+          />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
           <section className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <ShieldAlert className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Priority Actions</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                Priority Actions
+              </h3>
             </div>
             <div className="space-y-3">
               {reportSummary.actionItems.map((item) => (
-                <div key={item} className="flex items-start gap-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 px-4 py-3">
+                <div
+                  key={item}
+                  className="flex items-start gap-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 px-4 py-3"
+                >
                   <div className="mt-1 w-2 h-2 rounded-full bg-primary-500 shrink-0" />
                   <p className="text-sm text-slate-600 dark:text-slate-300">{item}</p>
                 </div>
@@ -364,20 +439,26 @@ const PastorDashboard = () => {
           <section className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <TrendingUp className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Report Snapshot</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                Report Snapshot
+              </h3>
             </div>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-500 dark:text-slate-400">Trend delta</span>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-sm text-slate-500 dark:text-slate-400 min-w-0">
+                  Trend delta
+                </span>
                 <Badge variant={reportSummary.trendDelta >= 0 ? 'success' : 'danger'}>
                   {reportSummary.trendDelta > 0 ? '+' : ''}
                   {reportSummary.trendDelta}%
                 </Badge>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500 dark:text-slate-400">Strongest section</span>
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  Strongest section
+                </span>
+                <div className="text-right min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {reportSummary.strongestSection?.section_name || 'No data'}
                   </div>
                   {reportSummary.strongestSection && (
@@ -389,8 +470,8 @@ const PastorDashboard = () => {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-slate-500 dark:text-slate-400">Needs support</span>
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="text-right min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {reportSummary.weakestSection?.section_name || 'No data'}
                   </div>
                   {reportSummary.weakestSection && (
@@ -402,13 +483,14 @@ const PastorDashboard = () => {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-slate-500 dark:text-slate-400">Top leader</span>
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <div className="text-right min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {reportSummary.topLeader?.leader_name || 'No data'}
                   </div>
                   {reportSummary.topLeader && (
                     <div className="text-xs text-slate-500 dark:text-slate-400">
-                      {reportSummary.topLeader.section_name} · {reportSummary.topLeader.attendance_rate}%
+                      {reportSummary.topLeader.section_name} ·{' '}
+                      {reportSummary.topLeader.attendance_rate}%
                     </div>
                   )}
                 </div>
@@ -433,9 +515,16 @@ const PastorDashboard = () => {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#64748b' }}
-                  tickFormatter={(value) => formatDisplayDate(value, { month: 'short', day: 'numeric' })}
+                  tickFormatter={(value) =>
+                    formatDisplayDate(value, { month: 'short', day: 'numeric' })
+                  }
                 />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} domain={[0, 100]} />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  domain={[0, 100]}
+                />
                 <Tooltip
                   formatter={(value) => [`${value}%`, 'Attendance']}
                   labelFormatter={(value) => formatDisplayDate(value)}
@@ -460,16 +549,26 @@ const PastorDashboard = () => {
             emptyMessage="Section performance will appear once attendance has been captured."
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sectionBreakdown} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
+              <BarChart
+                data={sectionBreakdown}
+                margin={{ top: 8, right: 12, left: -18, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis
                   dataKey="section_name"
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: '#64748b' }}
-                  tickFormatter={(value) => (value.length > 11 ? `${value.slice(0, 11)}...` : value)}
+                  tickFormatter={(value) =>
+                    value.length > 11 ? `${value.slice(0, 11)}...` : value
+                  }
                 />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} domain={[0, 100]} />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  domain={[0, 100]}
+                />
                 <Tooltip formatter={(value) => [`${value}%`, 'Attendance Rate']} />
                 <Bar dataKey="attendance_rate" radius={[8, 8, 0, 0]}>
                   {sectionBreakdown.map((section, index) => (
@@ -490,25 +589,29 @@ const PastorDashboard = () => {
               accessor: 'leader_name',
               header: 'Leader',
               sortable: true,
-              render: (row) => <span className="font-semibold text-slate-900 dark:text-slate-100">{row.leader_name}</span>,
+              render: (row) => (
+                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  {row.leader_name}
+                </span>
+              )
             },
             {
               accessor: 'section_name',
               header: 'Section',
               sortable: true,
-              render: (row) => <Badge variant="info">{row.section_name}</Badge>,
+              render: (row) => <Badge variant="info">{row.section_name}</Badge>
             },
             {
               accessor: 'reporting_days',
               header: 'Reporting Days',
               sortable: true,
-              align: 'center',
+              align: 'center'
             },
             {
               accessor: 'total_records',
               header: 'Records',
               sortable: true,
-              align: 'center',
+              align: 'center'
             },
             {
               accessor: 'attendance_rate',
@@ -519,8 +622,8 @@ const PastorDashboard = () => {
                 <Badge variant={rateVariant(numberOrZero(row.attendance_rate))}>
                   {row.attendance_rate}%
                 </Badge>
-              ),
-            },
+              )
+            }
           ]}
           data={rankedLeaders}
           searchable
@@ -535,31 +638,35 @@ const PastorDashboard = () => {
             {
               accessor: 'membership_id',
               header: 'Membership ID',
-              sortable: true,
+              sortable: true
             },
             {
               accessor: 'full_name',
               header: 'Member',
               sortable: true,
-              render: (row) => <span className="font-semibold text-slate-900 dark:text-slate-100">{row.full_name}</span>,
+              render: (row) => (
+                <span className="font-semibold text-slate-900 dark:text-slate-100">
+                  {row.full_name}
+                </span>
+              )
             },
             {
               accessor: 'section_name',
               header: 'Section',
-              sortable: true,
+              sortable: true
             },
             {
               accessor: 'leader_name',
               header: 'Leader',
-              sortable: true,
+              sortable: true
             },
             {
               accessor: 'absence_count',
               header: 'Absences',
               sortable: true,
               align: 'center',
-              render: (row) => <Badge variant="danger">{row.absence_count}</Badge>,
-            },
+              render: (row) => <Badge variant="danger">{row.absence_count}</Badge>
+            }
           ]}
           data={prioritizedMembers}
           searchable

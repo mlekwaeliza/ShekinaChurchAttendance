@@ -1,7 +1,26 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useToast } from '../../context/ToastContext';
-import { Users, Pencil, Trash2, Search, Download, UserPlus, Mail, Phone, Filter, X, ChevronLeft, Check, Clock, Award, Plus, X as XIcon, Crown, ShieldCheck } from 'lucide-react';
+import {
+  Users,
+  Pencil,
+  Trash2,
+  Search,
+  Download,
+  UserPlus,
+  Mail,
+  Phone,
+  Filter,
+  X,
+  ChevronLeft,
+  Check,
+  Clock,
+  Award,
+  Plus,
+  X as XIcon,
+  Crown,
+  ShieldCheck
+} from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
 import { fdatetime } from '../../utils/date';
@@ -9,7 +28,6 @@ import BulkDeleteModal from './BulkDeleteModal';
 import PendingDeletionModal from './PendingDeletionModal';
 import { adminAPI } from '../../services/api';
 import MemberDetailsDrawer from '../MemberDetailsDrawer';
-
 
 const avatarColors = [
   'from-violet-500 to-purple-600',
@@ -19,7 +37,7 @@ const avatarColors = [
   'from-rose-500 to-pink-600',
   'from-indigo-500 to-blue-600',
   'from-cyan-500 to-teal-600',
-  'from-fuchsia-500 to-pink-600',
+  'from-fuchsia-500 to-pink-600'
 ];
 
 const MemberDirectory = ({
@@ -34,7 +52,7 @@ const MemberDirectory = ({
   onSectionFilterChange,
   leaderFilter: externalLeaderFilter,
   onLeaderFilterChange,
-  loading = false,
+  loading = false
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'all');
@@ -42,13 +60,15 @@ const MemberDirectory = ({
   const [localSectionFilter, setLocalSectionFilter] = useState('');
 
   // Use external filter if provided, otherwise fallback to local
-  const sectionFilter = externalSectionFilter !== undefined ? externalSectionFilter : localSectionFilter;
+  const sectionFilter =
+    externalSectionFilter !== undefined ? externalSectionFilter : localSectionFilter;
   const handleSectionFilterChange = (val) => {
     if (onSectionFilterChange) onSectionFilterChange(val);
     else setLocalSectionFilter(val);
   };
   const [localLeaderFilter, setLocalLeaderFilter] = useState('');
-  const leaderFilter = externalLeaderFilter !== undefined ? externalLeaderFilter : localLeaderFilter;
+  const leaderFilter =
+    externalLeaderFilter !== undefined ? externalLeaderFilter : localLeaderFilter;
   const handleLeaderFilterChange = (val) => {
     if (onLeaderFilterChange) onLeaderFilterChange(val);
     else setLocalLeaderFilter(val);
@@ -76,15 +96,22 @@ const MemberDirectory = ({
   const [removingTitle, setRemovingTitle] = useState(null); // { memberId, titleId, titleName }
   const [detailsMember, setDetailsMember] = useState(null);
 
-  const fetchMemberTitles = useCallback(async (memberId) => {
-    try {
-      const res = await adminAPI.getMemberTitles(memberId);
-      setMemberTitles((prev) => ({ ...prev, [memberId]: res.data || [] }));
-    } catch (err) {
-      console.error('Failed to fetch member titles:', err);
-      showToast({ type: 'error', title: 'Failed to load titles', message: err.message || 'Could not load member titles' });
-    }
-  }, [showToast]);
+  const fetchMemberTitles = useCallback(
+    async (memberId) => {
+      try {
+        const res = await adminAPI.getMemberTitles(memberId);
+        setMemberTitles((prev) => ({ ...prev, [memberId]: res.data || [] }));
+      } catch (err) {
+        console.error('Failed to fetch member titles:', err);
+        showToast({
+          type: 'error',
+          title: 'Failed to load titles',
+          message: err.message || 'Could not load member titles'
+        });
+      }
+    },
+    [showToast]
+  );
 
   const fetchAllTitles = useCallback(async () => {
     try {
@@ -92,11 +119,17 @@ const MemberDirectory = ({
       setAllTitles(res.data || []);
     } catch (err) {
       console.error('Failed to fetch titles:', err);
-      showToast({ type: 'error', title: 'Failed to load titles', message: err.message || 'Could not load title list' });
+      showToast({
+        type: 'error',
+        title: 'Failed to load titles',
+        message: err.message || 'Could not load title list'
+      });
     }
   }, [showToast]);
 
-  useEffect(() => { fetchAllTitles(); }, [fetchAllTitles]);
+  useEffect(() => {
+    fetchAllTitles();
+  }, [fetchAllTitles]);
 
   // Preload all members for the assign modal (in case allMembers prop is empty/stale)
   const [allMembersLoaded, setAllMembersLoaded] = useState(false);
@@ -122,12 +155,22 @@ const MemberDirectory = ({
   }, [modalMembers.length, showToast]);
 
   useEffect(() => {
-    if (!viewHistoryFor) { setTitleHistory([]); return; }
+    if (!viewHistoryFor) {
+      setTitleHistory([]);
+      return;
+    }
     let cancelled = false;
-    adminAPI.getMemberTitleHistory(viewHistoryFor.memberId, viewHistoryFor.titleId)
-      .then((res) => { if (!cancelled) setTitleHistory(res.data || []); })
-      .catch(() => { if (!cancelled) setTitleHistory([]); });
-    return () => { cancelled = true; };
+    adminAPI
+      .getMemberTitleHistory(viewHistoryFor.memberId, viewHistoryFor.titleId)
+      .then((res) => {
+        if (!cancelled) setTitleHistory(res.data || []);
+      })
+      .catch(() => {
+        if (!cancelled) setTitleHistory([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [viewHistoryFor]);
 
   const handleExpandRow = (memberId) => {
@@ -151,14 +194,22 @@ const MemberDirectory = ({
     try {
       await adminAPI.assignMemberTitle(memberId, titleForm.title_id, {
         appointment_date: titleForm.appointment_date || null,
-        notes: titleForm.notes || null,
+        notes: titleForm.notes || null
       });
-      showToast({ type: 'success', title: 'Title Assigned', message: 'Title has been assigned successfully' });
+      showToast({
+        type: 'success',
+        title: 'Title Assigned',
+        message: 'Title has been assigned successfully'
+      });
       setTitleForm({ title_id: '', appointment_date: '', notes: '' });
       setTitleAssignMember(null);
       await fetchMemberTitles(memberId);
     } catch (err) {
-      showToast({ type: 'error', title: 'Assignment Failed', message: err.response?.data?.error || 'Failed to assign title' });
+      showToast({
+        type: 'error',
+        title: 'Assignment Failed',
+        message: err.response?.data?.error || 'Failed to assign title'
+      });
     } finally {
       setAssignSaving(false);
     }
@@ -168,11 +219,19 @@ const MemberDirectory = ({
     setAssignSaving(true);
     try {
       await adminAPI.updateMemberTitle(memberId, titleId, editingTitleAssignment);
-      showToast({ type: 'success', title: 'Assignment Updated', message: 'Title assignment has been updated' });
+      showToast({
+        type: 'success',
+        title: 'Assignment Updated',
+        message: 'Title assignment has been updated'
+      });
       setEditingTitleAssignment(null);
       await fetchMemberTitles(memberId);
     } catch (err) {
-      showToast({ type: 'error', title: 'Update Failed', message: err.response?.data?.error || 'Failed to update assignment' });
+      showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: err.response?.data?.error || 'Failed to update assignment'
+      });
     } finally {
       setAssignSaving(false);
     }
@@ -186,11 +245,19 @@ const MemberDirectory = ({
     if (!removingTitle) return;
     try {
       await adminAPI.removeMemberTitle(removingTitle.memberId, removingTitle.titleId);
-      showToast({ type: 'success', title: 'Title Removed', message: `${removingTitle.titleName} has been removed` });
+      showToast({
+        type: 'success',
+        title: 'Title Removed',
+        message: `${removingTitle.titleName} has been removed`
+      });
       await fetchMemberTitles(removingTitle.memberId);
       setRemovingTitle(null);
     } catch (err) {
-      showToast({ type: 'error', title: 'Removal Failed', message: err.response?.data?.error || 'Failed to remove title' });
+      showToast({
+        type: 'error',
+        title: 'Removal Failed',
+        message: err.response?.data?.error || 'Failed to remove title'
+      });
     }
   };
 
@@ -203,7 +270,9 @@ const MemberDirectory = ({
     }
   }, []);
 
-  useEffect(() => { refreshPendingDeletionCount(); }, [refreshPendingDeletionCount]);
+  useEffect(() => {
+    refreshPendingDeletionCount();
+  }, [refreshPendingDeletionCount]);
 
   const getInitials = (name) => {
     if (!name) return '?';
@@ -241,12 +310,30 @@ const MemberDirectory = ({
   const sectionColorMap = useMemo(() => {
     const map = {};
     const gradients = [
-      { bg: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700/50', dot: 'bg-violet-500' },
-      { bg: 'bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/50', dot: 'bg-sky-500' },
-      { bg: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50', dot: 'bg-emerald-500' },
-      { bg: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50', dot: 'bg-amber-500' },
-      { bg: 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/50', dot: 'bg-rose-500' },
-      { bg: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700/50', dot: 'bg-indigo-500' },
+      {
+        bg: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700/50',
+        dot: 'bg-violet-500'
+      },
+      {
+        bg: 'bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/50',
+        dot: 'bg-sky-500'
+      },
+      {
+        bg: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50',
+        dot: 'bg-emerald-500'
+      },
+      {
+        bg: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50',
+        dot: 'bg-amber-500'
+      },
+      {
+        bg: 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/50',
+        dot: 'bg-rose-500'
+      },
+      {
+        bg: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700/50',
+        dot: 'bg-indigo-500'
+      }
     ];
     sections.forEach((s, i) => {
       map[s.name] = gradients[i % gradients.length];
@@ -298,9 +385,12 @@ const MemberDirectory = ({
     }
     if (genderFilter && genderFilter !== 'all') {
       result = result.filter((m) => {
-        const g = String(m.gender || '').trim().toLowerCase();
+        const g = String(m.gender || '')
+          .trim()
+          .toLowerCase();
         if (genderFilter === 'male') return g.startsWith('m') || g === 'man';
-        if (genderFilter === 'female') return g.startsWith('f') || g.startsWith('w') || g === 'woman';
+        if (genderFilter === 'female')
+          return g.startsWith('f') || g.startsWith('w') || g === 'woman';
         return g === genderFilter;
       });
     }
@@ -312,7 +402,16 @@ const MemberDirectory = ({
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return result;
-  }, [allMembers, searchTerm, sectionFilter, leaderFilter, ageGroupFilter, genderFilter, sortField, sortDir]);
+  }, [
+    allMembers,
+    searchTerm,
+    sectionFilter,
+    leaderFilter,
+    ageGroupFilter,
+    genderFilter,
+    sortField,
+    sortDir
+  ]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -343,7 +442,10 @@ const MemberDirectory = ({
   const hasActiveFilters = sectionFilter || leaderFilter;
 
   const exportPDF = async () => {
-    const [{ default: jsPDF }, autoTableModule] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const [{ default: jsPDF }, autoTableModule] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable')
+    ]);
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
     const m = 20;
@@ -357,7 +459,11 @@ const MemberDirectory = ({
     doc.text('Member Directory', m, 18);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Shekina Church · ${new Date().toLocaleDateString()} · ${filteredMembers.length} members`, m, 28);
+    doc.text(
+      `Shekina Church · ${new Date().toLocaleDateString()} · ${filteredMembers.length} members`,
+      m,
+      28
+    );
     y = 45;
 
     doc.setTextColor(51, 51, 51);
@@ -370,13 +476,13 @@ const MemberDirectory = ({
     doc.line(m, y, pw - m, y);
     y += 5;
 
-    const bodyData = filteredMembers.map(member => [
+    const bodyData = filteredMembers.map((member) => [
       member.full_name || 'N/A',
       member.membership_id || 'N/A',
       member.section_name || 'N/A',
       member.leader_name || 'N/A',
       member.phone || 'N/A',
-      member.email || 'N/A',
+      member.email || 'N/A'
     ]);
     autoTableModule.default(doc, {
       startY: y,
@@ -385,7 +491,7 @@ const MemberDirectory = ({
       margin: { left: m, right: m },
       styles: { fontSize: 8, cellPadding: 3 },
       headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      alternateRowStyles: { fillColor: [248, 250, 252] }
     });
 
     const pc = doc.internal.getNumberOfPages();
@@ -393,14 +499,19 @@ const MemberDirectory = ({
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
-      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+      doc.text(
+        `Page ${i} of ${pc} | Shekina Church Management System`,
+        m,
+        doc.internal.pageSize.getHeight() - 10
+      );
     }
 
     doc.save(`member_directory_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const SortIcon = ({ field }) => {
-    if (sortField !== field) return <span className="ml-1 text-slate-300 dark:text-slate-600">↕</span>;
+    if (sortField !== field)
+      return <span className="ml-1 text-slate-300 dark:text-slate-600">↕</span>;
     return <span className="ml-1 text-primary-500">{sortDir === 'asc' ? '↑' : '↓'}</span>;
   };
 
@@ -415,9 +526,13 @@ const MemberDirectory = ({
           </div>
           <div>
             <p className="section-eyebrow">People &amp; care</p>
-            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">Member Directory</h2>
+            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
+              Member Directory
+            </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {loading ? 'Loading members...' : `${allMembers.length} members · ${sections.length} sections`}
+              {loading
+                ? 'Loading members...'
+                : `${allMembers.length} members · ${sections.length} sections`}
             </p>
           </div>
         </div>
@@ -440,7 +555,7 @@ const MemberDirectory = ({
             { id: 'all', label: 'All Members', icon: Users },
             { id: 'new', label: 'New Members', icon: UserPlus },
             { id: 'leadership', label: 'Leadership', icon: Crown },
-            { id: 'titles', label: 'Titles', icon: Award },
+            { id: 'titles', label: 'Titles', icon: Award }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -470,67 +585,71 @@ const MemberDirectory = ({
       </div>
 
       <div className="flex w-full flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={exportPDF}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-          >
-            <Download className="w-4 h-4" />
-            PDF
-          </button>
-          <button
-            type="button"
-            onClick={() => adminAPI.exportMembers()}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-          >
-            <Download className="w-4 h-4" />
-            CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowBulkEdit(true)}
-            disabled={selectedMembers.size === 0}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            title={selectedMembers.size === 0 ? 'Select members to edit' : 'Edit selected members'}
-          >
-            <Check className="w-4 h-4" />
-            Bulk Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowBulkDelete(true)}
-            disabled={selectedMembers.size === 0}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-rose-700/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30"
-            title={selectedMembers.size === 0 ? 'Select members to remove' : 'Move selected members to pending deletion'}
-          >
-            <Trash2 className="w-4 h-4" />
-            Bulk Delete
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowPendingDeletion(true)}
-            className="relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 hover:shadow dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30"
-            title="Review members awaiting permanent deletion"
-          >
-            <Clock className="w-4 h-4" />
-            Pending
-            {pendingDeletionCount > 0 && (
-              <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-600 px-1.5 text-xs font-bold text-white dark:bg-amber-300 dark:text-amber-900">
-                {pendingDeletionCount}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={onAdd}
-            className="btn-primary group inline-flex h-11 items-center justify-center gap-3 px-4 pr-5 text-sm"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/18 ring-1 ring-white/20 transition-colors group-hover:bg-white/24">
-              <UserPlus className="w-4 h-4" />
+        <button
+          type="button"
+          onClick={exportPDF}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+        >
+          <Download className="w-4 h-4" />
+          PDF
+        </button>
+        <button
+          type="button"
+          onClick={() => adminAPI.exportMembers()}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+        >
+          <Download className="w-4 h-4" />
+          CSV
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowBulkEdit(true)}
+          disabled={selectedMembers.size === 0}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          title={selectedMembers.size === 0 ? 'Select members to edit' : 'Edit selected members'}
+        >
+          <Check className="w-4 h-4" />
+          Bulk Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowBulkDelete(true)}
+          disabled={selectedMembers.size === 0}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-rose-700/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30"
+          title={
+            selectedMembers.size === 0
+              ? 'Select members to remove'
+              : 'Move selected members to pending deletion'
+          }
+        >
+          <Trash2 className="w-4 h-4" />
+          Bulk Delete
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowPendingDeletion(true)}
+          className="relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 hover:shadow dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30"
+          title="Review members awaiting permanent deletion"
+        >
+          <Clock className="w-4 h-4" />
+          Pending
+          {pendingDeletionCount > 0 && (
+            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-600 px-1.5 text-xs font-bold text-white dark:bg-amber-300 dark:text-amber-900">
+              {pendingDeletionCount}
             </span>
-            <span className="whitespace-nowrap tracking-tight">Add Member</span>
-          </button>
-        </div>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="btn-primary group inline-flex h-11 items-center justify-center gap-3 px-4 pr-5 text-sm"
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/18 ring-1 ring-white/20 transition-colors group-hover:bg-white/24">
+            <UserPlus className="w-4 h-4" />
+          </span>
+          <span className="whitespace-nowrap tracking-tight">Add Member</span>
+        </button>
+      </div>
 
       {/* Age Group Filter Pills */}
       <div className="flex flex-wrap items-center gap-1.5 py-1">
@@ -539,7 +658,7 @@ const MemberDirectory = ({
           { id: 'children', label: 'Children' },
           { id: 'youth', label: 'Youth' },
           { id: 'adult', label: 'Adult' },
-          { id: 'senior', label: 'Senior' },
+          { id: 'senior', label: 'Senior' }
         ].map((ag) => {
           const isActive = ageGroupFilter === ag.id;
           return (
@@ -595,7 +714,14 @@ const MemberDirectory = ({
             Filters
             {hasActiveFilters && (
               <span className="w-5 h-5 rounded-full bg-primary-600 text-white text-[10px] font-bold flex items-center justify-center">
-                {[sectionFilter, leaderFilter, ageGroupFilter !== 'all' ? ageGroupFilter : null, genderFilter !== 'all' ? genderFilter : null].filter(Boolean).length}
+                {
+                  [
+                    sectionFilter,
+                    leaderFilter,
+                    ageGroupFilter !== 'all' ? ageGroupFilter : null,
+                    genderFilter !== 'all' ? genderFilter : null
+                  ].filter(Boolean).length
+                }
               </span>
             )}
           </button>
@@ -610,7 +736,9 @@ const MemberDirectory = ({
             >
               <option value="">All Sections</option>
               {sections.map((s) => (
-                <option key={s.id} value={s.name}>{s.name}</option>
+                <option key={s.id} value={s.name}>
+                  {s.name}
+                </option>
               ))}
             </select>
 
@@ -621,7 +749,9 @@ const MemberDirectory = ({
             >
               <option value="">All Leaders</option>
               {uniqueLeaders.map((name) => (
-                <option key={name} value={name}>{name}</option>
+                <option key={name} value={name}>
+                  {name}
+                </option>
               ))}
             </select>
 
@@ -649,7 +779,12 @@ const MemberDirectory = ({
 
             {hasActiveFilters && (
               <button
-                onClick={() => { handleSectionFilterChange(''); handleLeaderFilterChange(''); setAgeGroupFilter('all'); setGenderFilter('all'); }}
+                onClick={() => {
+                  handleSectionFilterChange('');
+                  handleLeaderFilterChange('');
+                  setAgeGroupFilter('all');
+                  setGenderFilter('all');
+                }}
                 className="flex items-center gap-1 text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 font-medium"
               >
                 <X className="w-3.5 h-3.5" />
@@ -737,7 +872,11 @@ const MemberDirectory = ({
       ) : filteredMembers.length > 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
           <div className="border-b border-slate-100 px-4 py-2.5 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-            Showing all <span className="font-semibold text-slate-700 dark:text-slate-200">{filteredMembers.length}</span> matching members. Scroll to browse.
+            Showing all{' '}
+            <span className="font-semibold text-slate-700 dark:text-slate-200">
+              {filteredMembers.length}
+            </span>{' '}
+            matching members. Scroll to browse.
           </div>
           <div className="max-h-[68vh] overflow-auto scrollbar-thin">
             <table className="w-full">
@@ -748,23 +887,36 @@ const MemberDirectory = ({
                       onClick={toggleSelectAll}
                       className="w-4 h-4 rounded border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center transition-colors hover:border-primary-400"
                     >
-                      {selectedMembers.size > 0 && selectedMembers.size === filteredMembers.length && (
-                        <Check className="w-3 h-3 text-primary-600" />
-                      )}
+                      {selectedMembers.size > 0 &&
+                        selectedMembers.size === filteredMembers.length && (
+                          <Check className="w-3 h-3 text-primary-600" />
+                        )}
                     </button>
                   </th>
                   <th className="w-10 px-2 py-3"></th>
                   <th className="w-16 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     S/N
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer select-none" onClick={() => handleSort('full_name')}>
-                    Member<SortIcon field="full_name" />
+                  <th
+                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer select-none"
+                    onClick={() => handleSort('full_name')}
+                  >
+                    Member
+                    <SortIcon field="full_name" />
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer select-none" onClick={() => handleSort('section_name')}>
-                    Section<SortIcon field="section_name" />
+                  <th
+                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer select-none"
+                    onClick={() => handleSort('section_name')}
+                  >
+                    Section
+                    <SortIcon field="section_name" />
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden lg:table-cell cursor-pointer select-none" onClick={() => handleSort('leader_name')}>
-                    Leader<SortIcon field="leader_name" />
+                  <th
+                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden lg:table-cell cursor-pointer select-none"
+                    onClick={() => handleSort('leader_name')}
+                  >
+                    Leader
+                    <SortIcon field="leader_name" />
                   </th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden md:table-cell">
                     Contact
@@ -779,7 +931,10 @@ const MemberDirectory = ({
               </thead>
               <tbody>
                 {filteredMembers.map((member, index) => {
-                  const sectionStyle = sectionColorMap[member.section_name] || { bg: 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600', dot: 'bg-slate-400' };
+                  const sectionStyle = sectionColorMap[member.section_name] || {
+                    bg: 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600',
+                    dot: 'bg-slate-400'
+                  };
                   const avatarColor = getAvatarColor(member.full_name);
                   const isExpanded = expandedRow === member.id;
                   const isSelected = selectedMembers.has(member.id);
@@ -796,7 +951,10 @@ const MemberDirectory = ({
                         {/* Checkbox */}
                         <td className="px-4 py-3">
                           <button
-                            onClick={(e) => { e.stopPropagation(); toggleSelect(member.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleSelect(member.id);
+                            }}
                             className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
                               isSelected
                                 ? 'border-primary-500 bg-primary-500'
@@ -809,10 +967,17 @@ const MemberDirectory = ({
                         {/* Expand */}
                         <td className="px-2 py-3">
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleExpandRow(member.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExpandRow(member.id);
+                            }}
                             className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition-colors"
                           >
-                            {isExpanded ? <ChevronLeft className="w-4 h-4 rotate-90" /> : <ChevronLeft className="w-4 h-4 -rotate-90" />}
+                            {isExpanded ? (
+                              <ChevronLeft className="w-4 h-4 rotate-90" />
+                            ) : (
+                              <ChevronLeft className="w-4 h-4 -rotate-90" />
+                            )}
                           </button>
                         </td>
                         {/* Serial Number */}
@@ -824,13 +989,19 @@ const MemberDirectory = ({
                         {/* Member */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
-                          {member.profile_picture ? (
-                            <img src={member.profile_picture} alt={member.full_name} className="w-full h-full object-cover" />
-                          ) : (
-                            getInitials(member.full_name)
-                          )}
-                        </div>
+                            <div
+                              className={`w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}
+                            >
+                              {member.profile_picture ? (
+                                <img
+                                  src={member.profile_picture}
+                                  alt={member.full_name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                getInitials(member.full_name)
+                              )}
+                            </div>
                             <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate max-w-[160px]">
                               {member.full_name}
                             </span>
@@ -838,7 +1009,9 @@ const MemberDirectory = ({
                         </td>
                         {/* Section */}
                         <td className="px-4 py-3">
-                          <div className={`inline-flex max-w-[12rem] items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold shadow-sm ${sectionStyle.bg}`}>
+                          <div
+                            className={`inline-flex max-w-[12rem] items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold shadow-sm ${sectionStyle.bg}`}
+                          >
                             <span className={`h-2 w-2 shrink-0 rounded-full ${sectionStyle.dot}`} />
                             <span className="truncate leading-tight">
                               {formatSectionLabel(member.section_name)}
@@ -867,7 +1040,9 @@ const MemberDirectory = ({
                               </span>
                             )}
                             {!member.phone && !member.email && (
-                              <span className="text-slate-400 dark:text-slate-500 italic text-xs">—</span>
+                              <span className="text-slate-400 dark:text-slate-500 italic text-xs">
+                                —
+                              </span>
                             )}
                           </div>
                         </td>
@@ -875,13 +1050,19 @@ const MemberDirectory = ({
                         <td className="px-4 py-3 hidden sm:table-cell">
                           <div className="flex items-center gap-1.5">
                             {member.gender && (
-                              <Badge variant="neutral" className="text-[10px] px-1.5 py-0.5">{member.gender}</Badge>
+                              <Badge variant="neutral" className="text-[10px] px-1.5 py-0.5">
+                                {member.gender}
+                              </Badge>
                             )}
                             {member.age_group && (
-                              <Badge variant="neutral" className="text-[10px] px-1.5 py-0.5">{member.age_group}</Badge>
+                              <Badge variant="neutral" className="text-[10px] px-1.5 py-0.5">
+                                {member.age_group}
+                              </Badge>
                             )}
                             {member.home_cell_name && (
-                              <Badge variant="success" className="text-[10px] px-1.5 py-0.5">{member.home_cell_name}</Badge>
+                              <Badge variant="success" className="text-[10px] px-1.5 py-0.5">
+                                {member.home_cell_name}
+                              </Badge>
                             )}
                           </div>
                         </td>
@@ -889,21 +1070,32 @@ const MemberDirectory = ({
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-0.5">
                             <button
-                                            onClick={(e) => { e.stopPropagation(); ensureModalMembersLoaded(); setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                ensureModalMembersLoaded();
+                                setTitleAssignMember(member.id);
+                                setTitleForm({ title_id: '', appointment_date: '', notes: '' });
+                              }}
                               className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
                               title="Assign Title"
                             >
                               <Award className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); onEdit(member); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(member);
+                              }}
                               className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors active:scale-90"
                               title="Edit"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); onDelete(member); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(member);
+                              }}
                               className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-505 transition-colors active:scale-90"
                               title="Delete"
                             >
@@ -918,46 +1110,92 @@ const MemberDirectory = ({
                           <td colSpan={9} className="px-4 py-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Full Name</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.full_name}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Full Name
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {member.full_name}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">S/N</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{serialNumber}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  S/N
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {serialNumber}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Section</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{formatSectionLabel(member.section_name)}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Section
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {formatSectionLabel(member.section_name)}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Leader</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.leader_name || '—'}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Leader
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {member.leader_name || '—'}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Home Cell</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.home_cell_name || '—'}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Home Cell
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {member.home_cell_name || '—'}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Phone</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.phone || '—'}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Phone
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {member.phone || '—'}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Email</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.email || '—'}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Email
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {member.email || '—'}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Gender</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.gender || '—'}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Gender
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {member.gender || '—'}
+                                </p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Age Group</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.age_group || '—'}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Age Group
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {member.age_group || '—'}
+                                </p>
                               </div>
                               <div className="col-span-full">
                                 <div className="flex items-center justify-between mb-2">
-                                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Titles</p>
+                                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                    Titles
+                                  </p>
                                   <button
-                              onClick={() => { ensureModalMembersLoaded(); setTitleAssignMember(member.id); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }}
+                                    onClick={() => {
+                                      ensureModalMembersLoaded();
+                                      setTitleAssignMember(member.id);
+                                      setTitleForm({
+                                        title_id: '',
+                                        appointment_date: '',
+                                        notes: ''
+                                      });
+                                    }}
                                     className="text-[11px] font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all active:scale-95"
                                   >
                                     <Plus className="w-3 h-3" /> Add Title
@@ -966,25 +1204,50 @@ const MemberDirectory = ({
                                 <div className="flex flex-wrap items-center gap-1.5 min-h-[28px]">
                                   {(memberTitles[member.id] || []).length > 0 ? (
                                     (memberTitles[member.id] || []).map((t) => (
-                                      <Badge key={t.id} variant={t.status === 'active' ? 'info' : 'neutral'} className="text-[11px] px-2 py-0.5 group/badge">
-                                        <span className={t.status === 'active' ? '' : 'line-through opacity-60'}>{t.name}</span>
-                                        <div className="inline-flex items-center ml-1.5 opacity-0 group-hover/badge:opacity-100 transition-opacity">
+                                      <Badge
+                                        key={t.id}
+                                        variant={t.status === 'active' ? 'info' : 'neutral'}
+                                        className="text-[11px] px-2 py-0.5 group/badge"
+                                      >
+                                        <span
+                                          className={
+                                            t.status === 'active' ? '' : 'line-through opacity-60'
+                                          }
+                                        >
+                                          {t.name}
+                                        </span>
+                                        <div className="inline-flex items-center ml-1.5 sm:opacity-0 sm:group-hover/badge:opacity-100 transition-opacity">
                                           <button
-                                            onClick={() => setEditingTitleAssignment({ memberId: member.id, titleId: t.id, status: t.status, notes: t.notes || '' })}
+                                            onClick={() =>
+                                              setEditingTitleAssignment({
+                                                memberId: member.id,
+                                                titleId: t.id,
+                                                status: t.status,
+                                                notes: t.notes || ''
+                                              })
+                                            }
                                             className="hover:text-white/80 p-0.5"
                                             title="Edit assignment"
                                           >
                                             <Pencil className="w-2.5 h-2.5" />
                                           </button>
                                           <button
-                                            onClick={() => setViewHistoryFor({ memberId: member.id, titleId: t.id, titleName: t.name })}
+                                            onClick={() =>
+                                              setViewHistoryFor({
+                                                memberId: member.id,
+                                                titleId: t.id,
+                                                titleName: t.name
+                                              })
+                                            }
                                             className="hover:text-white/80 p-0.5"
                                             title="View history"
                                           >
                                             <Clock className="w-2.5 h-2.5" />
                                           </button>
                                           <button
-                                            onClick={() => handleRemoveTitle(member.id, t.id, t.name)}
+                                            onClick={() =>
+                                              handleRemoveTitle(member.id, t.id, t.name)
+                                            }
                                             className="hover:text-white/80 p-0.5"
                                             title="Remove title"
                                           >
@@ -994,13 +1257,19 @@ const MemberDirectory = ({
                                       </Badge>
                                     ))
                                   ) : (
-                                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">No titles assigned</span>
+                                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                                      No titles assigned
+                                    </span>
                                   )}
                                 </div>
                               </div>
                               <div className="col-span-full space-y-1">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Address</p>
-                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{member.address || '—'}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                                  Address
+                                </p>
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                  {member.address || '—'}
+                                </p>
                               </div>
                             </div>
                           </td>
@@ -1012,16 +1281,19 @@ const MemberDirectory = ({
               </tbody>
             </table>
           </div>
-
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600">
           <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-slate-400 dark:text-slate-500" />
           </div>
-          <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">No members found</h4>
+          <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
+            No members found
+          </h4>
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm text-center">
-            {searchTerm || hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add your first member to get started.'}
+            {searchTerm || hasActiveFilters
+              ? 'Try adjusting your search or filters.'
+              : 'Add your first member to get started.'}
           </p>
         </div>
       )}
@@ -1079,7 +1351,10 @@ const MemberDirectory = ({
           <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Assign Title</h3>
-              <button onClick={() => setTitleAssignMember(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+              <button
+                onClick={() => setTitleAssignMember(null)}
+                className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1097,14 +1372,19 @@ const MemberDirectory = ({
                   onChange={(e) => setTitleForm({ ...titleForm, title_id: e.target.value })}
                 >
                   <option value="">Select a title...</option>
-                  {allTitles.filter((t) => t.is_active).map((title) => {
-                    const hasTitle = (memberTitles[titleAssignMember] || []).some((mt) => mt.id === title.id);
-                    return (
-                      <option key={title.id} value={title.id} disabled={hasTitle}>
-                        {title.name}{hasTitle ? ' (already assigned)' : ''}
-                      </option>
-                    );
-                  })}
+                  {allTitles
+                    .filter((t) => t.is_active)
+                    .map((title) => {
+                      const hasTitle = (memberTitles[titleAssignMember] || []).some(
+                        (mt) => mt.id === title.id
+                      );
+                      return (
+                        <option key={title.id} value={title.id} disabled={hasTitle}>
+                          {title.name}
+                          {hasTitle ? ' (already assigned)' : ''}
+                        </option>
+                      );
+                    })}
                 </select>
               </div>
               <div>
@@ -1128,11 +1408,28 @@ const MemberDirectory = ({
               </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex gap-3">
-              <button onClick={() => { setTitleAssignMember(null); setTitleForm({ title_id: '', appointment_date: '', notes: '' }); }} className="btn-secondary flex-1">Cancel</button>
-              <button onClick={() => handleAssignTitle(titleAssignMember)} disabled={!titleForm.title_id || assignSaving} className="btn-primary flex-1">
+              <button
+                onClick={() => {
+                  setTitleAssignMember(null);
+                  setTitleForm({ title_id: '', appointment_date: '', notes: '' });
+                }}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleAssignTitle(titleAssignMember)}
+                disabled={!titleForm.title_id || assignSaving}
+                className="btn-primary flex-1"
+              >
                 {assignSaving ? (
-                  <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Assigning...</span>
-                ) : 'Assign'}
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{' '}
+                    Assigning...
+                  </span>
+                ) : (
+                  'Assign'
+                )}
               </button>
             </div>
           </div>
@@ -1144,8 +1441,13 @@ const MemberDirectory = ({
         <div className="modal-overlay" onClick={() => setEditingTitleAssignment(null)}>
           <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit Assignment</h3>
-              <button onClick={() => setEditingTitleAssignment(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Edit Assignment
+              </h3>
+              <button
+                onClick={() => setEditingTitleAssignment(null)}
+                className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1155,7 +1457,9 @@ const MemberDirectory = ({
                 <select
                   className="select h-10"
                   value={editingTitleAssignment.status}
-                  onChange={(e) => setEditingTitleAssignment({ ...editingTitleAssignment, status: e.target.value })}
+                  onChange={(e) =>
+                    setEditingTitleAssignment({ ...editingTitleAssignment, status: e.target.value })
+                  }
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -1167,16 +1471,37 @@ const MemberDirectory = ({
                   className="input"
                   rows={3}
                   value={editingTitleAssignment.notes}
-                  onChange={(e) => setEditingTitleAssignment({ ...editingTitleAssignment, notes: e.target.value })}
+                  onChange={(e) =>
+                    setEditingTitleAssignment({ ...editingTitleAssignment, notes: e.target.value })
+                  }
                 />
               </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex gap-3">
-              <button onClick={() => setEditingTitleAssignment(null)} className="btn-secondary flex-1">Cancel</button>
-              <button onClick={() => handleUpdateTitleAssignment(editingTitleAssignment.memberId, editingTitleAssignment.titleId)} disabled={assignSaving} className="btn-primary flex-1">
+              <button
+                onClick={() => setEditingTitleAssignment(null)}
+                className="btn-secondary flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() =>
+                  handleUpdateTitleAssignment(
+                    editingTitleAssignment.memberId,
+                    editingTitleAssignment.titleId
+                  )
+                }
+                disabled={assignSaving}
+                className="btn-primary flex-1"
+              >
                 {assignSaving ? (
-                  <span className="flex items-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving...</span>
-                ) : 'Save'}
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{' '}
+                    Saving...
+                  </span>
+                ) : (
+                  'Save'
+                )}
               </button>
             </div>
           </div>
@@ -1185,13 +1510,22 @@ const MemberDirectory = ({
 
       {/* Title History Modal */}
       {viewHistoryFor && (
-        <div className="modal-overlay" onClick={() => { setViewHistoryFor(null); }}>
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setViewHistoryFor(null);
+          }}
+        >
           <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                <span className="text-slate-400 font-normal">History:</span> {viewHistoryFor.titleName}
+                <span className="text-slate-400 font-normal">History:</span>{' '}
+                {viewHistoryFor.titleName}
               </h3>
-              <button onClick={() => setViewHistoryFor(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+              <button
+                onClick={() => setViewHistoryFor(null)}
+                className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1204,23 +1538,55 @@ const MemberDirectory = ({
               ) : (
                 <div className="space-y-3 max-h-[50vh] overflow-y-auto scrollbar-thin">
                   {titleHistory.map((h) => {
-                    const variantMap = { assigned: 'success', removed: 'danger', status_changed: 'warning', notes_updated: 'info' };
+                    const variantMap = {
+                      assigned: 'success',
+                      removed: 'danger',
+                      status_changed: 'warning',
+                      notes_updated: 'info'
+                    };
                     return (
-                      <div key={h.id} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5">
+                      <div
+                        key={h.id}
+                        className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5"
+                      >
                         <div className="flex items-center justify-between mb-2">
-                          <Badge variant={variantMap[h.action] || 'neutral'} className="text-[10px] px-2 py-0.5 uppercase tracking-wider">
+                          <Badge
+                            variant={variantMap[h.action] || 'neutral'}
+                            className="text-[10px] px-2 py-0.5 uppercase tracking-wider"
+                          >
                             {h.action.replace('_', ' ')}
                           </Badge>
-                          <span className="text-[10px] text-slate-400 font-medium">{fdatetime(h.created_at)}</span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {fdatetime(h.created_at)}
+                          </span>
                         </div>
                         {h.old_status && h.new_status && (
                           <p className="text-xs text-slate-600 dark:text-slate-400">
-                            Status: <span className={h.old_status === 'active' ? 'text-emerald-600' : 'text-slate-500'}>{h.old_status}</span>
+                            Status:{' '}
+                            <span
+                              className={
+                                h.old_status === 'active' ? 'text-emerald-600' : 'text-slate-500'
+                              }
+                            >
+                              {h.old_status}
+                            </span>
                             {' → '}
-                            <span className={h.new_status === 'active' ? 'text-emerald-600 font-semibold' : 'text-slate-500'}>{h.new_status}</span>
+                            <span
+                              className={
+                                h.new_status === 'active'
+                                  ? 'text-emerald-600 font-semibold'
+                                  : 'text-slate-500'
+                              }
+                            >
+                              {h.new_status}
+                            </span>
                           </p>
                         )}
-                        {h.notes && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 italic">{h.notes}</p>}
+                        {h.notes && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 italic">
+                            {h.notes}
+                          </p>
+                        )}
                         {h.changed_by_name && (
                           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
@@ -1243,7 +1609,10 @@ const MemberDirectory = ({
           <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Remove Title</h3>
-              <button onClick={() => setRemovingTitle(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+              <button
+                onClick={() => setRemovingTitle(null)}
+                className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1253,14 +1622,18 @@ const MemberDirectory = ({
                   <X className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
                 <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
-                  Are you sure you want to remove <strong>{removingTitle.titleName}</strong> from this member?
-                  This action will be recorded in the title history.
+                  Are you sure you want to remove <strong>{removingTitle.titleName}</strong> from
+                  this member? This action will be recorded in the title history.
                 </p>
               </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex gap-3">
-              <button onClick={() => setRemovingTitle(null)} className="btn-secondary flex-1">Cancel</button>
-              <button onClick={confirmRemoveTitle} className="btn-danger flex-1">Remove</button>
+              <button onClick={() => setRemovingTitle(null)} className="btn-secondary flex-1">
+                Cancel
+              </button>
+              <button onClick={confirmRemoveTitle} className="btn-danger flex-1">
+                Remove
+              </button>
             </div>
           </div>
         </div>
@@ -1276,7 +1649,10 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
   const [focused, setFocused] = useState(false);
   const ref = useRef(null);
 
-  const selected = useMemo(() => members.find((m) => Number(m.id) === Number(selectedId)), [members, selectedId]);
+  const selected = useMemo(
+    () => members.find((m) => Number(m.id) === Number(selectedId)),
+    [members, selectedId]
+  );
 
   const filtered = useMemo(() => {
     if (!search.trim()) return members.slice(0, 20);
@@ -1284,12 +1660,20 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
     return members.filter((m) => (m.full_name || '').toLowerCase().includes(t)).slice(0, 20);
   }, [search, members]);
 
-  const displayValue = focused ? search : (selected ? selected.full_name : search);
+  const displayValue = focused ? search : selected ? selected.full_name : search;
 
   const isLoading = members.length === 0;
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setFocused(false); if (!selectedId) { setSearch(''); } } };
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setFocused(false);
+        if (!selectedId) {
+          setSearch('');
+        }
+      }
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [selectedId]);
@@ -1300,17 +1684,44 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
       <input
         type="text"
         value={displayValue}
-        onChange={(e) => { setSearch(e.target.value); setOpen(true); if (selectedId) onChange(null); }}
-        onFocus={() => { setFocused(true); setOpen(true); }}
-        onBlur={() => { setTimeout(() => { setFocused(false); if (!selectedId) setSearch(''); }, 200); }}
-        placeholder={isLoading ? "Loading members..." : "Search member name..."}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setOpen(true);
+          if (selectedId) onChange(null);
+        }}
+        onFocus={() => {
+          setFocused(true);
+          setOpen(true);
+        }}
+        onBlur={() => {
+          setTimeout(() => {
+            setFocused(false);
+            if (!selectedId) setSearch('');
+          }, 200);
+        }}
+        placeholder={isLoading ? 'Loading members...' : 'Search member name...'}
         disabled={isLoading}
         className="input w-full"
       />
       {isLoading && (
         <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 py-2 animate-fade-in">
           <div className="px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+            <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
             Loading members...
           </div>
         </div>
@@ -1321,7 +1732,12 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
             <button
               key={m.id}
               type="button"
-              onClick={() => { onChange(m.id); setSearch(''); setOpen(false); setFocused(false); }}
+              onClick={() => {
+                onChange(m.id);
+                setSearch('');
+                setOpen(false);
+                setFocused(false);
+              }}
               className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
                 Number(m.id) === Number(selectedId)
                   ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
@@ -1329,10 +1745,19 @@ const MemberSearchSelect = ({ members, selectedId, onChange }) => {
               }`}
             >
               <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px] shrink-0">
-                {(m.full_name || '').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                {(m.full_name || '')
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()}
               </span>
               <span className="truncate font-medium">{m.full_name}</span>
-              {m.section_name && <span className="text-[10px] text-slate-400 ml-auto shrink-0">{m.section_name}</span>}
+              {m.section_name && (
+                <span className="text-[10px] text-slate-400 ml-auto shrink-0">
+                  {m.section_name}
+                </span>
+              )}
             </button>
           ))}
         </div>

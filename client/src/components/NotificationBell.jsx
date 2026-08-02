@@ -137,9 +137,9 @@ const NotificationBell = ({ user }) => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[420px] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50 animate-scale-in">
+        <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-[420px] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-50 animate-scale-in">
           {/* Header */}
-          <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+          <div className="px-4 sm:px-5 py-4 border-b border-slate-100 dark:border-slate-700">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Notifications</h3>
               {unreadCount > 0 && (

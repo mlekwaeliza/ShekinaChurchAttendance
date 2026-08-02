@@ -1,12 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { adminAPI } from '../services/api';
-import { History, User, Calendar, Sparkles, ChevronDown, RotateCcw, Users, Camera, Upload, X } from 'lucide-react';
+import {
+  History,
+  User,
+  Calendar,
+  Sparkles,
+  ChevronDown,
+  RotateCcw,
+  Users,
+  Camera,
+  Upload,
+  X
+} from 'lucide-react';
 import { useModalA11y } from '../hooks/useModalA11y';
 import { handlePhoneChange, capitalizeName } from '../utils/phone';
 import PhotoViewer from './PhotoViewer';
 
-const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], isOpen, onClose, onSave }) => {
+const MemberEditModal = ({
+  member,
+  mode = 'edit',
+  sections = [],
+  leaders = [],
+  isOpen,
+  onClose,
+  onSave
+}) => {
   const [formData, setFormData] = useState({
     membership_id: '',
     full_name: '',
@@ -30,20 +49,20 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
   });
 
   // ── Auto-assignment state (add mode only) ─────────────────────────────────
-  const [autoSuggestion, setAutoSuggestion]   = useState(null);   // the suggested { section_id, leader_id, ... }
-  const [rankedSections, setRankedSections]   = useState([]);     // sections ordered by member_count asc
-  const [rankedLeaders, setRankedLeaders]     = useState([]);     // leaders ordered by member_count asc
-  const [showOverride, setShowOverride]       = useState(false);  // reveal manual override panel
+  const [autoSuggestion, setAutoSuggestion] = useState(null); // the suggested { section_id, leader_id, ... }
+  const [rankedSections, setRankedSections] = useState([]); // sections ordered by member_count asc
+  const [rankedLeaders, setRankedLeaders] = useState([]); // leaders ordered by member_count asc
+  const [showOverride, setShowOverride] = useState(false); // reveal manual override panel
   const [loadingSuggestion, setLoadingSuggestion] = useState(false);
   const isAutoAssigned = useRef(false); // true when current formData matches auto suggestion
 
   // ── Other state ───────────────────────────────────────────────────────────
   const [serviceTypes, setServiceTypes] = useState([]);
-  const [homeCells, setHomeCells]       = useState([]);
-  const [saving, setSaving]             = useState(false);
+  const [homeCells, setHomeCells] = useState([]);
+  const [saving, setSaving] = useState(false);
   const [auditHistory, setAuditHistory] = useState([]);
   const [auditLoading, setAuditLoading] = useState(false);
-  const [showHistory, setShowHistory]   = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState(false);
   const dialogRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -58,7 +77,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
     }
     const reader = new FileReader();
     reader.onloadend = () => {
-      setFormData(prev => ({ ...prev, profile_picture: reader.result }));
+      setFormData((prev) => ({ ...prev, profile_picture: reader.result }));
     };
     reader.readAsDataURL(file);
   };
@@ -71,31 +90,31 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
       let parsedOptOut = [];
       try {
         parsedOptOut = member.opt_out_services
-          ? (Array.isArray(member.opt_out_services)
-              ? member.opt_out_services
-              : JSON.parse(member.opt_out_services))
+          ? Array.isArray(member.opt_out_services)
+            ? member.opt_out_services
+            : JSON.parse(member.opt_out_services)
           : [];
       } catch (_) {
         parsedOptOut = [];
       }
       setFormData({
         membership_id: member.membership_id || '',
-        full_name:     member.full_name || '',
-        phone:         member.phone || '',
-        email:         member.email || '',
-        gender:        member.gender || '',
+        full_name: member.full_name || '',
+        phone: member.phone || '',
+        email: member.email || '',
+        gender: member.gender || '',
         marital_status: member.marital_status || '',
-        occupation:    member.occupation || '',
-        age_group:     member.age_group || '',
-        section_id:    member.section_id || '',
-        leader_id:     member.leader_id || '',
-        home_cell_id:  member.home_cell_id || '',
+        occupation: member.occupation || '',
+        age_group: member.age_group || '',
+        section_id: member.section_id || '',
+        leader_id: member.leader_id || '',
+        home_cell_id: member.home_cell_id || '',
         date_of_birth: member.date_of_birth || '',
-        address:       member.address || '',
+        address: member.address || '',
         profile_picture: member.profile_picture || '',
         education_level: member.education_level || '',
         secondary_phone: member.secondary_phone || '',
-        show_age_to_leaders:    !!member.show_age_to_leaders,
+        show_age_to_leaders: !!member.show_age_to_leaders,
         hide_from_birthday_list: !!member.hide_from_birthday_list,
         opt_out_services: parsedOptOut
       });
@@ -117,11 +136,23 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
 
         setFormData({
           membership_id: genId,
-          full_name: '', phone: '', email: '', gender: '', marital_status: '',
-          occupation: '', age_group: '', section_id: '', leader_id: '',
-          home_cell_id: '', date_of_birth: '', address: '',
-          profile_picture: '', education_level: '', secondary_phone: '',
-          show_age_to_leaders: false, hide_from_birthday_list: false,
+          full_name: '',
+          phone: '',
+          email: '',
+          gender: '',
+          marital_status: '',
+          occupation: '',
+          age_group: '',
+          section_id: '',
+          leader_id: '',
+          home_cell_id: '',
+          date_of_birth: '',
+          address: '',
+          profile_picture: '',
+          education_level: '',
+          secondary_phone: '',
+          show_age_to_leaders: false,
+          hide_from_birthday_list: false,
           opt_out_services: []
         });
         setAuditHistory([]);
@@ -145,10 +176,10 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
       setRankedLeaders(rankedL || []);
       setAutoSuggestion(suggestion);
       if (suggestion) {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           section_id: String(suggestion.section_id),
-          leader_id:  String(suggestion.leader_id),
+          leader_id: String(suggestion.leader_id)
         }));
         isAutoAssigned.current = true;
       }
@@ -161,10 +192,10 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
 
   const applyAutoAssign = () => {
     if (!autoSuggestion) return;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       section_id: String(autoSuggestion.section_id),
-      leader_id:  String(autoSuggestion.leader_id),
+      leader_id: String(autoSuggestion.leader_id)
     }));
     isAutoAssigned.current = true;
     setShowOverride(false);
@@ -206,7 +237,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
     let finalValue = type === 'checkbox' ? checked : value;
     if (name === 'full_name') finalValue = capitalizeName(finalValue);
     if (name === 'phone') finalValue = handlePhoneChange(finalValue);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: finalValue
     }));
@@ -216,20 +247,20 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
     }
     // When section changes in override mode, reset leader to first available
     if (name === 'section_id') {
-      const firstLeader = rankedLeaders.find(l => String(l.section_id) === value);
-      setFormData(prev => ({
+      const firstLeader = rankedLeaders.find((l) => String(l.section_id) === value);
+      setFormData((prev) => ({
         ...prev,
         section_id: value,
-        leader_id: firstLeader ? String(firstLeader.leader_id) : '',
+        leader_id: firstLeader ? String(firstLeader.leader_id) : ''
       }));
     }
   };
 
   const handleToggleOptOut = (serviceId) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const current = prev.opt_out_services || [];
       const updated = current.includes(serviceId)
-        ? current.filter(id => id !== serviceId)
+        ? current.filter((id) => id !== serviceId)
         : [...current, serviceId];
       return { ...prev, opt_out_services: updated };
     });
@@ -254,12 +285,16 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
 
   // ── Derived values for the override panel ─────────────────────────────────
   const leadersInSelectedSection = rankedLeaders.filter(
-    l => String(l.section_id) === String(formData.section_id)
+    (l) => String(l.section_id) === String(formData.section_id)
   );
 
   // Find display info for current selection (when suggestion loaded)
-  const currentSectionInfo = rankedSections.find(s => String(s.section_id) === String(formData.section_id));
-  const currentLeaderInfo  = rankedLeaders.find(l => String(l.leader_id) === String(formData.leader_id));
+  const currentSectionInfo = rankedSections.find(
+    (s) => String(s.section_id) === String(formData.section_id)
+  );
+  const currentLeaderInfo = rankedLeaders.find(
+    (l) => String(l.leader_id) === String(formData.leader_id)
+  );
 
   if (!isOpen) return null;
   if (mode === 'edit' && !member) return null;
@@ -281,7 +316,10 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               <User className="w-6 h-6 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
-              <h2 id="member-edit-title" className="text-2xl font-black text-gray-900 dark:text-slate-100">
+              <h2
+                id="member-edit-title"
+                className="text-2xl font-black text-gray-900 dark:text-slate-100"
+              >
                 {mode === 'edit' ? 'Edit Member' : 'Add Member'}
               </h2>
               <p className="text-sm text-gray-500 dark:text-slate-400">
@@ -311,14 +349,25 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
             <div className="flex items-center gap-4 mb-5 p-3.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
               <div className="relative group w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white text-xl font-black shrink-0 overflow-hidden shadow-sm border-2 border-white dark:border-slate-700">
                 {formData.profile_picture ? (
-                  <img src={formData.profile_picture} alt="Preview" className="w-full h-full object-cover" />
+                  <img
+                    src={formData.profile_picture}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <span>{(formData.full_name || '').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() || <User className="w-7 h-7 opacity-80" />}</span>
+                  <span>
+                    {(formData.full_name || '')
+                      .split(' ')
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase() || <User className="w-7 h-7 opacity-80" />}
+                  </span>
                 )}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center text-white sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                   title="Change photo"
                 >
                   <Camera className="w-5 h-5" />
@@ -326,8 +375,12 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Member Profile Photo</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Visible to section leaders when taking attendance</p>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  Member Profile Photo
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Visible to section leaders when taking attendance
+                </p>
                 <div className="flex items-center gap-2 mt-2">
                   <button
                     type="button"
@@ -348,7 +401,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                       </button>
                       <button
                         type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, profile_picture: '' }))}
+                        onClick={() => setFormData((prev) => ({ ...prev, profile_picture: '' }))}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -394,7 +447,11 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleChange}
-                  onPaste={e => { e.preventDefault(); const v = capitalizeName(e.clipboardData.getData('text')); setFormData(prev => ({ ...prev, full_name: v })); }}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const v = capitalizeName(e.clipboardData.getData('text'));
+                    setFormData((prev) => ({ ...prev, full_name: v }));
+                  }}
                   required
                   className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                 />
@@ -408,7 +465,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                 {loadingSuggestion ? (
                   <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 animate-pulse">
                     <div className="w-5 h-5 rounded-full bg-slate-300 dark:bg-slate-600" />
-                    <span className="text-sm text-slate-400">Finding best section &amp; leader…</span>
+                    <span className="text-sm text-slate-400">
+                      Finding best section &amp; leader…
+                    </span>
                   </div>
                 ) : autoSuggestion && !showOverride ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
@@ -462,7 +521,11 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                         className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
                       >
                         <option value="">Select Section</option>
-                        {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        {sections.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -477,9 +540,16 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                         className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
                       >
                         <option value="">Select Leader</option>
-                        {leaders.filter(l => !formData.section_id || l.section_id === parseInt(formData.section_id)).map(l => (
-                          <option key={l.id} value={l.id}>{l.full_name}</option>
-                        ))}
+                        {leaders
+                          .filter(
+                            (l) =>
+                              !formData.section_id || l.section_id === parseInt(formData.section_id)
+                          )
+                          .map((l) => (
+                            <option key={l.id} value={l.id}>
+                              {l.full_name}
+                            </option>
+                          ))}
                       </select>
                     </div>
                   </div>
@@ -488,8 +558,10 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                 {/* Override Panel */}
                 {showOverride && (
                   <div className="p-4 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 space-y-4">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Manual Override</p>
+                    <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Manual Override
+                      </p>
                       {autoSuggestion && (
                         <button
                           type="button"
@@ -516,7 +588,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                           className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
                         >
                           <option value="">Select Section</option>
-                          {rankedSections.map(s => (
+                          {rankedSections.map((s) => (
                             <option key={s.section_id} value={s.section_id}>
                               {s.section_name} ({s.member_count} members)
                             </option>
@@ -524,7 +596,8 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                         </select>
                         {currentSectionInfo && (
                           <p className="text-[11px] text-slate-400 mt-1 ml-1">
-                            This section currently has <strong>{currentSectionInfo.member_count}</strong> active members
+                            This section currently has{' '}
+                            <strong>{currentSectionInfo.member_count}</strong> active members
                           </p>
                         )}
                       </div>
@@ -545,7 +618,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                           <option value="">
                             {formData.section_id ? 'Select Leader' : 'Select section first'}
                           </option>
-                          {leadersInSelectedSection.map(l => (
+                          {leadersInSelectedSection.map((l) => (
                             <option key={l.leader_id} value={l.leader_id}>
                               {l.leader_name} ({l.member_count} members)
                             </option>
@@ -553,7 +626,8 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                         </select>
                         {currentLeaderInfo && (
                           <p className="text-[11px] text-slate-400 mt-1 ml-1">
-                            This leader currently has <strong>{currentLeaderInfo.member_count}</strong> active members
+                            This leader currently has{' '}
+                            <strong>{currentLeaderInfo.member_count}</strong> active members
                           </p>
                         )}
                       </div>
@@ -578,7 +652,11 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                     className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
                   >
                     <option value="">Select Section</option>
-                    {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    {sections.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -594,14 +672,23 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                     className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
                   >
                     <option value="">Select Leader</option>
-                    {leaders.filter(l => !formData.section_id || l.section_id === parseInt(formData.section_id)).map(l => (
-                      <option key={l.id} value={l.id}>{l.full_name}</option>
-                    ))}
+                    {leaders
+                      .filter(
+                        (l) =>
+                          !formData.section_id || l.section_id === parseInt(formData.section_id)
+                      )
+                      .map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.full_name}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Home Cell</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                    Home Cell
+                  </label>
                   <select
                     name="home_cell_id"
                     value={formData.home_cell_id}
@@ -609,8 +696,10 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                     className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
                   >
                     <option value="">Not assigned</option>
-                    {homeCells.map(cell => (
-                      <option key={cell.id} value={cell.id}>{cell.name}</option>
+                    {homeCells.map((cell) => (
+                      <option key={cell.id} value={cell.id}>
+                        {cell.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -620,7 +709,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
             {/* Home Cell (add mode) */}
             {mode === 'add' && (
               <div className="mt-4">
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Home Cell</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Home Cell
+                </label>
                 <select
                   name="home_cell_id"
                   value={formData.home_cell_id}
@@ -628,8 +719,10 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                   className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none"
                 >
                   <option value="">Not assigned</option>
-                  {homeCells.map(cell => (
-                    <option key={cell.id} value={cell.id}>{cell.name}</option>
+                  {homeCells.map((cell) => (
+                    <option key={cell.id} value={cell.id}>
+                      {cell.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -644,31 +737,44 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Primary Phone</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Primary Phone
+                </label>
                 <input
                   type="tel"
                   name="phone"
                   placeholder="+255 XXX XXX XXX"
                   value={formData.phone}
-                  onChange={e => setFormData(p => ({ ...p, phone: handlePhoneChange(e.target.value) }))}
+                  onChange={(e) =>
+                    setFormData((p) => ({ ...p, phone: handlePhoneChange(e.target.value) }))
+                  }
                   className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Secondary Phone</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Secondary Phone
+                </label>
                 <input
                   type="tel"
                   name="secondary_phone"
                   placeholder="+255 XXX XXX XXX"
                   value={formData.secondary_phone}
-                  onChange={e => setFormData(p => ({ ...p, secondary_phone: handlePhoneChange(e.target.value) }))}
+                  onChange={(e) =>
+                    setFormData((p) => ({
+                      ...p,
+                      secondary_phone: handlePhoneChange(e.target.value)
+                    }))
+                  }
                   className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Email</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Email
+                </label>
                 <input
                   type="email"
                   name="email"
@@ -680,7 +786,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Gender</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Gender
+                </label>
                 <select
                   name="gender"
                   value={formData.gender}
@@ -694,7 +802,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Marital Status</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Marital Status
+                </label>
                 <select
                   name="marital_status"
                   value={formData.marital_status}
@@ -710,7 +820,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Occupation</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Occupation
+                </label>
                 <input
                   type="text"
                   name="occupation"
@@ -722,7 +834,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Age Group</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Age Group
+                </label>
                 <select
                   name="age_group"
                   value={formData.age_group}
@@ -738,7 +852,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Education Level</label>
+                <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                  Education Level
+                </label>
                 <select
                   name="education_level"
                   value={formData.education_level}
@@ -767,7 +883,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               </h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">Date of Birth</label>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-slate-300 mb-1.5">
+                    Date of Birth
+                  </label>
                   <input
                     type="date"
                     name="date_of_birth"
@@ -776,7 +894,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                     className="w-full border border-gray-300 dark:border-slate-600 rounded-xl px-4 py-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 cursor-pointer hover:bg-white dark:hover:bg-slate-700 transition-all">
                     <input
                       type="checkbox"
@@ -785,7 +903,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                       onChange={handleChange}
                       className="w-5 h-5 rounded-md border-gray-300 dark:border-slate-600 focus:ring-primary-500 text-primary-600"
                     />
-                    <span className="text-sm font-bold text-gray-900 dark:text-slate-100">Show age</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-slate-100">
+                      Show age
+                    </span>
                   </label>
 
                   <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 cursor-pointer hover:bg-white dark:hover:bg-slate-700 transition-all">
@@ -796,7 +916,9 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                       onChange={handleChange}
                       className="w-5 h-5 rounded-md border-gray-300 dark:border-slate-600 focus:ring-primary-500 text-primary-600"
                     />
-                    <span className="text-sm font-bold text-gray-900 dark:text-slate-100">Hide bday</span>
+                    <span className="text-sm font-bold text-gray-900 dark:text-slate-100">
+                      Hide bday
+                    </span>
                   </label>
                 </div>
               </div>
@@ -826,7 +948,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                 Service Opt-outs
               </h3>
               <div className="flex flex-wrap gap-2">
-                {serviceTypes.map(service => {
+                {serviceTypes.map((service) => {
                   const isOptedOut = formData.opt_out_services?.includes(service.id);
                   return (
                     <button
@@ -867,12 +989,19 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
                       <p className="text-xs text-slate-400">Loading history...</p>
                     ) : (
                       auditHistory.map((entry) => (
-                        <div key={entry.id} className="text-[11px] p-2 rounded-lg bg-white/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
+                        <div
+                          key={entry.id}
+                          className="text-[11px] p-2 rounded-lg bg-white/50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700"
+                        >
                           <div className="flex justify-between font-bold mb-1">
                             <span className="uppercase text-primary-600">{entry.action}</span>
-                            <span className="text-slate-400">{new Date(entry.created_at).toLocaleDateString()}</span>
+                            <span className="text-slate-400">
+                              {new Date(entry.created_at).toLocaleDateString()}
+                            </span>
                           </div>
-                          <p className="text-slate-500 truncate">By {entry.user_full_name || 'System'}</p>
+                          <p className="text-slate-500 truncate">
+                            By {entry.user_full_name || 'System'}
+                          </p>
                         </div>
                       ))
                     )}
@@ -883,7 +1012,7 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100 dark:border-slate-700">
+          <div className="flex flex-wrap justify-end gap-3 pt-6 border-t border-gray-100 dark:border-slate-700">
             <button
               type="button"
               onClick={onClose}
@@ -896,7 +1025,13 @@ const MemberEditModal = ({ member, mode = 'edit', sections = [], leaders = [], i
               disabled={saving || loadingSuggestion}
               className="px-8 py-2.5 rounded-xl font-bold bg-primary-600 text-white hover:bg-primary-700 shadow-glow transition-all disabled:opacity-70"
             >
-              {saving ? 'Saving...' : loadingSuggestion ? 'Loading…' : (mode === 'edit' ? 'Save Changes' : 'Add Member')}
+              {saving
+                ? 'Saving...'
+                : loadingSuggestion
+                  ? 'Loading…'
+                  : mode === 'edit'
+                    ? 'Save Changes'
+                    : 'Add Member'}
             </button>
           </div>
         </form>

@@ -160,14 +160,14 @@ const TakeAttendance = ({
     <div className="space-y-6 animate-fade-in">
       {/* Progress & Stats */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Attendance Roster</h3>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">Attendance Roster</h3>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               Target: <span className="text-primary-600 font-bold">{serviceName}</span> • {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <p className="text-2xl font-black text-primary-600 dark:text-primary-400 leading-none">
               {completed.length}<span className="text-sm text-slate-400 font-bold ml-1">/ {members.length}</span>
             </p>

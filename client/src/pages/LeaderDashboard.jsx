@@ -52,7 +52,7 @@ const LeaderDashboard = () => {
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="skeleton h-24 rounded-2xl" />
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="skeleton h-32 rounded-2xl" />
           <div className="skeleton h-32 rounded-2xl" />
         </div>

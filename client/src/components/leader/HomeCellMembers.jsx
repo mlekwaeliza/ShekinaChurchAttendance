@@ -3,7 +3,14 @@ import { Home, Plus, Trash2, UserPlus } from 'lucide-react';
 import { leaderAPI } from '../../services/api';
 import { handlePhoneChange, capitalizeName } from '../../utils/phone';
 
-const emptyForm = { cell_id: '', membership_id: '', full_name: '', phone: '', email: '', address: '' };
+const emptyForm = {
+  cell_id: '',
+  membership_id: '',
+  full_name: '',
+  phone: '',
+  email: '',
+  address: ''
+};
 
 const HomeCellMembers = () => {
   const [cells, setCells] = useState([]);
@@ -32,10 +39,14 @@ const HomeCellMembers = () => {
     loadHomeCells();
   }, []);
 
-  const groupedMembers = useMemo(() => cells.map((cell) => ({
-    ...cell,
-    members: members.filter((member) => Number(member.cell_id) === Number(cell.id)),
-  })), [cells, members]);
+  const groupedMembers = useMemo(
+    () =>
+      cells.map((cell) => ({
+        ...cell,
+        members: members.filter((member) => Number(member.cell_id) === Number(cell.id))
+      })),
+    [cells, members]
+  );
 
   const updateField = (key, value) => {
     if (key === 'full_name') value = capitalizeName(value);
@@ -50,7 +61,7 @@ const HomeCellMembers = () => {
     try {
       await leaderAPI.createHomeCellMember({
         ...form,
-        cell_id: Number(form.cell_id),
+        cell_id: Number(form.cell_id)
       });
       setMessage('Home cell member added.');
       setForm((current) => ({ ...emptyForm, cell_id: current.cell_id }));
@@ -91,30 +102,79 @@ const HomeCellMembers = () => {
           </div>
           <div>
             <h2 className="text-xl font-bold">Home Cell Members</h2>
-            <p className="text-sm text-white/80">Manage the members in your assigned Tuesday home cells.</p>
+            <p className="text-sm text-white/80">
+              Manage the members in your assigned Tuesday home cells.
+            </p>
           </div>
         </div>
       </div>
 
       {cells.length > 0 && (
-        <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+        >
           <div className="mb-4 flex items-center gap-2">
             <UserPlus className="h-4 w-4 text-emerald-600" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Add Cell Member</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              Add Cell Member
+            </h3>
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <select value={form.cell_id} onChange={(event) => updateField('cell_id', event.target.value)} className="select" required>
-              {cells.map((cell) => <option key={cell.id} value={cell.id}>{cell.name}</option>)}
+            <select
+              value={form.cell_id}
+              onChange={(event) => updateField('cell_id', event.target.value)}
+              className="select"
+              required
+            >
+              {cells.map((cell) => (
+                <option key={cell.id} value={cell.id}>
+                  {cell.name}
+                </option>
+              ))}
             </select>
-            <input value={form.membership_id} onChange={(event) => updateField('membership_id', event.target.value)} className="input" placeholder="Church member ID (optional)" />
-            <input value={form.full_name} onChange={(event) => updateField('full_name', event.target.value)}
-              onPaste={e => { e.preventDefault(); updateField('full_name', capitalizeName(e.clipboardData.getData('text'))); }}
-              className="input" placeholder="Full name" required />
-            <input value={form.phone} onChange={(event) => updateField('phone', event.target.value)} className="input" placeholder="Phone" />
-            <input type="email" value={form.email} onChange={(event) => updateField('email', event.target.value)} className="input" placeholder="Email" />
-            <input value={form.address} onChange={(event) => updateField('address', event.target.value)} className="input" placeholder="Address" />
+            <input
+              value={form.membership_id}
+              onChange={(event) => updateField('membership_id', event.target.value)}
+              className="input"
+              placeholder="Church member ID (optional)"
+            />
+            <input
+              value={form.full_name}
+              onChange={(event) => updateField('full_name', event.target.value)}
+              onPaste={(e) => {
+                e.preventDefault();
+                updateField('full_name', capitalizeName(e.clipboardData.getData('text')));
+              }}
+              className="input"
+              placeholder="Full name"
+              required
+            />
+            <input
+              value={form.phone}
+              onChange={(event) => updateField('phone', event.target.value)}
+              className="input"
+              placeholder="Phone"
+            />
+            <input
+              type="email"
+              value={form.email}
+              onChange={(event) => updateField('email', event.target.value)}
+              className="input"
+              placeholder="Email"
+            />
+            <input
+              value={form.address}
+              onChange={(event) => updateField('address', event.target.value)}
+              className="input"
+              placeholder="Address"
+            />
           </div>
-          <button disabled={saving} type="submit" className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60">
+          <button
+            disabled={saving}
+            type="submit"
+            className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+          >
             <Plus className="h-4 w-4" />
             {saving ? 'Saving...' : 'Add Member'}
           </button>
@@ -132,19 +192,37 @@ const HomeCellMembers = () => {
       ) : (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {groupedMembers.map((cell) => (
-            <section key={cell.id} className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{cell.name}</h3>
-              <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">{cell.members.length} members</p>
+            <section
+              key={cell.id}
+              className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
+            >
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {cell.name}
+              </h3>
+              <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {cell.members.length} members
+              </p>
               <div className="space-y-2">
                 {cell.members.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/30">
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/30"
+                  >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{member.full_name}</p>
+                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {member.full_name}
+                      </p>
                       <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                        {member.church_membership_id ? `Church ID: ${member.church_membership_id}` : member.phone || 'No phone'}
+                        {member.church_membership_id
+                          ? `Church ID: ${member.church_membership_id}`
+                          : member.phone || 'No phone'}
                       </p>
                     </div>
-                    <button disabled={saving} onClick={() => removeMember(member.id)} className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-rose-500 disabled:opacity-60 dark:hover:bg-slate-800">
+                    <button
+                      disabled={saving}
+                      onClick={() => removeMember(member.id)}
+                      className="h-9 w-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-rose-500 disabled:opacity-60 dark:hover:bg-slate-800"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>

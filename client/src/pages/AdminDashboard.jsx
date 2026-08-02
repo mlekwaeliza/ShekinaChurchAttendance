@@ -457,7 +457,7 @@ const AdminDashboard = () => {
       {data.deletingLeader && (
         <div className="modal-overlay">
           <div className="modal-content max-w-sm text-center">
-            <div className="p-8">
+            <div className="p-5 sm:p-8">
               <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
                 <ShieldAlert className="w-7 h-7 text-rose-500" />
               </div>
@@ -490,7 +490,7 @@ const AdminDashboard = () => {
       {showDeleteConfirm && deletingMember && (
         <div className="modal-overlay">
           <div className="modal-content max-w-sm text-center">
-            <div className="p-8">
+            <div className="p-5 sm:p-8">
               <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
                 <AlertTriangle className="w-7 h-7 text-rose-500" />
               </div>

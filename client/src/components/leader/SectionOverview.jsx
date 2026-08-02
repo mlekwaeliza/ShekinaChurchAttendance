@@ -13,7 +13,7 @@ const SectionOverview = ({
   sectionName,
   overviewData,
   overviewLoading,
-  loadOverview,
+  loadOverview
 }) => {
   React.useEffect(() => {
     loadOverview();
@@ -26,7 +26,7 @@ const SectionOverview = ({
       sortable: true,
       render: (row) => (
         <span className="font-semibold text-slate-900 dark:text-slate-100">{row.leader_name}</span>
-      ),
+      )
     },
     {
       id: 'status',
@@ -47,7 +47,7 @@ const SectionOverview = ({
           </div>
         ) : (
           <Badge variant="neutral">Pending</Badge>
-        ),
+        )
     },
     {
       id: 'present',
@@ -57,7 +57,7 @@ const SectionOverview = ({
         <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
           {row.stats.present}
         </span>
-      ),
+      )
     },
     {
       id: 'absent',
@@ -67,7 +67,7 @@ const SectionOverview = ({
         <span className="font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
           {row.stats.absent}
         </span>
-      ),
+      )
     },
     {
       id: 'excused',
@@ -77,15 +77,15 @@ const SectionOverview = ({
         <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
           {row.stats.excused}
         </span>
-      ),
-    },
+      )
+    }
   ];
 
   if (overviewLoading) {
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="skeleton h-20 rounded-2xl" />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="skeleton h-24 rounded-2xl" />
           ))}
@@ -109,15 +109,15 @@ const SectionOverview = ({
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-             <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                <span className="text-[10px] font-black text-slate-400 uppercase px-2">Date</span>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none text-sm font-bold focus:ring-0 p-0 pr-2"
-                />
-             </div>
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <span className="text-[10px] font-black text-slate-400 uppercase px-2">Date</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="bg-transparent border-none text-sm font-bold focus:ring-0 p-0 pr-2"
+              />
+            </div>
           </div>
         </div>
 
@@ -182,9 +182,7 @@ const SectionOverview = ({
       ) : (
         <div className="empty-state">
           <p className="empty-state-title">Failed to load data</p>
-          <p className="empty-state-desc">
-            Try selecting a different date or refreshing.
-          </p>
+          <p className="empty-state-desc">Try selecting a different date or refreshing.</p>
         </div>
       )}
     </div>

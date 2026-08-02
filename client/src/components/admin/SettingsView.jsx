@@ -1,6 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Settings, Shield, Camera, Upload, Key, Copy, Check, ShieldCheck, Trash2, Trophy, X, AlertTriangle, Loader2, Users, UserPlus, Edit3, RefreshCw, Layers, Clock, Heart, Banknote, Calendar, Building2, Megaphone, FileText, TrendingUp, BarChart3 } from 'lucide-react';
+import {
+  Settings,
+  Shield,
+  Camera,
+  Upload,
+  Key,
+  Copy,
+  Check,
+  ShieldCheck,
+  Trash2,
+  Trophy,
+  X,
+  AlertTriangle,
+  Loader2,
+  Users,
+  UserPlus,
+  Edit3,
+  RefreshCw,
+  Layers,
+  Clock,
+  Heart,
+  Banknote,
+  Calendar,
+  Building2,
+  Megaphone,
+  FileText,
+  TrendingUp,
+  BarChart3
+} from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import { capitalizeName } from '../../utils/phone';
@@ -39,7 +67,15 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
   const [showCreateUser, setShowCreateUser] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
-  const [userForm, setUserForm] = useState({ username: '', password: '', role: 'leader', full_name: '', section_id: '', phone: '', email: '' });
+  const [userForm, setUserForm] = useState({
+    username: '',
+    password: '',
+    role: 'leader',
+    full_name: '',
+    section_id: '',
+    phone: '',
+    email: ''
+  });
   const [userSaving, setUserSaving] = useState(false);
   const [userResetResult, setUserResetResult] = useState(null);
   const [userSearch, setUserSearch] = useState('');
@@ -82,9 +118,20 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     try {
       const res = await adminAPI.createUser(userForm);
       setUsers([...users, { ...res.data.user, leader_id: null, section_name: null }]);
-      setUserResetResult({ username: res.data.user.username, temp_password: res.data.temp_password });
+      setUserResetResult({
+        username: res.data.user.username,
+        temp_password: res.data.temp_password
+      });
       setShowCreateUser(false);
-      setUserForm({ username: '', password: '', role: 'leader', full_name: '', section_id: '', phone: '', email: '' });
+      setUserForm({
+        username: '',
+        password: '',
+        role: 'leader',
+        full_name: '',
+        section_id: '',
+        phone: '',
+        email: ''
+      });
       showMessage('User created successfully');
       loadUsers();
     } catch (e) {
@@ -98,7 +145,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     if (!editingUser) return;
     setUserSaving(true);
     try {
-      await adminAPI.updateUser(editingUser.id, { role: editingUser.role, full_name: editingUser.full_name, username: editingUser.username });
+      await adminAPI.updateUser(editingUser.id, {
+        role: editingUser.role,
+        full_name: editingUser.full_name,
+        username: editingUser.username
+      });
       setEditingUser(null);
       showMessage('User updated successfully');
       loadUsers();
@@ -134,8 +185,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     }
   };
 
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = !userSearch || u.full_name?.toLowerCase().includes(userSearch.toLowerCase()) || u.username?.toLowerCase().includes(userSearch.toLowerCase());
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch =
+      !userSearch ||
+      u.full_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      u.username?.toLowerCase().includes(userSearch.toLowerCase());
     const matchesRole = userRoleFilter === 'all' || u.role === userRoleFilter;
     return matchesSearch && matchesRole;
   });
@@ -145,10 +199,16 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     leader: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
     pastor: 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-300',
     evangelist: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
-    accountant: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300',
+    accountant: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300'
   };
 
-  const roleLabels = { admin: 'Administrator', leader: 'Section Leader', pastor: 'Pastor', evangelist: 'Evangelist Pastor', accountant: 'Accountant' };
+  const roleLabels = {
+    admin: 'Administrator',
+    leader: 'Section Leader',
+    pastor: 'Pastor',
+    evangelist: 'Evangelist Pastor',
+    accountant: 'Accountant'
+  };
 
   const loadHallOfFameSettings = async () => {
     try {
@@ -214,7 +274,10 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     if (!profileName.trim() || profileName.trim() === user?.full_name) return;
     setSaving(true);
     try {
-      const res = await authAPI.updateProfile({ full_name: profileName, member_id: selectedMemberId });
+      const res = await authAPI.updateProfile({
+        full_name: profileName,
+        member_id: selectedMemberId
+      });
       updateUser({ full_name: res.data.full_name, member_id: selectedMemberId });
       showMessage('Profile updated successfully');
     } catch (err) {
@@ -270,7 +333,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     { id: 'finance', label: 'Finance', icon: Banknote },
     { id: 'communication', label: 'Communication', icon: Calendar },
     { id: 'reporting', label: 'Reporting & Audit', icon: ShieldCheck },
-    { id: 'system', label: 'System & Users', icon: Key },
+    { id: 'system', label: 'System & Users', icon: Key }
   ];
 
   const handleTabChange = (tabId) => {
@@ -337,12 +400,16 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                       .filter((m) => m.full_name)
                       .sort((a, b) => a.full_name.localeCompare(b.full_name))
                       .map((m) => (
-                        <option key={m.id} value={`${m.full_name}|${m.id}`}>{m.full_name}</option>
+                        <option key={m.id} value={`${m.full_name}|${m.id}`}>
+                          {m.full_name}
+                        </option>
                       ))}
                   </select>
                   <button
                     onClick={handleSaveName}
-                    disabled={saving || !profileName.trim() || profileName.trim() === user?.full_name}
+                    disabled={
+                      saving || !profileName.trim() || profileName.trim() === user?.full_name
+                    }
                     className="btn-primary whitespace-nowrap"
                   >
                     {saving ? 'Saving...' : 'Save'}
@@ -370,14 +437,19 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200/60 dark:border-emerald-700/60">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
                   <div>
-                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">2FA is enabled</p>
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                      2FA is enabled
+                    </p>
                     <p className="text-xs text-emerald-600 dark:text-emerald-400">
                       {twoFactorStatus?.backupCodesRemaining || 0} backup codes remaining
                     </p>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  <button onClick={() => setShowDisable2FA(true)} className="btn-secondary text-rose-600 dark:text-rose-400">
+                  <button
+                    onClick={() => setShowDisable2FA(true)}
+                    className="btn-secondary text-rose-600 dark:text-rose-400"
+                  >
                     <Trash2 className="w-4 h-4" />
                     Disable 2FA
                   </button>
@@ -404,7 +476,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             ) : (
               <div className="space-y-4">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Protect your account with an authenticator app. After enabling, you'll need a 6-digit code from your app to log in.
+                  Protect your account with an authenticator app. After enabling, you'll need a
+                  6-digit code from your app to log in.
                 </p>
                 <button onClick={() => setShow2FAModal(true)} className="btn-primary">
                   <ShieldCheck className="w-4 h-4" />
@@ -425,7 +498,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               Leader Password Reset
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-              Generate a new temporary password for a leader. They will be prompted to change it on next login.
+              Generate a new temporary password for a leader. They will be prompted to change it on
+              next login.
             </p>
             <div className="flex gap-3">
               <select id="leaderResetSelect" className="select flex-1">
@@ -449,23 +523,51 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             </div>
             {resetResult && (
               <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">New Temporary Password</p>
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">
+                  New Temporary Password
+                </p>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Username: <strong>{resetResult.username}</strong></span>
-                    <button onClick={() => copyToClipboard(resetResult.username, 'username')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-                      {copiedField === 'username' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      Username: <strong>{resetResult.username}</strong>
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(resetResult.username, 'username')}
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                    >
+                      {copiedField === 'username' ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                   <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Password: <strong>{resetResult.temp_password}</strong></span>
-                    <button onClick={() => copyToClipboard(resetResult.temp_password, 'password')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-                      {copiedField === 'password' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      Password: <strong>{resetResult.temp_password}</strong>
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(resetResult.temp_password, 'password')}
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                    >
+                      {copiedField === 'password' ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Share these credentials securely and ask the leader to change their password on first login.</p>
-                <button onClick={() => setResetResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  Share these credentials securely and ask the leader to change their password on
+                  first login.
+                </p>
+                <button
+                  onClick={() => setResetResult(null)}
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2"
+                >
+                  Dismiss
+                </button>
               </div>
             )}
           </div>
@@ -476,37 +578,51 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               Recognition & Points Configuration
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              Configure how points are awarded to members. These points contribute to the yearly leaderboard.
+              Configure how points are awarded to members. These points contribute to the yearly
+              leaderboard.
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="input-label">Attendance Points</label>
                 <input
                   type="number"
                   value={hallOfFameSettings.points_attendance}
-                  onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, points_attendance: e.target.value })}
+                  onChange={(e) =>
+                    setHallOfFameSettings({
+                      ...hallOfFameSettings,
+                      points_attendance: e.target.value
+                    })
+                  }
                   className="input w-full"
                   placeholder="e.g. 10"
                 />
-                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Awarded for "Present" status</p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">
+                  Awarded for "Present" status
+                </p>
               </div>
               <div>
                 <label className="input-label">Excused Points</label>
                 <input
                   type="number"
                   value={hallOfFameSettings.points_excused}
-                  onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, points_excused: e.target.value })}
+                  onChange={(e) =>
+                    setHallOfFameSettings({ ...hallOfFameSettings, points_excused: e.target.value })
+                  }
                   className="input w-full"
                   placeholder="e.g. 5"
                 />
-                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Awarded for "Excused" status</p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">
+                  Awarded for "Excused" status
+                </p>
               </div>
               <div>
                 <label className="input-label">Midweek Service Day</label>
                 <select
                   value={hallOfFameSettings.midweek_day}
-                  onChange={(e) => setHallOfFameSettings({ ...hallOfFameSettings, midweek_day: e.target.value })}
+                  onChange={(e) =>
+                    setHallOfFameSettings({ ...hallOfFameSettings, midweek_day: e.target.value })
+                  }
                   className="select w-full"
                 >
                   <option value="Wednesday">Wednesday</option>
@@ -541,13 +657,19 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Active Sections</span>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{sections.length}</p>
+              <span className="text-xs font-semibold text-slate-400 uppercase">
+                Active Sections
+              </span>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                {sections.length}
+              </p>
               <p className="text-xs text-slate-500 mt-1">Configured in Section Management</p>
             </div>
             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
               <span className="text-xs font-semibold text-slate-400 uppercase">Active Leaders</span>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{leaders.length}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                {leaders.length}
+              </p>
               <p className="text-xs text-slate-500 mt-1">Assigned to Sections & Cells</p>
             </div>
           </div>
@@ -562,15 +684,22 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             Attendance & Service Settings
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-            Configure service attendance rules, submission deadline alerts, and automatic correction workflows.
+            Configure service attendance rules, submission deadline alerts, and automatic correction
+            workflows.
           </p>
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Sunday Service Deadline</p>
-                <p className="text-xs text-slate-500">Require leaders to submit attendance within 24 hours</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Sunday Service Deadline
+                </p>
+                <p className="text-xs text-slate-500">
+                  Require leaders to submit attendance within 24 hours
+                </p>
               </div>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full">Active</span>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full">
+                Active
+              </span>
             </div>
           </div>
         </div>
@@ -626,7 +755,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             Communication & Announcement Settings
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
-            Configure default announcement expiry periods, mobile push notification defaults, and event categories.
+            Configure default announcement expiry periods, mobile push notification defaults, and
+            event categories.
           </p>
           <div>
             <label className="input-label">Default Announcement Expiry (Days)</label>
@@ -661,13 +791,28 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <Users className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
                 User Management
               </h3>
-              <button onClick={() => { setShowCreateUser(true); setUserForm({ username: '', password: '', role: 'leader', full_name: '', section_id: '', phone: '', email: '' }); }} className="btn-primary text-sm">
+              <button
+                onClick={() => {
+                  setShowCreateUser(true);
+                  setUserForm({
+                    username: '',
+                    password: '',
+                    role: 'leader',
+                    full_name: '',
+                    section_id: '',
+                    phone: '',
+                    email: ''
+                  });
+                }}
+                className="btn-primary text-sm"
+              >
                 <UserPlus className="w-4 h-4" />
                 Add User
               </button>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-              Manage system users and their roles. Create accounts for leaders, pastors, evangelists, and accountants.
+              Manage system users and their roles. Create accounts for leaders, pastors,
+              evangelists, and accountants.
             </p>
 
             {/* Filters */}
@@ -700,23 +845,52 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             {/* User Reset Result */}
             {userResetResult && (
               <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">Credentials</p>
+                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">
+                  Credentials
+                </p>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Username: <strong>{userResetResult.username}</strong></span>
-                    <button onClick={() => copyToClipboard(userResetResult.username, 'user-username')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700">
-                      {copiedField === 'user-username' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      Username: <strong>{userResetResult.username}</strong>
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(userResetResult.username, 'user-username')}
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-700"
+                    >
+                      {copiedField === 'user-username' ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                   <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Password: <strong>{userResetResult.temp_password}</strong></span>
-                    <button onClick={() => copyToClipboard(userResetResult.temp_password, 'user-password')} className="text-primary-600 dark:text-primary-400 hover:text-primary-700">
-                      {copiedField === 'user-password' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      Password: <strong>{userResetResult.temp_password}</strong>
+                    </span>
+                    <button
+                      onClick={() =>
+                        copyToClipboard(userResetResult.temp_password, 'user-password')
+                      }
+                      className="text-primary-600 dark:text-primary-400 hover:text-primary-700"
+                    >
+                      {copiedField === 'user-password' ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Share these credentials securely.</p>
-                <button onClick={() => setUserResetResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                  Share these credentials securely.
+                </p>
+                <button
+                  onClick={() => setUserResetResult(null)}
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2"
+                >
+                  Dismiss
+                </button>
               </div>
             )}
 
@@ -735,33 +909,56 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-700">
-                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">User</th>
-                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">Role</th>
-                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden sm:table-cell">Section</th>
-                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden md:table-cell">Status</th>
-                      <th className="text-right py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">Actions</th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">
+                        User
+                      </th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">
+                        Role
+                      </th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden sm:table-cell">
+                        Section
+                      </th>
+                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden md:table-cell">
+                        Status
+                      </th>
+                      <th className="text-right py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredUsers.map((u) => (
-                      <tr key={u.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                      <tr
+                        key={u.id}
+                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                      >
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-3">
                             {u.profile_picture ? (
-                              <img src={u.profile_picture} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                              <img
+                                src={u.profile_picture}
+                                alt=""
+                                className="w-8 h-8 rounded-lg object-cover"
+                              />
                             ) : (
                               <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
                                 {u.full_name?.charAt(0)}
                               </div>
                             )}
                             <div>
-                              <p className="font-medium text-slate-900 dark:text-slate-100">{u.full_name}</p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">@{u.username}</p>
+                              <p className="font-medium text-slate-900 dark:text-slate-100">
+                                {u.full_name}
+                              </p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                @{u.username}
+                              </p>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 px-3">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeColor[u.role] || ''}`}>
+                          <span
+                            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeColor[u.role] || ''}`}
+                          >
                             {roleLabels[u.role] || u.role}
                           </span>
                         </td>
@@ -770,22 +967,38 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                         </td>
                         <td className="py-3 px-3 hidden md:table-cell">
                           {u.locked_until ? (
-                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Locked</span>
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                              Locked
+                            </span>
                           ) : u.totp_enabled ? (
-                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">2FA</span>
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                              2FA
+                            </span>
                           ) : (
                             <span className="text-xs text-slate-400">Active</span>
                           )}
                         </td>
                         <td className="py-3 px-3">
                           <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => handleResetUserPassword(u.id)} title="Reset Password" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600">
+                            <button
+                              onClick={() => handleResetUserPassword(u.id)}
+                              title="Reset Password"
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600"
+                            >
                               <Key className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setEditingUser({ ...u })} title="Edit User" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-primary-600">
+                            <button
+                              onClick={() => setEditingUser({ ...u })}
+                              title="Edit User"
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-primary-600"
+                            >
                               <Edit3 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setDeletingUser(u)} title="Delete User" className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-rose-600">
+                            <button
+                              onClick={() => setDeletingUser(u)}
+                              title="Delete User"
+                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-rose-600"
+                            >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -805,7 +1018,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-8 text-white">
               <h3 className="text-lg font-bold mb-2">Data Import</h3>
               <p className="text-primary-100 text-sm max-w-lg">
-                Bulk provision sections, leaders, and members via CSV upload. This will automatically create accounts and set up hierarchies.
+                Bulk provision sections, leaders, and members via CSV upload. This will
+                automatically create accounts and set up hierarchies.
               </p>
             </div>
             <div className="p-6">
@@ -826,20 +1040,47 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             </div>
             {uploadResult && (
               <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl">
-                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">Upload Complete</p>
+                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
+                  Upload Complete
+                </p>
                 <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div><span className="text-slate-500 dark:text-slate-400">Sections:</span> <strong>{uploadResult.results.sectionsCreated}</strong></div>
-                  <div><span className="text-slate-500 dark:text-slate-400">Leaders:</span> <strong>{uploadResult.results.leadersCreated}</strong></div>
-                  <div><span className="text-slate-500 dark:text-slate-400">Members:</span> <strong>{uploadResult.results.membersCreated}</strong></div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400">Sections:</span>{' '}
+                    <strong>{uploadResult.results.sectionsCreated}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400">Leaders:</span>{' '}
+                    <strong>{uploadResult.results.leadersCreated}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400">Members:</span>{' '}
+                    <strong>{uploadResult.results.membersCreated}</strong>
+                  </div>
                 </div>
                 {uploadResult.tempPasswords?.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
-                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">New Leader Credentials</p>
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
+                      New Leader Credentials
+                    </p>
                     {uploadResult.tempPasswords.map((cred, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg mb-2">
-                        <span className="text-sm text-slate-600 dark:text-slate-400"><strong>{cred.username}</strong>: {cred.password}</span>
-                        <button onClick={() => copyToClipboard(`${cred.username}: ${cred.password}`, `cred-${i}`)} className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
-                          {copiedField === `cred-${i}` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      <div
+                        key={i}
+                        className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg mb-2"
+                      >
+                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                          <strong>{cred.username}</strong>: {cred.password}
+                        </span>
+                        <button
+                          onClick={() =>
+                            copyToClipboard(`${cred.username}: ${cred.password}`, `cred-${i}`)
+                          }
+                          className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                        >
+                          {copiedField === `cred-${i}` ? (
+                            <Check className="w-4 h-4" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                     ))}
@@ -847,20 +1088,27 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 )}
                 {uploadResult.results.errors?.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
-                    <p className="text-sm font-semibold text-rose-700 dark:text-rose-400 mb-1">Errors ({uploadResult.results.errors.length})</p>
+                    <p className="text-sm font-semibold text-rose-700 dark:text-rose-400 mb-1">
+                      Errors ({uploadResult.results.errors.length})
+                    </p>
                     <ul className="text-xs text-rose-600 dark:text-rose-400 space-y-1 max-h-32 overflow-y-auto">
-                      {uploadResult.results.errors.map((err, i) => <li key={i}>{err}</li>)}
+                      {uploadResult.results.errors.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
                     </ul>
                   </div>
                 )}
-                <button onClick={() => setUploadResult(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2">Dismiss</button>
+                <button
+                  onClick={() => setUploadResult(null)}
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2"
+                >
+                  Dismiss
+                </button>
               </div>
             )}
           </div>
         </div>
       )}
-
-
 
       {/* 2FA Setup Modal */}
       {show2FAModal && (
@@ -868,10 +1116,18 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
           <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Two-Factor Authentication</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Scan the QR code with your authenticator app</p>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  Two-Factor Authentication
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  Scan the QR code with your authenticator app
+                </p>
               </div>
-              <button onClick={() => setShow2FAModal(false)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90" aria-label="Close">
+              <button
+                onClick={() => setShow2FAModal(false)}
+                className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
+                aria-label="Close"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -887,16 +1143,31 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
 
       {/* Disable 2FA Modal */}
       {showDisable2FA && (
-        <div className="modal-overlay" onClick={() => { setShowDisable2FA(false); setDisablePassword(''); }}>
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowDisable2FA(false);
+            setDisablePassword('');
+          }}
+        >
           <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
                   <Shield className="w-4.5 h-4.5 text-rose-500" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Disable 2FA</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  Disable 2FA
+                </h3>
               </div>
-              <button onClick={() => { setShowDisable2FA(false); setDisablePassword(''); }} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90" aria-label="Close">
+              <button
+                onClick={() => {
+                  setShowDisable2FA(false);
+                  setDisablePassword('');
+                }}
+                className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
+                aria-label="Close"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -915,7 +1186,10 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             </div>
             <div className="modal-footer">
               <button
-                onClick={() => { setShowDisable2FA(false); setDisablePassword(''); }}
+                onClick={() => {
+                  setShowDisable2FA(false);
+                  setDisablePassword('');
+                }}
                 className="btn-secondary"
               >
                 Cancel
@@ -926,8 +1200,12 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 className="btn-danger"
               >
                 {disabling2FA ? (
-                  <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Disabling...</span>
-                ) : 'Disable 2FA'}
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Disabling...
+                  </span>
+                ) : (
+                  'Disable 2FA'
+                )}
               </button>
             </div>
           </div>
@@ -943,31 +1221,68 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
                   <UserPlus className="w-4.5 h-4.5 text-primary-500" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Create New User</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                  Create New User
+                </h3>
               </div>
-              <button onClick={() => setShowCreateUser(false)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90" aria-label="Close">
+              <button
+                onClick={() => setShowCreateUser(false)}
+                className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
+                aria-label="Close"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="modal-body space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="input-label">Full Name *</label>
-                  <input type="text" value={userForm.full_name} onChange={(e) => setUserForm({ ...userForm, full_name: capitalizeName(e.target.value) })} onPaste={e => { e.preventDefault(); setUserForm({ ...userForm, full_name: capitalizeName(e.clipboardData.getData('text')) }); }} className="input w-full" placeholder="e.g. John Doe" />
+                  <input
+                    type="text"
+                    value={userForm.full_name}
+                    onChange={(e) =>
+                      setUserForm({ ...userForm, full_name: capitalizeName(e.target.value) })
+                    }
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      setUserForm({
+                        ...userForm,
+                        full_name: capitalizeName(e.clipboardData.getData('text'))
+                      });
+                    }}
+                    className="input w-full"
+                    placeholder="e.g. John Doe"
+                  />
                 </div>
                 <div>
                   <label className="input-label">Username *</label>
-                  <input type="text" value={userForm.username} onChange={(e) => setUserForm({ ...userForm, username: e.target.value })} className="input w-full" placeholder="e.g. johndoe" />
+                  <input
+                    type="text"
+                    value={userForm.username}
+                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                    className="input w-full"
+                    placeholder="e.g. johndoe"
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="input-label">Password *</label>
-                  <input type="text" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} className="input w-full" placeholder="Min 8 characters" />
+                  <input
+                    type="text"
+                    value={userForm.password}
+                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                    className="input w-full"
+                    placeholder="Min 8 characters"
+                  />
                 </div>
                 <div>
                   <label className="input-label">Role *</label>
-                  <select value={userForm.role} onChange={(e) => setUserForm({ ...userForm, role: e.target.value })} className="select w-full">
+                  <select
+                    value={userForm.role}
+                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                    className="select w-full"
+                  >
                     <option value="leader">Section Leader</option>
                     <option value="admin">Administrator</option>
                     <option value="pastor">Pastor</option>
@@ -977,27 +1292,55 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 </div>
               </div>
               {userForm.role === 'leader' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="input-label">Section</label>
-                    <select value={userForm.section_id} onChange={(e) => setUserForm({ ...userForm, section_id: e.target.value })} className="select w-full">
+                    <select
+                      value={userForm.section_id}
+                      onChange={(e) => setUserForm({ ...userForm, section_id: e.target.value })}
+                      className="select w-full"
+                    >
                       <option value="">Select section...</option>
                       {sections.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div>
                     <label className="input-label">Phone</label>
-                    <input type="text" value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: handlePhoneChange(e.target.value) })} className="input w-full" placeholder="+255 XXX XXX XXX" />
+                    <input
+                      type="text"
+                      value={userForm.phone}
+                      onChange={(e) =>
+                        setUserForm({ ...userForm, phone: handlePhoneChange(e.target.value) })
+                      }
+                      className="input w-full"
+                      placeholder="+255 XXX XXX XXX"
+                    />
                   </div>
                 </div>
               )}
             </div>
             <div className="modal-footer">
-              <button onClick={() => setShowCreateUser(false)} className="btn-secondary">Cancel</button>
-              <button onClick={handleCreateUser} disabled={userSaving || !userForm.username || !userForm.password || !userForm.full_name} className="btn-primary">
-                {userSaving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Creating...</span> : 'Create User'}
+              <button onClick={() => setShowCreateUser(false)} className="btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateUser}
+                disabled={
+                  userSaving || !userForm.username || !userForm.password || !userForm.full_name
+                }
+                className="btn-primary"
+              >
+                {userSaving ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Creating...
+                  </span>
+                ) : (
+                  'Create User'
+                )}
               </button>
             </div>
           </div>
@@ -1015,22 +1358,49 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit User</h3>
               </div>
-              <button onClick={() => setEditingUser(null)} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90" aria-label="Close">
+              <button
+                onClick={() => setEditingUser(null)}
+                className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
+                aria-label="Close"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="modal-body space-y-4">
               <div>
                 <label className="input-label">Full Name</label>
-                <input type="text" value={editingUser.full_name || ''} onChange={(e) => setEditingUser({ ...editingUser, full_name: capitalizeName(e.target.value) })} onPaste={e => { e.preventDefault(); setEditingUser({ ...editingUser, full_name: capitalizeName(e.clipboardData.getData('text')) }); }} className="input w-full" />
+                <input
+                  type="text"
+                  value={editingUser.full_name || ''}
+                  onChange={(e) =>
+                    setEditingUser({ ...editingUser, full_name: capitalizeName(e.target.value) })
+                  }
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    setEditingUser({
+                      ...editingUser,
+                      full_name: capitalizeName(e.clipboardData.getData('text'))
+                    });
+                  }}
+                  className="input w-full"
+                />
               </div>
               <div>
                 <label className="input-label">Username</label>
-                <input type="text" value={editingUser.username || ''} onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })} className="input w-full" />
+                <input
+                  type="text"
+                  value={editingUser.username || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                  className="input w-full"
+                />
               </div>
               <div>
                 <label className="input-label">Role</label>
-                <select value={editingUser.role || 'leader'} onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })} className="select w-full">
+                <select
+                  value={editingUser.role || 'leader'}
+                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                  className="select w-full"
+                >
                   <option value="leader">Section Leader</option>
                   <option value="admin">Administrator</option>
                   <option value="pastor">Pastor</option>
@@ -1039,13 +1409,26 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 </select>
               </div>
               <div className="text-xs text-slate-400 dark:text-slate-500">
-                User: @{editingUser.username} | Section: {editingUser.section_name || 'N/A'} | Created: {fdatetime(editingUser.created_at)}
+                User: @{editingUser.username} | Section: {editingUser.section_name || 'N/A'} |
+                Created: {fdatetime(editingUser.created_at)}
               </div>
             </div>
             <div className="modal-footer">
-              <button onClick={() => setEditingUser(null)} className="btn-secondary">Cancel</button>
-              <button onClick={handleUpdateUser} disabled={userSaving || !editingUser.full_name || !editingUser.username} className="btn-primary">
-                {userSaving ? <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span> : 'Save Changes'}
+              <button onClick={() => setEditingUser(null)} className="btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateUser}
+                disabled={userSaving || !editingUser.full_name || !editingUser.username}
+                className="btn-primary"
+              >
+                {userSaving ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                  </span>
+                ) : (
+                  'Save Changes'
+                )}
               </button>
             </div>
           </div>
@@ -1060,15 +1443,31 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
                 <AlertTriangle className="w-7 h-7 text-rose-500" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">Delete User?</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
+                Delete User?
+              </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-                This will permanently remove <strong className="text-slate-800 dark:text-slate-200">{deletingUser.full_name}</strong> (@{deletingUser.username}).
+                This will permanently remove{' '}
+                <strong className="text-slate-800 dark:text-slate-200">
+                  {deletingUser.full_name}
+                </strong>{' '}
+                (@{deletingUser.username}).
                 {deletingUser.role === 'leader' && <br />}
-                {deletingUser.role === 'leader' && <span className="text-rose-600 font-medium">This will also remove their leader profile.</span>}
+                {deletingUser.role === 'leader' && (
+                  <span className="text-rose-600 font-medium">
+                    This will also remove their leader profile.
+                  </span>
+                )}
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setDeletingUser(null)} className="btn-secondary flex-1">Cancel</button>
-                <button onClick={handleDeleteUser} disabled={userSaving} className="btn-danger flex-1">
+                <button onClick={() => setDeletingUser(null)} className="btn-secondary flex-1">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteUser}
+                  disabled={userSaving}
+                  className="btn-danger flex-1"
+                >
                   {userSaving ? 'Deleting...' : 'Delete User'}
                 </button>
               </div>

@@ -22,7 +22,7 @@ const PastorWeeklySummary = () => {
       const [summaryRes, followUpRes, birthdayRes] = await Promise.all([
         pastorAPI.getWeeklySummary(weekStart),
         pastorAPI.getFollowUpAlerts(),
-        pastorAPI.getBirthdayAlerts(),
+        pastorAPI.getBirthdayAlerts()
       ]);
       setSummary(summaryRes.data);
       setFollowUpAlerts(followUpRes.data);
@@ -44,7 +44,7 @@ const PastorWeeklySummary = () => {
   }
 
   const leaders = summary?.leaders || [];
-  const submitted = leaders.filter(l => l.submitted > 0).length;
+  const submitted = leaders.filter((l) => l.submitted > 0).length;
   const total = leaders.length;
   const totalOutreach = leaders.reduce((sum, l) => sum + Number(l.outreach_count), 0);
   const totalAbsent = leaders.reduce((sum, l) => sum + Number(l.absent_members), 0);
@@ -69,10 +69,7 @@ const PastorWeeklySummary = () => {
           >
             Previous Week
           </button>
-          <button
-            onClick={() => setWeekStart(getWeekStartString())}
-            className="btn-primary btn-sm"
-          >
+          <button onClick={() => setWeekStart(getWeekStartString())} className="btn-primary btn-sm">
             This Week
           </button>
         </div>
@@ -84,7 +81,9 @@ const PastorWeeklySummary = () => {
             <CheckCircle className="w-4 h-4 text-emerald-500" />
             <span>Submitted</span>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{submitted}/{total}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">
+            {submitted}/{total}
+          </p>
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-1">
@@ -113,17 +112,28 @@ const PastorWeeklySummary = () => {
         <div className="card border-l-4 border-amber-400 p-6">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Members Needing Follow-Up</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+              Members Needing Follow-Up
+            </h3>
             <Badge variant="warning">{followUpAlerts.length}</Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {followUpAlerts.map(m => (
-              <div key={m.id} className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white text-sm">{m.full_name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{m.section_name} · {m.recent_absences} absences</p>
+            {followUpAlerts.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center justify-between gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-slate-900 dark:text-white text-sm">
+                    {m.full_name}
+                  </p>
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    {m.section_name} · {m.recent_absences} absences
+                  </p>
                 </div>
-                <Badge variant="warning">{m.leader_name}</Badge>
+                <Badge variant="warning" className="shrink-0">
+                  {m.leader_name}
+                </Badge>
               </div>
             ))}
           </div>
@@ -138,13 +148,23 @@ const PastorWeeklySummary = () => {
             <Badge variant="info">{birthdayAlerts.length}</Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {birthdayAlerts.map(m => (
-              <div key={m.id} className="flex items-center justify-between p-3 bg-pink-50 dark:bg-pink-900/20 rounded-xl">
-                <div>
-                  <p className="font-medium text-slate-900 dark:text-white text-sm">{m.full_name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{m.section_name}{m.phone ? ` · ${m.phone}` : ''}</p>
+            {birthdayAlerts.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center justify-between gap-3 p-3 bg-pink-50 dark:bg-pink-900/20 rounded-xl"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-slate-900 dark:text-white text-sm">
+                    {m.full_name}
+                  </p>
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    {m.section_name}
+                    {m.phone ? ` · ${m.phone}` : ''}
+                  </p>
                 </div>
-                <Badge variant="info">{m.leader_name}</Badge>
+                <Badge variant="info" className="shrink-0">
+                  {m.leader_name}
+                </Badge>
               </div>
             ))}
           </div>
@@ -158,22 +178,31 @@ const PastorWeeklySummary = () => {
               accessor: 'section_name',
               header: 'Section',
               sortable: true,
-              render: (row) => <span className="font-medium text-slate-900 dark:text-white">{row.section_name}</span>
+              render: (row) => (
+                <span className="font-medium text-slate-900 dark:text-white">
+                  {row.section_name}
+                </span>
+              )
             },
             {
               accessor: 'leader_name',
               header: 'Leader',
               sortable: true,
-              render: (row) => <span className="text-slate-700 dark:text-slate-300">{row.leader_name}</span>
+              render: (row) => (
+                <span className="text-slate-700 dark:text-slate-300">{row.leader_name}</span>
+              )
             },
             {
               accessor: 'submitted',
               header: 'Attendance',
               sortable: true,
               align: 'center',
-              render: (row) => row.submitted > 0
-                ? <Badge variant="success">Submitted</Badge>
-                : <Badge variant="danger">Not Submitted</Badge>
+              render: (row) =>
+                row.submitted > 0 ? (
+                  <Badge variant="success">Submitted</Badge>
+                ) : (
+                  <Badge variant="danger">Not Submitted</Badge>
+                )
             },
             {
               accessor: 'outreach_count',
@@ -192,7 +221,11 @@ const PastorWeeklySummary = () => {
               header: 'Members Reached',
               sortable: true,
               align: 'center',
-              render: (row) => <span className="text-sm text-slate-600 dark:text-slate-400">{row.members_contacted}</span>
+              render: (row) => (
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  {row.members_contacted}
+                </span>
+              )
             },
             {
               accessor: 'absent_members',
@@ -200,11 +233,13 @@ const PastorWeeklySummary = () => {
               sortable: true,
               align: 'center',
               render: (row) => (
-                <span className={`text-sm font-medium ${row.absent_members > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
+                <span
+                  className={`text-sm font-medium ${row.absent_members > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}
+                >
                   {row.absent_members}
                 </span>
               )
-            },
+            }
           ]}
           data={leaders}
           searchable={true}

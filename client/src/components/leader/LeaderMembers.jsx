@@ -7,7 +7,6 @@ import Badge from '../ui/Badge';
 import { handlePhoneChange } from '../../utils/phone';
 import MemberDetailsDrawer from '../MemberDetailsDrawer';
 
-
 const LeaderMembers = ({
   members,
   isHead,
@@ -24,22 +23,28 @@ const LeaderMembers = ({
   onDelete,
   consecutiveAbsences = [],
   followUps = [],
-  onUpdateFollowUp,
+  onUpdateFollowUp
 }) => {
   const [followUpMember, setFollowUpMember] = useState(null);
-  const [followUpForm, setFollowUpForm] = useState({ contacted: false, contact_method: '', notes: '' });
+  const [followUpForm, setFollowUpForm] = useState({
+    contacted: false,
+    contact_method: '',
+    notes: ''
+  });
   const [followUpSaving, setFollowUpSaving] = useState(false);
   const [detailsMember, setDetailsMember] = useState(null);
 
   const absenceMap = useMemo(() => {
     const map = {};
-    consecutiveAbsences.forEach(a => { map[a.member_id] = a.consecutive_absences; });
+    consecutiveAbsences.forEach((a) => {
+      map[a.member_id] = a.consecutive_absences;
+    });
     return map;
   }, [consecutiveAbsences]);
 
   const followUpMap = useMemo(() => {
     const map = {};
-    followUps.forEach(f => {
+    followUps.forEach((f) => {
       if (!map[f.member_id] || new Date(f.absence_date) > new Date(map[f.member_id].absence_date)) {
         map[f.member_id] = f;
       }
@@ -70,121 +75,129 @@ const LeaderMembers = ({
     }
   };
 
-  const columns = useMemo(() => [
-    {
-      accessor: 'membership_id',
-      header: 'ID',
-      sortable: true,
-      render: (row) => (
-        <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-          {row.membership_id}
-        </span>
-      ),
-    },
-    {
-      accessor: 'full_name',
-      header: 'Name',
-      sortable: true,
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-slate-900 dark:text-slate-100">{row.full_name}</span>
-          {absenceMap[row.id] && (
-            <Badge variant="danger">{absenceMap[row.id]} absent</Badge>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessor: 'phone',
-      header: 'Phone',
-      render: (row) => (
-        <span className="text-slate-600 dark:text-slate-400">{row.phone || '—'}</span>
-      ),
-    },
-    {
-      accessor: 'follow_up',
-      header: 'Follow-Up',
-      render: (row) => {
-        const fu = followUpMap[row.id];
-        if (fu) {
-          return (
-            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-              fu.contacted
-                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-            }`}>
-              {fu.contacted ? 'Contacted' : 'Pending'}
-            </span>
-          );
-        }
-        if (absenceMap[row.id] && isHead) {
-          return (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleOpenFollowUp(row); }}
-              className="btn-ghost btn-sm text-amber-600 dark:text-amber-400"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              Follow Up
-            </button>
-          );
-        }
-        return <span className="text-slate-300 dark:text-slate-600">—</span>;
+  const columns = useMemo(
+    () => [
+      {
+        accessor: 'membership_id',
+        header: 'ID',
+        sortable: true,
+        render: (row) => (
+          <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            {row.membership_id}
+          </span>
+        )
       },
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          {isHead ? (
-            <>
+      {
+        accessor: 'full_name',
+        header: 'Name',
+        sortable: true,
+        render: (row) => (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-900 dark:text-slate-100">
+              {row.full_name}
+            </span>
+            {absenceMap[row.id] && <Badge variant="danger">{absenceMap[row.id]} absent</Badge>}
+          </div>
+        )
+      },
+      {
+        accessor: 'phone',
+        header: 'Phone',
+        render: (row) => (
+          <span className="text-slate-600 dark:text-slate-400">{row.phone || '—'}</span>
+        )
+      },
+      {
+        accessor: 'follow_up',
+        header: 'Follow-Up',
+        render: (row) => {
+          const fu = followUpMap[row.id];
+          if (fu) {
+            return (
+              <span
+                className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  fu.contacted
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                    : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                }`}
+              >
+                {fu.contacted ? 'Contacted' : 'Pending'}
+              </span>
+            );
+          }
+          if (absenceMap[row.id] && isHead) {
+            return (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(row);
+                  handleOpenFollowUp(row);
                 }}
-                className="btn-ghost btn-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                className="btn-ghost btn-sm text-amber-600 dark:text-amber-400"
               >
-                <Pencil className="w-3.5 h-3.5" />
-                Edit
+                <Phone className="w-3.5 h-3.5" />
+                Follow Up
               </button>
+            );
+          }
+          return <span className="text-slate-300 dark:text-slate-600">—</span>;
+        }
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        render: (row) => (
+          <div className="flex items-center gap-2">
+            {isHead ? (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(row);
+                  }}
+                  className="btn-ghost btn-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeletingMember(row);
+                  }}
+                  className="btn-ghost btn-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Delete
+                </button>
+              </>
+            ) : (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setDeletingMember(row);
+                  setDetailsMember(row);
                 }}
-                className="btn-ghost btn-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300"
+                className="btn-ghost btn-sm text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
+                <Users className="w-3.5 h-3.5" />
+                Details
               </button>
-            </>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDetailsMember(row);
-              }}
-              className="btn-ghost btn-sm text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-            >
-              <Users className="w-3.5 h-3.5" />
-              Details
-            </button>
-          )}
-        </div>
-      ),
-    },
-  ], [onEdit, setDeletingMember, absenceMap, followUpMap, isHead, setDetailsMember]);
+            )}
+          </div>
+        )
+      }
+    ],
+    [onEdit, setDeletingMember, absenceMap, followUpMap, isHead, setDetailsMember]
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
           My Section Members
         </h3>
         {isHead && (
-          <button onClick={onAdd} className="btn-primary">
+          <button onClick={onAdd} className="btn-primary self-start">
             <Plus className="w-4 h-4" />
             Add Member
           </button>
@@ -208,11 +221,11 @@ const LeaderMembers = ({
       <Modal
         isOpen={isMemberModalOpen}
         onClose={() => setIsMemberModalOpen(false)}
-        title={!isHead ? 'Member Details' : (editingMember ? 'Edit Member' : 'Add Member')}
+        title={!isHead ? 'Member Details' : editingMember ? 'Edit Member' : 'Add Member'}
         size="md"
       >
         <form onSubmit={onSave} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="input-label">
                 Membership ID <span className="text-rose-500">*</span>
@@ -220,11 +233,7 @@ const LeaderMembers = ({
               <input
                 required
                 name="membership_id"
-                defaultValue={
-                  editingMember
-                    ? editingMember.membership_id
-                    : autogeneratedId
-                }
+                defaultValue={editingMember ? editingMember.membership_id : autogeneratedId}
                 disabled={!!editingMember || !isHead}
                 className="input"
               />
@@ -242,20 +251,28 @@ const LeaderMembers = ({
                 required
                 name="full_name"
                 defaultValue={editingMember?.full_name}
-                onChange={e => { e.target.value = capitalizeName(e.target.value); }}
-                onPaste={e => { e.preventDefault(); e.target.value = capitalizeName(e.clipboardData.getData('text')); e.target.dispatchEvent(new Event('input', { bubbles: true })); }}
+                onChange={(e) => {
+                  e.target.value = capitalizeName(e.target.value);
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  e.target.value = capitalizeName(e.clipboardData.getData('text'));
+                  e.target.dispatchEvent(new Event('input', { bubbles: true }));
+                }}
                 className="input"
                 disabled={!isHead}
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="input-label">Phone</label>
               <input
                 name="phone"
                 defaultValue={editingMember?.phone}
-                onChange={e => { e.target.value = handlePhoneChange(e.target.value); }}
+                onChange={(e) => {
+                  e.target.value = handlePhoneChange(e.target.value);
+                }}
                 className="input"
                 disabled={!isHead}
               />
@@ -271,7 +288,7 @@ const LeaderMembers = ({
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="input-label">Gender</label>
               <select
@@ -331,11 +348,7 @@ const LeaderMembers = ({
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={!!deletingMember}
-        onClose={() => setDeletingMember(null)}
-        size="sm"
-      >
+      <Modal isOpen={!!deletingMember} onClose={() => setDeletingMember(null)} size="sm">
         <div className="text-center py-4">
           <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center mx-auto mb-5">
             <AlertTriangle className="w-7 h-7 text-rose-500 dark:text-rose-400" />
@@ -351,17 +364,10 @@ const LeaderMembers = ({
             ? This action cannot be undone.
           </p>
           <div className="flex gap-3">
-            <button
-              onClick={() => setDeletingMember(null)}
-              className="btn-secondary flex-1"
-            >
+            <button onClick={() => setDeletingMember(null)} className="btn-secondary flex-1">
               Cancel
             </button>
-            <button
-              onClick={onDelete}
-              disabled={saving}
-              className="btn-danger flex-1"
-            >
+            <button onClick={onDelete} disabled={saving} className="btn-danger flex-1">
               {saving ? 'Deleting...' : 'Delete'}
             </button>
           </div>
@@ -386,7 +392,9 @@ const LeaderMembers = ({
               <label className="input-label">Contact Method</label>
               <select
                 value={followUpForm.contact_method}
-                onChange={(e) => setFollowUpForm(prev => ({ ...prev, contact_method: e.target.value }))}
+                onChange={(e) =>
+                  setFollowUpForm((prev) => ({ ...prev, contact_method: e.target.value }))
+                }
                 className="select"
               >
                 <option value="">Select...</option>
@@ -402,7 +410,7 @@ const LeaderMembers = ({
               <label className="input-label">Notes</label>
               <textarea
                 value={followUpForm.notes}
-                onChange={(e) => setFollowUpForm(prev => ({ ...prev, notes: e.target.value }))}
+                onChange={(e) => setFollowUpForm((prev) => ({ ...prev, notes: e.target.value }))}
                 className="input"
                 rows={3}
                 placeholder="Add notes about the follow-up..."
@@ -413,17 +421,25 @@ const LeaderMembers = ({
               <input
                 type="checkbox"
                 checked={followUpForm.contacted}
-                onChange={(e) => setFollowUpForm(prev => ({ ...prev, contacted: e.target.checked }))}
+                onChange={(e) =>
+                  setFollowUpForm((prev) => ({ ...prev, contacted: e.target.checked }))
+                }
                 className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary-600"
               />
-              <span className="text-sm text-slate-700 dark:text-slate-300">Member has been contacted</span>
+              <span className="text-sm text-slate-700 dark:text-slate-300">
+                Member has been contacted
+              </span>
             </label>
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
               <button onClick={() => setFollowUpMember(null)} className="btn-secondary">
                 Cancel
               </button>
-              <button onClick={handleSaveFollowUp} disabled={followUpSaving} className="btn-primary">
+              <button
+                onClick={handleSaveFollowUp}
+                disabled={followUpSaving}
+                className="btn-primary"
+              >
                 {followUpSaving ? 'Saving...' : 'Save Follow-Up'}
               </button>
             </div>

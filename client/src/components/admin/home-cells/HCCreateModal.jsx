@@ -11,9 +11,15 @@ const HCCreateModal = ({ isOpen, cell, onClose, onSaved }) => {
 
   useEffect(() => {
     if (isOpen) {
-      setForm(cell
-        ? { name: cell.name || '', meeting_day: cell.meeting_day || '', location: cell.location || '', max_capacity: cell.max_capacity || '' }
-        : { name: '', meeting_day: '', location: '', max_capacity: '' }
+      setForm(
+        cell
+          ? {
+              name: cell.name || '',
+              meeting_day: cell.meeting_day || '',
+              location: cell.location || '',
+              max_capacity: cell.max_capacity || ''
+            }
+          : { name: '', meeting_day: '', location: '', max_capacity: '' }
       );
       setError('');
     }
@@ -26,14 +32,18 @@ const HCCreateModal = ({ isOpen, cell, onClose, onSaved }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const name = form.name.trim();
-    if (!name) { setError('Cell name is required'); return; }
-    setSaving(true); setError('');
+    if (!name) {
+      setError('Cell name is required');
+      return;
+    }
+    setSaving(true);
+    setError('');
     try {
       const payload = {
         name,
         meeting_day: form.meeting_day || null,
         location: form.location.trim() || null,
-        max_capacity: form.max_capacity ? Number(form.max_capacity) : null,
+        max_capacity: form.max_capacity ? Number(form.max_capacity) : null
       };
       if (isEdit) {
         await adminAPI.updateHomeCell(cell.id, payload);
@@ -50,7 +60,12 @@ const HCCreateModal = ({ isOpen, cell, onClose, onSaved }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div
+      className="modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div className="modal-content max-w-lg">
         <div className="flex items-center justify-between border-b border-slate-200 p-5 dark:border-slate-700">
           <div className="flex items-center gap-3">
@@ -61,7 +76,10 @@ const HCCreateModal = ({ isOpen, cell, onClose, onSaved }) => {
               {isEdit ? 'Edit Home Cell' : 'Create Home Cell'}
             </h2>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -83,14 +101,14 @@ const HCCreateModal = ({ isOpen, cell, onClose, onSaved }) => {
                 className="input pl-9"
                 placeholder="e.g. Home Cell 7"
                 value={form.name}
-                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 required
                 autoFocus
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Meeting Day
@@ -100,10 +118,14 @@ const HCCreateModal = ({ isOpen, cell, onClose, onSaved }) => {
                 <select
                   className="select pl-9"
                   value={form.meeting_day}
-                  onChange={(e) => setForm(f => ({ ...f, meeting_day: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, meeting_day: e.target.value }))}
                 >
                   <option value="">— None —</option>
-                  {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
+                  {DAYS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -121,7 +143,7 @@ const HCCreateModal = ({ isOpen, cell, onClose, onSaved }) => {
                   className="input pl-9"
                   placeholder="e.g. 20"
                   value={form.max_capacity}
-                  onChange={(e) => setForm(f => ({ ...f, max_capacity: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, max_capacity: e.target.value }))}
                 />
               </div>
             </div>
@@ -137,13 +159,15 @@ const HCCreateModal = ({ isOpen, cell, onClose, onSaved }) => {
                 className="input pl-9"
                 placeholder="e.g. 12 Olive Street, Westlands"
                 value={form.location}
-                onChange={(e) => setForm(f => ({ ...f, location: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
               />
             </div>
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">
+              Cancel
+            </button>
             <button type="submit" disabled={saving} className="btn-primary flex-1">
               {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Cell'}
             </button>

@@ -42,7 +42,10 @@ const PhotoViewer = ({ src, alt = 'Photo', onClose }) => {
       {/* Controls */}
       <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
         <button
-          onClick={(e) => { e.stopPropagation(); handleDownload(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDownload();
+          }}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white text-xs font-semibold border border-white/20 transition-all"
           title="Download photo"
         >
@@ -51,7 +54,7 @@ const PhotoViewer = ({ src, alt = 'Photo', onClose }) => {
         </button>
         <button
           onClick={onClose}
-          className="p-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20 transition-all"
+          className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white border border-white/20 transition-all"
           title="Close (Esc)"
         >
           <X className="w-5 h-5" />
@@ -59,10 +62,7 @@ const PhotoViewer = ({ src, alt = 'Photo', onClose }) => {
       </div>
 
       {/* Photo */}
-      <div
-        className="relative max-w-lg w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
         <img
           src={src}
           alt={alt}
