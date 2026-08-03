@@ -288,9 +288,9 @@ async function flagPendingPermanentDeletions() {
 }
 
 function startScheduler() {
-  // Run the four bootstrap functions in sequence so the in-memory query
-  // queue in postgresRuntime.js is not flooded by 4 concurrent producers
-  // at startup. Subsequent intervals stay concurrent.
+  // Run the four bootstrap functions in sequence so startup does not flood the
+  // PostgreSQL query gate (postgresRuntime.js) while the server is still
+  // coming up. Subsequent interval ticks stay concurrent.
   (async () => {
     try {
       await scheduleWeeklyReminders();

@@ -6007,6 +6007,13 @@ const queries = {
 
 // ── Transaction helper ───────────────────────────────────────────────────────
 async function transaction(callback) {
+  // PostgreSQL: delegate to the client-scoped transaction helper so the
+  // callback's { run, get, all } are bound to one dedicated connection and can
+  // run concurrently with unrelated pool queries. SQLite keeps the
+  // serialize/begin/commit dance below on the single shared connection.
+  if (usePostgres) {
+    return db.transaction(callback);
+  }
   return new Promise((resolve, reject) => {
     db.serialize(() => {
       db.run('BEGIN TRANSACTION', (err) => {

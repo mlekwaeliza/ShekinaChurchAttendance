@@ -1,5 +1,5 @@
 const express = require('express');
-const { queries, all, get, run } = require('../database');
+const { queries, all, get, run, transaction } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
 const { formatLocalDate, addDays } = require('../utils/date');
 const { invalidate } = require('../utils/cache');
@@ -220,50 +220,55 @@ router.post('/attendance', async (req, res) => {
     if (!childrenLeader) return res.status(404).json({ error: 'Children leader not found' });
 
     const leaderId = childrenLeader.id;
-    let recordsCount = 0;
 
-    await run('BEGIN');
-    try {
+    const recordsCount = await transaction(async (tx) => {
+      let count = 0;
       for (const record of records) {
         const { child_id, status, class_id } = record;
         if (!child_id || !status) continue;
 
         // Verify child belongs to this leader
-        const child = await get('SELECT id FROM children WHERE id = ? AND children_leader_id = ?', [child_id, leaderId]);
+        const child = await tx.get(
+          'SELECT id FROM children WHERE id = ? AND children_leader_id = ?',
+          [child_id, leaderId]
+        );
         if (!child) continue;
 
         const classId = class_id || child.class_id;
         const now = new Date().toISOString();
 
-        await run(`
+        await tx.run(
+          `
           INSERT INTO children_attendance (child_id, class_id, date, status, checked_in_at, checked_in_by, created_at)
           VALUES (?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(child_id, class_id, date) DO UPDATE SET
             status = excluded.status,
             checked_in_at = excluded.checked_in_at,
             checked_in_by = excluded.checked_in_by
-        `, [child_id, classId, date, status, now, userId, now]);
+        `,
+          [child_id, classId, date, status, now, userId, now]
+        );
 
-        recordsCount++;
+        count++;
       }
 
       // Log submission
-      await run(isPostgres
-        ? `INSERT INTO children_submission_log (children_leader_id, date, class_id, records_count, created_at)
+      await tx.run(
+        isPostgres
+          ? `INSERT INTO children_submission_log (children_leader_id, date, class_id, records_count, created_at)
            VALUES (?, ?, ?, ?, ?)
            ON CONFLICT(children_leader_id, date, class_id) DO UPDATE SET
              records_count = EXCLUDED.records_count, created_at = EXCLUDED.created_at`
-        : `INSERT OR REPLACE INTO children_submission_log (children_leader_id, date, class_id, records_count, created_at)
+          : `INSERT OR REPLACE INTO children_submission_log (children_leader_id, date, class_id, records_count, created_at)
            VALUES (?, ?, ?, ?, ?)`,
-      [leaderId, date, null, recordsCount, new Date().toISOString()]);
+        [leaderId, date, null, count, new Date().toISOString()]
+      );
 
-      await run('COMMIT');
-      invalidate('admin-children-');
-      res.json({ message: 'Attendance saved', records: recordsCount });
-    } catch (error) {
-      await run('ROLLBACK');
-      throw error;
-    }
+      return count;
+    });
+
+    invalidate('admin-children-');
+    res.json({ message: 'Attendance saved', records: recordsCount });
   } catch (error) {
     console.error('Submit attendance error:', error);
     res.status(500).json({ error: 'Failed to save attendance' });
