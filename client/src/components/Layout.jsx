@@ -55,7 +55,7 @@ import {
   Droplets,
   TrendingUp,
   Crown,
-  Baby,
+  Baby
 } from 'lucide-react';
 
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000;
@@ -80,7 +80,7 @@ const Layout = ({ children, showNav = true }) => {
   // Global search keyboard shortcut (Ctrl+K or Cmd+K)
   useEffect(() => {
     const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && (e.key.toLowerCase() === 'k')) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setSearchOpen(true);
       }
@@ -110,11 +110,22 @@ const Layout = ({ children, showNav = true }) => {
       if (logoutTimer) clearTimeout(logoutTimer);
       warnTimer = setTimeout(() => {
         warned = true;
-        try { showToast({ type: 'warning', message: 'You will be logged out in 5 minutes due to inactivity.' }); } catch (_e) { /* ignore */ }
+        try {
+          showToast({
+            type: 'warning',
+            message: 'You will be logged out in 5 minutes due to inactivity.'
+          });
+        } catch (_e) {
+          /* ignore */
+        }
       }, IDLE_WARNING_MS);
       logoutTimer = setTimeout(() => {
         if (warned) {
-          try { showToast({ type: 'info', message: 'Logged out due to inactivity.' }); } catch (_e) { /* ignore */ }
+          try {
+            showToast({ type: 'info', message: 'Logged out due to inactivity.' });
+          } catch (_e) {
+            /* ignore */
+          }
           logout();
         }
       }, IDLE_TIMEOUT_MS);
@@ -133,7 +144,11 @@ const Layout = ({ children, showNav = true }) => {
   useEffect(() => {
     const handler = (event) => {
       const msg = event?.detail?.message || 'Your session has expired. Please log in again.';
-      try { showToast({ type: 'warning', message: msg }); } catch (_e) { /* ignore */ }
+      try {
+        showToast({ type: 'warning', message: msg });
+      } catch (_e) {
+        /* ignore */
+      }
       logout();
     };
     window.addEventListener('app:session-expired', handler);
@@ -160,7 +175,7 @@ const Layout = ({ children, showNav = true }) => {
       setUploading(true);
       const res = await authAPI.uploadProfilePicture(file);
       updateUser({ profile_picture: res.data.profile_picture });
-      setProfileImgKey(prev => prev + 1);
+      setProfileImgKey((prev) => prev + 1);
     } catch (err) {
       alert('Failed to upload: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -181,22 +196,21 @@ const Layout = ({ children, showNav = true }) => {
       const refreshPrep = async () => {
         if ('serviceWorker' in navigator) {
           const registrations = await navigator.serviceWorker.getRegistrations();
-          await Promise.all(registrations.map(async (registration) => {
-            await registration.update();
-            if (registration.waiting) {
-              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-            }
-          }));
+          await Promise.all(
+            registrations.map(async (registration) => {
+              await registration.update();
+              if (registration.waiting) {
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+            })
+          );
         }
         if ('caches' in window) {
           const cacheNames = await caches.keys();
           await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
         }
       };
-      await Promise.race([
-        refreshPrep(),
-        new Promise((resolve) => setTimeout(resolve, 1200))
-      ]);
+      await Promise.race([refreshPrep(), new Promise((resolve) => setTimeout(resolve, 1200))]);
     } catch (error) {
       console.warn('App refresh preparation failed:', error);
     } finally {
@@ -207,152 +221,241 @@ const Layout = ({ children, showNav = true }) => {
   // Navigation structure per role
   const navConfig = {
     admin: [
-      { section: 'OVERVIEW', items: [
-        { path: '/admin', label: 'Church Overview', icon: LayoutDashboard, exact: true },
-      ]},
-      { section: 'MINISTRIES', items: [
-        { path: '/admin/sections', label: 'Sections', icon: Layers },
-        { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
-        { path: '/admin/departments', label: 'Departments', icon: Building2 },
-        { path: '/admin/leadership', label: 'Leadership', icon: Award },
-        { path: '/admin/titles', label: 'Titles', icon: Tag },
-      ]},
-      { section: 'PEOPLE & CARE', items: [
-        { path: '/admin/members', label: 'Member Directory', icon: Users },
-        { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
-        { path: '/admin/leaders', label: 'Leaders', icon: Crown },
-        { path: '/admin/children-leaders', label: 'Children Leaders', icon: Baby },
-        { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
-        { path: '/admin/rewards', label: 'Recognition', icon: Trophy },
-      ]},
-      { section: 'SERVICES & ATTENDANCE', items: [
-        { path: '/admin/attendance-dashboard', label: 'Attendance Overview', icon: BarChart3 },
-        { path: '/admin/attendance-corrections', label: 'Review Attendance', icon: CheckSquare },
-        { path: '/admin/history', label: 'Service History', icon: Clock },
-        { path: '/admin/attendance-analytics', label: 'Attendance Insights', icon: TrendingUp },
-      ]},
-      { section: 'OUTREACH', items: [
-        { path: '/admin/evangelism', label: 'Outreach Overview', icon: Heart, exact: true },
-        { path: '/admin/evangelism', label: 'Outreach Events', icon: Send, search: '?subtab=outreach' },
-        { path: '/admin/evangelism', label: 'New Believers', icon: Users, search: '?subtab=souls' },
-        { path: '/admin/follow-ups', label: 'Care Follow-Ups', icon: ClipboardCheck },
-        { path: '/admin/evangelism', label: 'Baptism', icon: Droplets, search: '?subtab=baptism' },
-        { path: '/admin/evangelism', label: 'Outreach Reports', icon: FileText, search: '?subtab=reports' },
-      ]},
-      { section: 'OPERATIONS', items: [
-        { path: '/admin/finance', label: 'Finance', icon: Banknote },
-        { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
-        { path: '/admin/announcements', label: 'Announcements', icon: Megaphone },
-      ]},
-      { section: 'INSIGHTS', items: [
-        { path: '/admin/reporting', label: 'Church Reports', icon: FileText },
-        { path: '/admin/analytics', label: 'Analytics', icon: Activity },
-      ]},
-      { section: 'ADMINISTRATION', items: [
-        { path: '/admin/audit', label: 'Activity Log', icon: ShieldCheck },
-        { path: '/admin/settings', label: 'Settings', icon: Settings },
-      ]},
+      {
+        section: 'OVERVIEW',
+        items: [{ path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true }]
+      },
+      {
+        section: 'MINISTRIES',
+        items: [
+          { path: '/admin/sections', label: 'Sections', icon: Layers },
+          { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
+          { path: '/admin/departments', label: 'Departments', icon: Building2 },
+          { path: '/admin/leadership', label: 'Leadership', icon: Award },
+          { path: '/admin/titles', label: 'Titles', icon: Tag }
+        ]
+      },
+      {
+        section: 'PEOPLE & CARE',
+        items: [
+          { path: '/admin/members', label: 'Member Directory', icon: Users },
+          { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
+          { path: '/admin/leaders', label: 'Leaders', icon: Crown },
+          { path: '/admin/children-leaders', label: 'Children Leaders', icon: Baby },
+          { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
+          { path: '/admin/rewards', label: 'Recognition', icon: Trophy }
+        ]
+      },
+      {
+        section: 'SERVICES & ATTENDANCE',
+        items: [
+          { path: '/admin/attendance-dashboard', label: 'Attendance Overview', icon: BarChart3 },
+          { path: '/admin/attendance-corrections', label: 'Review Attendance', icon: CheckSquare },
+          { path: '/admin/history', label: 'Service History', icon: Clock },
+          { path: '/admin/attendance-analytics', label: 'Attendance Insights', icon: TrendingUp }
+        ]
+      },
+      {
+        section: 'OUTREACH',
+        items: [
+          { path: '/admin/evangelism', label: 'Outreach Overview', icon: Heart, exact: true },
+          {
+            path: '/admin/evangelism',
+            label: 'Outreach Events',
+            icon: Send,
+            search: '?subtab=outreach'
+          },
+          {
+            path: '/admin/evangelism',
+            label: 'New Believers',
+            icon: Users,
+            search: '?subtab=souls'
+          },
+          { path: '/admin/follow-ups', label: 'Care Follow-Ups', icon: ClipboardCheck },
+          {
+            path: '/admin/evangelism',
+            label: 'Baptism',
+            icon: Droplets,
+            search: '?subtab=baptism'
+          },
+          {
+            path: '/admin/evangelism',
+            label: 'Outreach Reports',
+            icon: FileText,
+            search: '?subtab=reports'
+          }
+        ]
+      },
+      {
+        section: 'OPERATIONS',
+        items: [
+          { path: '/admin/finance', label: 'Finance', icon: Banknote },
+          { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
+          { path: '/admin/announcements', label: 'Announcements', icon: Megaphone }
+        ]
+      },
+      {
+        section: 'INSIGHTS',
+        items: [
+          { path: '/admin/reporting', label: 'Church Reports', icon: FileText },
+          { path: '/admin/executive', label: 'Executive Analytics', icon: Activity }
+        ]
+      },
+      {
+        section: 'ADMINISTRATION',
+        items: [
+          { path: '/admin/audit', label: 'Activity Log', icon: ShieldCheck },
+          { path: '/admin/settings', label: 'Settings', icon: Settings }
+        ]
+      }
     ],
     leader: [
-      { section: 'DASHBOARD', items: [
-        { path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-      ]},
-      { section: 'MY WORK', items: [
-        { path: '/leader/members', label: 'My Members', icon: Users },
-        { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
-        { path: '/leader/home-cells', label: 'Home Cell Members', icon: Home },
-      ]},
-      { section: 'OUTREACH', items: [
-        { path: '/leader/outreach', label: 'Outreach', icon: MessageSquare },
-      ]},
-      { section: 'REPORTS', items: [
-        { path: '/leader/history', label: 'History', icon: Clock },
-        { path: '/leader/contributions', label: 'Contributions', icon: DollarSign },
-        { path: '/leader/reports', label: 'Reports', icon: BarChart3 },
-      ]},
-      ...(user?.is_head ? [
-        { section: 'SECTION MANAGEMENT', items: [
-          { path: '/leader/overview', label: 'Section Overview', icon: Eye },
-        ]}
-      ] : []),
-      ...(user?.is_new_member_leader ? [
-        { section: 'NEW MEMBERS', items: [
-          { path: '/leader/new-members', label: 'New Members', icon: UserPlus },
-        ]}
-      ] : []),
-      { section: 'ACCOUNT', items: [
-        { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
-      ]},
+      {
+        section: 'DASHBOARD',
+        items: [{ path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true }]
+      },
+      {
+        section: 'MY WORK',
+        items: [
+          { path: '/leader/members', label: 'My Members', icon: Users },
+          { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
+          { path: '/leader/home-cells', label: 'Home Cell Members', icon: Home }
+        ]
+      },
+      {
+        section: 'OUTREACH',
+        items: [{ path: '/leader/outreach', label: 'Outreach', icon: MessageSquare }]
+      },
+      {
+        section: 'REPORTS',
+        items: [
+          { path: '/leader/history', label: 'History', icon: Clock },
+          { path: '/leader/contributions', label: 'Contributions', icon: DollarSign },
+          { path: '/leader/reports', label: 'Reports', icon: BarChart3 }
+        ]
+      },
+      ...(user?.is_head
+        ? [
+            {
+              section: 'SECTION MANAGEMENT',
+              items: [{ path: '/leader/overview', label: 'Section Overview', icon: Eye }]
+            }
+          ]
+        : []),
+      ...(user?.is_new_member_leader
+        ? [
+            {
+              section: 'NEW MEMBERS',
+              items: [{ path: '/leader/new-members', label: 'New Members', icon: UserPlus }]
+            }
+          ]
+        : []),
+      {
+        section: 'ACCOUNT',
+        items: [{ path: '/leader/calendar', label: 'Calendar', icon: Calendar }]
+      }
     ],
     evangelist: [
-      { section: 'DASHBOARD', items: [
-        { path: '/evangelist', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-      ]},
-      { section: 'EVANGELISM', items: [
-        { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
-        { path: '/evangelist/souls', label: 'New Believers', icon: Users },
-        { path: '/evangelist/follow-ups', label: 'Care Follow-Ups', icon: MessageSquare },
-        { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
-      ]},
-      { section: 'TEAM', items: [
-        { path: '/evangelist/team', label: 'Evangelism Team', icon: Users },
-      ]},
-      { section: 'REPORTS', items: [
-        { path: '/evangelist/reports', label: 'Reports', icon: BarChart3 },
-      ]},
-      { section: 'ACCOUNT', items: [
-        { path: '/change-password', label: 'Change Password', icon: Shield },
-        { path: '/evangelist/settings', label: 'Settings', icon: Settings },
-      ]},
+      {
+        section: 'DASHBOARD',
+        items: [{ path: '/evangelist', label: 'Dashboard', icon: LayoutDashboard, exact: true }]
+      },
+      {
+        section: 'EVANGELISM',
+        items: [
+          { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
+          { path: '/evangelist/souls', label: 'New Believers', icon: Users },
+          { path: '/evangelist/follow-ups', label: 'Care Follow-Ups', icon: MessageSquare },
+          { path: '/evangelist/baptism', label: 'Baptism', icon: Cross }
+        ]
+      },
+      {
+        section: 'TEAM',
+        items: [{ path: '/evangelist/team', label: 'Evangelism Team', icon: Users }]
+      },
+      {
+        section: 'REPORTS',
+        items: [{ path: '/evangelist/reports', label: 'Reports', icon: BarChart3 }]
+      },
+      {
+        section: 'ACCOUNT',
+        items: [
+          { path: '/change-password', label: 'Change Password', icon: Shield },
+          { path: '/evangelist/settings', label: 'Settings', icon: Settings }
+        ]
+      }
     ],
     pastor: [
-      { section: 'DASHBOARD', items: [
-        { path: '/pastor', label: 'Overview', icon: LayoutDashboard, exact: true },
-      ]},
-      { section: 'PASTORAL CARE', items: [
-        { path: '/pastor/insights', label: 'Insights', icon: Activity },
-        { path: '/pastor/engagement', label: 'Engagement', icon: MessageSquare },
-        { path: '/pastor/weekly', label: 'Weekly Summary', icon: Calendar },
-        { path: '/pastor/birthdays', label: 'Birthdays', icon: Cake },
-      ]},
-      { section: 'EVANGELISM', items: [
-        { path: '/evangelist', label: 'Evangelism Dashboard', icon: Heart, exact: true },
-        { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
-        { path: '/evangelist/souls', label: 'New Believers', icon: Users },
-        { path: '/evangelist/baptism', label: 'Baptism', icon: Cross },
-      ]},
-      { section: 'ACCOUNT', items: [
-        { path: '/pastor/calendar', label: 'Calendar', icon: Calendar },
-      ]},
+      {
+        section: 'DASHBOARD',
+        items: [{ path: '/pastor', label: 'Overview', icon: LayoutDashboard, exact: true }]
+      },
+      {
+        section: 'PASTORAL CARE',
+        items: [
+          { path: '/pastor/insights', label: 'Insights', icon: Activity },
+          { path: '/pastor/engagement', label: 'Engagement', icon: MessageSquare },
+          { path: '/pastor/weekly', label: 'Weekly Summary', icon: Calendar },
+          { path: '/pastor/birthdays', label: 'Birthdays', icon: Cake }
+        ]
+      },
+      {
+        section: 'EVANGELISM',
+        items: [
+          { path: '/evangelist', label: 'Evangelism Dashboard', icon: Heart, exact: true },
+          { path: '/evangelist/outreach', label: 'Outreach Events', icon: Calendar },
+          { path: '/evangelist/souls', label: 'New Believers', icon: Users },
+          { path: '/evangelist/baptism', label: 'Baptism', icon: Cross }
+        ]
+      },
+      {
+        section: 'ACCOUNT',
+        items: [{ path: '/pastor/calendar', label: 'Calendar', icon: Calendar }]
+      }
     ],
     children_leader: [
-      { section: 'DASHBOARD', items: [
-        { path: '/children-leader', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-      ]},
-      { section: 'MY WORK', items: [
-        { path: '/children-leader/children', label: 'My Children', icon: Users },
-        { path: '/children-leader/attendance', label: 'Take Attendance', icon: ClipboardList },
-      ]},
-      { section: 'REPORTS', items: [
-        { path: '/children-leader/history', label: 'History', icon: Clock },
-        { path: '/children-leader/trends', label: 'Trends', icon: BarChart3 },
-      ]},
-      { section: 'ACCOUNT', items: [
-        { path: '/children-leader/calendar', label: 'Calendar', icon: Calendar },
-      ]},
+      {
+        section: 'DASHBOARD',
+        items: [
+          { path: '/children-leader', label: 'Dashboard', icon: LayoutDashboard, exact: true }
+        ]
+      },
+      {
+        section: 'MY WORK',
+        items: [
+          { path: '/children-leader/children', label: 'My Children', icon: Users },
+          { path: '/children-leader/attendance', label: 'Take Attendance', icon: ClipboardList }
+        ]
+      },
+      {
+        section: 'REPORTS',
+        items: [
+          { path: '/children-leader/history', label: 'History', icon: Clock },
+          { path: '/children-leader/trends', label: 'Trends', icon: BarChart3 }
+        ]
+      },
+      {
+        section: 'ACCOUNT',
+        items: [{ path: '/children-leader/calendar', label: 'Calendar', icon: Calendar }]
+      }
     ],
     accountant: [
-      { section: 'DASHBOARD', items: [
-        { path: '/accountant', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-      ]},
-      { section: 'FINANCE', items: [
-        { path: '/accountant/finance', label: 'Finance Module', icon: Banknote },
-        { path: '/accountant/analytics', label: 'Analytics', icon: BarChart3 },
-      ]},
-      { section: 'ACCOUNT', items: [
-        { path: '/change-password', label: 'Change Password', icon: Shield },
-      ]},
-    ],
+      {
+        section: 'DASHBOARD',
+        items: [{ path: '/accountant', label: 'Dashboard', icon: LayoutDashboard, exact: true }]
+      },
+      {
+        section: 'FINANCE',
+        items: [
+          { path: '/accountant/finance', label: 'Finance Module', icon: Banknote },
+          { path: '/accountant/analytics', label: 'Analytics', icon: BarChart3 }
+        ]
+      },
+      {
+        section: 'ACCOUNT',
+        items: [{ path: '/change-password', label: 'Change Password', icon: Shield }]
+      }
+    ]
   };
 
   const currentNav = (() => {
@@ -360,22 +463,20 @@ const Layout = ({ children, showNav = true }) => {
       return [
         {
           section: 'DASHBOARD',
-          items: [
-            { path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true },
-          ]
+          items: [{ path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true }]
         },
         {
           section: 'NEW MEMBERS',
           items: [
             { path: '/leader/new-members', label: 'New Members', icon: UserPlus },
-            { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
+            { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList }
           ]
         },
         {
           section: 'ACCOUNT',
           items: [
             { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
-            { path: '/leader/settings', label: 'Settings', icon: Settings },
+            { path: '/leader/settings', label: 'Settings', icon: Settings }
           ]
         }
       ];
@@ -434,11 +535,15 @@ const Layout = ({ children, showNav = true }) => {
 
   const roleLabel = {
     admin: 'Administrator',
-    leader: user?.is_new_member_leader ? 'New Member Leader' : user?.is_head ? 'Head Leader' : 'Section Leader',
+    leader: user?.is_new_member_leader
+      ? 'New Member Leader'
+      : user?.is_head
+        ? 'Head Leader'
+        : 'Section Leader',
     pastor: 'Pastor',
     evangelist: 'Evangelist Pastor',
     accountant: 'Accountant',
-    children_leader: 'Children\'s Ministry Leader',
+    children_leader: "Children's Ministry Leader"
   };
 
   const roleBadgeColor = {
@@ -447,7 +552,7 @@ const Layout = ({ children, showNav = true }) => {
     pastor: 'bg-accent-500/20 text-accent-300',
     evangelist: 'bg-amber-500/20 text-amber-300',
     accountant: 'bg-cyan-500/20 text-cyan-300',
-    children_leader: 'bg-pink-500/20 text-pink-300',
+    children_leader: 'bg-pink-500/20 text-pink-300'
   };
 
   // Keep the mobile drawer expanded even when the desktop sidebar is collapsed.
@@ -457,7 +562,9 @@ const Layout = ({ children, showNav = true }) => {
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className={`flex h-[4.5rem] shrink-0 items-center border-b border-white/[0.06] px-4 ${navCollapsed ? 'justify-center' : ''}`}>
+      <div
+        className={`flex h-[4.5rem] shrink-0 items-center border-b border-white/[0.06] px-4 ${navCollapsed ? 'justify-center' : ''}`}
+      >
         <BrandMark compact={navCollapsed} inverse />
       </div>
 
@@ -465,12 +572,8 @@ const Layout = ({ children, showNav = true }) => {
       <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-1">
         {currentNav.map((group, gi) => (
           <div key={gi}>
-            {!navCollapsed && (
-              <div className="sidebar-section-label">{group.section}</div>
-            )}
-            {navCollapsed && gi > 0 && (
-              <div className="h-px bg-sidebar-border/20 mx-2 my-3" />
-            )}
+            {!navCollapsed && <div className="sidebar-section-label">{group.section}</div>}
+            {navCollapsed && gi > 0 && <div className="h-px bg-sidebar-border/20 mx-2 my-3" />}
             {group.items.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
@@ -483,9 +586,7 @@ const Layout = ({ children, showNav = true }) => {
                   className={`sidebar-nav-item ${active ? 'active' : ''} ${navCollapsed ? 'justify-center px-0' : ''}`}
                 >
                   <Icon className="nav-icon" />
-                  {!navCollapsed && (
-                    <span className="truncate">{item.label}</span>
-                  )}
+                  {!navCollapsed && <span className="truncate">{item.label}</span>}
                   {active && !navCollapsed && (
                     <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-accent-400" />
                   )}
@@ -509,10 +610,15 @@ const Layout = ({ children, showNav = true }) => {
       </div>
 
       {/* User Profile */}
-      <div className={`px-3 py-3 border-t border-sidebar-border/20 ${navCollapsed ? 'flex justify-center' : ''}`}>
+      <div
+        className={`px-3 py-3 border-t border-sidebar-border/20 ${navCollapsed ? 'flex justify-center' : ''}`}
+      >
         <div
           className={`flex items-center gap-3 ${navCollapsed ? '' : 'p-2 rounded-xl hover:bg-sidebar-hover transition-colors cursor-pointer'}`}
-          onClick={(e) => { e.stopPropagation(); setProfileDropdown(!profileDropdown); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setProfileDropdown(!profileDropdown);
+          }}
         >
           {/* Avatar */}
           <div className="relative shrink-0">
@@ -534,7 +640,9 @@ const Layout = ({ children, showNav = true }) => {
             <div className="flex-1 min-w-0 animate-fade-in">
               <p className="text-sm font-semibold text-white truncate">{user?.full_name}</p>
               <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeColor[user?.role] || ''}`}>
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${roleBadgeColor[user?.role] || ''}`}
+                >
                   {roleLabel[user?.role] || user?.role}
                 </span>
                 {user?.section_name && (
@@ -552,16 +660,25 @@ const Layout = ({ children, showNav = true }) => {
 
         {/* Profile Dropdown */}
         {profileDropdown && !navCollapsed && (
-          <div className="absolute bottom-20 left-3 right-3 z-50 animate-scale-in rounded-xl border border-slate-200 bg-white py-1 shadow-elevated dark:border-white/10 dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="absolute bottom-20 left-3 right-3 z-50 animate-scale-in rounded-xl border border-slate-200 bg-white py-1 shadow-elevated dark:border-white/10 dark:bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
-              onClick={() => { navigate(user?.role === 'admin' ? '/admin/settings' : '/change-password'); setProfileDropdown(false); }}
+              onClick={() => {
+                navigate(user?.role === 'admin' ? '/admin/settings' : '/change-password');
+                setProfileDropdown(false);
+              }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors dark:text-slate-200 dark:hover:bg-white/5"
             >
               <Settings className="w-4 h-4 text-slate-400" />
               Settings
             </button>
             <button
-              onClick={() => { navigate('/change-password'); setProfileDropdown(false); }}
+              onClick={() => {
+                navigate('/change-password');
+                setProfileDropdown(false);
+              }}
               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors dark:text-slate-200 dark:hover:bg-white/5"
             >
               <Shield className="w-4 h-4 text-slate-400" />
@@ -584,9 +701,7 @@ const Layout = ({ children, showNav = true }) => {
   if (!showNav || !user) {
     return (
       <div className="app-canvas min-h-screen">
-        <main className="max-w-7xl mx-auto px-4 py-8">
-          {children}
-        </main>
+        <main className="max-w-7xl mx-auto px-4 py-8">{children}</main>
       </div>
     );
   }
@@ -595,169 +710,207 @@ const Layout = ({ children, showNav = true }) => {
     <BreadcrumbProvider>
       <RealtimeBridge user={user}>
         <div className="app-canvas min-h-screen overflow-hidden">
-        {/* Hidden file input for profile uploads */}
-        <input type="file" id="profile-upload" className="hidden" accept="image/*" onChange={handleProfileUpload} disabled={uploading} />
+          {/* Hidden file input for profile uploads */}
+          <input
+            type="file"
+            id="profile-upload"
+            className="hidden"
+            accept="image/*"
+            onChange={handleProfileUpload}
+            disabled={uploading}
+          />
 
-      {/* Mobile Overlay */}
-      {mobileOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden" onClick={() => setMobileOpen(false)} />
-      )}
+          {/* Mobile Overlay */}
+          {mobileOpen && (
+            <div
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden"
+              onClick={() => setMobileOpen(false)}
+            />
+          )}
 
-      {/* Sidebar - Desktop */}
-      <aside
-        className={`sidebar hidden md:flex ${collapsed ? 'w-sidebar-collapsed' : 'w-sidebar'}`}
-      >
-        {sidebarContent}
-      </aside>
+          {/* Sidebar - Desktop */}
+          <aside
+            className={`sidebar hidden md:flex ${collapsed ? 'w-sidebar-collapsed' : 'w-sidebar'}`}
+          >
+            {sidebarContent}
+          </aside>
 
-      {/* Sidebar - Mobile */}
-      <aside
-        className={`sidebar md:hidden w-sidebar max-w-[85vw] transform transition-transform duration-350 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        {sidebarContent}
-      </aside>
+          {/* Sidebar - Mobile */}
+          <aside
+            className={`sidebar md:hidden w-sidebar max-w-[85vw] transform transition-transform duration-350 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          >
+            {sidebarContent}
+          </aside>
 
-      {/* Main Content */}
-      <div className={`transition-all duration-350 ${collapsed ? 'md:ml-sidebar-collapsed' : 'md:ml-sidebar'} app-shell overflow-hidden`}>
-        {/* Header */}
-        <header className="app-header">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileOpen(true)}
-              className="header-icon-button focus-ring -ml-1 sm:-ml-2 md:hidden"
-              aria-label="Open navigation"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+          {/* Main Content */}
+          <div
+            className={`transition-all duration-350 ${collapsed ? 'md:ml-sidebar-collapsed' : 'md:ml-sidebar'} app-shell overflow-hidden`}
+          >
+            {/* Header */}
+            <header className="app-header">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                {/* Mobile menu button */}
+                <button
+                  onClick={() => setMobileOpen(true)}
+                  className="header-icon-button focus-ring -ml-1 sm:-ml-2 md:hidden"
+                  aria-label="Open navigation"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
 
-            {/* Page title replaced with Breadcrumbs */}
-            <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="section-eyebrow hidden sm:block">{pageTitle}</p>
-              <Breadcrumbs userRole={user?.role} userName={user?.full_name} />
-            </div>
+                {/* Page title replaced with Breadcrumbs */}
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <p className="section-eyebrow hidden sm:block">{pageTitle}</p>
+                  <Breadcrumbs userRole={user?.role} userName={user?.full_name} />
+                </div>
+              </div>
+
+              {/* Right side controls */}
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                {/* Global search */}
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="header-icon-button focus-ring sm:hidden"
+                  title="Search"
+                  aria-label="Search members, reports, and pages"
+                >
+                  <Search className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="focus-ring hidden h-10 min-w-[13rem] items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 text-slate-500 transition-all hover:border-slate-300 hover:bg-white hover:text-slate-900 sm:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-primary-400/40 dark:hover:bg-white/10 dark:hover:text-white"
+                  title="Search (Ctrl+K)"
+                >
+                  <Search className="w-4 h-4" />
+                  <span className="text-xs font-medium">Search anything</span>
+                  <kbd className="ml-auto hidden items-center rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-400 md:inline-flex dark:border-white/10 dark:bg-slate-900">
+                    Ctrl K
+                  </kbd>
+                </button>
+                {/* Live time */}
+                <div className="mr-1 hidden items-center gap-2 text-xs text-slate-500 xl:flex dark:text-slate-400">
+                  <span className="font-medium">
+                    {currentTime.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </span>
+                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                  <span className="tabular-nums">
+                    {currentTime.toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
+
+                {/* Online/Offline Status */}
+                <div
+                  className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
+                    isOnline
+                      ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200/60 dark:border-emerald-700/60'
+                      : 'bg-amber-50 dark:bg-amber-900/30 border-amber-200/60 dark:border-amber-700/60'
+                  }`}
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}
+                  />
+                  <span
+                    className={`text-xs font-semibold ${isOnline ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}
+                  >
+                    {isOnline ? 'Online' : 'Offline'}
+                  </span>
+                  {!isOnline && pendingCount > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-200 dark:bg-amber-700 text-amber-800 dark:text-amber-200 rounded-full">
+                      {pendingCount}
+                    </span>
+                  )}
+                </div>
+
+                {/* Sync button when back online with pending items */}
+                {isOnline && pendingCount > 0 && (
+                  <button
+                    onClick={syncPending}
+                    disabled={syncing}
+                    className="btn-ghost p-2 relative"
+                    title={`Sync ${pendingCount} pending submission(s)`}
+                  >
+                    <svg
+                      className={`w-5 h-5 ${syncing ? 'animate-spin text-primary-500' : 'text-primary-600 dark:text-primary-400'}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {pendingCount}
+                    </span>
+                  </button>
+                )}
+
+                <button
+                  onClick={handleRefreshApp}
+                  disabled={refreshingApp}
+                  className="header-icon-button focus-ring hidden disabled:cursor-wait disabled:opacity-70 md:inline-flex"
+                  title="Refresh app"
+                  aria-label="Refresh app"
+                >
+                  <RefreshCw className={`w-5 h-5 ${refreshingApp ? 'animate-spin' : ''}`} />
+                </button>
+                {refreshingApp && (
+                  <span className="hidden md:inline-flex items-center rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
+                    Refreshing...
+                  </span>
+                )}
+
+                {/* Notification bell */}
+                <NotificationBell user={user} />
+
+                {/* Dark mode toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="header-icon-button focus-ring"
+                  title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                  aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="w-5 h-5 text-amber-300" />
+                  ) : (
+                    <Moon className="w-5 h-5" />
+                  )}
+                </button>
+
+                {/* Settings link */}
+                <button
+                  onClick={() =>
+                    navigate(user?.role === 'admin' ? '/admin/settings' : '/change-password')
+                  }
+                  className="header-icon-button focus-ring hidden sm:inline-flex"
+                  aria-label="Open settings"
+                >
+                  <Settings className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+            </header>
+
+            {/* Page Content */}
+            <main className="app-shell-scroll overflow-y-auto scroll-smooth px-3 py-4 sm:px-6 lg:px-8 lg:py-7">
+              <div className="mx-auto max-w-[96rem] animate-fade-in">{children}</div>
+            </main>
           </div>
-
-          {/* Right side controls */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {/* Global search */}
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="header-icon-button focus-ring sm:hidden"
-              title="Search"
-              aria-label="Search members, reports, and pages"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="focus-ring hidden h-10 min-w-[13rem] items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 text-slate-500 transition-all hover:border-slate-300 hover:bg-white hover:text-slate-900 sm:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-primary-400/40 dark:hover:bg-white/10 dark:hover:text-white"
-              title="Search (Ctrl+K)"
-            >
-              <Search className="w-4 h-4" />
-              <span className="text-xs font-medium">Search anything</span>
-              <kbd className="ml-auto hidden items-center rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-400 md:inline-flex dark:border-white/10 dark:bg-slate-900">
-                Ctrl K
-              </kbd>
-            </button>
-            {/* Live time */}
-            <div className="mr-1 hidden items-center gap-2 text-xs text-slate-500 xl:flex dark:text-slate-400">
-              <span className="font-medium">
-                {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </span>
-              <span className="text-slate-300 dark:text-slate-700">•</span>
-              <span className="tabular-nums">
-                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-
-            {/* Online/Offline Status */}
-            <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
-              isOnline
-                ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200/60 dark:border-emerald-700/60'
-                : 'bg-amber-50 dark:bg-amber-900/30 border-amber-200/60 dark:border-amber-700/60'
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-              <span className={`text-xs font-semibold ${isOnline ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
-              {!isOnline && pendingCount > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-200 dark:bg-amber-700 text-amber-800 dark:text-amber-200 rounded-full">
-                  {pendingCount}
-                </span>
-              )}
-            </div>
-
-            {/* Sync button when back online with pending items */}
-            {isOnline && pendingCount > 0 && (
-              <button
-                onClick={syncPending}
-                disabled={syncing}
-                className="btn-ghost p-2 relative"
-                title={`Sync ${pendingCount} pending submission(s)`}
-              >
-                <svg className={`w-5 h-5 ${syncing ? 'animate-spin text-primary-500' : 'text-primary-600 dark:text-primary-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                  {pendingCount}
-                </span>
-              </button>
-            )}
-
-            <button
-              onClick={handleRefreshApp}
-              disabled={refreshingApp}
-              className="header-icon-button focus-ring hidden disabled:cursor-wait disabled:opacity-70 md:inline-flex"
-              title="Refresh app"
-              aria-label="Refresh app"
-            >
-              <RefreshCw className={`w-5 h-5 ${refreshingApp ? 'animate-spin' : ''}`} />
-            </button>
-            {refreshingApp && (
-              <span className="hidden md:inline-flex items-center rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
-                Refreshing...
-              </span>
-            )}
-
-            {/* Notification bell */}
-            <NotificationBell user={user} />
-
-            {/* Dark mode toggle */}
-            <button
-              onClick={toggleTheme}
-              className="header-icon-button focus-ring"
-              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-300" /> : <Moon className="w-5 h-5" />}
-            </button>
-
-            {/* Settings link */}
-            <button
-              onClick={() => navigate(user?.role === 'admin' ? '/admin/settings' : '/change-password')}
-              className="header-icon-button focus-ring hidden sm:inline-flex"
-              aria-label="Open settings"
-            >
-              <Settings className="w-5 h-5 text-slate-500" />
-            </button>
-          </div>
-        </header>
-
-        {/* Page Content */}
-        <main className="app-shell-scroll overflow-y-auto scroll-smooth px-3 py-4 sm:px-6 lg:px-8 lg:py-7">
-          <div className="mx-auto max-w-[96rem] animate-fade-in">
-            {children}
-          </div>
-        </main>
-      </div>
-      {/* Search Modal */}
-      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-
-    </div>
+          {/* Search Modal */}
+          <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+        </div>
       </RealtimeBridge>
-  </BreadcrumbProvider>
-);
+    </BreadcrumbProvider>
+  );
 };
 
 export default Layout;

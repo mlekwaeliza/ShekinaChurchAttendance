@@ -56,7 +56,7 @@ const AdminDashboard = () => {
   // Load heavy executive analytics only when the dashboard tab is active.
   // This prevents the 10-call analytics burst from hitting on every admin mount.
   React.useEffect(() => {
-    if (activeTab === 'dashboard') {
+    if (activeTab === 'executive') {
       loadExecutiveDataOnce();
     }
   }, [activeTab, loadExecutiveDataOnce]);
@@ -64,13 +64,11 @@ const AdminDashboard = () => {
   // Handle Dynamic Breadcrumbs for Sections
   React.useEffect(() => {
     if (activeTab === 'leaders' && data.leaderSectionFilter) {
-      setCrumbs([
-        { label: data.leaderSectionFilter, path: `/admin/leaders`, icon: 'Layers' }
-      ]);
+      setCrumbs([{ label: data.leaderSectionFilter, path: `/admin/leaders`, icon: 'Layers' }]);
     } else {
       clearCrumbs();
     }
-    
+
     return () => clearCrumbs();
   }, [activeTab, data.leaderSectionFilter, setCrumbs, clearCrumbs]);
 
@@ -147,10 +145,32 @@ const AdminDashboard = () => {
     navigate('/admin/members');
   };
 
+  const handleAssignDutyRoster = (date) => {
+    data.loadServiceInstance(date, data.selectedServiceId);
+    data.setIsAssignmentModalOpen(true);
+  };
+
   // Tab-to-component mapping
   const renderTab = () => {
     switch (activeTab) {
       case 'dashboard':
+        return (
+          <DashboardOverview
+            allMembers={data.allMembers}
+            sections={data.sections}
+            leaders={data.leaders}
+            pastorName={user?.full_name}
+            dashboardMetrics={data.dashboardMetrics}
+            metricsLoading={data.metricsLoading}
+            serviceTypes={data.serviceTypes}
+            selectedServiceId={data.selectedServiceId}
+            onServiceChange={data.setSelectedServiceId}
+            onAssignDutyRoster={handleAssignDutyRoster}
+            lastUpdated={data.lastUpdated}
+          />
+        );
+
+      case 'executive':
         return (
           <ExecutiveCommandCenter
             allMembers={data.allMembers}
@@ -178,7 +198,7 @@ const AdminDashboard = () => {
       case 'sections':
         if (searchParams.get('profile')) {
           const sectionId = Number(searchParams.get('profile'));
-          const section = data.sections.find(s => Number(s.id) === sectionId);
+          const section = data.sections.find((s) => Number(s.id) === sectionId);
           return (
             <SectionProfile
               sectionId={sectionId}
@@ -247,8 +267,14 @@ const AdminDashboard = () => {
             setSectionFilter={data.setLeaderSectionFilter}
             onViewAnalytics={(id) => navigate(`/admin/leaders?profile=${id}`)}
             onViewMembers={handleViewMembersOfLeader}
-            onAdd={() => { data.setEditingLeader(null); data.setIsLeaderModalOpen(true); }}
-            onEdit={(leader) => { data.setEditingLeader(leader); data.setIsLeaderModalOpen(true); }}
+            onAdd={() => {
+              data.setEditingLeader(null);
+              data.setIsLeaderModalOpen(true);
+            }}
+            onEdit={(leader) => {
+              data.setEditingLeader(leader);
+              data.setIsLeaderModalOpen(true);
+            }}
             onDelete={(leader) => data.setDeletingLeader(leader)}
           />
         );
@@ -381,12 +407,14 @@ const AdminDashboard = () => {
             allMembers={data.allMembers}
             sections={data.sections}
             leaders={data.leaders}
+            pastorName={user?.full_name}
             dashboardMetrics={data.dashboardMetrics}
             metricsLoading={data.metricsLoading}
             serviceTypes={data.serviceTypes}
             selectedServiceId={data.selectedServiceId}
             onServiceChange={data.setSelectedServiceId}
-            onRefresh={data.loadDashboardMetrics}
+            onAssignDutyRoster={handleAssignDutyRoster}
+            lastUpdated={data.lastUpdated}
           />
         );
     }
@@ -404,11 +432,15 @@ const AdminDashboard = () => {
 
       {/* Active Tab Content */}
       <Suspense
-        fallback={(
-          <div className="flex min-h-64 items-center justify-center" role="status" aria-live="polite">
+        fallback={
+          <div
+            className="flex min-h-64 items-center justify-center"
+            role="status"
+            aria-live="polite"
+          >
             <span className="text-sm font-medium text-slate-500">Loading section...</span>
           </div>
-        )}
+        }
       >
         {renderTab()}
       </Suspense>
@@ -463,8 +495,12 @@ const AdminDashboard = () => {
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">Remove Leader?</h3>
               <p className="text-sm text-slate-500 mb-8">
-                Are you sure you want to remove <strong className="text-slate-800">{data.deletingLeader.full_name}</strong>?
-                <br /><small className="text-amber-600 font-medium mt-1 inline-block">Their login account will be kept but their children leader role will be removed.</small>
+                Are you sure you want to remove{' '}
+                <strong className="text-slate-800">{data.deletingLeader.full_name}</strong>?
+                <br />
+                <small className="text-amber-600 font-medium mt-1 inline-block">
+                  Their login account will be kept but their children leader role will be removed.
+                </small>
               </p>
               <div className="flex gap-3">
                 <button

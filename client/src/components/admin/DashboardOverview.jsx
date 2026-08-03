@@ -14,7 +14,18 @@ import {
   Zap,
   Download,
   Presentation,
+  TrendingUp
 } from 'lucide-react';
+
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 
 import QuickActionsBar from './QuickActionsBar';
 import NeedsAttentionWidget from './NeedsAttentionWidget';
@@ -35,7 +46,7 @@ const DashboardOverview = ({
   selectedServiceId,
   onServiceChange,
   onAssignDutyRoster,
-  lastUpdated = new Date(),
+  lastUpdated = new Date()
 }) => {
   const navigate = useNavigate();
 
@@ -44,21 +55,24 @@ const DashboardOverview = ({
   const currentService = serviceTypes.find((service) => service.id === selectedServiceId);
   const attendanceContext = dashboardMetrics?.attendanceContext || { mode: 'today' };
   const isLatestAttendance = attendanceContext.mode === 'latest';
-  const attendanceDateLabel = attendanceContext.date
-    ? fdate(attendanceContext.date)
-    : '';
-  const serviceLabel = selectedServiceId === 'all'
-    ? (isLatestAttendance ? 'All Services' : 'All Services Today')
-    : (currentService?.name || 'Loading...');
+  const attendanceDateLabel = attendanceContext.date ? fdate(attendanceContext.date) : '';
+  const serviceLabel =
+    selectedServiceId === 'all'
+      ? isLatestAttendance
+        ? 'All Services'
+        : 'All Services Today'
+      : currentService?.name || 'Loading...';
   const attendanceTitle = isLatestAttendance ? 'Latest Attendance Session' : "Today's Attendance";
-  const showingLabel = isLatestAttendance && attendanceDateLabel
-    ? `${serviceLabel} - ${attendanceDateLabel}`
-    : serviceLabel;
+  const showingLabel =
+    isLatestAttendance && attendanceDateLabel
+      ? `${serviceLabel} - ${attendanceDateLabel}`
+      : serviceLabel;
 
   const { comparisons, needsAttention, sparkline, hallOfFame } = dashboardMetrics || {};
   const welcomeName = pastorName?.trim() || 'Pastor';
   const currentHour = new Date().getHours();
-  const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
+  const greeting =
+    currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
 
   const totalMembers = comparisons?.total_members || allMembers.length;
   const newMembersMonth = comparisons?.new_members_month || 0;
@@ -95,12 +109,13 @@ const DashboardOverview = ({
 
   const todayStats = dashboardMetrics?.todayStats || { present: 0, absent: 0, excused: 0 };
   const totalToday = todayStats.present + todayStats.absent + todayStats.excused;
-  const attendanceRate = totalToday > 0
-    ? Math.round((todayStats.present / totalToday) * 100)
-    : 0;
+  const attendanceRate = totalToday > 0 ? Math.round((todayStats.present / totalToday) * 100) : 0;
 
   const handleExportPDF = async () => {
-    const [{ default: jsPDF }, autoTableModule] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const [{ default: jsPDF }, autoTableModule] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable')
+    ]);
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
     const m = 20;
@@ -135,7 +150,7 @@ const DashboardOverview = ({
       ['Attendance Rate', `${attendanceRate}%`],
       ['Total Leaders', String(leaders.length)],
       ['Total Sections', String(sections.length)],
-      ['New Members This Month', String(newMembersMonth)],
+      ['New Members This Month', String(newMembersMonth)]
     ];
     autoTableModule.default(doc, {
       startY: y,
@@ -144,7 +159,7 @@ const DashboardOverview = ({
       margin: { left: m, right: m },
       styles: { fontSize: 10, cellPadding: 4 },
       headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      alternateRowStyles: { fillColor: [248, 250, 252] }
     });
     y = doc.lastAutoTable.finalY + 12;
 
@@ -156,8 +171,8 @@ const DashboardOverview = ({
       doc.line(m, y, pw - m, y);
       y += 5;
 
-      const sectionData = sections.map(s => {
-        const sectionMembers = allMembers.filter(m => m.section_id === s.id);
+      const sectionData = sections.map((s) => {
+        const sectionMembers = allMembers.filter((m) => m.section_id === s.id);
         return [s.name, String(sectionMembers.length)];
       });
       autoTableModule.default(doc, {
@@ -167,13 +182,16 @@ const DashboardOverview = ({
         margin: { left: m, right: m },
         styles: { fontSize: 10, cellPadding: 4 },
         headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
+        alternateRowStyles: { fillColor: [248, 250, 252] }
       });
       y = doc.lastAutoTable.finalY + 12;
     }
 
     if (leaders.length > 0) {
-      if (y > 240) { doc.addPage(); y = 20; }
+      if (y > 240) {
+        doc.addPage();
+        y = 20;
+      }
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('Leaders', m, y);
@@ -181,10 +199,10 @@ const DashboardOverview = ({
       doc.line(m, y, pw - m, y);
       y += 5;
 
-      const leaderData = leaders.map(l => [
+      const leaderData = leaders.map((l) => [
         l.full_name || l.leader_name || 'N/A',
         l.section_name || 'N/A',
-        l.is_head ? 'Head' : 'Leader',
+        l.is_head ? 'Head' : 'Leader'
       ]);
       autoTableModule.default(doc, {
         startY: y,
@@ -193,7 +211,7 @@ const DashboardOverview = ({
         margin: { left: m, right: m },
         styles: { fontSize: 9, cellPadding: 3 },
         headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
+        alternateRowStyles: { fillColor: [248, 250, 252] }
       });
     }
 
@@ -202,7 +220,11 @@ const DashboardOverview = ({
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
-      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+      doc.text(
+        `Page ${i} of ${pc} | Shekina Church Management System`,
+        m,
+        doc.internal.pageSize.getHeight() - 10
+      );
     }
 
     doc.save(`dashboard_summary_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -249,6 +271,16 @@ const DashboardOverview = ({
     );
   };
 
+  const trendChartData = React.useMemo(() => {
+    if (!sparkline || sparkline.length < 2) {
+      return [];
+    }
+    return sparkline.slice(-14).map((item) => ({
+      label: item.date ? String(item.date).slice(5, 10) : '',
+      present: Number(item.present_count) || 0
+    }));
+  }, [sparkline]);
+
   const todaysAttendanceSection = (
     <div className="card overflow-hidden">
       <div className="px-8 py-6 border-b border-slate-100 dark:border-white/5">
@@ -259,7 +291,8 @@ const DashboardOverview = ({
             </h3>
             <div className="mt-2 flex items-center gap-3">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Showing: <span className="text-primary-600 dark:text-primary-400">{showingLabel}</span>
+                Showing:{' '}
+                <span className="text-primary-600 dark:text-primary-400">{showingLabel}</span>
               </p>
               {selectedServiceId !== 'all' && (
                 <button
@@ -291,61 +324,70 @@ const DashboardOverview = ({
         </div>
       </div>
 
-      {totalToday === 0 ? (() => {
-        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        const todayName = dayNames[new Date().getDay()];
-        const isScheduledToday = selectedServiceId === 'all'
-          || !currentService?.default_day
-          || currentService.default_day === todayName;
-        const lastSession = dashboardMetrics?.lastSession;
+      {totalToday === 0 ? (
+        (() => {
+          const dayNames = [
+            'Sunday',
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday'
+          ];
+          const todayName = dayNames[new Date().getDay()];
+          const isScheduledToday =
+            selectedServiceId === 'all' ||
+            !currentService?.default_day ||
+            currentService.default_day === todayName;
+          const lastSession = dashboardMetrics?.lastSession;
 
-        return (
-          <div className="flex flex-col items-center justify-center py-16 px-8">
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/20 shadow-lg shadow-primary-500/10">
-              <Zap className="h-8 w-8 text-primary-600 dark:text-primary-400" />
-            </div>
+          return (
+            <div className="flex flex-col items-center justify-center py-16 px-8">
+              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/20 shadow-lg shadow-primary-500/10">
+                <Zap className="h-8 w-8 text-primary-600 dark:text-primary-400" />
+              </div>
 
-            {isScheduledToday ? (
-              <>
-                <p className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
-                  No attendance records yet
-                </p>
-                <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  When leaders submit attendance for today&apos;s {serviceLabel}, this overview will update automatically.
-                </p>
-                <button
-                  onClick={() => navigate('/admin/reports')}
-                  className="btn-primary btn-lg"
-                >
-                  Open attendance workspace
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
-                  No {currentService?.name || 'service'} scheduled today
-                </p>
-                <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  {currentService?.name || 'This service'} runs on{' '}
-                  <span className="font-bold text-primary-600 dark:text-primary-400">
-                    {currentService?.default_day || 'N/A'}
-                  </span>
-                  .
-                </p>
-                {lastSession && (
-                  <button
-                    onClick={() => navigate('/admin/reports')}
-                    className="btn-secondary btn-lg"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Review last service · {lastSession.date}
+              {isScheduledToday ? (
+                <>
+                  <p className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                    No attendance records yet
+                  </p>
+                  <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                    When leaders submit attendance for today&apos;s {serviceLabel}, this overview
+                    will update automatically.
+                  </p>
+                  <button onClick={() => navigate('/admin/reports')} className="btn-primary btn-lg">
+                    Open attendance workspace
                   </button>
-                )}
-              </>
-            )}
-          </div>
-        );
-      })() : (
+                </>
+              ) : (
+                <>
+                  <p className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                    No {currentService?.name || 'service'} scheduled today
+                  </p>
+                  <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                    {currentService?.name || 'This service'} runs on{' '}
+                    <span className="font-bold text-primary-600 dark:text-primary-400">
+                      {currentService?.default_day || 'N/A'}
+                    </span>
+                    .
+                  </p>
+                  {lastSession && (
+                    <button
+                      onClick={() => navigate('/admin/reports')}
+                      className="btn-secondary btn-lg"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Review last service · {lastSession.date}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })()
+      ) : (
         <div className="px-8 py-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div className="relative overflow-hidden rounded-2xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50 to-emerald-50/50 p-6 dark:border-emerald-800/30 dark:from-emerald-900/20 dark:to-emerald-900/10">
             <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-emerald-500/5 blur-2xl -translate-y-8 translate-x-8" />
@@ -354,10 +396,16 @@ const DashboardOverview = ({
                 <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Present</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                  Present
+                </span>
               </div>
-              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{todayStats.present}</p>
-              <p className="mt-2 text-[10px] font-semibold text-slate-400">Active attendance today</p>
+              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">
+                {todayStats.present}
+              </p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">
+                Active attendance today
+              </p>
             </div>
           </div>
 
@@ -368,10 +416,16 @@ const DashboardOverview = ({
                 <div className="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center">
                   <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400">Absent</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400">
+                  Absent
+                </span>
               </div>
-              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{todayStats.absent}</p>
-              <p className="mt-2 text-[10px] font-semibold text-slate-400">Review before creating a care follow-up</p>
+              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">
+                {todayStats.absent}
+              </p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-400">
+                Review before creating a care follow-up
+              </p>
             </div>
           </div>
 
@@ -382,9 +436,13 @@ const DashboardOverview = ({
                 <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
                   <Clock3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">Excused</span>
+                <span className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                  Excused
+                </span>
               </div>
-              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{todayStats.excused}</p>
+              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">
+                {todayStats.excused}
+              </p>
               <p className="mt-2 text-[10px] font-semibold text-slate-400">Known in advance</p>
             </div>
           </div>
@@ -420,8 +478,11 @@ const DashboardOverview = ({
               {greeting}, {welcomeName}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-              Here is the health of your church for <span className="font-semibold text-slate-700 dark:text-slate-200">{showingLabel}</span>.
-              Focus first on the people and ministry areas that need attention.
+              Here is the health of your church for{' '}
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {showingLabel}
+              </span>
+              . Focus first on the people and ministry areas that need attention.
             </p>
           </div>
 
@@ -445,12 +506,62 @@ const DashboardOverview = ({
         selectedServiceId={selectedServiceId}
         onServiceChange={onServiceChange}
         onMarkAttendance={() => navigate('/admin/reports')}
-        onAddMember={() => navigate('/admin/visitors')}
+        onAddMember={() => navigate('/admin/new-members')}
         onSendAnnouncement={() => navigate('/admin/announcements')}
         onViewFollowUps={() => navigate('/admin/follow-ups')}
       />
 
       {todaysAttendanceSection}
+
+      {trendChartData.length >= 2 && (
+        <section className="card overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-6 py-5 border-b border-slate-100 dark:border-white/5">
+            <h3 className="flex items-center gap-3 text-lg font-bold text-slate-900 dark:text-slate-100">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-violet-500 shadow-lg shadow-primary-500/20">
+                <TrendingUp className="w-4.5 h-4.5 text-white" />
+              </div>
+              Attendance Trend
+            </h3>
+            <button
+              onClick={() => navigate('/admin/attendance-analytics')}
+              className="btn-sm btn-ghost text-primary-600 dark:text-primary-400"
+            >
+              Full analytics
+            </button>
+          </div>
+          <div className="p-5">
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={trendChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="presentGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <YAxis
+                  tick={{ fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  formatter={(v) => [`${v} present`, 'Attendance']}
+                  labelStyle={{ fontSize: 12 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="present"
+                  stroke="#6366f1"
+                  strokeWidth={2.5}
+                  fill="url(#presentGrad)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
 
       <LeadershipWidget onNavigate={() => navigate('/admin/leadership')} />
 
@@ -514,7 +625,20 @@ const DashboardOverview = ({
             ) : (
               upcomingBirthdays.slice(0, 5).map((member) => {
                 const dob = parseLocalDate(member.date_of_birth);
-                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const months = [
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr',
+                  'May',
+                  'Jun',
+                  'Jul',
+                  'Aug',
+                  'Sep',
+                  'Oct',
+                  'Nov',
+                  'Dec'
+                ];
                 const monthAbbr = months[dob.getMonth()];
                 const day = dob.getDate();
 
@@ -576,17 +700,22 @@ const DashboardOverview = ({
 
           <div className="p-5 space-y-4">
             {sections.slice(0, 4).map((section) => {
-              const sectionMembers = allMembers.filter((member) => member.section_name === section.name);
-              const sectionLeaders = leaders.filter((leader) => leader.section_name === section.name);
-              const percentage = allMembers.length > 0
-                ? (sectionMembers.length / allMembers.length) * 100
-                : 0;
+              const sectionMembers = allMembers.filter(
+                (member) => member.section_name === section.name
+              );
+              const sectionLeaders = leaders.filter(
+                (leader) => leader.section_name === section.name
+              );
+              const percentage =
+                allMembers.length > 0 ? (sectionMembers.length / allMembers.length) * 100 : 0;
 
               return (
                 <div key={section.id}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{section.name}</h4>
+                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        {section.name}
+                      </h4>
                       <p className="text-xs font-medium text-slate-400">
                         {sectionLeaders.length} leader{sectionLeaders.length !== 1 ? 's' : ''}
                       </p>
