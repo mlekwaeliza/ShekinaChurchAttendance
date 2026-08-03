@@ -74,7 +74,18 @@ if (!fs.existsSync(financeUploadsDir)) {
   fs.mkdirSync(financeUploadsDir, { recursive: true });
 }
 
-const { queries, db, all, run, get, ensureHomeCellSchema, ensureEvangelismSchema, createChildrensMinistryTables, migrateUsersRoleConstraint, linkUsersToMembers } = require('./database');
+const {
+  queries,
+  db,
+  all,
+  run,
+  get,
+  ensureHomeCellSchema,
+  ensureEvangelismSchema,
+  createChildrensMinistryTables,
+  migrateUsersRoleConstraint,
+  linkUsersToMembers
+} = require('./database');
 const { startScheduler } = require('./scheduler');
 const { invalidate: invalidateCache } = require('./utils/cache');
 const authRoutes = require('./routes/auth');
@@ -108,11 +119,14 @@ const evangelismRoutes = require('./routes/evangelism');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
-const trustProxy = isProduction
-  || String(process.env.TRUST_PROXY || '').toLowerCase() === 'true'
-  || !!process.env.DATABASE_URL;
-const cookieSecure = isProduction || String(process.env.COOKIE_SECURE || '').toLowerCase() === 'true';
-const clientUrl = process.env.CLIENT_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000';
+const trustProxy =
+  isProduction ||
+  String(process.env.TRUST_PROXY || '').toLowerCase() === 'true' ||
+  !!process.env.DATABASE_URL;
+const cookieSecure =
+  isProduction || String(process.env.COOKIE_SECURE || '').toLowerCase() === 'true';
+const clientUrl =
+  process.env.CLIENT_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000';
 
 if (trustProxy) {
   app.set('trust proxy', 1);
@@ -124,36 +138,36 @@ const isLocalRequest = (req) => {
 };
 
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: isProduction
-    ? {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", 'blob:'],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", 'data:', 'blob:'],
-          fontSrc: ["'self'", 'data:'],
-          // When Sentry is enabled, add the Sentry ingest host so the
-          // browser can post events. Without this, Sentry would silently
-          // fail because connect-src: 'self' would block all cross-origin
-          // XHR/fetch. Both server-side init (in this file) and the
-          // client SDK can use the same SENTRY_DSN.
-          connectSrc: sentryHost ? ["'self'", `https://${sentryHost}`] : ["'self'"],
-          objectSrc: ["'none'"],
-          frameAncestors: ["'none'"],
-          baseUri: ["'self'"],
-          formAction: ["'self'"],
-          upgradeInsecureRequests: []
+app.use(
+  helmet({
+    contentSecurityPolicy: isProduction
+      ? {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", 'blob:'],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'blob:'],
+            fontSrc: ["'self'", 'data:'],
+            // When Sentry is enabled, add the Sentry ingest host so the
+            // browser can post events. Without this, Sentry would silently
+            // fail because connect-src: 'self' would block all cross-origin
+            // XHR/fetch. Both server-side init (in this file) and the
+            // client SDK can use the same SENTRY_DSN.
+            connectSrc: sentryHost ? ["'self'", `https://${sentryHost}`] : ["'self'"],
+            objectSrc: ["'none'"],
+            frameAncestors: ["'none'"],
+            baseUri: ["'self'"],
+            formAction: ["'self'"],
+            upgradeInsecureRequests: []
+          }
         }
-      }
-    : false,
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: 'same-site' },
-  hsts: isProduction
-    ? { maxAge: 31536000, includeSubDomains: true, preload: true }
-    : false,
-  referrerPolicy: { policy: 'same-origin' }
-}));
+      : false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'same-site' },
+    hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+    referrerPolicy: { policy: 'same-origin' }
+  })
+);
 
 // L15-fix: explicit security headers. Helmet covers most of these in
 // recent versions, but pinning them here makes the policy version-
@@ -165,18 +179,21 @@ app.use((req, res, next) => {
   res.setHeader('X-Download-Options', 'noopen');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
   res.setHeader('X-XSS-Protection', '0'); // modern browsers honor CSP; legacy XSS filter is worse than nothing
-  res.setHeader('Permissions-Policy', [
-    'accelerometer=()',
-    'camera=()',
-    'geolocation=()',
-    'gyroscope=()',
-    'magnetometer=()',
-    'microphone=()',
-    'payment=()',
-    'usb=()',
-    'interest-cohort=()', // disable FLoC/Topics
-    'browsing-topics=()'
-  ].join(', '));
+  res.setHeader(
+    'Permissions-Policy',
+    [
+      'accelerometer=()',
+      'camera=()',
+      'geolocation=()',
+      'gyroscope=()',
+      'magnetometer=()',
+      'microphone=()',
+      'payment=()',
+      'usb=()',
+      'interest-cohort=()', // disable FLoC/Topics
+      'browsing-topics=()'
+    ].join(', ')
+  );
   // Cross-Origin policies for the /api endpoints
   if (req.path.startsWith('/api/')) {
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
@@ -185,14 +202,28 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow same-origin (no Origin header) and configured client origin
-    if (!origin || origin === clientUrl) return callback(null, true);
-    return callback(new Error('CORS: origin not allowed'));
-  },
-  credentials: true
-}));
+// Reject cross-origin requests unless they come from the configured client
+// origin or the origin the browser is actually requesting. Same-origin
+// POST/PUT/DELETE still send an Origin header, so a strict `origin ===
+// clientUrl` check would break all admin writes whenever CLIENT_URL does not
+// byte-match the browser origin (port, 127.0.0.1 vs localhost, scheme).
+app.use((req, res, next) => {
+  const sameOrigin = (origin) => {
+    try {
+      return new URL(origin).host === req.headers.host;
+    } catch {
+      return false;
+    }
+  };
+  cors({
+    origin: (origin, callback) => {
+      // Allow same-origin (no Origin header) and configured client origin
+      if (!origin || origin === clientUrl || sameOrigin(origin)) return callback(null, true);
+      return callback(new Error('CORS: origin not allowed'));
+    },
+    credentials: true
+  })(req, res, next);
+});
 
 // Shared rate-limit defaults. express-rate-limit v7 supplies the
 // request-aware IP key generator; ipKeyGenerator is a v8-only export.
@@ -257,15 +288,22 @@ const leaderMgmtLimiter = buildLimiter({
 });
 
 // Cleanup old IP login failures periodically
-setInterval(() => {
-  queries.cleanupIpLoginFailures().catch(err => console.error('Cleanup IP login failures error:', err.message));
-}, 5 * 60 * 1000).unref?.();
+setInterval(
+  () => {
+    queries
+      .cleanupIpLoginFailures()
+      .catch((err) => console.error('Cleanup IP login failures error:', err.message));
+  },
+  5 * 60 * 1000
+).unref?.();
 
 // Compression (skip /api/metrics and SSE streams which are text/event-stream)
-app.use(require('compression')({
-  threshold: 1024,
-  level: 6
-}));
+app.use(
+  require('compression')({
+    threshold: 1024,
+    level: 6
+  })
+);
 
 // I2/I4-fix: request-id for log correlation and response header.
 // Mounted first so the id is available to all subsequent middleware
@@ -283,7 +321,9 @@ app.use(cookieParser());
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
   console.error('ERROR: SESSION_SECRET environment variable is not set.');
-  console.error('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  console.error(
+    "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+  );
   process.exit(1);
 }
 // L5-fix: enforce minimum entropy on the session secret. Anything
@@ -292,14 +332,29 @@ if (!sessionSecret) {
 // allowed with a warning so local SQLite iteration isn't blocked.
 const SECRET_MIN = isProduction ? 32 : 16;
 if (sessionSecret.length < SECRET_MIN) {
-  console.error(`ERROR: SESSION_SECRET must be at least ${SECRET_MIN} chars (got ${sessionSecret.length}).`);
-  console.error('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  console.error(
+    `ERROR: SESSION_SECRET must be at least ${SECRET_MIN} chars (got ${sessionSecret.length}).`
+  );
+  console.error(
+    "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+  );
   process.exit(1);
 }
 const WEAK_SECRETS = new Set([
-  'changeme', 'change-me', 'secret', 'password', 'dev', 'development',
-  'shekina-dev', 'shekina-church-attendance', 'localhost', 'test',
-  'keyboard-cat', '12345678', 'admin', 'admin-secret'
+  'changeme',
+  'change-me',
+  'secret',
+  'password',
+  'dev',
+  'development',
+  'shekina-dev',
+  'shekina-church-attendance',
+  'localhost',
+  'test',
+  'keyboard-cat',
+  '12345678',
+  'admin',
+  'admin-secret'
 ]);
 if (WEAK_SECRETS.has(sessionSecret.toLowerCase())) {
   console.error('ERROR: SESSION_SECRET is set to a known weak value. Refusing to start.');
@@ -342,45 +397,52 @@ function buildSessionStore() {
     console.log('[Session] Using SQLite-backed session store (sessions survive server restarts)');
     return store;
   } catch (e) {
-    console.warn('[Session] connect-sqlite3 not available, falling back to MemoryStore. Sessions will be lost on restart.');
+    console.warn(
+      '[Session] connect-sqlite3 not available, falling back to MemoryStore. Sessions will be lost on restart.'
+    );
   }
 
   // L14-fix: MemoryStore fallback with periodic TTL sweep.
   const memStore = new session.MemoryStore();
-  const sweep = setInterval(() => {
-    if (typeof memStore.all === 'function') {
-      memStore.all((err, sessions) => {
-        if (!err && sessions) {
-          const now = Date.now();
-          for (const [sid, sess] of Object.entries(sessions)) {
-            if (sess?.cookie?.expires && new Date(sess.cookie.expires).getTime() < now) {
-              memStore.destroy(sid, () => {});
+  const sweep = setInterval(
+    () => {
+      if (typeof memStore.all === 'function') {
+        memStore.all((err, sessions) => {
+          if (!err && sessions) {
+            const now = Date.now();
+            for (const [sid, sess] of Object.entries(sessions)) {
+              if (sess?.cookie?.expires && new Date(sess.cookie.expires).getTime() < now) {
+                memStore.destroy(sid, () => {});
+              }
             }
           }
-        }
-      });
-    }
-  }, 15 * 60 * 1000);
+        });
+      }
+    },
+    15 * 60 * 1000
+  );
   sweep.unref?.();
   memStore._shekinaSweep = sweep;
   activeSessionStore = memStore;
   return memStore;
 }
 
-app.use(session({
-  name: 'sc.sid',
-  secret: sessionSecret,
-  resave: false,
-  saveUninitialized: false,
-  rolling: true,
-  store: buildSessionStore(),
-  cookie: {
-    secure: cookieSecure,
-    httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 1000 // 1 hour idle timeout (rolling)
-  }
-}));
+app.use(
+  session({
+    name: 'sc.sid',
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    store: buildSessionStore(),
+    cookie: {
+      secure: cookieSecure,
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 1000 // 1 hour idle timeout (rolling)
+    }
+  })
+);
 
 // CSRF Protection (for authenticated state-changing requests)
 app.use('/api/', csrfProtect());
@@ -421,27 +483,30 @@ app.use((req, res, next) => {
   const start = process.hrtime.bigint();
   onFinished(res, () => {
     const durMs = Number(process.hrtime.bigint() - start) / 1e6;
-    console.log(JSON.stringify({
-      level: 'info',
-      type: 'http',
-      request_id: id,
-      method: req.method,
-      path: req.originalUrl,
-      status: res.statusCode,
-      duration_ms: Math.round(durMs * 100) / 100,
-      ip: req.ip,
-      user_id: req.session?.userId || null
-    }));
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        type: 'http',
+        request_id: id,
+        method: req.method,
+        path: req.originalUrl,
+        status: res.statusCode,
+        duration_ms: Math.round(durMs * 100) / 100,
+        ip: req.ip,
+        user_id: req.session?.userId || null
+      })
+    );
     // Invalidate analytics caches on actual database writes.
     // Read-only POST routes (analytics queries, performance reports) are excluded
     // because they use POST only to carry complex query parameters — they never
     // mutate the database. Triggering invalidation on those routes would bust
     // the cache on every dashboard load, negating all the caching benefits.
     const READONLY_POST_PREFIXES = ['/api/analytics', '/api/admin/performance'];
-    const isReadonlyPost = READONLY_POST_PREFIXES.some(p => req.originalUrl.startsWith(p));
+    const isReadonlyPost = READONLY_POST_PREFIXES.some((p) => req.originalUrl.startsWith(p));
     if (
       ['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method) &&
-      res.statusCode >= 200 && res.statusCode < 300 &&
+      res.statusCode >= 200 &&
+      res.statusCode < 300 &&
       !isReadonlyPost
     ) {
       try {
@@ -512,7 +577,10 @@ const uploadStaticOptions = {
     // Security headers for uploads
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'self'");
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'none'; img-src 'self'; style-src 'self'"
+    );
     if (filePath.endsWith('.html')) {
       res.setHeader('Cache-Control', 'no-store');
     }
@@ -532,20 +600,22 @@ app.use(
 
 // Serve production client build
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
-app.use(express.static(clientDist, {
-  dotfiles: 'deny',
-  index: false,
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('sw.js') || filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-    } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-      // Vite fingerprints assets by content, so they are safe to cache for a year.
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+app.use(
+  express.static(clientDist, {
+    dotfiles: 'deny',
+    index: false,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('sw.js') || filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        // Vite fingerprints assets by content, so they are safe to cache for a year.
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
     }
-  }
-}));
+  })
+);
 
 // Health check
 // L9-fix: /api/health returns minimal info by default (status, timestamp,
@@ -558,8 +628,7 @@ app.use(express.static(clientDist, {
 app.get('/api/health', async (req, res) => {
   const uptime = process.uptime();
   const dbClient = String(process.env.DB_CLIENT || 'sqlite').toLowerCase();
-  const detail = req.query.detail === 'full'
-    && req.session?.user?.role === 'admin';
+  const detail = req.query.detail === 'full' && req.session?.user?.role === 'admin';
 
   if (dbClient === 'postgres') {
     try {
@@ -614,8 +683,14 @@ app.get('/api/health', async (req, res) => {
       database: { status: err ? 'error' : 'connected' }
     };
     if (detail) {
-      const dbSize = require('fs').existsSync(dbPath) ? Math.round(require('fs').statSync(dbPath).size / 1024) : 0;
-      response.database = { client: 'sqlite', size_kb: dbSize, status: err ? 'error' : 'connected' };
+      const dbSize = require('fs').existsSync(dbPath)
+        ? Math.round(require('fs').statSync(dbPath).size / 1024)
+        : 0;
+      response.database = {
+        client: 'sqlite',
+        size_kb: dbSize,
+        status: err ? 'error' : 'connected'
+      };
       response.memory = {
         rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`,
         heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`
@@ -659,25 +734,29 @@ app.get('/api/metrics', async (req, res) => {
       const { checkConnection } = require('./db/postgres');
       const r = await checkConnection();
       dbUp = r.ok ? 1 : 0;
-    } catch (e) { dbUp = 0; }
+    } catch (e) {
+      dbUp = 0;
+    }
   } else {
     dbUp = 1; // SQLite is process-local; assume up
   }
   res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
-  res.send([
-    '# HELP process_uptime_seconds Node process uptime in seconds',
-    '# TYPE process_uptime_seconds gauge',
-    `process_uptime_seconds ${process.uptime()}`,
-    '# HELP process_resident_memory_bytes RSS in bytes',
-    '# TYPE process_resident_memory_bytes gauge',
-    `process_resident_memory_bytes ${mem.rss}`,
-    '# HELP process_heap_bytes Heap used in bytes',
-    '# TYPE process_heap_bytes gauge',
-    `process_heap_bytes ${mem.heapUsed}`,
-    '# HELP database_up 1 if database is reachable, else 0',
-    '# TYPE database_up gauge',
-    `database_up{client="${dbClient}"} ${dbUp}`
-  ].join('\n'));
+  res.send(
+    [
+      '# HELP process_uptime_seconds Node process uptime in seconds',
+      '# TYPE process_uptime_seconds gauge',
+      `process_uptime_seconds ${process.uptime()}`,
+      '# HELP process_resident_memory_bytes RSS in bytes',
+      '# TYPE process_resident_memory_bytes gauge',
+      `process_resident_memory_bytes ${mem.rss}`,
+      '# HELP process_heap_bytes Heap used in bytes',
+      '# TYPE process_heap_bytes gauge',
+      `process_heap_bytes ${mem.heapUsed}`,
+      '# HELP database_up 1 if database is reachable, else 0',
+      '# TYPE database_up gauge',
+      `database_up{client="${dbClient}"} ${dbUp}`
+    ].join('\n')
+  );
 });
 // M1+M8-fix: global Express error handler. Strips error.message and
 // `details` from any response that hasn't explicitly opted in via
@@ -686,11 +765,14 @@ app.get('/api/metrics', async (req, res) => {
 // generic message and an `errorId` (a short hash of the timestamp +
 // path) so the support team can correlate client reports with
 // server logs.
-function globalErrorHandler(err, req, res, next) { // eslint-disable-line no-unused-vars
+function globalErrorHandler(err, req, res, next) {
+  // eslint-disable-line no-unused-vars
   try {
-    const status = Number.isInteger(err?.status) ? err.status
-      : Number.isInteger(err?.statusCode) ? err.statusCode
-      : 500;
+    const status = Number.isInteger(err?.status)
+      ? err.status
+      : Number.isInteger(err?.statusCode)
+        ? err.statusCode
+        : 500;
 
     // Allow explicitly-exposed errors (e.g., 4xx with a safe message)
     // to pass through. The route can set `err.expose = true` and a
@@ -712,20 +794,32 @@ function globalErrorHandler(err, req, res, next) { // eslint-disable-line no-unu
 
     // Sentry report if configured (does nothing in dev)
     try {
-      if (typeof Sentry !== 'undefined' && Sentry && typeof Sentry.captureException === 'function') {
-        Sentry.captureException(err, { tags: { errorId, requestId, path: req.originalUrl, method: req.method } });
+      if (
+        typeof Sentry !== 'undefined' &&
+        Sentry &&
+        typeof Sentry.captureException === 'function'
+      ) {
+        Sentry.captureException(err, {
+          tags: { errorId, requestId, path: req.originalUrl, method: req.method }
+        });
       }
-    } catch (_) { /* Sentry is optional */ }
+    } catch (_) {
+      /* Sentry is optional */
+    }
 
     // Generic client response
     res.status(status >= 400 && status < 600 ? status : 500).json({
-      error: status >= 500 ? 'Internal server error' : (err.userMessage || 'Request failed'),
+      error: status >= 500 ? 'Internal server error' : err.userMessage || 'Request failed',
       errorId
     });
   } catch (handlerError) {
     // Last-resort safety net so the process never crashes on a handler bug.
     console.error('Error handler itself threw:', handlerError);
-    try { res.status(500).end(); } catch (_) { /* connection already closed */ }
+    try {
+      res.status(500).end();
+    } catch (_) {
+      /* connection already closed */
+    }
   }
 }
 
@@ -753,31 +847,48 @@ async function initializeUsers() {
     // Helper: look up a member by name keywords and return {id, full_name}
     const findMemberByName = async (keywords) => {
       try {
-        const conditions = keywords.map(k => `full_name LIKE '%${k}%'`).join(' OR ');
+        const conditions = keywords.map((k) => `full_name LIKE '%${k}%'`).join(' OR ');
         const rows = await all(`SELECT id, full_name FROM members WHERE ${conditions} LIMIT 1`);
         return rows && rows[0] ? rows[0] : null;
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     };
 
     // Helper: title-case a username-derived full name (e.g. "happy_joseph_sikawa" -> "Happy Joseph Sikawa")
-    const titleCase = (s) => s.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+    const titleCase = (s) =>
+      s
+        .split('_')
+        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+        .join(' ');
 
     // Helper: seed or re-seed a user. Always re-hashes the password so the
     // configured password is the single source of truth on every startup.
-    const seedUser = async ({ username, password, role, fullName, memberKeywords = null, isNewMemberLeader = false }) => {
+    const seedUser = async ({
+      username,
+      password,
+      role,
+      fullName,
+      memberKeywords = null,
+      isNewMemberLeader = false
+    }) => {
       const passwordHash = await bcrypt.hash(password, 10);
       let member = null;
       if (memberKeywords) member = await findMemberByName(memberKeywords);
-      const finalName = member ? member.full_name : (fullName || titleCase(username));
+      const finalName = member ? member.full_name : fullName || titleCase(username);
       const existing = await queries.findUserByUsername(username);
       try {
         if (!existing) {
-          await run('INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
-            [username, passwordHash, role, finalName, member ? member.id : null]);
+          await run(
+            'INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
+            [username, passwordHash, role, finalName, member ? member.id : null]
+          );
           console.log(`User "${username}" created (${role}).`);
         } else {
-          await run('UPDATE users SET password_hash = ?, role = ?, full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
-            [passwordHash, role, finalName, username]);
+          await run(
+            'UPDATE users SET password_hash = ?, role = ?, full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
+            [passwordHash, role, finalName, username]
+          );
           console.log(`User "${username}" password reset (${role}).`);
         }
         if (isNewMemberLeader) {
@@ -792,38 +903,64 @@ async function initializeUsers() {
     // ── Admin account (password from env var) ──
     const initialPassword = process.env.INITIAL_ADMIN_PASSWORD;
     if (initialPassword && initialPassword.length >= 12) {
-      await seedUser({ username: 'admin', password: initialPassword, role: 'admin', memberKeywords: ['Daniel', 'Mulesi'], fullName: 'System Administrator' });
+      await seedUser({
+        username: 'admin',
+        password: initialPassword,
+        role: 'admin',
+        memberKeywords: ['Daniel', 'Mulesi'],
+        fullName: 'System Administrator'
+      });
     } else {
-      console.warn('INITIAL_ADMIN_PASSWORD not set or too short (<12 chars). Admin password not updated.');
+      console.warn(
+        'INITIAL_ADMIN_PASSWORD not set or too short (<12 chars). Admin password not updated.'
+      );
     }
 
     // ── Existing fixed accounts ──
-    await seedUser({ username: 'ghance', password: 'password123', role: 'leader', memberKeywords: ['Genoveva', 'Hance'], fullName: 'Genoveva Hance', isNewMemberLeader: true });
-    await seedUser({ username: 'jnicholaus', password: 'password123', role: 'evangelist', memberKeywords: ['Jeremiah', 'Nicholaus'], fullName: 'PST. JEREMIAH NICHOLAUS' });
-    await seedUser({ username: 'accountant', password: 'accountant123', role: 'accountant', fullName: 'Church Accountant' });
+    await seedUser({
+      username: 'ghance',
+      password: 'password123',
+      role: 'leader',
+      memberKeywords: ['Genoveva', 'Hance'],
+      fullName: 'Genoveva Hance',
+      isNewMemberLeader: true
+    });
+    await seedUser({
+      username: 'jnicholaus',
+      password: 'password123',
+      role: 'evangelist',
+      memberKeywords: ['Jeremiah', 'Nicholaus'],
+      fullName: 'PST. JEREMIAH NICHOLAUS'
+    });
+    await seedUser({
+      username: 'accountant',
+      password: 'accountant123',
+      role: 'accountant',
+      fullName: 'Church Accountant'
+    });
 
     // ── 20 leader accounts ──
     const leaders = [
-      { u: 'elizabeth_anthony',    p: 'Elizabeth@jTfS!26' },
-      { u: 'happy_joseph_sikawa',   p: 'Happy@q1OP!26' },
-      { u: 'maria_kidumba',         p: 'Maria@Y277!26' },
-      { u: 'neema_kaijage',         p: 'Neema@nN77!26' },
-      { u: 'rose_simon',            p: 'Rose@5cuV!26' },
-      { u: 'christina_mwamlima',    p: 'Christina@cbUX!26' },
-      { u: 'farida_mlawa',          p: 'Farida@TRP8!26' },
-      { u: 'neema_dickson',         p: 'Neema@wak0!26' },
-      { u: 'neema_godfrey',         p: 'Neema@4jG7!26' },
-      { u: 'sigfred_kaijage',       p: 'Sigfred@tNoa!26' },
-      { u: 'catherine_gasper',      p: 'Catherine@CAew!26' },
-      { u: 'eliya_kasmil_mapunda',  p: 'Eliya@g0O7!26' },
-      { u: 'faith_ngonyani',        p: 'Faith@Hh6q!26' },
-      { u: 'happiness_erasto',      p: 'Happiness@8HJP!26' },
-      { u: 'mariam_adam',           p: 'Mariam@FEU9!26' },
-      { u: 'elizabeth_nehemiah',    p: 'Elizabeth@L7gC!26' },
-      { u: 'crispin_mbatiani',      p: 'Crispin@5Q97!26' },
-      { u: 'doreen_uhuru',          p: 'Doreen@6tvi!26' },
-      { u: 'irene_joseph',          p: 'Irene@gvz7!26' },
-      { u: 'joseph_chitanda',       p: 'Joseph@VYE7!26' },
+      { u: 'elizabeth_anthony', p: 'Elizabeth@jTfS!26' },
+      { u: 'happy_joseph_sikawa', p: 'Happy@q1OP!26' },
+      { u: 'maria_kidumba', p: 'Maria@Y277!26' },
+      { u: 'neema_kaijage', p: 'Neema@nN77!26' },
+      { u: 'rose_simon', p: 'Rose@5cuV!26' },
+      { u: 'christina_mwamlima', p: 'Christina@cbUX!26' },
+      { u: 'farida_mlawa', p: 'Farida@TRP8!26' },
+      { u: 'neema_dickson', p: 'Neema@wak0!26' },
+      { u: 'neema_godfrey', p: 'Neema@4jG7!26' },
+      { u: 'sigfred_kaijage', p: 'Sigfred@tNoa!26' },
+      { u: 'catherine_gasper', p: 'Catherine@CAew!26' },
+      { u: 'eliya_kasmil_mapunda', p: 'Eliya@g0O7!26' },
+      { u: 'faith_ngonyani', p: 'Faith@Hh6q!26' },
+      { u: 'happiness_erasto', p: 'Happiness@8HJP!26' },
+      { u: 'mariam_adam', p: 'Mariam@FEU9!26' },
+      { u: 'elizabeth_nehemiah', p: 'Elizabeth@L7gC!26' },
+      { u: 'crispin_mbatiani', p: 'Crispin@5Q97!26' },
+      { u: 'doreen_uhuru', p: 'Doreen@6tvi!26' },
+      { u: 'irene_joseph', p: 'Irene@gvz7!26' },
+      { u: 'joseph_chitanda', p: 'Joseph@VYE7!26' }
     ];
     for (const { u, p } of leaders) {
       await seedUser({ username: u, password: p, role: 'leader', fullName: titleCase(u) });
@@ -930,7 +1067,9 @@ async function seedFinanceRecords() {
     const count = Number(existing?.cnt || existing?.count || 0);
     if (count > 0) return; // already has data
 
-    const adminUser = await get("SELECT id FROM users WHERE role IN ('admin','accountant') LIMIT 1");
+    const adminUser = await get(
+      "SELECT id FROM users WHERE role IN ('admin','accountant') LIMIT 1"
+    );
     const userId = adminUser ? adminUser.id : 1;
 
     // Generate last 24 Sundays
@@ -942,7 +1081,7 @@ async function seedFinanceRecords() {
       d.setDate(d.getDate() - 7);
     }
 
-    const expCats = ['Food','Water','Fruits','Sugar','Media','Transport'];
+    const expCats = ['Food', 'Water', 'Fruits', 'Sugar', 'Media', 'Transport'];
     let seeded = 0;
     for (const date of sundays) {
       const m = randomRoundedAmount(80000, 250000);
@@ -951,24 +1090,30 @@ async function seedFinanceRecords() {
       const ev = randomRoundedAmount(10000, 50000);
       const c = calculateSampleFinance(m, a, t);
       try {
-        await run(`
+        await run(
+          `
           INSERT INTO finance_daily_records
             (record_date,morning_offering,afternoon_offering,total_tithes,
              evangelism_offering,total_income,mission_fund,remaining_after_mission,
              bishop_fund,usable_church_funds,status,created_by,notes)
           VALUES (?,?,?,?,?,?,?,?,?,?,'approved',?,'Auto-seeded sample record')
-        `, [date, m, a, t, ev, c.total, c.mission, c.remaining, c.bishop, c.usable, userId]);
-
-        const rec = await get('SELECT id FROM finance_daily_records WHERE record_date::text LIKE ?', [`${date}%`]).catch(() =>
-          get('SELECT id FROM finance_daily_records WHERE record_date = ?', [date])
+        `,
+          [date, m, a, t, ev, c.total, c.mission, c.remaining, c.bishop, c.usable, userId]
         );
 
+        const rec = await get(
+          'SELECT id FROM finance_daily_records WHERE record_date::text LIKE ?',
+          [`${date}%`]
+        ).catch(() => get('SELECT id FROM finance_daily_records WHERE record_date = ?', [date]));
+
         if (rec && rec.id) {
-          const numExp = Math.floor(Math.random()*3)+1;
-          for (let e=0; e<numExp; e++) {
-            const cat = expCats[Math.floor(Math.random()*expCats.length)];
-            await run(`INSERT INTO finance_expenses (record_id,category,amount,description) VALUES (?,?,?,?)`,
-              [rec.id, cat, randomRoundedAmount(5000, 40000), `${cat} for Sunday service`]);
+          const numExp = Math.floor(Math.random() * 3) + 1;
+          for (let e = 0; e < numExp; e++) {
+            const cat = expCats[Math.floor(Math.random() * expCats.length)];
+            await run(
+              `INSERT INTO finance_expenses (record_id,category,amount,description) VALUES (?,?,?,?)`,
+              [rec.id, cat, randomRoundedAmount(5000, 40000), `${cat} for Sunday service`]
+            );
           }
         }
         seeded++;
@@ -1002,7 +1147,9 @@ async function startServer() {
         const pgPool = require('./db/postgres').pool;
         const schemaResult = await pgPool.query('SELECT current_schema() AS schema');
         if (schemaResult.rows[0]?.schema !== 'public') {
-          console.warn('PostgreSQL current_schema is not public; configure search_path during deployment.');
+          console.warn(
+            'PostgreSQL current_schema is not public; configure search_path during deployment.'
+          );
         }
       } catch (e) {
         console.warn('PostgreSQL schema check failed:', e.message);
@@ -1065,7 +1212,11 @@ function shutdown(signal) {
       }
       // Stop the realtime bridge BEFORE closing the pool so the LISTEN
       // client can cleanly end its connection.
-      try { await require('./realtime/bridge').stopBridge(); } catch (_) { /* noop */ }
+      try {
+        await require('./realtime/bridge').stopBridge();
+      } catch (_) {
+        /* noop */
+      }
       // L14-fix: clear the in-memory store sweep interval so the
       // process can exit cleanly during local SQLite dev.
       if (activeSessionStore && activeSessionStore._shekinaSweep) {
@@ -1092,10 +1243,19 @@ function shutdown(signal) {
 process.on('SIGTERM', shutdown('SIGTERM'));
 process.on('SIGINT', shutdown('SIGINT'));
 process.on('unhandledRejection', (reason) => {
-  console.error(JSON.stringify({ level: 'error', type: 'unhandledRejection', reason: String(reason) }));
+  console.error(
+    JSON.stringify({ level: 'error', type: 'unhandledRejection', reason: String(reason) })
+  );
 });
 process.on('uncaughtException', (err) => {
-  console.error(JSON.stringify({ level: 'error', type: 'uncaughtException', message: err.message, stack: err.stack }));
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      type: 'uncaughtException',
+      message: err.message,
+      stack: err.stack
+    })
+  );
   shutdown('uncaughtException')();
 });
 
