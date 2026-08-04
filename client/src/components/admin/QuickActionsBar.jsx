@@ -10,6 +10,11 @@ const QuickActionsBar = ({
   onSendAnnouncement,
   onViewFollowUps,
 }) => {
+  // Leadership is managed from its dedicated admin area, not as an attendance service.
+  const dashboardServiceTypes = serviceTypes.filter(
+    (service) => !/^(leader|leaders|leadership)$/i.test(String(service.name || '').trim())
+  );
+
   const actions = [
     {
       label: 'View attendance',
@@ -38,14 +43,14 @@ const QuickActionsBar = ({
   ];
 
   return (
-    <section className="grid gap-4 xl:grid-cols-[auto_1fr]">
-      <div className="product-surface flex max-w-full items-center gap-2 overflow-x-auto p-2 scrollbar-hide">
+    <section className="grid gap-4 xl:grid-cols-2">
+      <div className="product-surface flex min-w-0 max-w-full items-center gap-2 overflow-x-auto p-2 scrollbar-hide">
         <div className="flex shrink-0 items-center gap-1.5 px-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
           <Clock className="h-3.5 w-3.5" />
           Service
         </div>
         <div className="flex gap-1">
-          {serviceTypes.map((service) => (
+          {dashboardServiceTypes.map((service) => (
             <button
               type="button"
               key={service.id}
@@ -73,18 +78,18 @@ const QuickActionsBar = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 2xl:grid-cols-4">
         {actions.map(({ label, icon: Icon, onClick, style }) => (
           <button
             type="button"
             key={label}
             onClick={onClick}
-            className="product-surface focus-ring group flex min-h-14 items-center gap-3 px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card-hover dark:hover:border-white/20"
+            className="product-surface focus-ring group flex min-h-[4.5rem] min-w-0 items-center gap-3 overflow-hidden px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card-hover dark:hover:border-white/20"
           >
             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${style}`}>
               <Icon className="h-4 w-4" />
             </span>
-            <span className="text-xs font-bold leading-4 text-slate-700 dark:text-slate-200 sm:text-[13px]">
+            <span className="block min-w-0 flex-1 whitespace-normal break-words text-xs font-bold leading-4 text-slate-700 dark:text-slate-200 sm:text-[13px]">
               {label}
             </span>
           </button>

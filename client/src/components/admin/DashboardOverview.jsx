@@ -31,7 +31,6 @@ import QuickActionsBar from './QuickActionsBar';
 import NeedsAttentionWidget from './NeedsAttentionWidget';
 import { PresentationGenerator } from '../../utils/presentationGenerator';
 import HallOfFamePreview from './HallOfFamePreview';
-import LeadershipWidget from './LeadershipWidget';
 import StatCard from '../ui/StatCard';
 import { formatLocalDate, fdate, fdatetime, parseLocalDate } from '../../utils/date';
 
@@ -463,8 +462,8 @@ const DashboardOverview = ({
     <div className="space-y-6 animate-fade-in pb-12">
       <section className="product-surface relative overflow-hidden px-5 py-6 sm:px-7">
         <div className="absolute inset-y-0 right-0 hidden w-[42%] bg-[radial-gradient(circle_at_80%_20%,rgba(20,168,150,0.14),transparent_65%)] lg:block" />
-        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
-          <div>
+        <div className="relative flex min-w-0 flex-col justify-between gap-6 lg:flex-row lg:items-center">
+          <div className="min-w-0">
             <div className="mb-3 flex items-center gap-2">
               <span className="section-eyebrow">Church command center</span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -474,7 +473,7 @@ const DashboardOverview = ({
                 Live
               </span>
             </div>
-            <h2 className="font-display text-2xl font-semibold tracking-[-0.035em] text-slate-950 dark:text-white sm:text-3xl">
+            <h2 className="break-words font-display text-2xl font-semibold tracking-[-0.035em] text-slate-950 dark:text-white sm:text-3xl">
               {greeting}, {welcomeName}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
@@ -486,7 +485,7 @@ const DashboardOverview = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <button onClick={handleExportPDF} className="btn-secondary btn-sm focus-ring">
               <Download className="h-3.5 w-3.5" /> PDF summary
             </button>
@@ -562,8 +561,6 @@ const DashboardOverview = ({
           </div>
         </section>
       )}
-
-      <LeadershipWidget onNavigate={() => navigate('/admin/leadership')} />
 
       <NeedsAttentionWidget
         birthdays={needsAttention?.birthdays || []}
