@@ -386,11 +386,13 @@ function buildSessionStore() {
   // MemoryStore only if the package is unavailable.
   try {
     const SqliteStore = require('connect-sqlite3')(session);
-    const dbPath = path.join(__dirname, 'db');
-    if (!require('fs').existsSync(dbPath)) require('fs').mkdirSync(dbPath, { recursive: true });
+    const sqlite3 = require('sqlite3');
+    const dbDir = path.join(__dirname, 'db');
+    if (!require('fs').existsSync(dbDir)) require('fs').mkdirSync(dbDir, { recursive: true });
+    // connect-sqlite3 expects a live sqlite3.Database instance as `options.db`
+    // (not a path string), and is compatible with the sqlite3 v6 API.
     const store = new SqliteStore({
-      db: 'sessions.sqlite',
-      dir: dbPath,
+      db: new sqlite3.Database(path.join(dbDir, 'sessions.sqlite')),
       table: 'sessions'
     });
     activeSessionStore = store;
@@ -398,7 +400,7 @@ function buildSessionStore() {
     return store;
   } catch (e) {
     console.warn(
-      '[Session] connect-sqlite3 not available, falling back to MemoryStore. Sessions will be lost on restart.'
+      `[Session] connect-sqlite3 not available, falling back to MemoryStore. Sessions will be lost on restart. (${e.message})`
     );
   }
 
