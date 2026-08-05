@@ -4,6 +4,8 @@ import { adminAPI } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
+import StatCard from '../components/ui/StatCard';
+import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import {
   Baby,
   Users,
@@ -148,8 +150,8 @@ export default function ChildrensMinistry() {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <LoadingSkeleton type="card" count={4} />
       </div>
     );
 
@@ -223,58 +225,30 @@ export default function ChildrensMinistry() {
       {/* Dashboard Tab */}
       {activeTab === 'dashboard' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                <Baby className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {data.dashboard.totalChildren || 0}
-                </p>
-                <p className="text-sm text-slate-500">Total Children</p>
-              </div>
-            </div>
-          </div>
-          <div className="card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                <GraduationCap className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {data.dashboard.totalClasses || 0}
-                </p>
-                <p className="text-sm text-slate-500">Active Classes</p>
-              </div>
-            </div>
-          </div>
-          <div className="card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {data.dashboard.totalTeachers || 0}
-                </p>
-                <p className="text-sm text-slate-500">Active Teachers</p>
-              </div>
-            </div>
-          </div>
-          <div className="card p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
-                <Calendar className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                  {data.dashboard.todayAttendance || 0}
-                </p>
-                <p className="text-sm text-slate-500">Today's Attendance</p>
-              </div>
-            </div>
-          </div>
+          <StatCard
+            icon={Baby}
+            label="Total Children"
+            value={data.dashboard.totalChildren || 0}
+            variant="info"
+          />
+          <StatCard
+            icon={GraduationCap}
+            label="Active Classes"
+            value={data.dashboard.totalClasses || 0}
+            variant="success"
+          />
+          <StatCard
+            icon={Users}
+            label="Active Teachers"
+            value={data.dashboard.totalTeachers || 0}
+            variant="default"
+          />
+          <StatCard
+            icon={Calendar}
+            label="Today's Attendance"
+            value={data.dashboard.todayAttendance || 0}
+            variant="warning"
+          />
 
           {medicalAlerts.length > 0 && (
             <div className="card p-4 md:col-span-2 lg:col-span-4">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { adminAPI } from '../../services/api';
+import StatCard from '../ui/StatCard';
 import {
   ShieldCheck,
   Plus,
@@ -15,9 +16,6 @@ import {
   AtSign,
   Copy
 } from 'lucide-react';
-
-const STAT_STYLE =
-  'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
 
 // ── Member Search Combobox (same pattern as LeaderEditModal) ───────────────
 const MemberSearchInput = ({ members = [], selected, onSelect }) => {
@@ -387,47 +385,19 @@ export default function ChildrenLeaderManager({ showMessage }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className={STAT_STYLE}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 dark:bg-primary-900/30">
-              <Users className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {leaders.length}
-              </p>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Total Leaders
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className={STAT_STYLE}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
-              <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {leaders.filter((l) => l.is_active !== false).length}
-              </p>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active</p>
-            </div>
-          </div>
-        </div>
-        <div className={STAT_STYLE}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/30">
-              <ShieldCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {leaders.filter((l) => l.is_head).length}
-              </p>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Head Leaders</p>
-            </div>
-          </div>
-        </div>
+        <StatCard icon={Users} label="Total Leaders" value={leaders.length} variant="default" />
+        <StatCard
+          icon={CheckCircle}
+          label="Active"
+          value={leaders.filter((l) => l.is_active !== false).length}
+          variant="success"
+        />
+        <StatCard
+          icon={ShieldCheck}
+          label="Head Leaders"
+          value={leaders.filter((l) => l.is_head).length}
+          variant="warning"
+        />
       </div>
 
       <div className="relative">
