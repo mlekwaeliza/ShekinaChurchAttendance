@@ -1,5 +1,15 @@
 import React from 'react';
-import { Users, FileText, CheckCircle2, XCircle, Clock3, ArrowRight, MapPin, Crown } from 'lucide-react';
+import {
+  Users,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  Clock3,
+  ArrowRight,
+  MapPin,
+  Crown
+} from 'lucide-react';
+import StatCard from '../ui/StatCard';
 
 const LeaderOverview = ({
   members,
@@ -12,10 +22,11 @@ const LeaderOverview = ({
   leaderName,
   sectionName,
   isHead = false,
-  onGoToAttendance,
+  onGoToAttendance
 }) => {
   const currentService = serviceTypes.find((service) => service.id === selectedServiceId);
-  const serviceName = currentService?.name || (selectedServiceId === 'all' ? 'All Services' : 'Main Service');
+  const serviceName =
+    currentService?.name || (selectedServiceId === 'all' ? 'All Services' : 'Main Service');
   const rosterMembers = Array.isArray(eligibleMembers) ? eligibleMembers : members;
 
   const presentMembers = rosterMembers.filter((member) => attendance[member.id] === 'present');
@@ -29,37 +40,29 @@ const LeaderOverview = ({
       count: presentMembers.length,
       note: submitted ? 'Recorded present' : 'Marked present',
       icon: CheckCircle2,
-      accent: 'text-emerald-600 dark:text-emerald-400',
-      iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
-      border: 'border-emerald-200/80 dark:border-emerald-800/70',
+      variant: 'success'
     },
     {
       label: 'Absent',
       count: absentMembers.length,
       note: submitted ? 'Recorded absent' : 'Marked absent',
       icon: XCircle,
-      accent: 'text-rose-600 dark:text-rose-400',
-      iconBg: 'bg-rose-100 dark:bg-rose-900/30',
-      border: 'border-rose-200/80 dark:border-rose-800/70',
+      variant: 'danger'
     },
     {
       label: 'Excused',
       count: excusedMembers.length,
       note: submitted ? 'Recorded excused' : 'Marked excused',
       icon: Clock3,
-      accent: 'text-amber-600 dark:text-amber-400',
-      iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-      border: 'border-amber-200/80 dark:border-amber-800/70',
+      variant: 'warning'
     },
     {
       label: submitted ? 'Completed' : 'Pending',
       count: submitted ? rosterMembers.length : unmarkedMembers.length,
       note: submitted ? 'Roster locked in' : 'Still waiting to be marked',
       icon: FileText,
-      accent: 'text-sky-600 dark:text-sky-400',
-      iconBg: 'bg-sky-100 dark:bg-sky-900/30',
-      border: 'border-sky-200/80 dark:border-sky-800/70',
-    },
+      variant: 'info'
+    }
   ];
 
   const summaryCards = [
@@ -72,7 +75,7 @@ const LeaderOverview = ({
       borderColor: 'border-emerald-200 dark:border-emerald-800',
       shadowColor: 'shadow-emerald-500/20',
       listBg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
-      members: presentMembers,
+      members: presentMembers
     },
     {
       label: 'Absent',
@@ -83,7 +86,7 @@ const LeaderOverview = ({
       borderColor: 'border-rose-200 dark:border-rose-800',
       shadowColor: 'shadow-rose-500/20',
       listBg: 'bg-rose-50/50 dark:bg-rose-900/10',
-      members: absentMembers,
+      members: absentMembers
     },
     {
       label: 'Excused',
@@ -94,8 +97,8 @@ const LeaderOverview = ({
       borderColor: 'border-amber-200 dark:border-amber-800',
       shadowColor: 'shadow-amber-500/20',
       listBg: 'bg-amber-50/50 dark:bg-amber-900/10',
-      members: excusedMembers,
-    },
+      members: excusedMembers
+    }
   ];
 
   return (
@@ -116,11 +119,10 @@ const LeaderOverview = ({
               </span>
             )}
           </div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            Welcome, {leaderName || 'Leader'}
-          </h2>
+          <h2 className="text-2xl font-bold tracking-tight">Welcome, {leaderName || 'Leader'}</h2>
           <p className="mt-2 max-w-lg text-base text-white/80">
-            {serviceName} dashboard is ready. Track the attendance roster for the service scheduled on this day and keep your section up to date.
+            {serviceName} dashboard is ready. Track the attendance roster for the service scheduled
+            on this day and keep your section up to date.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-5 py-3 backdrop-blur-sm">
@@ -150,27 +152,14 @@ const LeaderOverview = ({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {attendanceOverviewCards.map((card) => (
-          <div
+          <StatCard
             key={card.label}
-            className={`rounded-2xl border ${card.border} bg-white/95 p-5 shadow-sm dark:bg-slate-800/95`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
-                  {card.label}
-                </p>
-                <p className="mt-2 text-3xl font-black text-slate-900 dark:text-slate-100">
-                  {card.count}
-                </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {card.note}
-                </p>
-              </div>
-              <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${card.iconBg}`}>
-                <card.icon className={`h-5 w-5 ${card.accent}`} />
-              </div>
-            </div>
-          </div>
+            icon={card.icon}
+            label={card.label}
+            value={card.count}
+            trendLabel={card.note}
+            variant={card.variant}
+          />
         ))}
       </div>
 
@@ -190,14 +179,22 @@ const LeaderOverview = ({
               >
                 <div className="mb-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${card.gradient} shadow-md ${card.shadowColor}`}>
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${card.gradient} shadow-md ${card.shadowColor}`}
+                    >
                       <card.icon className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{card.label}</span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      {card.label}
+                    </span>
                   </div>
-                  <span className="text-xl font-bold text-slate-900 dark:text-white">{card.count}</span>
+                  <span className="text-xl font-bold text-slate-900 dark:text-white">
+                    {card.count}
+                  </span>
                 </div>
-                <ul className={`max-h-40 space-y-1.5 overflow-y-auto rounded-xl p-2 scrollbar-thin ${card.listBg}`}>
+                <ul
+                  className={`max-h-40 space-y-1.5 overflow-y-auto rounded-xl p-2 scrollbar-thin ${card.listBg}`}
+                >
                   {card.members.map((member) => (
                     <li
                       key={member.id}

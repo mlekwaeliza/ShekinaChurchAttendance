@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import useLeaderData from '../hooks/useLeaderData';
 import { CheckCircle2 } from 'lucide-react';
 import useOffline from '../hooks/useOffline';
+import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 
 import LeaderOverview from '../components/leader/LeaderOverview';
 import TakeAttendance from '../components/leader/TakeAttendance';
@@ -44,10 +45,10 @@ const LeaderDashboard = () => {
   if (data.loading) {
     return (
       <div className="space-y-4 animate-fade-in">
-        <div className="skeleton h-24 rounded-2xl" />
+        <LoadingSkeleton type="card" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="skeleton h-32 rounded-2xl" />
-          <div className="skeleton h-32 rounded-2xl" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
         </div>
       </div>
     );

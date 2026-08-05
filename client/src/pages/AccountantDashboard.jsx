@@ -3,8 +3,11 @@ import { useParams } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import FinanceView from '../components/admin/FinanceView';
 import AnalyticsView from '../components/admin/AnalyticsView';
+import StatCard from '../components/ui/StatCard';
+import EmptyState from '../components/ui/EmptyState';
+import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import { contributionAPI, financeAPI, adminAPI } from '../services/api';
-import { Loader2, HandCoins, Building2, Calendar, Users } from 'lucide-react';
+import { HandCoins, Building2, Calendar, Users, PiggyBank, Wallet } from 'lucide-react';
 
 const AccountantDashboard = () => {
   const { tab } = useParams();
@@ -17,7 +20,7 @@ const AccountantDashboard = () => {
   );
 
   if (!tab || tab === 'dashboard') {
-    return <AccountantOverview showMessage={showMessage} />;
+    return <AccountantOverview />;
   }
 
   if (tab === 'analytics') {
@@ -31,7 +34,7 @@ const AccountantDashboard = () => {
   );
 };
 
-const AccountantOverview = ({ showMessage }) => {
+const AccountantOverview = () => {
   const [data, setData] = useState({
     contributions: [],
     finance: [],
@@ -70,8 +73,13 @@ const AccountantOverview = ({ showMessage }) => {
 
   if (loading)
     return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Accountant Dashboard</h1>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <LoadingSkeleton key={i} type="card" />
+          ))}
+        </div>
       </div>
     );
 
@@ -96,81 +104,49 @@ const AccountantOverview = ({ showMessage }) => {
       label: 'Finance Tithes',
       value: `TZS ${financeTithes.toLocaleString()}`,
       icon: HandCoins,
-      border: 'border-violet-200/70',
-      darkBorder: 'dark:border-violet-700',
-      textColor: 'text-violet-600',
-      darkText: 'dark:text-violet-400',
-      iconColor: 'text-violet-500'
+      variant: 'default'
     },
     {
       label: 'All Contributions',
       value: `TZS ${totalContributions.toLocaleString()}`,
       icon: HandCoins,
-      border: 'border-emerald-200/70',
-      darkBorder: 'dark:border-emerald-700',
-      textColor: 'text-emerald-600',
-      darkText: 'dark:text-emerald-400',
-      iconColor: 'text-emerald-500'
+      variant: 'success'
     },
     {
       label: 'Finance Income',
       value: `TZS ${totalIncome.toLocaleString()}`,
       icon: Building2,
-      border: 'border-blue-200/70',
-      darkBorder: 'dark:border-blue-700',
-      textColor: 'text-blue-600',
-      darkText: 'dark:text-blue-400',
-      iconColor: 'text-blue-500'
+      variant: 'info'
     },
     {
       label: 'Finance Expenses',
       value: `TZS ${totalExpenses.toLocaleString()}`,
       icon: Building2,
-      border: 'border-rose-200/70',
-      darkBorder: 'dark:border-rose-700',
-      textColor: 'text-rose-600',
-      darkText: 'dark:text-rose-400',
-      iconColor: 'text-rose-500'
+      variant: 'danger'
     },
     {
       label: 'Available Funds',
       value: `TZS ${(usableFunds - totalExpenses).toLocaleString()}`,
-      icon: Building2,
-      border: 'border-teal-200/70',
-      darkBorder: 'dark:border-teal-700',
-      textColor: 'text-teal-600',
-      darkText: 'dark:text-teal-400',
-      iconColor: 'text-teal-500'
+      icon: Wallet,
+      variant: 'success'
     },
     {
       label: 'Finance Entries',
       value: data.finance.length.toString(),
-      icon: Building2,
-      border: 'border-blue-200/70',
-      darkBorder: 'dark:border-blue-700',
-      textColor: 'text-blue-600',
-      darkText: 'dark:text-blue-400',
-      iconColor: 'text-blue-500'
+      icon: PiggyBank,
+      variant: 'info'
     },
     {
       label: 'Contributors (This Month)',
       value: uniqueContributors.toString(),
       icon: Users,
-      border: 'border-violet-200/70',
-      darkBorder: 'dark:border-violet-700',
-      textColor: 'text-violet-600',
-      darkText: 'dark:text-violet-400',
-      iconColor: 'text-violet-500'
+      variant: 'default'
     },
     {
       label: 'Total Members',
       value: data.members.toLocaleString(),
       icon: Calendar,
-      border: 'border-amber-200/70',
-      darkBorder: 'dark:border-amber-700',
-      textColor: 'text-amber-600',
-      darkText: 'dark:text-amber-400',
-      iconColor: 'text-amber-500'
+      variant: 'warning'
     }
   ];
 
@@ -186,20 +162,13 @@ const AccountantOverview = ({ showMessage }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         {cards.map((card, i) => (
-          <div
+          <StatCard
             key={i}
-            className={`rounded-2xl border ${card.border} bg-white dark:bg-slate-800 ${card.darkBorder} p-4 shadow-sm`}
-          >
-            <div className="flex items-center justify-between mb-2 gap-2">
-              <span className="text-xs font-medium text-slate-500 uppercase tracking-wider truncate">
-                {card.label}
-              </span>
-              <card.icon className={`w-4 h-4 shrink-0 ${card.iconColor}`} />
-            </div>
-            <p className={`text-2xl font-bold truncate ${card.textColor} ${card.darkText}`}>
-              {card.value}
-            </p>
-          </div>
+            icon={card.icon}
+            label={card.label}
+            value={card.value}
+            variant={card.variant}
+          />
         ))}
       </div>
 
@@ -209,7 +178,11 @@ const AccountantOverview = ({ showMessage }) => {
             All Contributions by Type (This Month)
           </h3>
           {Object.keys(contributionsByType).length === 0 ? (
-            <p className="text-slate-400 text-sm py-8 text-center">No contributions this month</p>
+            <EmptyState
+              icon={HandCoins}
+              title="No contributions this month"
+              description="Contributions received this month will appear here."
+            />
           ) : (
             <div className="space-y-3">
               {Object.entries(contributionsByType).map(([type, total]) => (

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { childrenLeaderAPI } from '../services/api';
+import StatCard from './ui/StatCard';
+import EmptyState from './ui/EmptyState';
+import LoadingSkeleton from './ui/LoadingSkeleton';
 import {
   Baby,
   CalendarCheck,
@@ -9,12 +12,10 @@ import {
   XCircle,
   AlertCircle,
   Clock,
-  Loader2
+  Loader2,
+  Users
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-
-const STAT_STYLE =
-  'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
 
 const AGE_GROUPS = ['Nursery', 'Toddler', 'Preschool', 'Primary', 'Pre-Teen', 'Youth'];
 
@@ -29,6 +30,9 @@ export default function ChildrenLeaderDashboard() {
   const [history, setHistory] = useState([]);
   const [trends, setTrends] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [childrenLoading, setChildrenLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [trendsLoading, setTrendsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [ageGroupFilter, setAgeGroupFilter] = useState('');
 
@@ -78,6 +82,7 @@ export default function ChildrenLeaderDashboard() {
   };
 
   const loadChildren = async (ageGroup) => {
+    setChildrenLoading(true);
     try {
       const params = {};
       if (ageGroup) params.age_group = ageGroup;
@@ -85,6 +90,8 @@ export default function ChildrenLeaderDashboard() {
       setChildren(res.data);
     } catch (err) {
       console.error('Failed to load children:', err);
+    } finally {
+      setChildrenLoading(false);
     }
   };
 
@@ -109,20 +116,26 @@ export default function ChildrenLeaderDashboard() {
   };
 
   const loadHistory = async () => {
+    setHistoryLoading(true);
     try {
       const res = await childrenLeaderAPI.getHistory();
       setHistory(res.data);
     } catch (err) {
       console.error('Failed to load history:', err);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
   const loadTrends = async () => {
+    setTrendsLoading(true);
     try {
       const res = await childrenLeaderAPI.getTrends();
       setTrends(res.data);
     } catch (err) {
       console.error('Failed to load trends:', err);
+    } finally {
+      setTrendsLoading(false);
     }
   };
 
@@ -179,66 +192,30 @@ export default function ChildrenLeaderDashboard() {
       {activeTab === 'overview' && dashboard && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className={STAT_STYLE}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
-                  <Baby className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                    {dashboard.stats?.totalChildren || 0}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    Total Children
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className={STAT_STYLE}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
-                  <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                    {dashboard.todayAttendance?.length || 0}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    Present Today
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className={STAT_STYLE}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-900/30">
-                  <XCircle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                    {dashboard.stats?.totalAbsent || 0}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    Absent This Week
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className={STAT_STYLE}>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/30">
-                  <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                    {dashboard.stats?.totalExcused || 0}
-                  </p>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    Excused This Week
-                  </p>
-                </div>
-              </div>
-            </div>
+            <StatCard
+              icon={Baby}
+              label="Total Children"
+              value={dashboard.stats?.totalChildren || 0}
+              variant="info"
+            />
+            <StatCard
+              icon={CheckCircle}
+              label="Present Today"
+              value={dashboard.todayAttendance?.length || 0}
+              variant="success"
+            />
+            <StatCard
+              icon={XCircle}
+              label="Absent This Week"
+              value={dashboard.stats?.totalAbsent || 0}
+              variant="danger"
+            />
+            <StatCard
+              icon={AlertCircle}
+              label="Excused This Week"
+              value={dashboard.stats?.totalExcused || 0}
+              variant="warning"
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -344,61 +321,69 @@ export default function ChildrenLeaderDashboard() {
               ))}
             </select>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-slate-50 dark:bg-slate-800/50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Age Group
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Class
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Parent/Guardian
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Contact
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {children.length === 0 ? (
+          {childrenLoading ? (
+            <LoadingSkeleton type="table" />
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-800/50">
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-sm text-slate-400">
-                      No children assigned yet
-                    </td>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Age Group
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Class
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Parent/Guardian
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Contact
+                    </th>
                   </tr>
-                ) : (
-                  children.map((child) => (
-                    <tr
-                      key={child.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">
-                        {child.full_name}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                        {child.age_group || '—'}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                        {child.class_name || '—'}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                        {child.parent_guardian_name || '—'}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                        {child.parent_guardian_phone || '—'}
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                  {children.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-4 py-8">
+                        <EmptyState
+                          icon={Users}
+                          title="No children assigned yet"
+                          description="Children added to your ministry will appear here."
+                        />
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    children.map((child) => (
+                      <tr
+                        key={child.id}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {child.full_name}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                          {child.age_group || '—'}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                          {child.class_name || '—'}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                          {child.parent_guardian_name || '—'}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                          {child.parent_guardian_phone || '—'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -532,57 +517,65 @@ export default function ChildrenLeaderDashboard() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             Submission History
           </h2>
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-            <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-              <thead className="bg-slate-50 dark:bg-slate-800/50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Class
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Records
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Submitted At
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {history.length === 0 ? (
+          {historyLoading ? (
+            <LoadingSkeleton type="table" />
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead className="bg-slate-50 dark:bg-slate-800/50">
                   <tr>
-                    <td colSpan="4" className="px-4 py-8 text-center text-sm text-slate-400">
-                      No submission history yet
-                    </td>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Class
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Records
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      Submitted At
+                    </th>
                   </tr>
-                ) : (
-                  history.map((record, idx) => (
-                    <tr
-                      key={idx}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
-                        {new Date(record.date).toLocaleDateString()}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
-                        {record.class_name || 'All Classes'}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <span className="inline-flex items-center rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-medium text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
-                          {record.records_count} records
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
-                        {new Date(record.created_at).toLocaleString()}
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                  {history.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="px-4 py-8">
+                        <EmptyState
+                          icon={Clock}
+                          title="No submission history yet"
+                          description="Attendance submissions will appear here once recorded."
+                        />
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    history.map((record, idx) => (
+                      <tr
+                        key={idx}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
+                          {new Date(record.date).toLocaleDateString()}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                          {record.class_name || 'All Classes'}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <span className="inline-flex items-center rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-medium text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
+                            {record.records_count} records
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+                          {new Date(record.created_at).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -591,44 +584,55 @@ export default function ChildrenLeaderDashboard() {
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             Attendance Trends
           </h2>
-          <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-            {trends.length > 0 ? (
-              <div className="overflow-x-auto">
-                <BarChart width={800} height={400} data={trends}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1e293b',
-                      border: 'none',
-                      borderRadius: '12px',
-                      color: '#f1f5f9',
-                      fontSize: 12
-                    }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar
-                    dataKey="present_count"
-                    name="Present"
-                    fill="#10B981"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar dataKey="absent_count" name="Absent" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                  <Bar
-                    dataKey="excused_count"
-                    name="Excused"
-                    fill="#F59E0B"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </div>
-            ) : (
-              <div className="flex h-64 items-center justify-center text-sm text-slate-400">
-                No trend data available yet
-              </div>
-            )}
-          </div>
+          {trendsLoading ? (
+            <LoadingSkeleton type="chart" />
+          ) : (
+            <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
+              {trends.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <BarChart width={800} height={400} data={trends}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1e293b',
+                        border: 'none',
+                        borderRadius: '12px',
+                        color: '#f1f5f9',
+                        fontSize: 12
+                      }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar
+                      dataKey="present_count"
+                      name="Present"
+                      fill="#10B981"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="absent_count"
+                      name="Absent"
+                      fill="#EF4444"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="excused_count"
+                      name="Excused"
+                      fill="#F59E0B"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </div>
+              ) : (
+                <EmptyState
+                  icon={BarChart3}
+                  title="No trend data available yet"
+                  description="Weekly attendance trends will appear here once data is recorded."
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

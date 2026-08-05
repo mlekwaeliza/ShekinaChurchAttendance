@@ -3,16 +3,17 @@ import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { evangelismAPI } from '../services/api';
 import { handlePhoneChange, capitalizeName } from '../utils/phone';
+import StatCard from '../components/ui/StatCard';
+import EmptyState from '../components/ui/EmptyState';
+import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import {
   Heart,
   TrendingUp,
   Users,
   Calendar,
-  Target,
   UserPlus,
   Cross,
   Clock,
-  Loader2,
   X,
   Plus,
   ChevronDown,
@@ -108,8 +109,17 @@ const Overview = ({ user }) => {
 
   if (loading)
     return (
-      <div className="flex items-center justify-center py-20 text-slate-400">
-        <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading dashboard...
+      <div className="space-y-6 animate-fade-in">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <LoadingSkeleton type="chart" />
+          <LoadingSkeleton type="chart" />
+        </div>
       </div>
     );
 
@@ -118,49 +128,49 @@ const Overview = ({ user }) => {
       label: 'Souls Won This Month',
       value: stats?.souls_won_month || 0,
       icon: Heart,
-      color: 'text-rose-600 bg-rose-100'
+      variant: 'rose'
     },
     {
       label: 'Souls Won This Year',
       value: stats?.souls_won_year || 0,
       icon: TrendingUp,
-      color: 'text-emerald-600 bg-emerald-100'
+      variant: 'success'
     },
     {
       label: 'New Converts This Week',
       value: stats?.new_converts_week || 0,
       icon: UserPlus,
-      color: 'text-blue-600 bg-blue-100'
+      variant: 'info'
     },
     {
       label: 'New Converts This Month',
       value: stats?.new_converts_month || 0,
       icon: Users,
-      color: 'text-violet-600 bg-violet-100'
+      variant: 'default'
     },
     {
       label: 'Baptisms',
       value: stats?.baptisms || 0,
       icon: Cross,
-      color: 'text-amber-600 bg-amber-100'
+      variant: 'warning'
     },
     {
       label: 'Active Outreach',
       value: stats?.active_outreach || 0,
       icon: Megaphone,
-      color: 'text-cyan-600 bg-cyan-100'
+      variant: 'info'
     },
     {
       label: 'Pending Follow-Ups',
       value: stats?.pending_follow_ups || 0,
       icon: MessageSquare,
-      color: 'text-orange-600 bg-orange-100'
+      variant: 'warning'
     },
     {
       label: 'Conversion Rate',
       value: `${stats?.conversion_rate || 0}%`,
       icon: Activity,
-      color: 'text-indigo-600 bg-indigo-100'
+      variant: 'default'
     }
   ];
 
@@ -199,24 +209,15 @@ const Overview = ({ user }) => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card, i) => {
-          const Icon = card.icon;
-          return (
-            <div key={i} className={STAT_STYLE}>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  {card.label}
-                </span>
-                <div
-                  className={`w-9 h-9 rounded-xl ${card.color} flex items-center justify-center`}
-                >
-                  <Icon className="w-4 h-4" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">{card.value}</p>
-            </div>
-          );
-        })}
+        {statCards.map((card, i) => (
+          <StatCard
+            key={i}
+            icon={card.icon}
+            label={card.label}
+            value={card.value}
+            variant={card.variant}
+          />
+        ))}
       </div>
 
       {/* Trend Chart + Funnel */}
@@ -231,7 +232,11 @@ const Overview = ({ user }) => {
           <Sparkles className="w-5 h-5 text-amber-500" /> New Converts This Week
         </h3>
         {recentConverts.length === 0 ? (
-          <p className="text-sm text-slate-400 py-4 text-center">No new converts this week</p>
+          <EmptyState
+            icon={UserPlus}
+            title="No new converts this week"
+            description="Register new converts to see them listed here."
+          />
         ) : (
           <div className="space-y-3">
             {recentConverts.map((soul) => (
@@ -283,7 +288,11 @@ const SoulWinningTrendChart = ({ data }) => (
       <TrendingUp className="w-5 h-5 text-primary-500" /> Soul Winning Trend
     </h3>
     {data.length === 0 ? (
-      <p className="text-sm text-slate-400 py-8 text-center">No data available</p>
+      <EmptyState
+        icon={TrendingUp}
+        title="No data available"
+        description="Soul winning trends will appear once outreach results are recorded."
+      />
     ) : (
       <div className="space-y-2">
         {data.map((point, i) => (
@@ -433,8 +442,14 @@ const OutreachEvents = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+        </div>
+        <LoadingSkeleton type="table" />
       </div>
     );
 
@@ -564,7 +579,11 @@ const OutreachEvents = () => {
 
       <div className="space-y-3">
         {events.length === 0 ? (
-          <p className="text-center py-12 text-slate-400">No outreach events yet</p>
+          <EmptyState
+            icon={Calendar}
+            title="No outreach events yet"
+            description="Create an outreach event to start tracking your evangelism efforts."
+          />
         ) : (
           events.map((ev) => (
             <div key={ev.id} className={STAT_STYLE}>
@@ -704,8 +723,14 @@ const SoulsWonRegistry = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+        </div>
+        <LoadingSkeleton type="table" />
       </div>
     );
 
@@ -880,8 +905,12 @@ const SoulsWonRegistry = () => {
           <tbody>
             {souls.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-slate-400">
-                  No records found
+                <td colSpan={6} className="text-center py-12">
+                  <EmptyState
+                    icon={Heart}
+                    title="No records found"
+                    description="Souls won will appear here as they are registered."
+                  />
                 </td>
               </tr>
             ) : (
@@ -1032,8 +1061,14 @@ const FollowUpManagement = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+        </div>
+        <LoadingSkeleton type="table" />
       </div>
     );
 
@@ -1285,8 +1320,14 @@ const EvangelismTeam = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+        </div>
+        <LoadingSkeleton type="table" />
       </div>
     );
 
@@ -1412,7 +1453,11 @@ const EvangelismTeam = () => {
           <Trophy className="w-5 h-5 text-amber-500" /> Soul Winner Leaderboard
         </h3>
         {team.length === 0 ? (
-          <p className="text-sm text-slate-400 py-4 text-center">No team members yet</p>
+          <EmptyState
+            icon={Trophy}
+            title="No team members yet"
+            description="Add evangelism team members to start tracking their performance."
+          />
         ) : (
           <div className="space-y-2">
             {[...team]
@@ -1581,8 +1626,14 @@ const BaptismTracking = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+        </div>
+        <LoadingSkeleton type="table" />
       </div>
     );
 
@@ -1701,8 +1752,12 @@ const BaptismTracking = () => {
           <tbody>
             {records.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-slate-400">
-                  No baptism records yet
+                <td colSpan={6} className="text-center py-12">
+                  <EmptyState
+                    icon={Cross}
+                    title="No baptism records yet"
+                    description="Baptisms will appear here once they are recorded."
+                  />
                 </td>
               </tr>
             ) : (
@@ -1804,8 +1859,14 @@ const EvangelismReports = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+          <LoadingSkeleton type="card" />
+        </div>
+        <LoadingSkeleton type="table" />
       </div>
     );
 
