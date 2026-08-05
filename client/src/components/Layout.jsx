@@ -379,10 +379,7 @@ const Layout = ({ children, showNav = true }) => {
       },
       {
         section: 'ACCOUNT',
-        items: [
-          { path: '/change-password', label: 'Change Password', icon: Shield },
-          { path: '/evangelist/settings', label: 'Settings', icon: Settings }
-        ]
+        items: [{ path: '/change-password', label: 'Change Password', icon: Shield }]
       }
     ],
     pastor: [
@@ -474,10 +471,7 @@ const Layout = ({ children, showNav = true }) => {
         },
         {
           section: 'ACCOUNT',
-          items: [
-            { path: '/leader/calendar', label: 'Calendar', icon: Calendar },
-            { path: '/leader/settings', label: 'Settings', icon: Settings }
-          ]
+          items: [{ path: '/leader/calendar', label: 'Calendar', icon: Calendar }]
         }
       ];
     }

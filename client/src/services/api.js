@@ -17,18 +17,21 @@ function getCookie(name) {
 }
 
 // Interceptor to add CSRF token to state-changing requests
-api.interceptors.request.use(config => {
-  const method = config.method.toUpperCase();
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-    const csrfToken = getCookie('csrfToken');
-    if (csrfToken) {
-      config.headers['X-CSRF-Token'] = csrfToken;
-    } else {
-      console.warn('CSRF token not found - cookie may have expired');
+api.interceptors.request.use(
+  (config) => {
+    const method = config.method.toUpperCase();
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const csrfToken = getCookie('csrfToken');
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      } else {
+        console.warn('CSRF token not found - cookie may have expired');
+      }
     }
-  }
-  return config;
-}, error => Promise.reject(error));
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Global response error handler — convert non-2xx to a plain Error so
 // TanStack Query's onError gets a useful message.
@@ -37,10 +40,7 @@ api.interceptors.response.use(
   (err) => {
     const status = err.response?.status;
     const message =
-      err.response?.data?.error ||
-      err.response?.data?.message ||
-      err.message ||
-      'Request failed';
+      err.response?.data?.error || err.response?.data?.message || err.message || 'Request failed';
 
     // Session expired / unauthenticated — kick to login unless we're
     // already on the login page (avoid loops).
@@ -48,8 +48,16 @@ api.interceptors.response.use(
       const path = window.location.pathname;
       if (!path.startsWith('/login')) {
         // Best-effort: clear the user-visible session and reload to /login.
-        try { window.dispatchEvent(new CustomEvent('app:session-expired', { detail: { message } })); } catch (_) { /* ignore */ }
-        try { window.location.assign('/login?expired=1'); } catch (_) { /* ignore */ }
+        try {
+          window.dispatchEvent(new CustomEvent('app:session-expired', { detail: { message } }));
+        } catch (_) {
+          /* ignore */
+        }
+        try {
+          window.location.assign('/login?expired=1');
+        } catch (_) {
+          /* ignore */
+        }
       }
     }
 
@@ -57,7 +65,10 @@ api.interceptors.response.use(
     e.status = status;
     e.data = err.response?.data;
     e.original = err;
-    console.error(`[API ${status}] ${err.config?.method?.toUpperCase()} ${err.config?.url}`, err.response?.data);
+    console.error(
+      `[API ${status}] ${err.config?.method?.toUpperCase()} ${err.config?.url}`,
+      err.response?.data
+    );
     return Promise.reject(e);
   }
 );
@@ -65,7 +76,10 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   changePassword: (currentPassword, newPassword) =>
-    api.post('/auth/change-password', { current_password: currentPassword, new_password: newPassword }),
+    api.post('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword
+    }),
   uploadProfilePicture: (file) => {
     const formData = new FormData();
     formData.append('image', file);
@@ -78,7 +92,7 @@ export const authAPI = {
   verify2FA: (token) => api.post('/2fa/verify', { token }),
   disable2FA: (password) => api.post('/2fa/disable', { password }),
   get2FAStatus: () => api.get('/2fa/status'),
-  regenerateBackupCodes: () => api.post('/2fa/regenerate-backup-codes'),
+  regenerateBackupCodes: () => api.post('/2fa/regenerate-backup-codes')
 };
 
 // Admin API
@@ -117,13 +131,13 @@ export const adminAPI = {
   deleteLeader: (id) => api.delete(`/admin/leaders/${id}`),
   resetLeaderPassword: (leaderId) => api.post(`/admin/leaders/${leaderId}/reset-password`),
   createMember: (data) => api.post('/admin/members', data),
-  uploadMemberPhoto: (id, formData) => api.post(`/admin/members/${id}/photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getSuggestAssignment: () => api.get('/admin/members/suggest-assignment'),
   getNextMembershipId: () => api.get('/admin/members/next-id'),
-  renumberMembershipIds: () => api.post('/admin/members/renumber-ids'),
-  bulkSoftDelete: (memberIds) => api.post('/admin/members/bulk-soft-delete', { member_ids: memberIds }),
+  bulkSoftDelete: (memberIds) =>
+    api.post('/admin/members/bulk-soft-delete', { member_ids: memberIds }),
   getPendingDeletion: () => api.get('/admin/members/pending-deletion'),
-  confirmDeletion: (memberIds) => api.post('/admin/members/confirm-deletion', { member_ids: memberIds, confirm: true }),
+  confirmDeletion: (memberIds) =>
+    api.post('/admin/members/confirm-deletion', { member_ids: memberIds, confirm: true }),
   restoreMembers: (memberIds) => api.post('/admin/members/restore', { member_ids: memberIds }),
   // Trash
   getTrash: () => api.get('/admin/members/trash'),
@@ -133,36 +147,43 @@ export const adminAPI = {
   getHistory: (serviceId) => api.get('/admin/history', { params: { service_id: serviceId } }),
   getSettingsConfig: () => api.get('/admin/settings/config'),
   updateSettingsConfig: (config) => api.put('/admin/settings/config', { config }),
-  getAggregatedOverview: (filterType, filterValue, serviceId) => api.get('/admin/aggregated-overview', { 
-    params: { filterType, filterValue, service_id: serviceId, fallback_latest: true } 
-  }),
+  getAggregatedOverview: (filterType, filterValue, serviceId) =>
+    api.get('/admin/aggregated-overview', {
+      params: { filterType, filterValue, service_id: serviceId, fallback_latest: true }
+    }),
   getLeaderDashboard: (id) => api.get(`/admin/leader-dashboard/${id}`),
   getSectionDashboard: (id) => api.get(`/admin/section-dashboard/${id}`),
-  submitAttendance: (date, attendance, leader_id, section_id) => api.post('/admin/attendance', { date, attendance, leader_id, section_id }),
-  getMissingSubmissions: (date, service_id = 1) => api.get('/admin/attendance/missing-submissions', { params: { date, service_id } }),
-  getLeaderMembers: (leaderId, date, service_id = 1) => api.get(`/admin/attendance/leader-members/${leaderId}`, { params: { date, service_id } }),
+  submitAttendance: (date, attendance, leader_id, section_id) =>
+    api.post('/admin/attendance', { date, attendance, leader_id, section_id }),
+  getMissingSubmissions: (date, service_id = 1) =>
+    api.get('/admin/attendance/missing-submissions', { params: { date, service_id } }),
+  getLeaderMembers: (leaderId, date, service_id = 1) =>
+    api.get(`/admin/attendance/leader-members/${leaderId}`, { params: { date, service_id } }),
   bulkCorrectAttendance: (data) => api.post('/admin/attendance/bulk-correct', data),
   getTopMembers: (year, week) => api.get('/admin/rewards/top-members', { params: { year, week } }),
   getTopLeaders: (year, week) => api.get('/admin/rewards/top-leaders', { params: { year, week } }),
-  getPerformanceDashboard: (filters = {}) => api.get('/admin/performance/dashboard', { params: filters }),
+  getPerformanceDashboard: (filters = {}) =>
+    api.get('/admin/performance/dashboard', { params: filters }),
   updatePerformanceWeights: (weights) => api.put('/admin/performance/weights', { weights }),
-  getPerformanceProfile: (entityType, entityId, filter = 'month', cancelToken) => api.get(`/admin/performance/profile/${entityType}/${entityId}`, { params: { filter }, cancelToken }),
-  getPerformanceRecognition: (seasonType, seasonKey) => api.get('/admin/performance/recognition', { params: { season_type: seasonType, season_key: seasonKey } }),
+  getPerformanceProfile: (entityType, entityId, filter = 'month', cancelToken) =>
+    api.get(`/admin/performance/profile/${entityType}/${entityId}`, {
+      params: { filter },
+      cancelToken
+    }),
   awardPerformanceSeason: (payload) => api.post('/admin/performance/award-season', payload),
-  getPerformancePenalties: () => api.get('/admin/performance/penalties'),
-  adjustPerformancePoints: (payload) => api.post('/admin/performance/adjust', payload),
-  getFamilies: () => api.get('/admin/performance/families'),
-  createFamily: (name, head_member_id) => api.post('/admin/performance/families', { name, head_member_id }),
-  addFamilyMember: (familyId, member_id, role) => api.post(`/admin/performance/families/${familyId}/members`, { member_id, role }),
-  removeFamilyMember: (familyId, memberId) => api.delete(`/admin/performance/families/${familyId}/members/${memberId}`),
+  createFamily: (name, head_member_id) =>
+    api.post('/admin/performance/families', { name, head_member_id }),
+  addFamilyMember: (familyId, member_id, role) =>
+    api.post(`/admin/performance/families/${familyId}/members`, { member_id, role }),
+  removeFamilyMember: (familyId, memberId) =>
+    api.delete(`/admin/performance/families/${familyId}/members/${memberId}`),
   deleteFamily: (familyId) => api.delete(`/admin/performance/families/${familyId}`),
   getUnreadNotificationCount: () => api.get('/admin/notifications/unread-count'),
-  getNotifications: () => api.get('/admin/notifications'),
   getAllNotifications: () => api.get('/admin/notifications/all'),
   markNotificationRead: (id) => api.put(`/admin/notifications/${id}/read`),
   markAllNotificationsRead: () => api.put('/admin/notifications/read-all'),
-  getConsecutiveAbsences: (leaderId) => api.get(`/admin/notifications/consecutive-absences`, { params: { leaderId } }),
-  getAbsentFollowUps: (leaderId) => api.get('/admin/notifications/follow-ups', { params: { leaderId } }),
+  getConsecutiveAbsences: (leaderId) =>
+    api.get(`/admin/notifications/consecutive-absences`, { params: { leaderId } }),
   updateFollowUp: (id, data) => api.put(`/admin/notifications/follow-ups/${id}`, data),
   getAnnouncements: () => api.get('/admin/announcements'),
   createAnnouncement: (data) => api.post('/admin/announcements', data),
@@ -174,35 +195,55 @@ export const adminAPI = {
   createVisitor: (data) => api.post('/admin/visitors', data),
   getAuditLog: (filters = {}) => api.get('/admin/audit-log', { params: filters }),
   getMemberAuditHistory: (memberId) => api.get(`/admin/audit-log/member/${memberId}`),
-  bulkUpdateMembers: (memberIds, sectionId, leaderId) => api.put('/admin/members/bulk-update', { member_ids: memberIds, section_id: sectionId, leader_id: leaderId }),
+  bulkUpdateMembers: (memberIds, sectionId, leaderId) =>
+    api.put('/admin/members/bulk-update', {
+      member_ids: memberIds,
+      section_id: sectionId,
+      leader_id: leaderId
+    }),
   exportMembers: () => window.open('/api/admin/members/export', '_blank'),
   getAttendancePrediction: () => api.get('/admin/analytics/prediction'),
-  getSectionAnomalies: (threshold) => api.get('/admin/analytics/anomalies', { params: { threshold } }),
+  getSectionAnomalies: (threshold) =>
+    api.get('/admin/analytics/anomalies', { params: { threshold } }),
   getMemberStreaks: (limit) => api.get('/admin/analytics/streaks', { params: { limit } }),
-  getLeaderPerformance: (startDate, endDate) => api.get('/admin/analytics/leader-performance', { params: { start_date: startDate, end_date: endDate } }),
+  getLeaderPerformance: (startDate, endDate) =>
+    api.get('/admin/analytics/leader-performance', {
+      params: { start_date: startDate, end_date: endDate }
+    }),
   getUpcomingBirthdays: (days) => api.get('/admin/analytics/birthdays', { params: { days } }),
   getServiceTypes: () => api.get('/admin/service-types'),
-  updateServiceType: (id, data) => api.put(`/admin/service-types/${id}`, data),
-  getServiceInstance: (date, serviceId) => api.get(`/admin/service-instances/${date}`, { params: { service_id: serviceId } }),
-  saveServiceInstance: (date, serviceId, assignedLeaderIds) => api.post('/admin/service-instances', { date, service_id: serviceId, assigned_leader_ids: assignedLeaderIds }),
+  getServiceInstance: (date, serviceId) =>
+    api.get(`/admin/service-instances/${date}`, { params: { service_id: serviceId } }),
+  saveServiceInstance: (date, serviceId, assignedLeaderIds) =>
+    api.post('/admin/service-instances', {
+      date,
+      service_id: serviceId,
+      assigned_leader_ids: assignedLeaderIds
+    }),
   getHomeCells: () => api.get('/admin/home-cells'),
   createHomeCell: (data) => api.post('/admin/home-cells', data),
   updateHomeCell: (id, data) => api.patch(`/admin/home-cells/${id}`, data),
-  updateHomeCellLeaders: (cellId, leaderIds) => api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
+  updateHomeCellLeaders: (cellId, leaderIds) =>
+    api.put(`/admin/home-cells/${cellId}/leaders`, { leader_ids: leaderIds }),
   deleteHomeCell: (id) => api.delete(`/admin/home-cells/${id}`),
   createHomeCellMember: (data) => api.post('/admin/home-cell-members', data),
   deleteHomeCellMember: (id) => api.delete(`/admin/home-cell-members/${id}`),
-  transferHomeCellMember: (memberId, newCellId) => api.put(`/admin/home-cell-members/${memberId}/transfer`, { new_cell_id: newCellId }),
+  transferHomeCellMember: (memberId, newCellId) =>
+    api.put(`/admin/home-cell-members/${memberId}/transfer`, { new_cell_id: newCellId }),
   // Leadership roles & assignments
   getTitles: () => api.get('/admin/titles'),
   createTitle: (data) => api.post('/admin/titles', data),
   updateTitle: (id, data) => api.put(`/admin/titles/${id}`, data),
   deleteTitle: (id) => api.delete(`/admin/titles/${id}`),
   getMemberTitles: (memberId) => api.get(`/admin/members/${memberId}/titles`),
-  assignMemberTitle: (memberId, titleId, data = {}) => api.post(`/admin/members/${memberId}/titles`, { title_id: titleId, ...data }),
-  updateMemberTitle: (memberId, titleId, data) => api.put(`/admin/members/${memberId}/titles/${titleId}`, data),
-  removeMemberTitle: (memberId, titleId) => api.delete(`/admin/members/${memberId}/titles/${titleId}`),
-  getMemberTitleHistory: (memberId, titleId) => api.get(`/admin/members/${memberId}/titles/${titleId}/history`),
+  assignMemberTitle: (memberId, titleId, data = {}) =>
+    api.post(`/admin/members/${memberId}/titles`, { title_id: titleId, ...data }),
+  updateMemberTitle: (memberId, titleId, data) =>
+    api.put(`/admin/members/${memberId}/titles/${titleId}`, data),
+  removeMemberTitle: (memberId, titleId) =>
+    api.delete(`/admin/members/${memberId}/titles/${titleId}`),
+  getMemberTitleHistory: (memberId, titleId) =>
+    api.get(`/admin/members/${memberId}/titles/${titleId}/history`),
   getLeadershipDirectory: (params = {}) => api.get('/admin/leadership-directory', { params }),
   getLeadershipStats: () => api.get('/admin/leadership-stats'),
   // Departments
@@ -211,10 +252,10 @@ export const adminAPI = {
   createDepartment: (data) => api.post('/admin/departments', data),
   updateDepartment: (id, data) => api.put(`/admin/departments/${id}`, data),
   deleteDepartment: (id) => api.delete(`/admin/departments/${id}`),
-  getDepartmentMembers: (id) => api.get(`/admin/departments/${id}/members`),
-  addDepartmentMember: (id, member_id) => api.post(`/admin/departments/${id}/members`, { member_id }),
-  removeDepartmentMember: (id, memberId) => api.delete(`/admin/departments/${id}/members/${memberId}`),
-  getDepartmentHistory: (id) => api.get(`/admin/departments/${id}/history`),
+  addDepartmentMember: (id, member_id) =>
+    api.post(`/admin/departments/${id}/members`, { member_id }),
+  removeDepartmentMember: (id, memberId) =>
+    api.delete(`/admin/departments/${id}/members/${memberId}`),
   getMemberDepartments: (memberId) => api.get(`/admin/members/${memberId}/departments`),
   // User Management
   getUsers: () => api.get('/admin/users'),
@@ -246,7 +287,7 @@ export const adminAPI = {
     bulkAttendance: (data) => api.post('/admin/children/attendance/bulk', data),
     getPromotions: () => api.get('/admin/children/promotions'),
     createPromotion: (data) => api.post('/admin/children/promotions', data),
-    getDashboard: () => api.get('/admin/children/dashboard'),
+    getDashboard: () => api.get('/admin/children/dashboard')
   },
   // Executive Reporting Center
   reports: {
@@ -258,26 +299,21 @@ export const adminAPI = {
     getEvangelism: (params = {}) => api.get('/admin/reports/evangelism', { params }),
     getNewMembers: (params = {}) => api.get('/admin/reports/new-members', { params }),
     getHomeCells: (params = {}) => api.get('/admin/reports/home-cells', { params }),
-    getChildren: (params = {}) => api.get('/admin/reports/children', { params }),
+    getChildren: (params = {}) => api.get('/admin/reports/children', { params })
   },
   // Audit Trail
   auditTrail: {
     get: (params = {}) => api.get('/admin/audit-trail', { params }),
-    getActivitySummary: (days = 30) => api.get('/admin/audit-trail/activity-summary', { params: { days } }),
-    getUserActivity: (userId, params = {}) => api.get(`/admin/audit-trail/user/${userId}`, { params }),
-    getEntityActivity: (entityType, entityId) => api.get(`/admin/audit-trail/entity/${entityType}/${entityId}`),
-    logAction: (data) => api.post('/admin/audit-trail', data),
-    export: (params = {}) => api.get('/admin/audit-trail/export', { params }),
+    export: (params = {}) => api.get('/admin/audit-trail/export', { params })
   },
   // Children's Ministry Leaders
   childrenLeaders: {
     getLeaders: () => api.get('/admin/children-leaders'),
-    getAvailableMembers: (q) => api.get('/admin/members-for-children-leader', { params: { q } }),
     createLeader: (data) => api.post('/admin/children-leaders', data),
     updateLeader: (id, data) => api.put(`/admin/children-leaders/${id}`, data),
     deleteLeader: (id, data) => api.delete(`/admin/children-leaders/${id}`, { data }),
-    resetPassword: (id, data) => api.post(`/admin/children-leaders/${id}/reset-password`, data),
-  },
+    resetPassword: (id, data) => api.post(`/admin/children-leaders/${id}/reset-password`, data)
+  }
 };
 
 // Children Leader Dashboard API
@@ -285,49 +321,51 @@ export const childrenLeaderAPI = {
   getDashboard: () => api.get('/children-leader/dashboard'),
   getChildren: (params = {}) => api.get('/children-leader/children', { params }),
   getClasses: () => api.get('/children-leader/classes'),
-  getAttendance: (date, params = {}) => api.get('/children-leader/attendance', { params: { date, ...params } }),
+  getAttendance: (date, params = {}) =>
+    api.get('/children-leader/attendance', { params: { date, ...params } }),
   recordAttendance: (data) => api.post('/children-leader/attendance', data),
-  bulkRecordAttendance: (data) => api.post('/children-leader/attendance/bulk', data),
   getHistory: (params = {}) => api.get('/children-leader/history', { params }),
-  getTrends: (params = {}) => api.get('/children-leader/trends', { params }),
+  getTrends: (params = {}) => api.get('/children-leader/trends', { params })
 };
 
 // Shared church calendar API
 export const calendarAPI = {
   getEvents: (year) => api.get('/calendar', { params: { year } }),
   createEvent: (data) => api.post('/calendar', data),
-  updateEvent: (id, data) => api.put(`/calendar/${id}`, data),
-  deleteEvent: (id) => api.delete(`/calendar/${id}`),
+  deleteEvent: (id) => api.delete(`/calendar/${id}`)
 };
 
 // Leader API
 export const leaderAPI = {
-  getMembers: (targetLeaderId, date, serviceId) => api.get('/leader/members', {
-    params: {
-      ...(targetLeaderId ? { target_leader_id: targetLeaderId } : {}),
-      ...(date ? { date } : {}),
-      ...(serviceId ? { service_id: serviceId } : {})
-    }
-  }),
+  getMembers: (targetLeaderId, date, serviceId) =>
+    api.get('/leader/members', {
+      params: {
+        ...(targetLeaderId ? { target_leader_id: targetLeaderId } : {}),
+        ...(date ? { date } : {}),
+        ...(serviceId ? { service_id: serviceId } : {})
+      }
+    }),
   createMember: (data) => api.post('/leader/members', data),
   updateMember: (id, data) => api.put(`/leader/members/${id}`, data),
   deleteMember: (id) => api.delete(`/leader/members/${id}`),
   getHomeCells: () => api.get('/leader/home-cells'),
   createHomeCellMember: (data) => api.post('/leader/home-cell-members', data),
   deleteHomeCellMember: (id) => api.delete(`/leader/home-cell-members/${id}`),
-  getAttendanceStatus: (date, serviceId, targetLeaderId) => api.get(`/leader/attendance/${date}`, {
-    params: {
-      service_id: serviceId,
-      ...(targetLeaderId ? { target_leader_id: targetLeaderId } : {})
-    }
-  }),
+  getAttendanceStatus: (date, serviceId, targetLeaderId) =>
+    api.get(`/leader/attendance/${date}`, {
+      params: {
+        service_id: serviceId,
+        ...(targetLeaderId ? { target_leader_id: targetLeaderId } : {})
+      }
+    }),
   getServiceTypes: () => api.get('/leader/service-types'),
-  submitAttendance: (date, attendance, service_id, target_leader_id) => api.post('/leader/attendance', {
-    date,
-    attendance,
-    service_id,
-    ...(target_leader_id ? { target_leader_id } : {})
-  }),
+  submitAttendance: (date, attendance, service_id, target_leader_id) =>
+    api.post('/leader/attendance', {
+      date,
+      attendance,
+      service_id,
+      ...(target_leader_id ? { target_leader_id } : {})
+    }),
   getHistory: () => api.get('/leader/history'),
   getSectionOverview: (date) => api.get(`/leader/section-overview/${date}`),
   getAttendanceTrends: (days = 90) => api.get(`/leader/attendance-trends?days=${days}`),
@@ -336,18 +374,24 @@ export const leaderAPI = {
   updateFollowUp: (memberId, data) => api.put(`/leader/follow-ups/${memberId}`, data),
   getAssignments: () => api.get('/leader/assignments'),
   // Head leader: edit attendance after submission
-  getEditMembers: (leaderId, date, serviceId = 1) => api.get(`/leader/attendance/edit-members/${leaderId}`, { params: { date, service_id: serviceId } }),
-  updateAttendanceRecord: (id, status, reason) => api.put(`/leader/attendance/${id}`, { status, reason }),
+  getEditMembers: (leaderId, date, serviceId = 1) =>
+    api.get(`/leader/attendance/edit-members/${leaderId}`, {
+      params: { date, service_id: serviceId }
+    }),
   bulkEditAttendance: (data) => api.post('/leader/attendance/bulk-edit', data),
   getAttendanceAudit: (id) => api.get(`/leader/attendance/${id}/audit`),
   // Leadership roles & assignments
   getTitles: () => api.get('/leader/titles'),
   getMemberTitles: (memberId) => api.get(`/leader/members/${memberId}/titles`),
-  assignMemberTitle: (memberId, titleId, data = {}) => api.post(`/leader/members/${memberId}/titles`, { title_id: titleId, ...data }),
-  updateMemberTitle: (memberId, titleId, data) => api.put(`/leader/members/${memberId}/titles/${titleId}`, data),
-  removeMemberTitle: (memberId, titleId) => api.delete(`/leader/members/${memberId}/titles/${titleId}`),
+  assignMemberTitle: (memberId, titleId, data = {}) =>
+    api.post(`/leader/members/${memberId}/titles`, { title_id: titleId, ...data }),
+  updateMemberTitle: (memberId, titleId, data) =>
+    api.put(`/leader/members/${memberId}/titles/${titleId}`, data),
+  removeMemberTitle: (memberId, titleId) =>
+    api.delete(`/leader/members/${memberId}/titles/${titleId}`),
   getMemberDepartments: (memberId) => api.get(`/leader/members/${memberId}/departments`),
-  getMemberAttendanceDetails: (memberId, days = 180, serviceId = 'all') => api.get(`/leader/members/${memberId}/attendance`, { params: { days, service_id: serviceId } }),
+  getMemberAttendanceDetails: (memberId, days = 180, serviceId = 'all') =>
+    api.get(`/leader/members/${memberId}/attendance`, { params: { days, service_id: serviceId } })
 };
 
 // Pastor API
@@ -356,7 +400,6 @@ export const pastorAPI = {
   getTrends: (filters = {}) => api.get('/pastor/dashboard/trends', { params: filters }),
   getLeaderMetrics: (filters = {}) => api.get('/pastor/leaders/metrics', { params: filters }),
   getAtRiskMembers: () => api.get('/pastor/members/at-risk'),
-  getMemberHistory: (memberId) => api.get(`/pastor/members/${memberId}/history`),
   exportAttendance: (filters = {}) => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
@@ -369,7 +412,7 @@ export const pastorAPI = {
   getEngagementScores: (filters = {}) => api.get('/pastor/engagement', { params: filters }),
   getWeeklySummary: (week) => api.get('/pastor/weekly-summary', { params: { week } }),
   getFollowUpAlerts: () => api.get('/pastor/alerts/follow-up-needed'),
-  getBirthdayAlerts: () => api.get('/pastor/alerts/birthdays'),
+  getBirthdayAlerts: () => api.get('/pastor/alerts/birthdays')
 };
 
 // Analytics API (admin/pastor only)
@@ -382,7 +425,8 @@ export const analyticsAPI = {
   getDemographics: () => api.get('/analytics/demographics'),
   getYearOverYear: () => api.get('/analytics/year-over-year'),
   getRetention: (days) => api.get('/analytics/retention', { params: { days } }),
-  getDashboardMetrics: (serviceId) => api.get('/analytics/dashboard-metrics', { params: { service_id: serviceId } }),
+  getDashboardMetrics: (serviceId) =>
+    api.get('/analytics/dashboard-metrics', { params: { service_id: serviceId } }),
   getSectionComparison: (days, startDate, endDate) => {
     const params = { days };
     if (startDate) params.startDate = startDate;
@@ -395,11 +439,7 @@ export const analyticsAPI = {
     if (endDate) params.endDate = endDate;
     return api.get('/analytics/service-comparison', { params });
   },
-  getServiceTypeBreakdown: (days) => api.get('/analytics/service-type-breakdown', { params: { days } }),
   getAttendancePatterns: (days) => api.get('/analytics/attendance-patterns', { params: { days } }),
-  getMonthlyTrends: (months) => api.get('/analytics/monthly-trends', { params: { months } }),
-  getEvangelismFunnel: () => api.get('/analytics/evangelism-funnel'),
-  getNewMemberFunnel: () => api.get('/analytics/new-member-funnel'),
   getExecutiveDashboard: () => api.get('/analytics/executive-dashboard'),
   getComparison: (params) => api.get('/analytics/comparison', { params }),
   getHistorical: (params) => api.get('/analytics/historical', { params }),
@@ -442,60 +482,73 @@ export const analyticsAPI = {
     params.fallback_latest = 'true';
     return api.get('/analytics/member-intelligence', { params });
   },
-  getMemberAttendanceDetails: (memberId, days = 180, serviceId = 'all') => api.get(`/analytics/member-intelligence/${memberId}/attendance`, {
-    params: { days, service_id: serviceId }
-  }),
-  getHeatmap: (months) => api.get('/analytics/heatmap', { params: { months } }),
+  getMemberAttendanceDetails: (memberId, days = 180, serviceId = 'all') =>
+    api.get(`/analytics/member-intelligence/${memberId}/attendance`, {
+      params: { days, service_id: serviceId }
+    }),
   getTrendsMA: (weeks) => api.get('/analytics/trends-ma', { params: { weeks } }),
   getRiskAnalysis: () => api.get('/analytics/risk-analysis'),
   getLeaderWorkload: (days) => api.get('/analytics/leader-workload', { params: { days } }),
-  getCorrelations: (months) => api.get('/analytics/correlations', { params: { months } }),
   getChurchGrowthIndex: () => api.get('/analytics/church-growth-index'),
   getAIInsights: () => api.get('/analytics/ai-insights'),
   getFinanceAnalytics: (year) => api.get('/analytics/finance-analytics', { params: { year } }),
   getExecutiveComparison: (data) => api.post('/analytics/executive-comparison', data),
   getExecutiveSummary: (days = 90) => api.get('/analytics/executive-summary', { params: { days } }),
-  getMemberWeeklyMatrix: ({ weeks = 12, serviceId = 'all', startDate, endDate, sectionId, leaderId, memberId } = {}) => api.get('/analytics/member-weekly-matrix', {
-    params: {
-      weeks,
-      ...(serviceId !== undefined ? { service_id: serviceId } : {}),
-      ...(startDate ? { startDate } : {}),
-      ...(endDate ? { endDate } : {}),
-      ...(sectionId ? { section_id: sectionId } : {}),
-      ...(leaderId ? { leader_id: leaderId } : {}),
-      ...(memberId ? { member_id: memberId } : {}),
-    }
-  }),
+  getMemberWeeklyMatrix: ({
+    weeks = 12,
+    serviceId = 'all',
+    startDate,
+    endDate,
+    sectionId,
+    leaderId,
+    memberId
+  } = {}) =>
+    api.get('/analytics/member-weekly-matrix', {
+      params: {
+        weeks,
+        ...(serviceId !== undefined ? { service_id: serviceId } : {}),
+        ...(startDate ? { startDate } : {}),
+        ...(endDate ? { endDate } : {}),
+        ...(sectionId ? { section_id: sectionId } : {}),
+        ...(leaderId ? { leader_id: leaderId } : {}),
+        ...(memberId ? { member_id: memberId } : {})
+      }
+    })
 };
 
 // New Member Leader API
 export const newMemberLeaderAPI = {
   getNewMembers: (status) => api.get('/new-member-leader/new-members', { params: { status } }),
-  getNewMember: (id) => api.get(`/new-member-leader/new-members/${id}`),
   createNewMember: (data) => api.post('/new-member-leader/new-members', data),
-  updateNewMember: (id, data) => api.put(`/new-member-leader/new-members/${id}`, data),
   deleteNewMember: (id) => api.delete(`/new-member-leader/new-members/${id}`),
-  graduateNewMember: (id, sectionId) => api.post(`/new-member-leader/new-members/${id}/graduate`, { section_id: sectionId }),
+  graduateNewMember: (id, sectionId) =>
+    api.post(`/new-member-leader/new-members/${id}/graduate`, { section_id: sectionId }),
   makePermanent: (id) => api.post(`/new-member-leader/new-members/${id}/permanent`),
   getAttendance: (id) => api.get(`/new-member-leader/new-members/${id}/attendance`),
   recordAttendance: (id, weekStart, attended, notes) =>
-    api.post(`/new-member-leader/new-members/${id}/attendance`, { week_start: weekStart, attended, notes }),
+    api.post(`/new-member-leader/new-members/${id}/attendance`, {
+      week_start: weekStart,
+      attended,
+      notes
+    }),
   getReport: (params) => api.get('/new-member-leader/reports/new-members', { params }),
   getSections: () => api.get('/new-member-leader/sections'),
   getSectionWithLeastMembers: () => api.get('/new-member-leader/sections/least-members'),
   getWeekAttendance: (weekStart) => api.get(`/new-member-leader/attendance/${weekStart}`),
   // Pipeline
   getPipeline: (stage) => api.get('/new-member-leader/pipeline', { params: { stage } }),
-  movePipelineStage: (id, stage, notes) => api.post(`/new-member-leader/pipeline/${id}/move`, { stage, notes }),
+  movePipelineStage: (id, stage, notes) =>
+    api.post(`/new-member-leader/pipeline/${id}/move`, { stage, notes }),
   getJourney: (id) => api.get(`/new-member-leader/pipeline/${id}/journey`),
   addFollowup: (id, data) => api.post(`/new-member-leader/pipeline/${id}/followup`, data),
   getFollowups: (id) => api.get(`/new-member-leader/pipeline/${id}/followups`),
   getPipelineStats: () => api.get('/new-member-leader/pipeline/stats'),
   getPipelineTasks: () => api.get('/new-member-leader/pipeline/tasks'),
   getAssimilationFunnel: () => api.get('/new-member-leader/pipeline/funnel'),
-  transferBaptized: (soulWonId) => api.post('/new-member-leader/pipeline/transfer-baptized', { soul_won_id: soulWonId }),
+  transferBaptized: (soulWonId) =>
+    api.post('/new-member-leader/pipeline/transfer-baptized', { soul_won_id: soulWonId }),
   transferAllBaptized: () => api.post('/new-member-leader/pipeline/transfer-baptized', {}),
-  getAwaitingTransfer: () => api.get('/new-member-leader/pipeline/awaiting-transfer'),
+  getAwaitingTransfer: () => api.get('/new-member-leader/pipeline/awaiting-transfer')
 };
 
 // Birthdays API
@@ -513,25 +566,22 @@ export const outreachAPI = {
   getMembers: (filters = {}) => api.get('/outreach/members', { params: filters }),
   getLeaders: () => api.get('/outreach/leaders'),
   logOutreach: (data) => api.post('/outreach/log', data),
-  getHistory: () => api.get('/outreach/history'),
+  getHistory: () => api.get('/outreach/history')
 };
 
 // Contributions API
 export const contributionAPI = {
   getTypes: () => api.get('/admin/contribution-types'),
-  getType: (id) => api.get(`/admin/contribution-types/${id}`),
   createType: (data) => api.post('/admin/contribution-types', data),
   updateType: (id, data) => api.put(`/admin/contribution-types/${id}`, data),
   deleteType: (id) => api.delete(`/admin/contribution-types/${id}`),
 
   getContributions: (filters = {}) => api.get('/admin/contributions', { params: filters }),
-  getContribution: (id) => api.get(`/admin/contributions/${id}`),
   createContribution: (data) => api.post('/admin/contributions', data),
   updateContribution: (id, data) => api.put(`/admin/contributions/${id}`, data),
   deleteContribution: (id) => api.delete(`/admin/contributions/${id}`),
 
-  getSummary: (filters = {}) => api.get('/admin/contributions/summary', { params: filters }),
-  getDetail: (from, to) => api.get('/admin/contributions/detail', { params: { from, to } }),
+  getSummary: (filters = {}) => api.get('/admin/contributions/summary', { params: filters })
 };
 
 // Finance API
@@ -540,23 +590,13 @@ export const financeAPI = {
   getRecord: (id) => api.get(`/admin/finance/records/${id}`),
   createRecord: (data) => api.post('/admin/finance/records', data),
   updateRecord: (id, data) => api.put(`/admin/finance/records/${id}`, data),
-  deleteRecord: (id) => api.delete(`/admin/finance/records/${id}`),
   submitRecord: (id) => api.post(`/admin/finance/records/${id}/submit`),
   approveRecord: (id) => api.put(`/admin/finance/records/${id}/approve`),
   rejectRecord: (id, reason) => api.put(`/admin/finance/records/${id}/reject`, { reason }),
   sendBackRecord: (id) => api.put(`/admin/finance/records/${id}/send-back`),
   recalculateRecord: (id) => api.put(`/admin/finance/records/${id}/recalculate`),
 
-  addExpense: (recordId, data) => api.post(`/admin/finance/records/${recordId}/expenses`, data),
   updateExpense: (id, data) => api.put(`/admin/finance/expenses/${id}`, data),
-  deleteExpense: (id) => api.delete(`/admin/finance/expenses/${id}`),
-  uploadReceipt: (expenseId, file) => {
-    const fd = new FormData();
-    fd.append('receipt', file);
-    return api.post(`/admin/finance/expenses/${expenseId}/receipt`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-  },
 
   uploadRecordReceipt: (recordId, type, formData) => {
     return api.post(`/admin/finance/records/${recordId}/receipt/${type}`, formData, {
@@ -564,11 +604,10 @@ export const financeAPI = {
     });
   },
 
-  getSubmissions: (status) => api.get('/admin/finance/submissions', { params: status ? { status } : {} }),
-  getSummary: (dateFrom, dateTo) => api.get('/admin/finance/reports/summary', { params: { date_from: dateFrom, date_to: dateTo } }),
+  getSummary: (dateFrom, dateTo) =>
+    api.get('/admin/finance/reports/summary', { params: { date_from: dateFrom, date_to: dateTo } }),
   getTrend: (year) => api.get('/admin/finance/reports/trend', { params: { year } }),
-  getExport: (dateFrom, dateTo) => api.get('/admin/finance/reports/export', { params: { date_from: dateFrom, date_to: dateTo } }),
-  searchMembers: (q) => api.get('/admin/finance/members/search', { params: { q } }),
+  searchMembers: (q) => api.get('/admin/finance/members/search', { params: { q } })
 };
 
 export const evangelismAPI = {
@@ -584,7 +623,6 @@ export const evangelismAPI = {
   deleteOutreachEvent: (id) => api.delete(`/evangelism/outreach-events/${id}`),
 
   getSoulsWon: (filters = {}) => api.get('/evangelism/souls-won', { params: filters }),
-  getSoulWon: (id) => api.get(`/evangelism/souls-won/${id}`),
   createSoulWon: (data) => api.post('/evangelism/souls-won', data),
   updateSoulWon: (id, data) => api.put(`/evangelism/souls-won/${id}`, data),
   deleteSoulWon: (id) => api.delete(`/evangelism/souls-won/${id}`),
@@ -603,7 +641,7 @@ export const evangelismAPI = {
   updateBaptismRecord: (id, data) => api.put(`/evangelism/baptism/${id}`, data),
   deleteBaptismRecord: (id) => api.delete(`/evangelism/baptism/${id}`),
 
-  getMemberNames: () => api.get('/evangelism/member-names'),
+  getMemberNames: () => api.get('/evangelism/member-names')
 };
 
 export default api;

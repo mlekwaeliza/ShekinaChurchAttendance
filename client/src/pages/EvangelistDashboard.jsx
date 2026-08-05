@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { evangelismAPI } from '../services/api';
-import SettingsView from '../components/admin/SettingsView';
 import { handlePhoneChange, capitalizeName } from '../utils/phone';
 import {
   Heart,
@@ -11,21 +10,11 @@ import {
   Calendar,
   Target,
   UserPlus,
-  Church,
-  BookOpen,
-  BarChart3,
-  Phone,
-  Mail,
-  MapPin,
   Cross,
-  Award,
-  CheckCircle2,
   Clock,
   Loader2,
   X,
   Plus,
-  Search,
-  Filter,
   ChevronDown,
   ChevronUp,
   Edit3,
@@ -37,9 +26,7 @@ import {
   MessageSquare,
   DollarSign,
   Sparkles,
-  Trophy,
-  Download,
-  Bell
+  Trophy
 } from 'lucide-react';
 
 const YEAR = new Date().getFullYear();
@@ -66,30 +53,8 @@ const EvangelistDashboard = ({ subtab: propTab }) => {
   const { tab } = useParams();
   const { user } = useAuth();
   const activeTab = propTab || tab || 'overview';
-  const [toast, setToast] = useState(null);
-
-  const showMessage = useCallback((msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
-  }, []);
 
   switch (activeTab) {
-    case 'settings':
-      return (
-        <div className="space-y-6 animate-fade-in">
-          {toast && (
-            <div className="toast-success mb-6">
-              <span>{toast}</span>
-            </div>
-          )}
-          <SettingsView
-            leaders={[]}
-            loadCoreData={() => {}}
-            loadLeaders={() => {}}
-            showMessage={showMessage}
-          />
-        </div>
-      );
     case 'outreach':
       return <OutreachEvents />;
     case 'souls':

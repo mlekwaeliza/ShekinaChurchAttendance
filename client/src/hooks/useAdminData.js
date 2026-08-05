@@ -62,15 +62,6 @@ const useAdminData = () => {
   const [trends, setTrends] = useState([]);
   const [trendsLoading, setTrendsLoading] = useState(false);
 
-  // Rewards
-  const currentYear = new Date().getFullYear().toString();
-  const [rewardsYear, setRewardsYear] = useState(currentYear);
-  const [rewardsMode, setRewardsMode] = useState('year');
-  const [rewardsWeek, setRewardsWeek] = useState(() => getWeekString(new Date()));
-  const [topMembers, setTopMembers] = useState(null);
-  const [topLeaders, setTopLeaders] = useState(null);
-  const [rewardsLoading, setRewardsLoading] = useState(false);
-
   // Drilldown
   const [drilldownData, setDrilldownData] = useState(null);
 
@@ -115,7 +106,6 @@ const useAdminData = () => {
   const execDataLoadedRef = useRef(false);
 
   const messageTimerRef = useRef(null);
-  const latestReportInitializedRef = useRef(false);
   const overviewRequestRef = useRef(0);
   const showMessage = useCallback((msg, duration = 3000) => {
     setMessage(msg);
@@ -353,26 +343,6 @@ const useAdminData = () => {
     }
   }, [selectedServiceId]);
 
-  const loadLatestReportWindow = useCallback(async () => {
-    if (filterType !== 'weekly') return;
-
-    try {
-      const res = await adminAPI.getHistory('all');
-      let latestDate = res.data?.[0]?.date;
-
-      if (!latestDate) return;
-
-      const latestDateOnly = String(latestDate).split('T')[0];
-      const latestWeek = getWeekString(new Date(`${latestDateOnly}T12:00:00`));
-      setSelectedServiceId('all');
-      setFilterValue(latestWeek);
-      updateSearchParam('period', latestWeek);
-      updateSearchParam('service', 'all');
-    } catch (error) {
-      console.warn('Failed to load latest report window:', error);
-    }
-  }, [filterType, updateSearchParam]);
-
   const loadTrends = useCallback(async () => {
     setTrendsLoading(true);
     try {
@@ -384,28 +354,6 @@ const useAdminData = () => {
       setTrendsLoading(false);
     }
   }, []);
-
-  const loadRewards = useCallback(async () => {
-    setRewardsLoading(true);
-    setTopMembers(null);
-    setTopLeaders(null);
-    try {
-      const week = rewardsMode === 'week' ? rewardsWeek : undefined;
-      const results = await Promise.allSettled([
-        adminAPI.getTopMembers(rewardsYear, week),
-        adminAPI.getTopLeaders(rewardsYear, week)
-      ]);
-      if (results[0].status === 'fulfilled') setTopMembers(results[0].value.data);
-      if (results[1].status === 'fulfilled') setTopLeaders(results[1].value.data);
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') console.warn(`Rewards call ${i} failed:`, r.reason);
-      });
-    } catch (error) {
-      console.error('Failed to load rewards:', error);
-    } finally {
-      setRewardsLoading(false);
-    }
-  }, [rewardsYear, rewardsMode, rewardsWeek]);
 
   const openLeaderDashboard = useCallback(async (leaderId) => {
     setDrilldownData({ loading: true });
@@ -516,12 +464,6 @@ const useAdminData = () => {
       serviceIdInitialized.current = true;
     }
   }, [selectedServiceId, loadDashboardMetrics, updateSearchParam]);
-
-  useEffect(() => {
-    if (latestReportInitializedRef.current) return;
-    latestReportInitializedRef.current = true;
-    // Deferred: only load when reports tab is active (called from AdminDashboard)
-  }, []);
 
   // Service Assignments
   const loadServiceInstance = useCallback(
@@ -643,17 +585,6 @@ const useAdminData = () => {
     trends,
     trendsLoading,
     loadTrends,
-    // Rewards
-    rewardsYear,
-    setRewardsYear,
-    rewardsMode,
-    setRewardsMode,
-    rewardsWeek,
-    setRewardsWeek,
-    topMembers,
-    topLeaders,
-    rewardsLoading,
-    loadRewards,
     // Drilldown
     drilldownData,
     setDrilldownData,
@@ -667,7 +598,6 @@ const useAdminData = () => {
     loadCoreData,
     loadLeaders,
     loadServiceTypes,
-    loadLatestReportWindow,
     loadExecutiveData,
     loadExecutiveDataOnce,
     // Dashboard metrics
