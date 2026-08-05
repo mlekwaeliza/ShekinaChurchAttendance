@@ -715,6 +715,20 @@ const useLeaderData = () => {
     loadAssignments
   ]);
 
+  // SSE push — refresh history/check-submission instantly when THIS leader's
+  // attendance lands (own submission or another session submitting for them).
+  useEffect(() => {
+    const handleDataChanged = (e) => {
+      const detail = e?.detail || {};
+      if (!detail.leader_id || Number(detail.leader_id) === Number(user?.id)) {
+        loadHistory();
+        checkSubmission();
+      }
+    };
+    window.addEventListener('app:data-changed', handleDataChanged);
+    return () => window.removeEventListener('app:data-changed', handleDataChanged);
+  }, [user?.id, loadHistory, checkSubmission]);
+
   useEffect(() => {
     if (selectedDate !== previousSelectedDateRef.current) {
       previousSelectedDateRef.current = selectedDate;

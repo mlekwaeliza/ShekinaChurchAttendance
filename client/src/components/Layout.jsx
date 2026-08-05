@@ -9,7 +9,6 @@ import NotificationBell from './NotificationBell';
 import SearchModal from './admin/SearchModal';
 import BrandMark from './BrandMark';
 import { authAPI } from '../services/api';
-import { useQueryClient } from '@tanstack/react-query';
 import useEventStream from '../hooks/useEventStream';
 import { useToast } from '../context/ToastContext';
 import {
@@ -913,13 +912,13 @@ export default Layout;
 //  - Invalidates TanStack Query caches so the notification bell refreshes
 //  - Shows a transient toast for new notifications
 //  - Invalidates attendance caches for admin/pastor dashboards
+//  - Fires window events so hand-rolled data hooks (useAdminData/useLeaderData,
+//    NotificationBell) can refetch instantly instead of waiting for their poll timers.
 function RealtimeBridge({ user, children }) {
-  const queryClient = useQueryClient();
   const { showToast } = useToast();
   useEventStream(user ? '/api/events' : '', {
     notification: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+      window.dispatchEvent(new CustomEvent('app:notifications-changed'));
       showToast({
         type: 'info',
         title: data?.title || 'New notification',
@@ -932,12 +931,12 @@ function RealtimeBridge({ user, children }) {
       });
     },
     'attendance-submitted': (data) => {
-      // Admin/pastor dashboards watch these keys
-      queryClient.invalidateQueries({ queryKey: ['attendance'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'attendance'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'submission-history'] });
-      queryClient.invalidateQueries({ queryKey: ['pastor', 'dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
+      // Admin/pastor dashboards refetch on this; leaders refetch their own submission
+      window.dispatchEvent(
+        new CustomEvent('app:data-changed', {
+          detail: { scope: 'attendance', leader_id: data?.leader_id }
+        })
+      );
       if (user?.role === 'admin' || user?.role === 'pastor') {
         showToast({
           type: 'success',

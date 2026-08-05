@@ -1,9 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bell, Check, CheckCheck, X, AlertTriangle, Clock, Users, Info,
-  Calendar, Gift, ClipboardCheck, UserX, ChevronRight, TrendingDown,
-  FileText, DollarSign
+  Bell,
+  Check,
+  CheckCheck,
+  X,
+  AlertTriangle,
+  Clock,
+  Users,
+  Info,
+  Calendar,
+  Gift,
+  ClipboardCheck,
+  UserX,
+  ChevronRight,
+  TrendingDown,
+  FileText,
+  DollarSign
 } from 'lucide-react';
 import { adminAPI } from '../services/api';
 
@@ -25,7 +38,16 @@ const NotificationBell = ({ user }) => {
       loadNotifications();
       loadFollowUps();
     }, 60000);
-    return () => clearInterval(interval);
+    // SSE push — instant refresh when a notification is created server-side
+    const onNotificationsChanged = () => {
+      loadNotifications();
+      loadFollowUps();
+    };
+    window.addEventListener('app:notifications-changed', onNotificationsChanged);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('app:notifications-changed', onNotificationsChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -55,7 +77,7 @@ const NotificationBell = ({ user }) => {
   const loadFollowUps = async () => {
     try {
       const res = await adminAPI.getFollowUpTasks();
-      const pending = (res.data || []).filter(t => t.status !== 'completed').slice(0, 5);
+      const pending = (res.data || []).filter((t) => t.status !== 'completed').slice(0, 5);
       setFollowUps(pending);
     } catch (e) {
       console.error('Failed to load follow-ups:', e);
@@ -65,8 +87,8 @@ const NotificationBell = ({ user }) => {
   const handleMarkRead = async (id) => {
     try {
       await adminAPI.markNotificationRead(id);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: 1 } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n)));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (e) {
       console.error('Failed to mark notification read:', e);
     }
@@ -75,7 +97,7 @@ const NotificationBell = ({ user }) => {
   const handleMarkAllRead = async () => {
     try {
       await adminAPI.markAllNotificationsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: 1 })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
       setUnreadCount(0);
     } catch (e) {
       console.error('Failed to mark all read:', e);
@@ -83,25 +105,75 @@ const NotificationBell = ({ user }) => {
   };
 
   const typeConfig = {
-    missed_submission: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-500/10', label: 'Attendance' },
-    absent_member: { icon: UserX, color: 'text-rose-500', bg: 'bg-rose-50 dark:bg-rose-500/10', label: 'Absence' },
-    attendance_drop: { icon: TrendingDown, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-500/10', label: 'Alert' },
-    system: { icon: Info, color: 'text-primary-500', bg: 'bg-primary-50 dark:bg-primary-500/10', label: 'System' },
-    birthday: { icon: Gift, color: 'text-pink-500', bg: 'bg-pink-50 dark:bg-pink-500/10', label: 'Birthday' },
-    event: { icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-500/10', label: 'Event' },
-    follow_up: { icon: ClipboardCheck, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-500/10', label: 'Follow-up' },
-    finance: { icon: DollarSign, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-500/10', label: 'Finance' },
-    children: { icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-500/10', label: "Children's Ministry" },
-    report: { icon: FileText, color: 'text-cyan-500', bg: 'bg-cyan-50 dark:bg-cyan-500/10', label: 'Report' },
+    missed_submission: {
+      icon: Clock,
+      color: 'text-amber-500',
+      bg: 'bg-amber-50 dark:bg-amber-500/10',
+      label: 'Attendance'
+    },
+    absent_member: {
+      icon: UserX,
+      color: 'text-rose-500',
+      bg: 'bg-rose-50 dark:bg-rose-500/10',
+      label: 'Absence'
+    },
+    attendance_drop: {
+      icon: TrendingDown,
+      color: 'text-orange-500',
+      bg: 'bg-orange-50 dark:bg-orange-500/10',
+      label: 'Alert'
+    },
+    system: {
+      icon: Info,
+      color: 'text-primary-500',
+      bg: 'bg-primary-50 dark:bg-primary-500/10',
+      label: 'System'
+    },
+    birthday: {
+      icon: Gift,
+      color: 'text-pink-500',
+      bg: 'bg-pink-50 dark:bg-pink-500/10',
+      label: 'Birthday'
+    },
+    event: {
+      icon: Calendar,
+      color: 'text-blue-500',
+      bg: 'bg-blue-50 dark:bg-blue-500/10',
+      label: 'Event'
+    },
+    follow_up: {
+      icon: ClipboardCheck,
+      color: 'text-emerald-500',
+      bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+      label: 'Follow-up'
+    },
+    finance: {
+      icon: DollarSign,
+      color: 'text-yellow-500',
+      bg: 'bg-yellow-50 dark:bg-yellow-500/10',
+      label: 'Finance'
+    },
+    children: {
+      icon: Users,
+      color: 'text-indigo-500',
+      bg: 'bg-indigo-50 dark:bg-indigo-500/10',
+      label: "Children's Ministry"
+    },
+    report: {
+      icon: FileText,
+      color: 'text-cyan-500',
+      bg: 'bg-cyan-50 dark:bg-cyan-500/10',
+      label: 'Report'
+    }
   };
 
   const tabs = [
     { id: 'all', label: 'All' },
     { id: 'action', label: 'Action Required' },
-    { id: 'info', label: 'Information' },
+    { id: 'info', label: 'Information' }
   ];
 
-  const filteredNotifications = notifications.filter(n => {
+  const filteredNotifications = notifications.filter((n) => {
     if (activeTab === 'action') return !n.is_read;
     if (activeTab === 'info') return n.is_read;
     return true;
@@ -141,7 +213,9 @@ const NotificationBell = ({ user }) => {
           {/* Header */}
           <div className="px-4 sm:px-5 py-4 border-b border-slate-100 dark:border-slate-700">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Notifications</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Notifications
+              </h3>
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
@@ -185,8 +259,12 @@ const NotificationBell = ({ user }) => {
             ) : filteredNotifications.length === 0 ? (
               <div className="p-8 text-center">
                 <Bell className="w-10 h-10 text-slate-200 dark:text-slate-600 mx-auto mb-3" />
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No notifications</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">You're all caught up!</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  No notifications
+                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                  You're all caught up!
+                </p>
               </div>
             ) : (
               filteredNotifications.map((notif) => {
@@ -200,22 +278,32 @@ const NotificationBell = ({ user }) => {
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${config.bg}`}>
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${config.bg}`}
+                      >
                         <Icon className={`w-4 h-4 ${config.color}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className={`text-sm ${!notif.is_read ? 'font-semibold text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-300'}`}>
+                          <p
+                            className={`text-sm ${!notif.is_read ? 'font-semibold text-slate-900 dark:text-slate-100' : 'text-slate-700 dark:text-slate-300'}`}
+                          >
                             {notif.title}
                           </p>
                           {!notif.is_read && (
                             <div className="w-2 h-2 bg-primary-500 rounded-full shrink-0" />
                           )}
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{notif.message}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">
+                          {notif.message}
+                        </p>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500">{formatTime(notif.created_at)}</span>
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${config.bg} ${config.color}`}>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                            {formatTime(notif.created_at)}
+                          </span>
+                          <span
+                            className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${config.bg} ${config.color}`}
+                          >
                             {config.label}
                           </span>
                         </div>
@@ -241,24 +329,35 @@ const NotificationBell = ({ user }) => {
             {/* Follow-up Reminders */}
             {followUps.length > 0 && (
               <div className="mb-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Pending Follow-ups</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  Pending Follow-ups
+                </p>
                 <div className="space-y-1.5">
-                  {followUps.map(task => (
-                    <div key={task.id} className="flex items-center justify-between p-2 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600">
+                  {followUps.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between p-2 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600"
+                    >
                       <div className="flex items-center gap-2">
                         <ClipboardCheck className="w-3 h-3 text-emerald-500" />
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]">{task.title || task.description}</span>
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]">
+                          {task.title || task.description}
+                        </span>
                       </div>
                       {task.due_date && (
-                        <span className="text-[10px] text-slate-400">Due: {new Date(task.due_date).toLocaleDateString()}</span>
+                        <span className="text-[10px] text-slate-400">
+                          Due: {new Date(task.due_date).toLocaleDateString()}
+                        </span>
                       )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
-            
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Quick Actions</p>
+
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Quick Actions
+            </p>
             <div className="flex gap-2">
               {user?.role === 'admin' && (
                 <>

@@ -560,6 +560,19 @@ const useAdminData = () => {
     };
   }, [loadDashboardMetrics]);
 
+  // SSE push — refresh dashboard metrics instantly when attendance is submitted
+  useEffect(() => {
+    const handleDataChanged = (e) => {
+      const scope = e?.detail?.scope;
+      if (!scope || scope === 'attendance') {
+        loadDashboardMetrics();
+        setLastUpdated(new Date());
+      }
+    };
+    window.addEventListener('app:data-changed', handleDataChanged);
+    return () => window.removeEventListener('app:data-changed', handleDataChanged);
+  }, [loadDashboardMetrics]);
+
   return {
     // Core data
     sections,
