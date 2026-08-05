@@ -71,7 +71,8 @@ function SubmissionStatusBadge({ status }) {
 
 // ── Existing single-member edit modal (unchanged) ──
 const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
-  const modalRef = useModalA11y({ isOpen: true, onClose });
+  const modalRef = useRef(null);
+  useModalA11y(modalRef, true, onClose);
   const [status, setStatus] = useState(record?.status || 'present');
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -342,7 +343,8 @@ const CORRECTION_REASONS = [
 ];
 
 const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMessage }) => {
-  const modalRef = useModalA11y({ isOpen: true, onClose });
+  const modalRef = useRef(null);
+  useModalA11y(modalRef, true, onClose);
   const [members, setMembers] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState(new Set());

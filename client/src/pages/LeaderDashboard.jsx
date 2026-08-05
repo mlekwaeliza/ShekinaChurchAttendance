@@ -168,7 +168,13 @@ const LeaderDashboard = () => {
         );
 
       case 'outreach':
-        return <LeaderOutreach members={data.members} />;
+        return (
+          <LeaderOutreach
+            members={data.members}
+            serviceTypes={data.serviceTypes}
+            currentServiceId={data.selectedServiceId}
+          />
+        );
 
       case 'new-members':
         return <NewMemberPipeline />;

@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 
 // Lightweight toast system used by SSE-driven notifications and other
 // transient messages. Toasts auto-dismiss after `duration` ms (default
@@ -17,6 +25,7 @@ const nextId = () => ++_id;
 export function ToastProvider({ children, maxToasts = 4 }) {
   const [toasts, setToasts] = useState([]);
   const timersRef = useRef(new Map());
+  const endTimeRef = useRef(new Map());
 
   const dismiss = useCallback((id) => {
     setToasts((current) => current.filter((t) => t.id !== id));
@@ -25,49 +34,72 @@ export function ToastProvider({ children, maxToasts = 4 }) {
       clearTimeout(timer);
       timersRef.current.delete(id);
     }
+    endTimeRef.current.delete(id);
   }, []);
 
   const pause = useCallback((id) => {
     const timer = timersRef.current.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      timersRef.current.delete(id);
-    }
+    if (!timer) return;
+    clearTimeout(timer);
+    timersRef.current.delete(id);
+    const end = endTimeRef.current.get(id);
+    // Store the remaining time (ms) so the timer can be re-armed on resume.
+    endTimeRef.current.set(id, (end ?? Date.now()) - Date.now());
   }, []);
 
-  const showToast = useCallback((opts, legacyType) => {
-    const normalized = typeof opts === 'string'
-      ? { message: opts, type: legacyType || 'info' }
-      : (opts || {});
-    const id = nextId();
-    const toast = {
-      id,
-      type: normalized.type || 'info',
-      title: normalized.title || '',
-      message: normalized.message || '',
-      duration: normalized.duration ?? 5000,
-      action: normalized.action || null,
-      createdAt: Date.now()
-    };
-    setToasts((current) => {
-      const next = [...current, toast];
-      // Cap visible toasts
-      if (next.length > maxToasts) {
-        const dropped = next.slice(0, next.length - maxToasts);
-        for (const d of dropped) {
-          const t = timersRef.current.get(d.id);
-          if (t) { clearTimeout(t); timersRef.current.delete(d.id); }
-        }
-        return next.slice(-maxToasts);
+  const resume = useCallback(
+    (id) => {
+      const remaining = endTimeRef.current.get(id);
+      if (remaining == null || remaining <= 0) {
+        endTimeRef.current.delete(id);
+        return;
       }
-      return next;
-    });
-    if (toast.duration > 0) {
-      const timer = setTimeout(() => dismiss(id), toast.duration);
+      endTimeRef.current.delete(id);
+      const timer = setTimeout(() => dismiss(id), remaining);
       timersRef.current.set(id, timer);
-    }
-    return id;
-  }, [dismiss, maxToasts]);
+    },
+    [dismiss]
+  );
+
+  const showToast = useCallback(
+    (opts, legacyType) => {
+      const normalized =
+        typeof opts === 'string' ? { message: opts, type: legacyType || 'info' } : opts || {};
+      const id = nextId();
+      const toast = {
+        id,
+        type: normalized.type || 'info',
+        title: normalized.title || '',
+        message: normalized.message || '',
+        duration: normalized.duration ?? 5000,
+        action: normalized.action || null,
+        createdAt: Date.now()
+      };
+      setToasts((current) => {
+        const next = [...current, toast];
+        // Cap visible toasts
+        if (next.length > maxToasts) {
+          const dropped = next.slice(0, next.length - maxToasts);
+          for (const d of dropped) {
+            const t = timersRef.current.get(d.id);
+            if (t) {
+              clearTimeout(t);
+              timersRef.current.delete(d.id);
+            }
+          }
+          return next.slice(-maxToasts);
+        }
+        return next;
+      });
+      if (toast.duration > 0) {
+        const timer = setTimeout(() => dismiss(id), toast.duration);
+        timersRef.current.set(id, timer);
+        endTimeRef.current.set(id, Date.now() + toast.duration);
+      }
+      return id;
+    },
+    [dismiss, maxToasts]
+  );
 
   // Clear all timers on unmount to prevent leaks
   useEffect(() => {
@@ -75,15 +107,19 @@ export function ToastProvider({ children, maxToasts = 4 }) {
     return () => {
       for (const t of timers.values()) clearTimeout(t);
       timers.clear();
+      endTimeRef.current.clear();
     };
   }, []);
 
-  const value = useMemo(() => ({ showToast, dismiss, pause, toasts }), [showToast, dismiss, pause, toasts]);
+  const value = useMemo(
+    () => ({ showToast, dismiss, pause, resume, toasts }),
+    [showToast, dismiss, pause, resume, toasts]
+  );
 
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastViewport toasts={toasts} onDismiss={dismiss} onPause={pause} />
+      <ToastViewport toasts={toasts} onDismiss={dismiss} onPause={pause} onResume={resume} />
     </ToastContext.Provider>
   );
 }
@@ -94,7 +130,7 @@ export function useToast() {
   return ctx;
 }
 
-function ToastViewport({ toasts, onDismiss, onPause }) {
+function ToastViewport({ toasts, onDismiss, onPause, onResume }) {
   return (
     <div
       aria-live="polite"
@@ -102,7 +138,13 @@ function ToastViewport({ toasts, onDismiss, onPause }) {
       className="pointer-events-none fixed inset-x-0 bottom-4 z-[10000] flex flex-col items-center gap-2 px-4 sm:right-4 sm:left-auto sm:items-end"
     >
       {toasts.map((t) => (
-        <ToastCard key={t.id} toast={t} onDismiss={onDismiss} onPause={onPause} />
+        <ToastCard
+          key={t.id}
+          toast={t}
+          onDismiss={onDismiss}
+          onPause={onPause}
+          onResume={onResume}
+        />
       ))}
     </div>
   );
@@ -117,27 +159,36 @@ const ICONS = {
 
 const STYLES = {
   info: 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100',
-  warning: 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100',
-  error: 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100'
+  success:
+    'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100',
+  warning:
+    'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100',
+  error:
+    'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100'
 };
 
-function ToastCard({ toast, onDismiss, onPause }) {
+function ToastCard({ toast, onDismiss, onPause, onResume }) {
   return (
     <div
       role={toast.type === 'error' ? 'alert' : 'status'}
       onMouseEnter={() => onPause(toast.id)}
+      onMouseLeave={() => onResume(toast.id)}
       className={`pointer-events-auto w-full max-w-sm rounded-lg border shadow-lg backdrop-blur-sm transition-all animate-fade-in ${STYLES[toast.type] || STYLES.info}`}
     >
       <div className="flex items-start gap-3 p-3">
-        <div className="flex-shrink-0 text-lg leading-none" aria-hidden="true">{ICONS[toast.type] || ICONS.info}</div>
+        <div className="flex-shrink-0 text-lg leading-none" aria-hidden="true">
+          {ICONS[toast.type] || ICONS.info}
+        </div>
         <div className="min-w-0 flex-1">
           {toast.title && <div className="text-sm font-semibold">{toast.title}</div>}
           {toast.message && <div className="mt-0.5 text-sm opacity-90">{toast.message}</div>}
           {toast.action && (
             <button
               type="button"
-              onClick={() => { toast.action.onClick?.(); onDismiss(toast.id); }}
+              onClick={() => {
+                toast.action.onClick?.();
+                onDismiss(toast.id);
+              }}
               className="mt-2 text-sm font-medium underline underline-offset-2 hover:no-underline"
             >
               {toast.action.label}

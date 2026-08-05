@@ -44,6 +44,21 @@ import {
 
 const YEAR = new Date().getFullYear();
 
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
+];
+
 const STAT_STYLE =
   'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
 
@@ -1889,9 +1904,7 @@ const EvangelismReports = () => {
                 monthly.map((row, i) => (
                   <tr key={i} className="border-b border-slate-100 dark:border-slate-700">
                     <td className="py-3 px-4 text-slate-800 font-medium">
-                      {new Date(parseInt(row.month) - 1).toLocaleDateString('en-US', {
-                        month: 'long'
-                      })}
+                      {MONTH_NAMES[parseInt(row.month) - 1] || row.month}
                     </td>
                     <td className="py-3 px-4 text-right text-emerald-600 font-bold">
                       {row.souls_won}

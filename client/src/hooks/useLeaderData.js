@@ -13,7 +13,15 @@ function getWeekStart(date = new Date()) {
   return d.toISOString().split('T')[0];
 }
 
-const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const WEEKDAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday'
+];
 
 const normalizeDay = (day) => (day || '').trim().toLowerCase();
 
@@ -25,11 +33,10 @@ const getWeekdayNameForDate = (dateString) => {
   return WEEKDAY_NAMES[parsed.getDay()];
 };
 
-const getFallbackServiceId = (services) => (
+const getFallbackServiceId = (services) =>
   services.find((service) => service.name?.toLowerCase().includes('main'))?.id ||
   services[0]?.id ||
-  1
-);
+  1;
 
 const getScheduledServiceId = (services, dateString) => {
   if (!services.length) return 1;
@@ -48,7 +55,8 @@ const getLeaderCoreCacheKey = (leaderId) => `${LEADER_CORE_CACHE_PREFIX}:${leade
 
 const readLeaderCoreCache = (leaderId) => {
   try {
-    const cached = localStorage.getItem(getLeaderCoreCacheKey(leaderId)) ||
+    const cached =
+      localStorage.getItem(getLeaderCoreCacheKey(leaderId)) ||
       localStorage.getItem(getLeaderCoreCacheKey('latest'));
     return cached ? JSON.parse(cached) : null;
   } catch (error) {
@@ -120,6 +128,7 @@ const useLeaderData = () => {
   const messageTimerRef = useRef(null);
   const serviceSelectionWasManualRef = useRef(false);
   const previousSelectedDateRef = useRef(selectedDate);
+  const membersLoadSeqRef = useRef(0);
   const showMessage = useCallback((msg, duration = 4000) => {
     setMessage(msg);
     if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
@@ -128,54 +137,64 @@ const useLeaderData = () => {
 
   // --- Data Loaders ---
   // Eligibility Filter Helper
-  const checkEligibility = useCallback((member, service) => {
-    if (user?.is_new_member_leader) return true;
-    if (!service) return true;
-    const rules = service.eligibility_rules || {};
-    
-    // Opt-out check
-    if (member.opt_out_services) {
-      try {
-        const optOuts = JSON.parse(member.opt_out_services);
-        if (optOuts.includes(service.id)) return false;
-      } catch (e) { /* noop */ }
-    }
+  const checkEligibility = useCallback(
+    (member, service) => {
+      if (user?.is_new_member_leader) return true;
+      if (!service) return true;
+      const rules = service.eligibility_rules || {};
 
-    // Gender check
-    if (rules.gender && member.gender && rules.gender !== 'All' && member.gender !== rules.gender) return false;
-    
-    // Section check
-    if (rules.sections && rules.sections.length > 0) {
-      if (!rules.sections.includes(member.section_id)) return false;
-    }
-    
-    // Role check
-    if (rules.role && rules.role !== 'All') {
-      const isLeader = member.role === 'Leader' || member.is_leader;
-      if (rules.role === 'Leader' && !isLeader) return false;
-    }
-    
-    // Age check
-    if (rules.age_range && member.date_of_birth) {
-      const birthDate = new Date(member.date_of_birth);
-      let age = new Date().getFullYear() - birthDate.getFullYear();
-      const m = new Date().getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && new Date().getDate() < birthDate.getDate())) age--;
-      
-      const { min, max } = rules.age_range;
-      if (min && age < min) return false;
-      if (max && age > max) return false;
-    }
+      // Opt-out check
+      if (member.opt_out_services) {
+        try {
+          const optOuts = JSON.parse(member.opt_out_services);
+          if (optOuts.includes(service.id)) return false;
+        } catch (e) {
+          /* noop */
+        }
+      }
 
-    return true;
-  }, [user]);
+      // Gender check
+      if (rules.gender && member.gender && rules.gender !== 'All' && member.gender !== rules.gender)
+        return false;
 
-  const eligibleMembers = members.filter(m => 
-    checkEligibility(m, serviceTypes.find(s => s.id === selectedServiceId))
+      // Section check
+      if (rules.sections && rules.sections.length > 0) {
+        if (!rules.sections.includes(member.section_id)) return false;
+      }
+
+      // Role check
+      if (rules.role && rules.role !== 'All') {
+        const isLeader = member.role === 'Leader' || member.is_leader;
+        if (rules.role === 'Leader' && !isLeader) return false;
+      }
+
+      // Age check
+      if (rules.age_range && member.date_of_birth) {
+        const birthDate = new Date(member.date_of_birth);
+        let age = new Date().getFullYear() - birthDate.getFullYear();
+        const m = new Date().getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && new Date().getDate() < birthDate.getDate())) age--;
+
+        const { min, max } = rules.age_range;
+        if (min && age < min) return false;
+        if (max && age > max) return false;
+      }
+
+      return true;
+    },
+    [user]
+  );
+
+  const eligibleMembers = members.filter((m) =>
+    checkEligibility(
+      m,
+      serviceTypes.find((s) => s.id === selectedServiceId)
+    )
   );
 
   // --- Data Loaders ---
   const loadMembers = useCallback(async () => {
+    const seq = ++membersLoadSeqRef.current;
     setLoading(true);
     try {
       if (user?.is_new_member_leader) {
@@ -183,13 +202,14 @@ const useLeaderData = () => {
           newMemberLeaderAPI.getNewMembers('probation'),
           leaderAPI.getServiceTypes()
         ]);
-        
-        const mappedMembers = (newMembersRes.data || []).map(m => ({
+        if (seq !== membersLoadSeqRef.current) return;
+
+        const mappedMembers = (newMembersRes.data || []).map((m) => ({
           id: m.id,
           membership_id: `NM-${m.id}`,
           full_name: m.full_name,
           phone: m.phone || '',
-          email: m.email || '',
+          email: m.email || ''
         }));
 
         const snapshot = {
@@ -197,7 +217,7 @@ const useLeaderData = () => {
             section_id: 'new-members',
             name: 'New Members Registration',
             leader_id: user.id,
-            leader: user.full_name,
+            leader: user.full_name
           },
           members: mappedMembers,
           isHead: false,
@@ -205,7 +225,7 @@ const useLeaderData = () => {
           attendanceLeaderId: user.id,
           attendanceLeaderName: user.full_name,
           actingOnBehalf: false,
-          serviceTypes: servicesRes.data,
+          serviceTypes: servicesRes.data
         };
 
         setSectionInfo(snapshot.sectionInfo);
@@ -220,13 +240,14 @@ const useLeaderData = () => {
 
         const weekStart = getWeekStart(new Date(selectedDate));
         const attRes = await newMemberLeaderAPI.getWeekAttendance(weekStart);
+        if (seq !== membersLoadSeqRef.current) return;
         const attData = attRes.data || [];
         const attMap = {};
-        attData.forEach(r => {
+        attData.forEach((r) => {
           attMap[r.new_member_id] = r.attended === 1 ? 'present' : 'absent';
         });
         setAttendance(attMap);
-        
+
         setLoading(false);
         return;
       }
@@ -235,13 +256,14 @@ const useLeaderData = () => {
         leaderAPI.getMembers(attendanceLeaderId, selectedDate, selectedServiceId),
         leaderAPI.getServiceTypes()
       ]);
+      if (seq !== membersLoadSeqRef.current) return;
 
       const snapshot = {
         sectionInfo: {
           section_id: membersRes.data.section_id,
           name: membersRes.data.section_name,
           leader_id: membersRes.data.leader_id,
-          leader: membersRes.data.leader_name,
+          leader: membersRes.data.leader_name
         },
         members: membersRes.data.members,
         isHead: Boolean(membersRes.data.is_head),
@@ -249,7 +271,7 @@ const useLeaderData = () => {
         attendanceLeaderId: membersRes.data.attendance_leader_id,
         attendanceLeaderName: membersRes.data.attendance_leader_name || membersRes.data.leader_name,
         actingOnBehalf: Boolean(membersRes.data.acting_on_behalf),
-        serviceTypes: servicesRes.data,
+        serviceTypes: servicesRes.data
       };
 
       setSectionInfo(snapshot.sectionInfo);
@@ -263,6 +285,7 @@ const useLeaderData = () => {
       setAttendance({});
       writeLeaderCoreCache(snapshot.attendanceLeaderId || attendanceLeaderId, snapshot);
     } catch (error) {
+      if (seq !== membersLoadSeqRef.current) return;
       console.error('Failed to load leader core data:', error);
       const cached = readLeaderCoreCache(attendanceLeaderId);
       if (cached) {
@@ -276,10 +299,15 @@ const useLeaderData = () => {
         setServiceTypes(cached.serviceTypes || []);
         showMessage('Offline roster loaded. You can mark attendance and sync later.', 6000);
       } else {
-        showMessage('No offline roster found. Open this page once while online before using it offline.', 7000);
+        showMessage(
+          'No offline roster found. Open this page once while online before using it offline.',
+          7000
+        );
       }
     } finally {
-      setLoading(false);
+      if (seq === membersLoadSeqRef.current) {
+        setLoading(false);
+      }
     }
   }, [attendanceLeaderId, showMessage, user, selectedDate, selectedServiceId]);
 
@@ -368,25 +396,31 @@ const useLeaderData = () => {
     }
   }, [user?.is_new_member_leader]);
 
-  const handleUpdateFollowUp = useCallback(async (memberId, data) => {
-    await leaderAPI.updateFollowUp(memberId, data);
-    showMessage('Follow-up saved');
-    await loadFollowUps();
-    await loadConsecutiveAbsences();
-  }, [loadFollowUps, loadConsecutiveAbsences, showMessage]);
+  const handleUpdateFollowUp = useCallback(
+    async (memberId, data) => {
+      await leaderAPI.updateFollowUp(memberId, data);
+      showMessage('Follow-up saved');
+      await loadFollowUps();
+      await loadConsecutiveAbsences();
+    },
+    [loadFollowUps, loadConsecutiveAbsences, showMessage]
+  );
 
-  const handleDateSelection = useCallback((nextDate) => {
-    previousSelectedDateRef.current = nextDate;
-    serviceSelectionWasManualRef.current = false;
-    setSelectedDate(nextDate);
+  const handleDateSelection = useCallback(
+    (nextDate) => {
+      previousSelectedDateRef.current = nextDate;
+      serviceSelectionWasManualRef.current = false;
+      setSelectedDate(nextDate);
 
-    if (!serviceTypes.length) return;
+      if (!serviceTypes.length) return;
 
-    const nextServiceId = getScheduledServiceId(serviceTypes, nextDate);
-    setSelectedServiceId((currentId) => (
-      currentId === nextServiceId ? currentId : nextServiceId
-    ));
-  }, [serviceTypes]);
+      const nextServiceId = getScheduledServiceId(serviceTypes, nextDate);
+      setSelectedServiceId((currentId) =>
+        currentId === nextServiceId ? currentId : nextServiceId
+      );
+    },
+    [serviceTypes]
+  );
 
   const handleServiceSelection = useCallback((serviceId) => {
     serviceSelectionWasManualRef.current = true;
@@ -412,7 +446,11 @@ const useLeaderData = () => {
         return;
       }
 
-      const response = await leaderAPI.getAttendanceStatus(selectedDate, selectedServiceId, attendanceLeaderId);
+      const response = await leaderAPI.getAttendanceStatus(
+        selectedDate,
+        selectedServiceId,
+        attendanceLeaderId
+      );
       if (response.data.unauthorized) {
         setIsUnauthorized(true);
         setSubmitted(false);
@@ -453,35 +491,38 @@ const useLeaderData = () => {
     setEditMode((prev) => !prev);
   }, []);
 
-  const handleEditSubmit = useCallback(async (reason) => {
-    if (!reason) {
-      setEditError('Please select a reason for the correction.');
-      return false;
-    }
-    setEditSaving(true);
-    setEditError('');
-    try {
-      const records = Object.entries(attendance).map(([member_id, status]) => ({
-        member_id: parseInt(member_id),
-        status,
-      }));
-      await leaderAPI.bulkEditAttendance({
-        date: selectedDate,
-        service_id: selectedServiceId,
-        leader_id: attendanceLeaderId,
-        reason,
-        records,
-      });
-      setEditMode(false);
-      showMessage('Attendance edited successfully!');
-      return true;
-    } catch (error) {
-      setEditError(error.response?.data?.error || error.message);
-      return false;
-    } finally {
-      setEditSaving(false);
-    }
-  }, [attendance, selectedDate, selectedServiceId, attendanceLeaderId, showMessage]);
+  const handleEditSubmit = useCallback(
+    async (reason) => {
+      if (!reason) {
+        setEditError('Please select a reason for the correction.');
+        return false;
+      }
+      setEditSaving(true);
+      setEditError('');
+      try {
+        const records = Object.entries(attendance).map(([member_id, status]) => ({
+          member_id: parseInt(member_id),
+          status
+        }));
+        await leaderAPI.bulkEditAttendance({
+          date: selectedDate,
+          service_id: selectedServiceId,
+          leader_id: attendanceLeaderId,
+          reason,
+          records
+        });
+        setEditMode(false);
+        showMessage('Attendance edited successfully!');
+        return true;
+      } catch (error) {
+        setEditError(error.response?.data?.error || error.message);
+        return false;
+      } finally {
+        setEditSaving(false);
+      }
+    },
+    [attendance, selectedDate, selectedServiceId, attendanceLeaderId, showMessage]
+  );
 
   const [submitError, setSubmitError] = useState('');
   const [queuedForDate, setQueuedForDate] = useState(null);
@@ -490,6 +531,10 @@ const useLeaderData = () => {
     setSubmitError('');
     if (submitted) {
       setSubmitError('Attendance already submitted for this date');
+      return false;
+    }
+    if (eligibleMembers.length === 0) {
+      setSubmitError('No eligible members loaded to submit attendance for.');
       return false;
     }
     if (Object.keys(attendance).length !== eligibleMembers.length) {
@@ -522,16 +567,16 @@ const useLeaderData = () => {
         return true;
       }
 
-      const attendanceArray = Object.entries(attendance).map(
-        ([member_id, status]) => ({
-          member_id: parseInt(member_id),
-          status,
-        })
-      );
+      const attendanceArray = Object.entries(attendance).map(([member_id, status]) => ({
+        member_id: parseInt(member_id),
+        status
+      }));
 
       if (!isOnline) {
         if (actingOnBehalf) {
-          setSubmitError('Please reconnect before submitting attendance on behalf of another leader.');
+          setSubmitError(
+            'Please reconnect before submitting attendance on behalf of another leader.'
+          );
           return false;
         }
         const result = await queueSubmission({
@@ -553,28 +598,44 @@ const useLeaderData = () => {
         return false;
       }
 
-      await leaderAPI.submitAttendance(selectedDate, attendanceArray, selectedServiceId, attendanceLeaderId);
+      await leaderAPI.submitAttendance(
+        selectedDate,
+        attendanceArray,
+        selectedServiceId,
+        attendanceLeaderId
+      );
       setSubmitted(true);
       loadHistory();
       showMessage('Attendance submitted successfully!');
       return true;
     } catch (error) {
-      setSubmitError(
-        error.response?.data?.error || error.message
-      );
+      setSubmitError(error.response?.data?.error || error.message);
       return false;
     } finally {
       setSubmitting(false);
     }
-  }, [submitted, attendance, eligibleMembers.length, selectedDate, selectedServiceId, attendanceLeaderId, actingOnBehalf, sectionInfo, loadHistory, showMessage, isOnline, queueSubmission, user]);
+  }, [
+    submitted,
+    attendance,
+    eligibleMembers.length,
+    selectedDate,
+    selectedServiceId,
+    attendanceLeaderId,
+    actingOnBehalf,
+    sectionInfo,
+    loadHistory,
+    showMessage,
+    isOnline,
+    queueSubmission,
+    user
+  ]);
 
   // --- Member CRUD Handlers ---
   const openAddMember = useCallback(() => {
     setEditingMember(null);
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let newId = 'MEM-';
-    for (let i = 0; i < 8; i++)
-      newId += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < 8; i++) newId += chars.charAt(Math.floor(Math.random() * chars.length));
     setAutogeneratedId(newId);
     setIsMemberModalOpen(true);
   }, []);
@@ -594,7 +655,7 @@ const useLeaderData = () => {
         phone: formData.get('phone'),
         email: formData.get('email'),
         gender: formData.get('gender'),
-        age_group: formData.get('age_group'),
+        age_group: formData.get('age_group')
       };
 
       setSaving(true);
@@ -610,9 +671,7 @@ const useLeaderData = () => {
         setEditingMember(null);
         loadMembers();
       } catch (error) {
-        showMessage(
-          `Error saving member: ${error.response?.data?.error || error.message}`
-        );
+        showMessage(`Error saving member: ${error.response?.data?.error || error.message}`);
       } finally {
         setSaving(false);
       }
@@ -629,9 +688,7 @@ const useLeaderData = () => {
       setDeletingMember(null);
       loadMembers();
     } catch (error) {
-      showMessage(
-        `Error deleting member: ${error.response?.data?.error || error.message}`
-      );
+      showMessage(`Error deleting member: ${error.response?.data?.error || error.message}`);
     } finally {
       setSaving(false);
     }
@@ -649,7 +706,14 @@ const useLeaderData = () => {
     loadConsecutiveAbsences();
     loadFollowUps();
     loadAssignments();
-  }, [user?.is_new_member_leader, loadMembers, loadHistory, loadConsecutiveAbsences, loadFollowUps, loadAssignments]);
+  }, [
+    user?.is_new_member_leader,
+    loadMembers,
+    loadHistory,
+    loadConsecutiveAbsences,
+    loadFollowUps,
+    loadAssignments
+  ]);
 
   useEffect(() => {
     if (selectedDate !== previousSelectedDateRef.current) {
@@ -662,9 +726,7 @@ const useLeaderData = () => {
     if (!serviceTypes.length || serviceSelectionWasManualRef.current) return;
 
     const nextServiceId = getScheduledServiceId(serviceTypes, selectedDate);
-    setSelectedServiceId((currentId) => (
-      currentId === nextServiceId ? currentId : nextServiceId
-    ));
+    setSelectedServiceId((currentId) => (currentId === nextServiceId ? currentId : nextServiceId));
   }, [serviceTypes, selectedDate]);
 
   useEffect(() => {
@@ -692,7 +754,8 @@ const useLeaderData = () => {
   useEffect(() => {
     if (isOnline) {
       syncPending(async (record) => {
-        const syncedServiceId = record.service_id || getScheduledServiceId(serviceTypes, record.date);
+        const syncedServiceId =
+          record.service_id || getScheduledServiceId(serviceTypes, record.date);
         await leaderAPI.submitAttendance(record.date, record.attendance, syncedServiceId);
       }).then((result) => {
         if (result.synced > 0) {
@@ -704,7 +767,10 @@ const useLeaderData = () => {
           showMessage(`${result.conflicts} record(s) had conflicts — check sync status`, 6000);
         }
         if (result.failed > 0) {
-          showMessage(`${result.failed} offline submission(s) could not sync. Keep the app open online and try refresh.`, 7000);
+          showMessage(
+            `${result.failed} offline submission(s) could not sync. Keep the app open online and try refresh.`,
+            7000
+          );
         }
       });
     }
@@ -781,7 +847,7 @@ const useLeaderData = () => {
     // Absent follow-ups
     consecutiveAbsences,
     followUps,
-    handleUpdateFollowUp,
+    handleUpdateFollowUp
   };
 };
 
