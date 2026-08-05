@@ -31,3 +31,7 @@ client/build_output*.log
 diagnose-db.js
 check-session.js
 .foglamp/
+server/test-*.js
+server/db_check.js
+server/inspect_db.js
+server/migrate_hc_leaders.js
