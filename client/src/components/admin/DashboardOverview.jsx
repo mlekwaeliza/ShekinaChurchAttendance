@@ -17,22 +17,13 @@ import {
   TrendingUp
 } from 'lucide-react';
 
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
-
 import QuickActionsBar from './QuickActionsBar';
 import NeedsAttentionWidget from './NeedsAttentionWidget';
-import { PresentationGenerator } from '../../utils/presentationGenerator';
 import HallOfFamePreview from './HallOfFamePreview';
 import StatCard from '../ui/StatCard';
 import { formatLocalDate, fdate, fdatetime, parseLocalDate } from '../../utils/date';
+
+const TrendAreaChart = React.lazy(() => import('./TrendAreaChart'));
 
 const DashboardOverview = ({
   allMembers = [],
@@ -229,8 +220,9 @@ const DashboardOverview = ({
     doc.save(`dashboard_summary_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const handlePresentation = () => {
+  const handlePresentation = async () => {
     try {
+      const { PresentationGenerator } = await import('../../utils/presentationGenerator');
       const gen = new PresentationGenerator();
       gen.generateDashboardSummary(dashboardMetrics, sections, leaders);
       gen.save(`church_dashboard_${new Date().toISOString().split('T')[0]}.pptx`);
@@ -529,35 +521,13 @@ const DashboardOverview = ({
             </button>
           </div>
           <div className="p-5">
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={trendChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="presentGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
-                <YAxis
-                  tick={{ fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  allowDecimals={false}
-                />
-                <Tooltip
-                  formatter={(v) => [`${v} present`, 'Attendance']}
-                  labelStyle={{ fontSize: 12 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="present"
-                  stroke="#6366f1"
-                  strokeWidth={2.5}
-                  fill="url(#presentGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <React.Suspense
+              fallback={
+                <div className="h-[260px] animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
+              }
+            >
+              <TrendAreaChart data={trendChartData} />
+            </React.Suspense>
           </div>
         </section>
       )}

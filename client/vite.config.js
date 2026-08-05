@@ -9,10 +9,6 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined;
           const modulePath = id.replace(/\\/g, '/');
-          if (modulePath.includes('jspdf-autotable')) return 'report-autotable';
-          if (modulePath.includes('/jspdf/')) return 'report-pdf';
-          if (modulePath.includes('/pptxgenjs/')) return 'report-presentation';
-          if (modulePath.includes('/recharts/')) return 'charts';
           if (modulePath.includes('/lucide-react/')) return 'icons';
           if (modulePath.includes('/@sentry/')) return 'observability';
           if (modulePath.includes('/@tanstack/react-query/')) return 'data-query';
@@ -21,7 +17,8 @@ export default defineConfig({
             modulePath.includes('/react-dom/') ||
             modulePath.includes('/react-router/') ||
             modulePath.includes('/react-router-dom/')
-          ) return 'react-vendor';
+          )
+            return 'react-vendor';
           return undefined;
         }
       }
