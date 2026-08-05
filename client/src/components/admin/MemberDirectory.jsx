@@ -95,6 +95,23 @@ const MemberDirectory = ({
   const [titleHistory, setTitleHistory] = useState([]);
   const [removingTitle, setRemovingTitle] = useState(null); // { memberId, titleId, titleName }
   const [detailsMember, setDetailsMember] = useState(null);
+  const profileMemberId = Number(searchParams.get('profile'));
+
+  // Global search navigates here with ?profile=<member id>. Resolve that ID
+  // once the directory data is available and open the profile immediately.
+  useEffect(() => {
+    if (!Number.isInteger(profileMemberId) || profileMemberId < 1) return;
+    const member = allMembers.find((item) => Number(item.id) === profileMemberId);
+    if (member) setDetailsMember(member);
+  }, [allMembers, profileMemberId]);
+
+  const closeDetails = () => {
+    setDetailsMember(null);
+    if (!Number.isInteger(profileMemberId) || profileMemberId < 1) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('profile');
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const fetchMemberTitles = useCallback(
     async (memberId) => {
@@ -1302,7 +1319,7 @@ const MemberDirectory = ({
       <MemberDetailsDrawer
         member={detailsMember}
         isOpen={!!detailsMember}
-        onClose={() => setDetailsMember(null)}
+        onClose={closeDetails}
       />
 
       {/* Bulk Edit Modal */}
