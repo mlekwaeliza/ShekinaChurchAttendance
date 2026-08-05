@@ -1129,6 +1129,22 @@ async function seedFinanceRecords() {
   }
 }
 
+// These jobs are useful after boot but must not delay the HTTP listener. A
+// sleeping deployment should be able to accept its first login as soon as the
+// authentication schema is ready.
+async function startPostStartupServices() {
+  await seedFinanceRecords();
+  await generateNotifications();
+  setInterval(generateNotifications, 24 * 60 * 60 * 1000).unref?.();
+  startScheduler();
+
+  // Start the Postgres LISTEN/NOTIFY bridge for cross-instance SSE delivery.
+  // This is non-blocking for authentication and dashboard startup.
+  require('./realtime/bridge').startBridge().catch((error) => {
+    console.warn('Realtime bridge failed to start:', error.message);
+  });
+}
+
 // Start server
 let server = null;
 async function startServer() {
@@ -1174,18 +1190,11 @@ async function startServer() {
     console.log('Performance & Recognition Center schema ready');
 
     await initializeUsers();
-    await seedFinanceRecords();
-    await generateNotifications();
-    setInterval(generateNotifications, 24 * 60 * 60 * 1000).unref?.();
-    startScheduler();
-    // Start the Postgres LISTEN/NOTIFY bridge for cross-instance SSE
-    // delivery. No-op when DATABASE_URL is unset (e.g. SQLite mode).
-    const busBridge = require('./realtime/bridge');
-    busBridge.startBridge().catch((err) => {
-      console.warn('Realtime bridge failed to start:', err.message);
-    });
     server = app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
       console.log(`Server running on ${process.env.HOST || '0.0.0.0'}:${PORT}`);
+      startPostStartupServices().catch((error) => {
+        console.warn('Post-startup services failed:', error.message);
+      });
     });
   } catch (error) {
     console.error('FATAL: Failed to connect to database:', error.message);

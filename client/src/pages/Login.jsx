@@ -76,7 +76,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login', { username, password });
+      // A production instance may need a little longer to wake its database
+      // before the first authenticated request. Keep the normal API timeout
+      // for dashboard requests, but allow this one login attempt to finish.
+      const response = await api.post('/auth/login', { username, password }, { timeout: 120000 });
       if (response.data.requires2FA) {
         setRequires2FA(true);
         setPendingUserId(response.data.userId);
