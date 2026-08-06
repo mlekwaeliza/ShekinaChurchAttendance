@@ -58,22 +58,22 @@ const StatCard = ({
         className={`absolute -right-9 -top-9 h-28 w-28 rounded-full ${colors.wash} transition-transform duration-300 group-hover:scale-110`}
       />
 
-      <div className="relative grid grid-cols-[minmax(0,1fr)_2.75rem] items-start gap-3">
-        <div className="min-w-0">
-          <p className="break-words text-[11px] font-bold uppercase leading-5 tracking-[0.14em] text-slate-400 dark:text-slate-500">
-            {label}
-          </p>
-          <p className="mt-2 font-display text-[2rem] font-semibold leading-none tracking-[-0.04em] text-slate-950 dark:text-white tabular-nums">
+      <div className="relative min-w-0">
+        <p className="break-words text-[11px] font-bold uppercase leading-5 tracking-[0.14em] text-slate-400 dark:text-slate-500">
+          {label}
+        </p>
+        <div className="mt-3 flex items-end justify-between gap-3">
+          <p className="font-display text-[2rem] font-semibold leading-none tracking-[-0.04em] text-slate-950 dark:text-white tabular-nums">
             {value}
           </p>
+          {Icon && (
+            <div
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${colors.icon}`}
+            >
+              <Icon className="h-5 w-5" strokeWidth={2} />
+            </div>
+          )}
         </div>
-        {Icon && (
-          <div
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${colors.icon}`}
-          >
-            <Icon className="h-5 w-5" strokeWidth={2} />
-          </div>
-        )}
       </div>
 
       {(trendDirection || trendLabel) && (
