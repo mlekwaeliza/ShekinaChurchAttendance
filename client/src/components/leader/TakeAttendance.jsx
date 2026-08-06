@@ -106,7 +106,7 @@ const TakeAttendance = ({
           <div className="flex justify-center mb-3">
             <div
               onClick={() => member.profile_picture && setSelectedPhotoMember(member)}
-              className={`flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-white bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-black text-white shadow-md dark:border-slate-700 ${
+              className={`flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-black text-white shadow-md ${
                 member.profile_picture ? 'cursor-pointer hover:scale-105 hover:ring-2 hover:ring-indigo-400 transition-all' : ''
               }`}
               title={member.profile_picture ? 'Click to view full photo' : undefined}
