@@ -379,7 +379,7 @@ const DashboardOverview = ({
           );
         })()
       ) : (
-        <div className="px-8 py-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 px-5 py-6 sm:grid-cols-2 sm:px-8 xl:grid-cols-3">
           <div className="relative overflow-hidden rounded-2xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50 to-emerald-50/50 p-6 dark:border-emerald-800/30 dark:from-emerald-900/20 dark:to-emerald-900/10">
             <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-emerald-500/5 blur-2xl -translate-y-8 translate-x-8" />
             <div className="relative">
