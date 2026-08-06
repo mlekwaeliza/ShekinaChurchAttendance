@@ -563,10 +563,26 @@ const SectionOverview = ({ section, ranking, performance, leaders, activeMembers
                   key={l.id || i}
                   type="button"
                   onClick={() => navigate(`/admin/leaders?profile=${l.id}`)}
-                  className="w-full flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-700 p-2.5 hover:bg-violet-50 dark:hover:bg-violet-950/20 transition-colors group text-left"
+                  className="group flex min-h-20 w-full items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition-colors hover:bg-violet-50 dark:border-slate-700 dark:hover:bg-violet-950/20"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 flex items-center justify-center text-xs font-bold shrink-0">
-                    {l.is_head ? <Crown className="w-4 h-4" /> : i + 1}
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-violet-100 text-lg font-bold text-violet-700 shadow-sm dark:bg-violet-900/40 dark:text-violet-300">
+                    {l.profile_picture ? (
+                      <img
+                        src={l.profile_picture}
+                        alt={l.full_name || 'Leader'}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : l.is_head ? (
+                      <Crown className="h-6 w-6" />
+                    ) : (
+                      l.full_name
+                        ?.split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((name) => name[0])
+                        .join('')
+                        .toUpperCase() || i + 1
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-slate-900 dark:text-white truncate group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">{l.full_name}</p>
