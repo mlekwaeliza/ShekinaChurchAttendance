@@ -298,8 +298,8 @@ const DashboardOverview = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-3 self-start xl:self-auto">
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400">
+            <div className="flex flex-col items-start text-left">
+              <span className="text-left text-[10px] font-bold uppercase tracking-tighter text-slate-400">
                 4-Week Trend
               </span>
               {renderSparkline()}
