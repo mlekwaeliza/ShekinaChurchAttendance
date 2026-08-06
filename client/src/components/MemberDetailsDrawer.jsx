@@ -181,7 +181,7 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
               <div className="relative flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3 sm:gap-4">
                   <div
-                    className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/30 bg-white/20 text-xl font-bold text-white shadow-lg backdrop-blur-md sm:h-16 sm:w-16 sm:text-2xl ${member.profile_picture ? 'cursor-pointer hover:ring-2 hover:ring-white/60 transition-all' : ''}`}
+                    className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/30 bg-white/20 text-2xl font-bold text-white shadow-lg backdrop-blur-md ${member.profile_picture ? 'cursor-pointer hover:ring-2 hover:ring-white/60 transition-all' : ''}`}
                     onClick={() => member.profile_picture && setViewingPhoto(true)}
                     title={member.profile_picture ? 'Click to view full photo' : undefined}
                   >
