@@ -1013,7 +1013,7 @@ const MemberDirectory = ({
                                 <img
                                   src={member.profile_picture}
                                   alt={member.full_name}
-                                  className="w-full h-full object-cover"
+                                  className="h-full w-full object-cover object-[center_20%]"
                                 />
                               ) : (
                                 getInitials(member.full_name)
