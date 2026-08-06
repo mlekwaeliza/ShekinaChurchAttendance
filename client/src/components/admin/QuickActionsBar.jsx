@@ -8,11 +8,11 @@ const QuickActionsBar = ({
   onMarkAttendance,
   onAddMember,
   onSendAnnouncement,
-  onViewFollowUps,
+  onViewFollowUps
 }) => {
   // Leadership is managed from its dedicated admin area, not as an attendance service.
   const dashboardServiceTypes = serviceTypes.filter(
-    (service) => !/^(leader|leaders|leadership)$/i.test(String(service.name || '').trim())
+    (service) => !/\bleader(?:s|ship)?\b/i.test(String(service.name || '').trim())
   );
 
   const actions = [
@@ -20,26 +20,26 @@ const QuickActionsBar = ({
       label: 'View attendance',
       icon: MousePointer2,
       onClick: onMarkAttendance,
-      style: 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300',
+      style: 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300'
     },
     {
       label: 'Add visitor',
       icon: UserPlus,
       onClick: onAddMember,
-      style: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+      style: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
     },
     {
       label: 'Announcement',
       icon: Megaphone,
       onClick: onSendAnnouncement,
-      style: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300',
+      style: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300'
     },
     {
       label: 'Follow-ups',
       icon: CalendarCheck,
       onClick: onViewFollowUps,
-      style: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
-    },
+      style: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+    }
   ];
 
   return (
@@ -86,7 +86,9 @@ const QuickActionsBar = ({
             onClick={onClick}
             className="product-surface focus-ring group flex min-h-[4.5rem] min-w-0 items-center gap-3 overflow-hidden px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card-hover dark:hover:border-white/20"
           >
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${style}`}>
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${style}`}
+            >
               <Icon className="h-4 w-4" />
             </span>
             <span className="block min-w-0 flex-1 whitespace-normal break-words text-xs font-bold leading-4 text-slate-700 dark:text-slate-200 sm:text-[13px]">
