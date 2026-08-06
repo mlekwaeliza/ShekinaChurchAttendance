@@ -1218,7 +1218,7 @@ router.get('/leaders', async (req, res) => {
       SELECT u.id, u.username, u.full_name
       FROM users u
       LEFT JOIN leaders l ON l.user_id = u.id
-      WHERE u.role = 'leader' AND l.id IS NULL
+      WHERE u.role = 'leader' AND COALESCE(u.is_new_member_leader, 0) = 0 AND l.id IS NULL
     `);
     if (missingLeaders && missingLeaders.length > 0) {
       const defaultSection = await get('SELECT id FROM sections ORDER BY id ASC LIMIT 1');

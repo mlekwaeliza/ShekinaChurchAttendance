@@ -927,6 +927,12 @@ async function initializeUsers() {
       fullName: 'Genoveva Hance',
       isNewMemberLeader: true
     });
+    // Genoveva is the New Member Leader, not a section leader. Keep her
+    // account and dedicated access, while removing any legacy section-leader
+    // assignment that an earlier auto-repair may have created.
+    await run('DELETE FROM leaders WHERE user_id = (SELECT id FROM users WHERE username = ?)', [
+      'ghance'
+    ]);
     await seedUser({
       username: 'jnicholaus',
       password: 'password123',
