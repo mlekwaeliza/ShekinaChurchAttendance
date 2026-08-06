@@ -1232,7 +1232,7 @@ router.get('/leaders', async (req, res) => {
 
     const leaders = await withCache('admin-leaders', 300000, () => new Promise((resolve, reject) => {
       db.all(`
-        SELECT l.id, l.section_id, u.username, u.full_name, COALESCE(s.name, 'Unassigned') as section_name, l.phone, l.email, l.is_head
+        SELECT l.id, l.section_id, u.username, u.full_name, u.profile_picture, COALESCE(s.name, 'Unassigned') as section_name, l.phone, l.email, l.is_head
         FROM leaders l
         JOIN users u ON l.user_id = u.id
         LEFT JOIN sections s ON l.section_id = s.id

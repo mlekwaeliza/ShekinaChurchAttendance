@@ -253,8 +253,16 @@ const LeaderDirectory = ({
                         <div className="p-4">
                           {/* Avatar & Name */}
                           <div className="flex items-start gap-3 mb-3">
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${style.gradient} flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm ${style.shadow}`}>
-                              {leader.full_name?.charAt(0)}
+                            <div className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-lg font-bold text-white shadow-sm ${style.gradient} ${style.shadow}`}>
+                              {leader.profile_picture ? (
+                                <img
+                                  src={leader.profile_picture}
+                                  alt={leader.full_name || 'Leader'}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                leader.full_name?.charAt(0)
+                              )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
