@@ -248,7 +248,7 @@ const DashboardOverview = ({
       .join(' ');
 
     return (
-      <svg width="60" height="20" className="overflow-visible">
+      <svg width="60" height="20" viewBox="0 0 100 30" className="shrink-0">
         <polyline
           fill="none"
           stroke="currentColor"
@@ -275,8 +275,8 @@ const DashboardOverview = ({
   const todaysAttendanceSection = (
     <div className="card overflow-hidden">
       <div className="px-8 py-6 border-b border-slate-100 dark:border-white/5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
             <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               {attendanceTitle}
             </h3>
@@ -297,7 +297,7 @@ const DashboardOverview = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 self-start xl:self-auto">
             <div className="flex flex-col items-end">
               <span className="text-[10px] font-bold uppercase tracking-tighter text-slate-400">
                 4-Week Trend
@@ -305,7 +305,7 @@ const DashboardOverview = ({
               {renderSparkline()}
             </div>
             {totalToday > 0 && (
-              <div className="rounded-2xl border border-primary-100 bg-primary-50 px-4 py-2 dark:border-primary-800/30 dark:bg-primary-900/20">
+              <div className="shrink-0 rounded-2xl border border-primary-100 bg-primary-50 px-4 py-2 dark:border-primary-800/30 dark:bg-primary-900/20">
                 <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
                   {attendanceRate}% Rate
                 </span>
