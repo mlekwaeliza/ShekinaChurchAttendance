@@ -115,7 +115,7 @@ const TakeAttendance = ({
                 <img
                   src={member.profile_picture}
                   alt={member.full_name}
-                  className="h-full w-full bg-slate-100 object-contain dark:bg-slate-700"
+                  className="h-full w-full object-cover object-[center_20%]"
                 />
               ) : (
                 <span>{member.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}</span>
