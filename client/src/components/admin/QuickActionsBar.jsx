@@ -44,18 +44,18 @@ const QuickActionsBar = ({
 
   return (
     <section className="grid gap-4 xl:grid-cols-2">
-      <div className="product-surface flex min-w-0 max-w-full items-center gap-2 overflow-x-auto p-2 scrollbar-hide">
+      <div className="product-surface flex min-w-0 max-w-full items-center gap-2 p-2">
         <div className="flex shrink-0 items-center gap-1.5 px-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
           <Clock className="h-3.5 w-3.5" />
           Service
         </div>
-        <div className="flex gap-1">
+        <div className="grid min-w-0 flex-1 grid-flow-col auto-cols-fr gap-1">
           {dashboardServiceTypes.map((service) => (
             <button
               type="button"
               key={service.id}
               onClick={() => onServiceChange(service.id)}
-              className={`focus-ring whitespace-nowrap rounded-lg px-3 py-2 text-[11px] font-bold transition-colors ${
+              className={`focus-ring min-w-0 truncate rounded-lg px-2 py-2 text-center text-[11px] font-bold transition-colors ${
                 selectedServiceId === service.id
                   ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
                   : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white'
@@ -67,7 +67,7 @@ const QuickActionsBar = ({
           <button
             type="button"
             onClick={() => onServiceChange('all')}
-            className={`focus-ring rounded-lg px-3 py-2 text-[11px] font-bold transition-colors ${
+            className={`focus-ring min-w-0 truncate rounded-lg px-2 py-2 text-center text-[11px] font-bold transition-colors ${
               selectedServiceId === 'all'
                 ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
                 : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white'
