@@ -112,7 +112,11 @@ const TakeAttendance = ({
               title={member.profile_picture ? 'Click to view full photo' : undefined}
             >
               {member.profile_picture ? (
-                <img src={member.profile_picture} alt={member.full_name} className="w-full h-full object-cover" />
+                <img
+                  src={member.profile_picture}
+                  alt={member.full_name}
+                  className="h-full w-full bg-slate-100 object-contain dark:bg-slate-700"
+                />
               ) : (
                 <span>{member.full_name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}</span>
               )}
