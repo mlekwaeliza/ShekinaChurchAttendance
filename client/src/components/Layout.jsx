@@ -895,7 +895,7 @@ const Layout = ({ children, showNav = true }) => {
 
             {/* Page Content */}
             <main className="app-shell-scroll overflow-y-auto scroll-smooth px-3 py-4 sm:px-6 lg:px-8 lg:py-7">
-              <div className="mx-auto max-w-[96rem] animate-fade-in">{children}</div>
+              <div className="animate-fade-in">{children}</div>
             </main>
           </div>
           {/* Search Modal */}
