@@ -63,7 +63,7 @@ const StatCard = ({
           {label}
         </p>
         <div className="mt-3 flex items-end justify-between gap-3">
-          <p className="font-display text-[2rem] font-semibold leading-none tracking-[-0.04em] text-slate-950 dark:text-white tabular-nums">
+          <p className="font-display text-[2.25rem] font-semibold leading-none tracking-[-0.04em] text-slate-950 dark:text-white tabular-nums">
             {value}
           </p>
           {Icon && (
