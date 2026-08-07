@@ -10,7 +10,6 @@ const useAdminData = () => {
   const [allMembers, setAllMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [leadersLoading, setLeadersLoading] = useState(false);
-  const [birthdays, setBirthdays] = useState([]);
   const [todayStats, setTodayStats] = useState({ present: 0, absent: 0, excused: 0 });
   const [serviceTypes, setServiceTypes] = useState([]);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -176,10 +175,9 @@ const useAdminData = () => {
   const loadCoreData = useCallback(async () => {
     setLoading(true);
     try {
-      const [sectionsRes, membersRes, birthdaysRes, servicesRes] = await Promise.allSettled([
+      const [sectionsRes, membersRes, servicesRes] = await Promise.allSettled([
         adminAPI.getSections(),
         adminAPI.getMembers(),
-        adminAPI.getUpcomingBirthdays(30),
         adminAPI.getServiceTypes()
       ]);
       if (sectionsRes.status === 'fulfilled') setSections(sectionsRes.value.data);
@@ -189,12 +187,6 @@ const useAdminData = () => {
         setAllMembers(membersRes.value.data);
       } else {
         console.error('Failed to load members:', membersRes.reason);
-      }
-
-      if (birthdaysRes.status === 'fulfilled') setBirthdays(birthdaysRes.value.data);
-      else {
-        console.warn('Failed to load upcoming birthdays:', birthdaysRes.reason);
-        setBirthdays([]);
       }
 
       if (servicesRes.status === 'fulfilled') setServiceTypes(servicesRes.value.data);
@@ -364,7 +356,7 @@ const useAdminData = () => {
       showMessage('Failed to launch leader analytics');
       setDrilldownData(null);
     }
-  }, []);
+  }, [showMessage]);
 
   // --- Section Handlers ---
   const handleSectionSave = useCallback(

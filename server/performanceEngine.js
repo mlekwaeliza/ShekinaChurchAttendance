@@ -248,7 +248,7 @@ async function scoreMembers(start, end, serviceId) {
 }
 
 // ── Leader scoring ──────────────────────────────────────────────────────────
-async function scoreLeaders(start, end, serviceId) {
+async function scoreLeaders(start, end, _serviceId) {
   const serviceDaysRow = await get(`SELECT COUNT(DISTINCT date) AS d FROM attendance WHERE date BETWEEN ? AND ?`, [start, end]);
   const serviceDays = Number(serviceDaysRow?.d) || 0;
 
@@ -277,7 +277,7 @@ async function scoreLeaders(start, end, serviceId) {
 }
 
 // ── Group scoring (sections / departments / cells) ──────────────────────────
-async function scoreSections(start, end, serviceId) {
+async function scoreSections(start, end, _serviceId) {
   const rows = await all(`
     SELECT s.id, s.name,
       COALESCE(SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END),0) AS present,
@@ -417,7 +417,7 @@ function prevSeasonOf(season) {
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
-async function getDashboard(filter, serviceId, userId) {
+async function getDashboard(filter, serviceId, _userId) {
   const season = getFilterRange(filter);
   const weights = await loadWeights();
 
@@ -733,7 +733,7 @@ async function getGroupProfile(entityType, entityId, season) {
   };
 }
 
-async function getProfile(entityType, entityId, filter, userId) {
+async function getProfile(entityType, entityId, filter, _userId) {
   const season = getFilterRange(filter);
   console.error(`[profile-debug] START getProfile(${entityType}, ${entityId}, ${filter}) season=${season.start}..${season.end}`);
 

@@ -745,7 +745,7 @@ router.put('/attendance/:id', async (req, res) => {
     }
     const trimmedReason = typeof reason === 'string' ? reason.trim().slice(0, EDIT_REASON_MAX_LENGTH) : '';
 
-    const { leaderRecord, record } = await verifyAttendanceInSection(req, id);
+    const { record } = await verifyAttendanceInSection(req, id);
 
     if (record.status === status && !trimmedReason) {
       return res.status(400).json({ error: 'Status is already set to that value. No changes to save.' });

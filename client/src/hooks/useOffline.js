@@ -32,7 +32,7 @@ const useOffline = () => {
       loadPendingCount();
       loadConflicts();
     }
-  }, [isOnline]);
+  }, [isOnline, loadPendingCount, loadConflicts]);
 
   const loadPendingCount = useCallback(async () => {
     try {

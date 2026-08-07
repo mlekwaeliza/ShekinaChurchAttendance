@@ -305,7 +305,7 @@ router.post('/log', async (req, res) => {
 // GET /api/outreach/history
 router.get('/history', async (req, res) => {
   try {
-    const { userId, isPastorOrAdmin, sectionId } = req.outreachContext;
+    const { isPastorOrAdmin, sectionId } = req.outreachContext;
     
     let query = `
       SELECT ol.*, 

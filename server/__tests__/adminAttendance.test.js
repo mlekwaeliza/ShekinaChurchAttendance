@@ -32,7 +32,7 @@ function loadAndStart(mocks) {
     validateDate: () => (req, res, next) => next(),
   }));
   jest.doMock(path.resolve(__dirname, '../utils/date'), () => ({
-    addDays: (d, n) => d,
+    addDays: (d, _n) => d,
     formatLocalDate: () => '2026-06-07',
     getISOWeekRange: () => ({ start: '2026-06-01', end: '2026-06-07' }),
     getISOWeekString: () => '2026-W23',

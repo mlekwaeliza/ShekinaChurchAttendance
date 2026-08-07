@@ -620,7 +620,7 @@ function createQueries({ run, get, all, usePostgres }) {
       return all(query, params);
     },
 
-    getHallOfFameSummary: (year) =>
+    getHallOfFameSummary: (_year) =>
       all(`
     SELECT m.id, m.full_name, m.hall_of_fame_points as points, s.name as section_name
     FROM members m
@@ -1012,7 +1012,7 @@ function createQueries({ run, get, all, usePostgres }) {
       ),
 
     // Advanced Analytics queries
-    getAttendancePrediction: (weeks = 4) =>
+    getAttendancePrediction: (_weeks = 4) =>
       all(`
     WITH weekly_totals AS (
       SELECT date,
@@ -3622,7 +3622,7 @@ function createQueries({ run, get, all, usePostgres }) {
          ORDER BY nm.pipeline_stage, nm.date_joined DESC`;
       return stage ? all(sql, [stage]) : all(sql);
     },
-    updatePipelineStage: (id, stage, userId) =>
+    updatePipelineStage: (id, stage, _userId) =>
       run(
         `
     UPDATE new_members SET pipeline_stage = ?, updated_at = CURRENT_TIMESTAMP

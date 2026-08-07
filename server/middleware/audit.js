@@ -156,7 +156,7 @@ function getEntityType(path) {
   return null;
 }
 
-function extractEntityId(path, entityType) {
+function extractEntityId(path, _entityType) {
   const parts = path.split('/').filter(Boolean);
   const lastPart = parts[parts.length - 1];
   const id = parseInt(lastPart, 10);

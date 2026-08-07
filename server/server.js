@@ -767,8 +767,7 @@ app.get('/api/metrics', async (req, res) => {
 // generic message and an `errorId` (a short hash of the timestamp +
 // path) so the support team can correlate client reports with
 // server logs.
-function globalErrorHandler(err, req, res, next) {
-  // eslint-disable-line no-unused-vars
+function globalErrorHandler(err, req, res, _next) {
   try {
     const status = Number.isInteger(err?.status)
       ? err.status

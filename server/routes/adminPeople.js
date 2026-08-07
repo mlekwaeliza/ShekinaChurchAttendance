@@ -773,7 +773,7 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
     }
 
     // Wrap all row processing in a single transaction for atomicity
-    await transaction(async (tx) => {
+    await transaction(async (_tx) => {
       for (const row of rows) {
       try {
         const fullName = getValue(row, ['fullname', 'full_name', 'name']);
@@ -1079,7 +1079,7 @@ router.post('/children-leaders', async (req, res) => {
         return res.status(400).json({ error: 'This user is already a children leader' });
       }
       // User exists but is not yet a children leader — reassign them
-      await transaction(async (tx) => {
+    await transaction(async (tx) => {
         await tx.run('UPDATE users SET role = ? WHERE id = ?', ['children_leader', existingUser.id]);
         await tx.run(
           'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
@@ -1760,7 +1760,7 @@ router.get('/departments/:id', async (req, res) => {
 // POST create department
 router.post('/departments', async (req, res) => {
   try {
-    const { name, description, reports_to_title_id, leader_id, assistant_leader_id, secretary_id, is_active } = req.body;
+    const { name, description, reports_to_title_id, leader_id, assistant_leader_id, secretary_id } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: 'Department name is required' });
     await queries.createDepartment(name.trim(), description || null, reports_to_title_id || null, leader_id || null, assistant_leader_id || null, secretary_id || null);
     const created = await get('SELECT id FROM departments WHERE name = ?', [name.trim()]);

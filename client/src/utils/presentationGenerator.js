@@ -99,7 +99,7 @@ export class PresentationGenerator {
     });
   }
 
-  addSectionDivider(title, icon) {
+  addSectionDivider(title, _icon) {
     const slide = this.pptx.addSlide();
     slide.background = { color: COLORS.slate50 };
 
