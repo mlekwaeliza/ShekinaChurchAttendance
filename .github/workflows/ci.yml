@@ -7,6 +7,23 @@ on:
     branches: [master, main]
 
 jobs:
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Or your version
+
+      # 👇 ADD THIS STEP 👇
+      - name: Install Root Dependencies
+        run: npm install
+      
+      - name: Run Linter
+        run: npm run lint
 # .github/workflows/ci.yml (or similar)
   build:
     runs-on: ubuntu-latest
