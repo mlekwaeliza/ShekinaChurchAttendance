@@ -3,7 +3,6 @@ import {
   queueAttendanceSubmission,
   getUnsyncedSubmissions,
   markAsSynced,
-  markAsConflict,
   deleteQueuedRecord,
   getAllQueuedRecords,
   getQueuedSubmissionForDate

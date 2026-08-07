@@ -1,6 +1,4 @@
 ﻿// server/utils/errorResponse.js
-const constants = require('../config/constants');
-
 const sendError = (res, statusCode = 500, message = 'Internal server error', details = null) => {
   const response = {
     success: false,

@@ -503,7 +503,6 @@ function createQueries({ run, get, all, usePostgres }) {
       const absentMembersByService = new Map();
       for (const r of absentRows) {
         const sid = Number(r.service_type_id);
-        const knownDates = datesByService.get(sid) || [];
         const key = `${r.member_id}_${sid}`;
         if (!absentMembersByService.has(key)) {
           absentMembersByService.set(key, { ...r, _absentDates: [] });
@@ -3691,7 +3690,6 @@ function createQueries({ run, get, all, usePostgres }) {
     GROUP BY pipeline_stage
   `),
     getPipelineTasks: () => {
-      const today = formatLocalDate(new Date());
       const twoWeeksAgo = formatLocalDate(addDays(new Date(), -14));
       return all(
         `

@@ -749,7 +749,6 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
     });
 
     const sectionsMap = new Map();
-    const leadersMap = new Map();
     const userPasswords = new Map();
 
     // Pre-populate existing sections

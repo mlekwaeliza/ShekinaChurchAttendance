@@ -2,7 +2,6 @@
 // HTTP server in the test process, so we test the URL/path
 // construction by extracting the logic into a small helper and
 // validating that the same code path is used by uploadBackupToRemote.
-const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 

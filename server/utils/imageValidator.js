@@ -3,14 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const constants = require('../config/constants');
 
-// Magic numbers for file types
-const MAGIC_NUMBERS = {
-  'ff d8 ff': 'image/jpeg',
-  '89 50 4e 47': 'image/png',
-  '47 49 46 38': 'image/gif',
-  '52 49 46 46': 'image/webp' // RIFF header (check further for WEBP)
-};
-
 const validateImageContent = (filePath) => {
   return new Promise((resolve, reject) => {
     const stream = fs.createReadStream(filePath, { start: 0, end: 4 });

@@ -1,7 +1,6 @@
 const express = require('express');
-const { queries, run, get, all, transaction } = require('../database');
+const { queries, all } = require('../database');
 const { isAuthenticated } = require('../middleware/auth');
-const { addDays, formatLocalDate } = require('../utils/date');
 
 const router = express.Router();
 
@@ -252,7 +251,6 @@ router.get('/pipeline/stats', async (req, res) => {
     const stageCounts = await queries.getPipelineDashboardStats();
     const today = new Date();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const { getNewMembersReport, getNewMembersByMonth } = queries;
     const stageMap = {};
     stageCounts.forEach(s => { stageMap[s.pipeline_stage] = Number(s.count); });
     const totalInPipeline = Object.values(stageMap).reduce((a, b) => a + b, 0);

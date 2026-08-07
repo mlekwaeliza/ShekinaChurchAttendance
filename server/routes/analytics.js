@@ -2,7 +2,7 @@ const express = require('express');
 const { queries, get, all, getMultiPeriodOverall, getMultiPeriodSections, getMultiPeriodLeaders, getMultiPeriodDepartments, getMultiPeriodMembers, getAttendanceMovement } = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString, parseDateInput } = require('../utils/date');
-const { withCache, invalidate: invalidateCache, withTimeout } = require('../utils/cache');
+const { withCache, withTimeout } = require('../utils/cache');
 const { yearOnly, yearMonth } = require('../utils/sqlDialect');
 
 const router = express.Router();
@@ -1164,7 +1164,6 @@ function computeExecutiveKPIs(periodResults) {
   if (total === 0) return {};
 
   const rates = periodResults.map(p => p.overall?.attendance_rate || 0);
-  const presents = periodResults.map(p => p.overall?.present || 0);
   const members = periodResults.map(p => p.overall?.total_members || 0);
   const growth = periodResults.map(p => p.overall?.net_growth || 0);
   const sections = periodResults.map(p => p.overall?.active_sections || 0);
@@ -1818,7 +1817,6 @@ router.get('/executive-summary', async (req, res) => {
 
     // ── Executive Alerts ──────────────────────────────────────────────────
     const alerts = [];
-    const threshold = days >= 90 ? 15 : days >= 30 ? 10 : 5;
 
     // Declining attendance
     if (attendanceRate < 50) {

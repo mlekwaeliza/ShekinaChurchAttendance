@@ -114,7 +114,7 @@ function buildAttendanceReport(p) {
 function buildPastorReport(p) {
   const {
     form, reportSummary, summaryMetrics, sectionBreakdown,
-    prioritizedMembers, generatedOn, formatDisplayDate, formatLocalDate,
+    prioritizedMembers, generatedOn, formatLocalDate,
     sanitizeFilename, numberOrZero
   } = p;
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });

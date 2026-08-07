@@ -2,8 +2,8 @@
 // Computes transparent, weighted scores from measurable ministry activities,
 // persists every point as an auditable transaction, and exposes rankings,
 // profiles, recognition history and configurable weights.
-const { all, get, run, transaction, usePostgres } = require('./database');
-const { formatLocalDate, addDays, getISOWeekString, getISOWeekRange } = require('./utils/date');
+const { all, get, run, usePostgres } = require('./database');
+const { formatLocalDate, addDays, getISOWeekString } = require('./utils/date');
 const { withTimeout } = require('./utils/cache');
 
 // ── Schema ────────────────────────────────────────────────────────────────
@@ -335,15 +335,6 @@ async function scoreCells(start, end) {
     const attendance = attMap[c.id] || 0;
     return { id: c.id, name: c.name, full_name: c.name, section_name: c.name, members_count: Number(c.members_count) || 0, components: { attendance }, overallScore: attendance };
   });
-}
-
-// ── Audit transactions (idempotent per season+entity+category) ───────────────
-async function recordTransaction(entity_type, entity_id, season, category, points, reason, reference_id, created_by) {
-  await run(
-    `INSERT INTO point_transactions (entity_type, entity_id, season_type, season_key, category, points, reason, reference_id, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [entity_type, entity_id, season.seasonType, season.seasonKey, category, points, reason, reference_id || null, created_by || null]
-  );
 }
 
 // Build a full ranked list with scores, levels, rank movement
@@ -1069,23 +1060,6 @@ async function getProfile(entityType, entityId, filter, userId) {
     weights: w,
     season,
   };
-}
-
-function componentNote(k) {
-  const notes = {
-    church_attendance: 'Share of church services attended (present ÷ total) this period.',
-    cell_attendance: 'Home-cell meeting participation. Not yet tracked separately.',
-    evangelism: 'Outreach logs + visitor intakes (25 points each).',
-    contributions: '100 if any contribution was recorded this period.',
-    events: 'Event/study participation. Not yet tracked separately.',
-    submission_rate: 'Share of service days the leader submitted attendance.',
-    member_attendance: 'Average church attendance of the leader’s members.',
-    retention: 'Member retention. Not yet tracked.',
-    cell_growth: 'Home-cell growth. Not yet tracked.',
-    followups: 'Share of assigned follow-ups marked complete.',
-    reports: 'Report submission. Not yet tracked.',
-  };
-  return notes[k] || '';
 }
 
 function generateInsight(entity, data) {

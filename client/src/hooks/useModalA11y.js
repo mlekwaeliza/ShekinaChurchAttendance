@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 
 // useModalA11y(ref, isOpen, onClose)
 // Adds the standard accessibility behaviors that the shared

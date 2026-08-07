@@ -1,14 +1,6 @@
-const { queries, all, run, db } = require('./database');
+const { queries, all, run } = require('./database');
 const { addDays, formatMonthDay, getWeekStartString, startOfLocalDay } = require('./utils/date');
 const { monthsAgo } = require('./utils/sqlDialect');
-
-function getNextSunday() {
-  const d = new Date();
-  const daysUntilSunday = (7 - d.getDay()) % 7 || 7;
-  d.setDate(d.getDate() + daysUntilSunday);
-  d.setHours(8, 0, 0, 0);
-  return d.toISOString();
-}
 
 function getSaturdayEvening() {
   const d = new Date();

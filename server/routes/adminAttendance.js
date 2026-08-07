@@ -3,7 +3,7 @@ const { db, queries, run, get, all, transaction } = require('../database');
 const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
 const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString } = require('../utils/date');
 const { escapeCsvValue, toCsvRow } = require('../utils/csv');
-const { yearEquals, monthEquals, weekEquals, dateOnly, upsertAttendanceSql } = require('../utils/sqlDialect');
+const { yearEquals, monthEquals, dateOnly, upsertAttendanceSql } = require('../utils/sqlDialect');
 const { invalidate: invalidateCache } = require('../utils/cache');
 const {
   getAttendanceHistory,

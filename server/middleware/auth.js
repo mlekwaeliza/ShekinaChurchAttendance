@@ -1,4 +1,4 @@
-const { queries, get } = require('../database');
+const { get } = require('../database');
 
 const rolePermissions = {
   admin: ['admin', 'leader', 'pastor', 'evangelist', 'children_leader'],

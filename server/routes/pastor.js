@@ -1,6 +1,6 @@
 const express = require('express');
 const { queries, all, get, db } = require('../database');
-const { isAuthenticated, requireRole, validateDate } = require('../middleware/auth');
+const { isAuthenticated, requireRole } = require('../middleware/auth');
 const { addDays, formatLocalDate, getWeekStartString } = require('../utils/date');
 
 const router = express.Router();

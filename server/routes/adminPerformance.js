@@ -1,8 +1,8 @@
 const express = require('express');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
-const { all, get, run, usePostgres } = require('../database');
+const { all, run, usePostgres } = require('../database');
 const engine = require('../performanceEngine');
-const { withCache, invalidate: invalidateCache } = require('../utils/cache');
+const { withCache } = require('../utils/cache');
 
 // 5-minute TTL for the performance dashboard (runs 5+5 heavy scoring queries)
 const PERF_DASHBOARD_TTL = 5 * 60 * 1000;

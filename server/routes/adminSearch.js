@@ -1,20 +1,11 @@
 const express = require('express');
-const { queries, all, get } = require('../database');
+const { all } = require('../database');
 const { isAuthenticated, requireRole } = require('../middleware/auth');
 const { withCache, withTimeout } = require('../utils/cache');
 
 const router = express.Router();
 router.use(isAuthenticated);
 router.use(requireRole(['admin']));
-
-const search = async (table, query, columns, extraJoins = '', extraWhere = '') => {
-  const q = `%${query}%`;
-  const conditions = columns.map(c => `${c} ILIKE ?`).join(' OR ');
-  const params = columns.map(() => q);
-  let sql = `SELECT * FROM ${table} WHERE (${conditions}) ${extraWhere} ORDER BY 1 LIMIT 10`;
-  if (extraJoins) sql = sql.replace('SELECT *', `SELECT ${table}.*`);
-  return all(sql, params);
-};
 
 router.get('/', async (req, res) => {
   try {

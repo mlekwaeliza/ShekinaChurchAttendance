@@ -695,7 +695,7 @@ router.get('/attendance/edit-members/:leaderId', async (req, res) => {
     const { date, service_id = 1 } = req.query;
     if (!date) return res.status(400).json({ error: 'Date query parameter required' });
 
-    const { headLeader, target } = await requireHeadLeaderWithTarget(req, leaderId);
+    const { target } = await requireHeadLeaderWithTarget(req, leaderId);
 
     const leader = await get(
       'SELECT l.id, u.full_name AS leader_name, s.name AS section_name FROM leaders l JOIN users u ON l.user_id = u.id JOIN sections s ON l.section_id = s.id WHERE l.id = ?',
@@ -790,7 +790,7 @@ router.post('/attendance/bulk-edit', async (req, res) => {
       }
     }
 
-    const { headLeader, target } = await requireHeadLeaderWithTarget(req, leader_id);
+    const { target } = await requireHeadLeaderWithTarget(req, leader_id);
 
     const leader = await get(
       'SELECT l.id, l.section_id, u.full_name AS leader_name FROM leaders l JOIN users u ON l.user_id = u.id WHERE l.id = ?',
