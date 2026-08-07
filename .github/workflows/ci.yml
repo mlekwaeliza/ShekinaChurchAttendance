@@ -7,6 +7,19 @@ on:
     branches: [master, main]
 
 jobs:
+# .github/workflows/ci.yml (or similar)
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      # 1. Install Root Dependencies (where eslint now lives)
+      - name: Install Root Dependencies
+        run: npm install
+      
+      # 2. Now run lint
+      - name: Lint
+        run: npm run lint
   backend:
     name: Backend lint, test & schema check
     runs-on: ubuntu-latest
