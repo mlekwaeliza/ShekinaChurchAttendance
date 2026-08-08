@@ -24,6 +24,8 @@ export default function useEventStream(url, handlers = {}) {
   const reconnectTimerRef = useRef(null);
   const lastEventIdRef = useRef(null);
   const closedByUserRef = useRef(false);
+  const connectRef = useRef(null);
+  const scheduleReconnectRef = useRef(null);
 
   handlersRef.current = handlers;
 
@@ -40,7 +42,7 @@ export default function useEventStream(url, handlers = {}) {
       // EventSource constructor is synchronous and very rarely throws
       // (e.g. invalid URL). Fall back to a reconnecting state.
       setStatus('reconnecting');
-      scheduleReconnect();
+      scheduleReconnectRef.current();
       return;
     }
     esRef.current = es;
@@ -56,7 +58,7 @@ export default function useEventStream(url, handlers = {}) {
       if (esRef.current === es) esRef.current = null;
       if (closedByUserRef.current) return;
       setStatus('reconnecting');
-      scheduleReconnect();
+      scheduleReconnectRef.current();
     });
 
     // Special events
@@ -89,9 +91,12 @@ export default function useEventStream(url, handlers = {}) {
     const delay = Math.min(30_000, 500 * 2 ** attempt);
     reconnectTimerRef.current = setTimeout(() => {
       reconnectTimerRef.current = null;
-      connect();
+      connectRef.current();
     }, delay);
-  }, [connect]);
+  }, []);
+
+  connectRef.current = connect;
+  scheduleReconnectRef.current = scheduleReconnect;
 
   useEffect(() => {
     if (!url) return undefined;
