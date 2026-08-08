@@ -34,6 +34,75 @@ const avatarColors = [
   'from-fuchsia-500 to-pink-600'
 ];
 
+/* Mini Helper Components */
+function ProfileItem({ icon: Icon, label, value, isPhone, isEmail }) {
+  return (
+    <div className="flex gap-3 items-center min-w-0">
+      <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-850 flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-800 text-slate-400 shadow-sm">
+        {Icon ? <Icon className="w-4 h-4" /> : null}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold text-slate-450 dark:text-slate-505 uppercase tracking-wide truncate">
+          {label}
+        </p>
+        {isPhone && value !== '—' ? (
+          <a
+            href={`tel:${value}`}
+            className="text-sm font-bold text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline truncate block"
+          >
+            {value}
+          </a>
+        ) : isEmail && value !== '—' ? (
+          <a
+            href={`mailto:${value}`}
+            className="text-sm font-bold text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline truncate block"
+          >
+            {value}
+          </a>
+        ) : (
+          <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate block">
+            {value}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, color }) {
+  return (
+    <div
+      className={`p-3 rounded-xl border border-slate-100/50 dark:border-slate-800 flex flex-col justify-between shadow-sm ${color}`}
+    >
+      <span className="text-[10px] font-bold uppercase tracking-wider opacity-85 block truncate">
+        {label}
+      </span>
+      <span className="text-xl font-bold leading-none mt-2 block tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function LayersIcon(props) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <polygon points="12 2 2 7 12 12 22 7 12 2" />
+      <polyline points="2 17 12 22 22 17" />
+      <polyline points="2 12 12 17 22 12" />
+    </svg>
+  );
+}
+
 const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
@@ -871,70 +940,5 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
     </>
   );
 };
-
-/* Mini Helper Components */
-const ProfileItem = ({ icon: Icon, label, value, isPhone, isEmail }) => {
-  return (
-    <div className="flex gap-3 items-center min-w-0">
-      <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-850 flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-800 text-slate-400 shadow-sm">
-        <Icon className="w-4 h-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold text-slate-450 dark:text-slate-505 uppercase tracking-wide truncate">
-          {label}
-        </p>
-        {isPhone && value !== '—' ? (
-          <a
-            href={`tel:${value}`}
-            className="text-sm font-bold text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline truncate block"
-          >
-            {value}
-          </a>
-        ) : isEmail && value !== '—' ? (
-          <a
-            href={`mailto:${value}`}
-            className="text-sm font-bold text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline truncate block"
-          >
-            {value}
-          </a>
-        ) : (
-          <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate block">
-            {value}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const StatCard = ({ label, value, color }) => (
-  <div
-    className={`p-3 rounded-xl border border-slate-100/50 dark:border-slate-800 flex flex-col justify-between shadow-sm ${color}`}
-  >
-    <span className="text-[10px] font-bold uppercase tracking-wider opacity-85 block truncate">
-      {label}
-    </span>
-    <span className="text-xl font-bold leading-none mt-2 block tabular-nums">{value}</span>
-  </div>
-);
-
-const LayersIcon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <polygon points="12 2 2 7 12 12 22 7 12 2" />
-    <polyline points="2 17 12 22 22 17" />
-    <polyline points="2 12 12 17 22 12" />
-  </svg>
-);
 
 export default MemberDetailsDrawer;

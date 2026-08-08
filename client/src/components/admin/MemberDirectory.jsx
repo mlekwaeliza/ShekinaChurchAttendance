@@ -40,6 +40,133 @@ const avatarColors = [
   'from-fuchsia-500 to-pink-600'
 ];
 
+// Member search + select component for the assign title modal
+function MemberSearchSelect({ members, selectedId, onChange }) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const ref = useRef(null);
+
+  const selected = useMemo(
+    () => members.find((m) => Number(m.id) === Number(selectedId)),
+    [members, selectedId]
+  );
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return members.slice(0, 20);
+    const t = search.toLowerCase();
+    return members.filter((m) => (m.full_name || '').toLowerCase().includes(t)).slice(0, 20);
+  }, [search, members]);
+
+  const displayValue = focused ? search : selected ? selected.full_name : search;
+
+  const isLoading = members.length === 0;
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        setFocused(false);
+        if (!selectedId) {
+          setSearch('');
+        }
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [selectedId]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <label className="input-label">Member</label>
+      <input
+        type="text"
+        value={displayValue}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setOpen(true);
+          if (selectedId) onChange(null);
+        }}
+        onFocus={() => {
+          setFocused(true);
+          setOpen(true);
+        }}
+        onBlur={() => {
+          setTimeout(() => {
+            setFocused(false);
+            if (!selectedId) setSearch('');
+          }, 200);
+        }}
+        placeholder={isLoading ? 'Loading members...' : 'Search member name...'}
+        disabled={isLoading}
+        className="input w-full"
+      />
+      {isLoading && (
+        <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 py-2 animate-fade-in">
+          <div className="px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24">
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+                fill="none"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            Loading members...
+          </div>
+        </div>
+      )}
+      {open && !isLoading && filtered.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
+          {filtered.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                onChange(m.id);
+                setSearch('');
+                setOpen(false);
+                setFocused(false);
+              }}
+              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
+                Number(m.id) === Number(selectedId)
+                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+              }`}
+            >
+              <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                {(m.full_name || '')
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </span>
+              <span className="truncate font-medium">{m.full_name}</span>
+              {m.section_name && (
+                <span className="text-[10px] text-slate-400 ml-auto shrink-0">
+                  {m.section_name}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+      {focused && !selectedId && !open && search.trim() && (
+        <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
+      )}
+    </div>
+  );
+}
+
 const MemberDirectory = ({
   allMembers,
   sections,
@@ -1654,133 +1781,6 @@ const MemberDirectory = ({
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
-};
-
-// Member search + select component for the assign title modal
-const MemberSearchSelect = ({ members, selectedId, onChange }) => {
-  const [search, setSearch] = useState('');
-  const [open, setOpen] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const ref = useRef(null);
-
-  const selected = useMemo(
-    () => members.find((m) => Number(m.id) === Number(selectedId)),
-    [members, selectedId]
-  );
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return members.slice(0, 20);
-    const t = search.toLowerCase();
-    return members.filter((m) => (m.full_name || '').toLowerCase().includes(t)).slice(0, 20);
-  }, [search, members]);
-
-  const displayValue = focused ? search : selected ? selected.full_name : search;
-
-  const isLoading = members.length === 0;
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-        setFocused(false);
-        if (!selectedId) {
-          setSearch('');
-        }
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [selectedId]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <label className="input-label">Member</label>
-      <input
-        type="text"
-        value={displayValue}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setOpen(true);
-          if (selectedId) onChange(null);
-        }}
-        onFocus={() => {
-          setFocused(true);
-          setOpen(true);
-        }}
-        onBlur={() => {
-          setTimeout(() => {
-            setFocused(false);
-            if (!selectedId) setSearch('');
-          }, 200);
-        }}
-        placeholder={isLoading ? 'Loading members...' : 'Search member name...'}
-        disabled={isLoading}
-        className="input w-full"
-      />
-      {isLoading && (
-        <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 py-2 animate-fade-in">
-          <div className="px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            Loading members...
-          </div>
-        </div>
-      )}
-      {open && !isLoading && filtered.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
-          {filtered.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => {
-                onChange(m.id);
-                setSearch('');
-                setOpen(false);
-                setFocused(false);
-              }}
-              className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
-                Number(m.id) === Number(selectedId)
-                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
-              }`}
-            >
-              <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px] shrink-0">
-                {(m.full_name || '')
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase()}
-              </span>
-              <span className="truncate font-medium">{m.full_name}</span>
-              {m.section_name && (
-                <span className="text-[10px] text-slate-400 ml-auto shrink-0">
-                  {m.section_name}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-      {focused && !selectedId && !open && search.trim() && (
-        <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
       )}
     </div>
   );
