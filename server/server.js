@@ -1153,6 +1153,11 @@ async function startPostStartupServices() {
 // Start server
 let server = null;
 async function startServer() {
+  const host = process.env.HOST || '0.0.0.0';
+  server = app.listen(PORT, host, () => {
+    console.log(`Server running on ${host}:${PORT}`);
+  });
+
   try {
     await new Promise((resolve, reject) => {
       require('./database').db.get('SELECT 1', (err) => {
@@ -1195,11 +1200,9 @@ async function startServer() {
     console.log('Performance & Recognition Center schema ready');
 
     await initializeUsers();
-    server = app.listen(PORT, process.env.HOST || '0.0.0.0', () => {
-      console.log(`Server running on ${process.env.HOST || '0.0.0.0'}:${PORT}`);
-      startPostStartupServices().catch((error) => {
-        console.warn('Post-startup services failed:', error.message);
-      });
+
+    startPostStartupServices().catch((error) => {
+      console.warn('Post-startup services failed:', error.message);
     });
   } catch (error) {
     console.error('FATAL: Failed to connect to database:', error.message);

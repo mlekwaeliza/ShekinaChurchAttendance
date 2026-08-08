@@ -4,41 +4,24 @@ const dns = require('dns');
 const isTruthy = (value) => ['1', 'true', 'yes', 'require'].includes(String(value || '').toLowerCase());
 const isFalsy = (value) => ['0', 'false', 'no', 'off'].includes(String(value || '').toLowerCase());
 
-// Force IPv4 — Supabase DNS may return IPv6 which Render cannot reach.
-// Strip pgbouncer param (unsupported by pg lib and pg_dump).
-function forceIPv4(url) {
+// Clean up connection string parameters unsupported by pg library or pg_dump
+function cleanConnectionString(url) {
   try {
     const u = new URL(url);
     u.searchParams.delete('pgbouncer');
-
-    // Try dns.lookupSync to resolve to IPv4
-    const hostname = u.hostname;
-    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
-      try {
-        const { address } = dns.lookupSync(hostname, { family: 4 });
-        if (address) {
-          u.hostname = address;
-          console.log(`Resolved ${hostname} -> ${address} (IPv4)`);
-          return u.toString();
-        }
-      } catch (_) { /* use the original hostname */ }
-    }
-  } catch (_) { /* use the original connection URL */ }
-  return url;
+    u.searchParams.delete('channel_binding');
+    u.searchParams.delete('options');
+    return u.toString();
+  } catch (_) {
+    return url;
+  }
 }
 
 function buildPoolConfig() {
   let connectionString = process.env.DATABASE_URL || null;
 
-  // Force IPv4 and strip unsupported query params
   if (connectionString) {
-    connectionString = forceIPv4(connectionString);
-    try {
-      const url = new URL(connectionString);
-      url.searchParams.delete('channel_binding');
-      url.searchParams.delete('options');
-      connectionString = url.toString();
-    } catch (_) { /* not a parseable URL — use as-is */ }
+    connectionString = cleanConnectionString(connectionString);
   }
 
   // Detect SSL mode from the connection string or env vars
@@ -61,6 +44,7 @@ function buildPoolConfig() {
 
   const config = {
     ...baseConfig,
+    lookup: (hostname, options, callback) => dns.lookup(hostname, { ...options, family: 4 }, callback),
     max: Number(process.env.PGPOOL_MAX || 10),
     idleTimeoutMillis: Number(process.env.PG_IDLE_TIMEOUT_MS || 30000),
     connectionTimeoutMillis: Number(process.env.PG_CONNECTION_TIMEOUT_MS || 15000),
