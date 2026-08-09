@@ -20,6 +20,17 @@ import {
 const asArray = (v) => (Array.isArray(v) ? v : []);
 const R = (v) => Math.round(Number(v) || 0);
 
+
+const StatCard = ({ label, value, icon: Icon, color }) => (
+  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+    <div className={`w-7 h-7 rounded-lg flex items-center justify-center mb-1.5 ${color}`}>
+      <Icon className="w-3.5 h-3.5" />
+    </div>
+    <p className="text-lg font-black text-slate-900 dark:text-white">{value}</p>
+    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+  </div>
+);
+
 const TrashView = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -410,15 +421,4 @@ const TrashView = () => {
     </div>
   );
 };
-
-const StatCard = ({ label, value, icon: Icon, color }) => (
-  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
-    <div className={`w-7 h-7 rounded-lg flex items-center justify-center mb-1.5 ${color}`}>
-      <Icon className="w-3.5 h-3.5" />
-    </div>
-    <p className="text-lg font-black text-slate-900 dark:text-white">{value}</p>
-    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-  </div>
-);
-
 export default TrashView;

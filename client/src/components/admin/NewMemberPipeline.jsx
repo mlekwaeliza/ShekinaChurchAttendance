@@ -63,6 +63,367 @@ function daysBetween(dateStr) {
   return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
 }
 
+
+// ── Member Card Component ─────────────────────────────────────────────────
+const MemberCard = ({ member, stage, onClick, onMove }) => {
+  const daysInAssimilation = daysBetween(member.date_joined);
+  const daysSinceBaptism = daysBetween(member.baptism_date);
+  const riskColors = { low: 'bg-emerald-100 text-emerald-700', medium: 'bg-amber-100 text-amber-700', high: 'bg-rose-100 text-rose-700' };
+
+  return (
+    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-xs"
+      onClick={onClick}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="font-bold text-slate-900 dark:text-white truncate">{member.full_name}</p>
+          {member.phone && <p className="text-[10px] text-slate-400 truncate">{member.phone}</p>}
+        </div>
+        {member.risk_status && member.risk_status !== 'low' && (
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${riskColors[member.risk_status] || riskColors.low}`}>{member.risk_status}</span>
+        )}
+      </div>
+      <div className="mt-1.5 space-y-0.5">
+        {daysSinceBaptism != null && <p className="text-[9px] text-slate-400">{daysSinceBaptism}d since baptism</p>}
+        {daysInAssimilation != null && <p className="text-[9px] text-slate-400">{daysInAssimilation}d in assimilation</p>}
+        {member.section_name && <p className="text-[9px] text-indigo-500">Section: {member.section_name}</p>}
+        {member.home_cell_name && <p className="text-[9px] text-indigo-500">Cell: {member.home_cell_name}</p>}
+        {member.mentor_name && <p className="text-[9px] text-purple-500">Mentor: {member.mentor_name}</p>}
+      </div>
+      {stage && onMove && (() => {
+        const nextStageIdx = PIPELINE_STAGES.findIndex(s => s.key === stage.key) + 1;
+        if (nextStageIdx < PIPELINE_STAGES.length) {
+          const nextStage = PIPELINE_STAGES[nextStageIdx];
+          return (
+            <button onClick={(e) => { e.stopPropagation(); onMove(member.id, nextStage.key); }}
+              className={`mt-2 w-full text-[9px] font-bold py-1 rounded-lg ${STAGE_COLORS[nextStage.color].bg} ${STAGE_COLORS[nextStage.color].text} hover:opacity-80 transition-colors border ${STAGE_COLORS[nextStage.color].border}`}>
+              Move to {nextStage.label}
+            </button>
+          );
+        }
+        return null;
+      })()}
+    </div>
+  );
+};
+
+// ── Add Member Form ───────────────────────────────────────────────────────
+const AddMemberForm = ({ form, setForm, onSubmit, onCancel }) => {
+  const inputClass = "w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30";
+  return (
+    <form onSubmit={onSubmit} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Add New Member</h3>
+        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input className={inputClass} placeholder="Full Name *" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required />
+        <input className={inputClass} placeholder="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+        <input className={inputClass} type="email" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+        <input className={inputClass} placeholder="Address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
+        <input className={inputClass} type="date" value={form.date_joined} onChange={e => setForm({ ...form, date_joined: e.target.value })} />
+        <select className={inputClass} value={form.decision_type} onChange={e => setForm({ ...form, decision_type: e.target.value })}>
+          <option>Salvation</option><option>Transfer</option><option>Restoration</option><option>Visitor</option><option>Other</option>
+        </select>
+        <input className={inputClass} type="date" placeholder="Date of Birth" value={form.date_of_birth} onChange={e => setForm({ ...form, date_of_birth: e.target.value })} />
+        <input className={inputClass} placeholder="Occupation" value={form.occupation} onChange={e => setForm({ ...form, occupation: e.target.value })} />
+        <select className={inputClass} value={form.marital_status} onChange={e => setForm({ ...form, marital_status: e.target.value })}>
+          <option value="">Marital Status</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option>
+        </select>
+        <select className={inputClass} value={form.invitation_source} onChange={e => setForm({ ...form, invitation_source: e.target.value })}>
+          <option value="">Invitation Source</option><option>Friend</option><option>Social Media</option><option>Church Outreach</option><option>Family Member</option><option>Walk-in</option><option>Other</option>
+        </select>
+      </div>
+      <textarea className={inputClass} placeholder="Notes" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">Cancel</button>
+        <button type="submit" className="text-xs font-bold px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Add Member</button>
+      </div>
+    </form>
+  );
+};
+
+// ── Member Profile Modal ─────────────────────────────────────────────────
+
+const InfoCard = ({ label, value }) => (
+  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 p-2.5">
+    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+    <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{value}</p>
+  </div>
+);
+
+const FollowupForm = ({ memberId, onSaved }) => {
+  const [type, setType] = useState('phone_call');
+  const [notes, setNotes] = useState('');
+  const [nextDate, setNextDate] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await newMemberLeaderAPI.addFollowup(memberId, { followup_type: type, notes, next_followup_date: nextDate || null });
+      onSaved();
+    } catch (e) { console.error('Followup save failed:', e); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2">
+      <select value={type} onChange={e => setType(e.target.value)} className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs">
+        <option value="phone_call">Phone Call</option>
+        <option value="visit">Visit</option>
+        <option value="mentor_session">Mentor Session</option>
+        <option value="pastoral_meeting">Pastoral Meeting</option>
+        <option value="prayer_request">Prayer Request</option>
+      </select>
+      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes..." rows={2} className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs" />
+      <input type="date" value={nextDate} onChange={e => setNextDate(e.target.value)} className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs" />
+      <button type="submit" disabled={saving} className="w-full text-xs font-bold py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+        {saving ? 'Saving...' : 'Save Follow-up'}
+      </button>
+    </form>
+  );
+};
+
+const GraduationChecklist = ({ member, attendance }) => {
+  const presentCount = attendance.filter(a => Number(a.attended) === 1).length;
+  const items = [
+    { label: 'Orientation Completed', done: !!member?.orientation_completion_date },
+    { label: 'Home Cell Active', done: !!member?.home_cell_id },
+    { label: 'Section Assigned', done: !!member?.section_name },
+    { label: 'Mentor Assigned', done: !!member?.mentor_name },
+    { label: 'Attends Church Consistently', done: presentCount >= 3 },
+    { label: 'Serving in Ministry', done: !!member?.ministry_department_id },
+    { label: 'In Graduation Review Stage', done: member?.pipeline_stage === 'graduation_review' },
+  ];
+  const completed = items.filter(i => i.done).length;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-bold text-slate-900 dark:text-white">Graduation Checklist</span>
+        <span className={`text-xs font-black px-2 py-0.5 rounded-full ${completed === items.length ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{completed}/{items.length}</span>
+      </div>
+      {items.map((item, i) => (
+        <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-2">
+          {item.done ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <X className="w-4 h-4 text-slate-300" />}
+          <span className={`text-xs ${item.done ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-400'}`}>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const MemberProfileModal = ({ member, onClose, onMove, onUpdate }) => {
+  const [tab, setTab] = useState('overview');
+  const [journey, setJourney] = useState([]);
+  const [followups, setFollowups] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showFollowupForm, setShowFollowupForm] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [journeyRes, followupsRes, attendanceRes] = await Promise.all([
+          newMemberLeaderAPI.getJourney(member.id).catch(() => ({ data: [] })),
+          newMemberLeaderAPI.getFollowups(member.id).catch(() => ({ data: [] })),
+          newMemberLeaderAPI.getAttendance(member.id).catch(() => ({ data: [] })),
+        ]);
+        setJourney(asArray(journeyRes.data));
+        setFollowups(asArray(followupsRes.data));
+        setAttendance(asArray(attendanceRes.data));
+      } catch (e) { console.error('Profile load failed:', e); }
+      finally { setLoading(false); }
+    };
+    if (member?.id) load();
+  }, [member?.id]);
+
+  const currentStageIdx = PIPELINE_STAGES.findIndex(s => s.key === member?.pipeline_stage);
+  const progressPct = currentStageIdx >= 0 ? Math.round(((currentStageIdx + 1) / PIPELINE_STAGES.length) * 100) : 0;
+  const daysInAssimilation = daysBetween(member?.date_joined);
+  const daysSinceBaptism = daysBetween(member?.baptism_date);
+
+  const journeySteps = [
+    { label: 'Received', stage: 'received' },
+    { label: 'Orientation Scheduled', stage: 'orientation_scheduled' },
+    { label: 'Orientation In Progress', stage: 'orientation_in_progress' },
+    { label: 'Orientation Completed', stage: 'orientation_completed' },
+    { label: 'Home Cell Assigned', stage: 'home_cell_assigned' },
+    { label: 'Section Assigned', stage: 'section_assigned' },
+    { label: 'Mentor Assigned', stage: 'mentor_assigned' },
+    { label: 'Ministry Placement', stage: 'ministry_placement' },
+    { label: 'Graduation Review', stage: 'graduation_review' },
+    { label: 'Permanent Member', stage: 'permanent' },
+  ];
+
+  const tabs = ['Overview', 'Journey', 'Discipleship', 'Follow-ups', 'Graduation'];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 z-10">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{member?.full_name}</h2>
+              {member?.phone && <p className="text-xs text-slate-500">{member.phone}</p>}
+              <div className="flex items-center gap-2 mt-1">
+                {member?.pipeline_stage && (() => {
+                  const st = PIPELINE_STAGES.find(s => s.key === member.pipeline_stage);
+                  return st ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STAGE_COLORS[st.color].bg} ${STAGE_COLORS[st.color].text} border ${STAGE_COLORS[st.color].border}`}>{st.label}</span> : null;
+                })()}
+              </div>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Assimilation Progress</span>
+              <span className="text-[10px] font-black text-slate-600 dark:text-slate-400">{progressPct}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-900/40 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+            </div>
+          </div>
+          {/* Tabs */}
+          <div className="flex gap-1 mt-3">
+            {tabs.map(t => (
+              <button key={t} onClick={() => setTab(t.toLowerCase())}
+                className={`text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors ${tab === t.toLowerCase() ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
+          ) : (
+            <>
+              {tab === 'overview' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <InfoCard label="Member ID" value={member?.id} />
+                    <InfoCard label="Days Since Baptism" value={daysSinceBaptism ?? '—'} />
+                    <InfoCard label="Days in Assimilation" value={daysInAssimilation ?? '—'} />
+                    <InfoCard label="Section" value={member?.section_name || 'Not assigned'} />
+                    <InfoCard label="Home Cell" value={member?.home_cell_name || 'Not assigned'} />
+                    <InfoCard label="Mentor" value={member?.mentor_name || 'Not assigned'} />
+                    <InfoCard label="Decision Type" value={member?.decision_type || '—'} />
+                    <InfoCard label="Date Joined" value={fdate(member?.date_joined)} />
+                    <InfoCard label="Risk Status" value={member?.risk_status || 'low'} />
+                  </div>
+                  {member?.next_action && (
+                    <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3">
+                      <p className="text-[10px] font-bold uppercase text-amber-600">Next Required Action</p>
+                      <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">{member.next_action}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {tab === 'journey' && (
+                <div className="space-y-2">
+                  {journeySteps.map((step, i) => {
+                    const reached = currentStageIdx >= i;
+                    const journeyEntry = journey.find(j => j.stage === step.stage);
+                    return (
+                      <div key={i} className={`flex items-start gap-3 ${reached ? '' : 'opacity-40'}`}>
+                        <div className="flex flex-col items-center">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${reached ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                            {reached ? <CheckCircle2 className="w-4 h-4" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
+                          </div>
+                          {i < journeySteps.length - 1 && <div className={`w-0.5 h-6 ${reached ? 'bg-emerald-300' : 'bg-slate-200 dark:bg-slate-700'}`} />}
+                        </div>
+                        <div className="pt-1 pb-4">
+                          <p className="text-sm font-bold text-slate-900 dark:text-white">{step.label}</p>
+                          {journeyEntry && <p className="text-[10px] text-slate-400">{fdatetime(journeyEntry.stage_date)}{journeyEntry.recorded_by_name ? ` by ${journeyEntry.recorded_by_name}` : ''}</p>}
+                          {journeyEntry?.notes && <p className="text-xs text-slate-500 mt-0.5">{journeyEntry.notes}</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {tab === 'discipleship' && (
+                <div className="space-y-3">
+                  {(() => {
+                    const presentCount = attendance.filter(a => Number(a.attended) === 1).length;
+                    const totalWeeks = attendance.length;
+                    const attendanceRate = totalWeeks > 0 ? Math.round((presentCount / totalWeeks) * 100) : 0;
+                    const metrics = [
+                      { label: 'Orientation Completion', value: member?.orientation_completion_date ? '100%' : '0%', icon: BookOpen },
+                      { label: 'Sunday Attendance', value: `${attendanceRate}%`, icon: Calendar },
+                      { label: 'Weeks Tracked', value: totalWeeks, icon: Clock },
+                      { label: 'Weeks Present', value: presentCount, icon: CheckCircle2 },
+                      { label: 'Assimilation Score', value: `${member?.assimilation_score || 0}/100`, icon: Award },
+                    ];
+                    return metrics.map((m, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                        <div className="flex items-center gap-2">
+                          <m.icon className="w-4 h-4 text-slate-400" />
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{m.label}</span>
+                        </div>
+                        <span className="text-sm font-black text-slate-900 dark:text-white">{m.value}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              )}
+
+              {tab === 'follow-ups' && (
+                <div className="space-y-3">
+                  <button onClick={() => setShowFollowupForm(!showFollowupForm)}
+                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300">
+                    + Add Follow-up
+                  </button>
+                  {showFollowupForm && <FollowupForm memberId={member.id} onSaved={() => { setShowFollowupForm(false); onUpdate(); }} />}
+                  {followups.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-6">No follow-up records yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {followups.map((f, i) => (
+                        <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-indigo-600">{f.followup_type}</span>
+                            <span className="text-[10px] text-slate-400">{fdatetime(f.followup_date)}</span>
+                          </div>
+                          {f.notes && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{f.notes}</p>}
+                          {f.next_followup_date && <p className="text-[10px] text-amber-600 mt-1">Next: {fdate(f.next_followup_date)}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {tab === 'graduation' && (
+                <div className="space-y-3">
+                  <GraduationChecklist member={member} attendance={attendance} />
+                  {member?.pipeline_stage === 'graduation_review' && (
+                    <button onClick={() => { onMove(member.id, 'permanent'); onClose(); }}
+                      className="w-full text-sm font-bold py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
+                      Approve & Graduate to Permanent Membership
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Helper Components ────────────────────────────────────────────────────
+
+
 const NewMemberPipeline = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('pipeline');
@@ -623,362 +984,4 @@ const NewMemberPipeline = () => {
     </div>
   );
 };
-
-// ── Member Card Component ─────────────────────────────────────────────────
-const MemberCard = ({ member, stage, onClick, onMove }) => {
-  const daysInAssimilation = daysBetween(member.date_joined);
-  const daysSinceBaptism = daysBetween(member.baptism_date);
-  const riskColors = { low: 'bg-emerald-100 text-emerald-700', medium: 'bg-amber-100 text-amber-700', high: 'bg-rose-100 text-rose-700' };
-
-  return (
-    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 hover:border-indigo-300 hover:shadow-sm transition-all cursor-pointer text-xs"
-      onClick={onClick}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="font-bold text-slate-900 dark:text-white truncate">{member.full_name}</p>
-          {member.phone && <p className="text-[10px] text-slate-400 truncate">{member.phone}</p>}
-        </div>
-        {member.risk_status && member.risk_status !== 'low' && (
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${riskColors[member.risk_status] || riskColors.low}`}>{member.risk_status}</span>
-        )}
-      </div>
-      <div className="mt-1.5 space-y-0.5">
-        {daysSinceBaptism != null && <p className="text-[9px] text-slate-400">{daysSinceBaptism}d since baptism</p>}
-        {daysInAssimilation != null && <p className="text-[9px] text-slate-400">{daysInAssimilation}d in assimilation</p>}
-        {member.section_name && <p className="text-[9px] text-indigo-500">Section: {member.section_name}</p>}
-        {member.home_cell_name && <p className="text-[9px] text-indigo-500">Cell: {member.home_cell_name}</p>}
-        {member.mentor_name && <p className="text-[9px] text-purple-500">Mentor: {member.mentor_name}</p>}
-      </div>
-      {stage && onMove && (() => {
-        const nextStageIdx = PIPELINE_STAGES.findIndex(s => s.key === stage.key) + 1;
-        if (nextStageIdx < PIPELINE_STAGES.length) {
-          const nextStage = PIPELINE_STAGES[nextStageIdx];
-          return (
-            <button onClick={(e) => { e.stopPropagation(); onMove(member.id, nextStage.key); }}
-              className={`mt-2 w-full text-[9px] font-bold py-1 rounded-lg ${STAGE_COLORS[nextStage.color].bg} ${STAGE_COLORS[nextStage.color].text} hover:opacity-80 transition-colors border ${STAGE_COLORS[nextStage.color].border}`}>
-              Move to {nextStage.label}
-            </button>
-          );
-        }
-        return null;
-      })()}
-    </div>
-  );
-};
-
-// ── Add Member Form ───────────────────────────────────────────────────────
-const AddMemberForm = ({ form, setForm, onSubmit, onCancel }) => {
-  const inputClass = "w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30";
-  return (
-    <form onSubmit={onSubmit} className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Add New Member</h3>
-        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <input className={inputClass} placeholder="Full Name *" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required />
-        <input className={inputClass} placeholder="Phone" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-        <input className={inputClass} type="email" placeholder="Email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-        <input className={inputClass} placeholder="Address" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} />
-        <input className={inputClass} type="date" value={form.date_joined} onChange={e => setForm({ ...form, date_joined: e.target.value })} />
-        <select className={inputClass} value={form.decision_type} onChange={e => setForm({ ...form, decision_type: e.target.value })}>
-          <option>Salvation</option><option>Transfer</option><option>Restoration</option><option>Visitor</option><option>Other</option>
-        </select>
-        <input className={inputClass} type="date" placeholder="Date of Birth" value={form.date_of_birth} onChange={e => setForm({ ...form, date_of_birth: e.target.value })} />
-        <input className={inputClass} placeholder="Occupation" value={form.occupation} onChange={e => setForm({ ...form, occupation: e.target.value })} />
-        <select className={inputClass} value={form.marital_status} onChange={e => setForm({ ...form, marital_status: e.target.value })}>
-          <option value="">Marital Status</option><option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option>
-        </select>
-        <select className={inputClass} value={form.invitation_source} onChange={e => setForm({ ...form, invitation_source: e.target.value })}>
-          <option value="">Invitation Source</option><option>Friend</option><option>Social Media</option><option>Church Outreach</option><option>Family Member</option><option>Walk-in</option><option>Other</option>
-        </select>
-      </div>
-      <textarea className={inputClass} placeholder="Notes" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="text-xs font-semibold px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">Cancel</button>
-        <button type="submit" className="text-xs font-bold px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Add Member</button>
-      </div>
-    </form>
-  );
-};
-
-// ── Member Profile Modal ─────────────────────────────────────────────────
-const MemberProfileModal = ({ member, onClose, onMove, onUpdate }) => {
-  const [tab, setTab] = useState('overview');
-  const [journey, setJourney] = useState([]);
-  const [followups, setFollowups] = useState([]);
-  const [attendance, setAttendance] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [showFollowupForm, setShowFollowupForm] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [journeyRes, followupsRes, attendanceRes] = await Promise.all([
-          newMemberLeaderAPI.getJourney(member.id).catch(() => ({ data: [] })),
-          newMemberLeaderAPI.getFollowups(member.id).catch(() => ({ data: [] })),
-          newMemberLeaderAPI.getAttendance(member.id).catch(() => ({ data: [] })),
-        ]);
-        setJourney(asArray(journeyRes.data));
-        setFollowups(asArray(followupsRes.data));
-        setAttendance(asArray(attendanceRes.data));
-      } catch (e) { console.error('Profile load failed:', e); }
-      finally { setLoading(false); }
-    };
-    if (member?.id) load();
-  }, [member?.id]);
-
-  const currentStageIdx = PIPELINE_STAGES.findIndex(s => s.key === member?.pipeline_stage);
-  const progressPct = currentStageIdx >= 0 ? Math.round(((currentStageIdx + 1) / PIPELINE_STAGES.length) * 100) : 0;
-  const daysInAssimilation = daysBetween(member?.date_joined);
-  const daysSinceBaptism = daysBetween(member?.baptism_date);
-
-  const journeySteps = [
-    { label: 'Received', stage: 'received' },
-    { label: 'Orientation Scheduled', stage: 'orientation_scheduled' },
-    { label: 'Orientation In Progress', stage: 'orientation_in_progress' },
-    { label: 'Orientation Completed', stage: 'orientation_completed' },
-    { label: 'Home Cell Assigned', stage: 'home_cell_assigned' },
-    { label: 'Section Assigned', stage: 'section_assigned' },
-    { label: 'Mentor Assigned', stage: 'mentor_assigned' },
-    { label: 'Ministry Placement', stage: 'ministry_placement' },
-    { label: 'Graduation Review', stage: 'graduation_review' },
-    { label: 'Permanent Member', stage: 'permanent' },
-  ];
-
-  const tabs = ['Overview', 'Journey', 'Discipleship', 'Follow-ups', 'Graduation'];
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 z-10">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{member?.full_name}</h2>
-              {member?.phone && <p className="text-xs text-slate-500">{member.phone}</p>}
-              <div className="flex items-center gap-2 mt-1">
-                {member?.pipeline_stage && (() => {
-                  const st = PIPELINE_STAGES.find(s => s.key === member.pipeline_stage);
-                  return st ? <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STAGE_COLORS[st.color].bg} ${STAGE_COLORS[st.color].text} border ${STAGE_COLORS[st.color].border}`}>{st.label}</span> : null;
-                })()}
-              </div>
-            </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-          </div>
-          {/* Progress bar */}
-          <div className="mt-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-bold uppercase text-slate-400">Assimilation Progress</span>
-              <span className="text-[10px] font-black text-slate-600 dark:text-slate-400">{progressPct}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-900/40 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all" style={{ width: `${progressPct}%` }} />
-            </div>
-          </div>
-          {/* Tabs */}
-          <div className="flex gap-1 mt-3">
-            {tabs.map(t => (
-              <button key={t} onClick={() => setTab(t.toLowerCase())}
-                className={`text-[11px] font-bold px-3 py-1.5 rounded-lg transition-colors ${tab === t.toLowerCase() ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-indigo-500" /></div>
-          ) : (
-            <>
-              {tab === 'overview' && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    <InfoCard label="Member ID" value={member?.id} />
-                    <InfoCard label="Days Since Baptism" value={daysSinceBaptism ?? '—'} />
-                    <InfoCard label="Days in Assimilation" value={daysInAssimilation ?? '—'} />
-                    <InfoCard label="Section" value={member?.section_name || 'Not assigned'} />
-                    <InfoCard label="Home Cell" value={member?.home_cell_name || 'Not assigned'} />
-                    <InfoCard label="Mentor" value={member?.mentor_name || 'Not assigned'} />
-                    <InfoCard label="Decision Type" value={member?.decision_type || '—'} />
-                    <InfoCard label="Date Joined" value={fdate(member?.date_joined)} />
-                    <InfoCard label="Risk Status" value={member?.risk_status || 'low'} />
-                  </div>
-                  {member?.next_action && (
-                    <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3">
-                      <p className="text-[10px] font-bold uppercase text-amber-600">Next Required Action</p>
-                      <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">{member.next_action}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {tab === 'journey' && (
-                <div className="space-y-2">
-                  {journeySteps.map((step, i) => {
-                    const reached = currentStageIdx >= i;
-                    const journeyEntry = journey.find(j => j.stage === step.stage);
-                    return (
-                      <div key={i} className={`flex items-start gap-3 ${reached ? '' : 'opacity-40'}`}>
-                        <div className="flex flex-col items-center">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center ${reached ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                            {reached ? <CheckCircle2 className="w-4 h-4" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
-                          </div>
-                          {i < journeySteps.length - 1 && <div className={`w-0.5 h-6 ${reached ? 'bg-emerald-300' : 'bg-slate-200 dark:bg-slate-700'}`} />}
-                        </div>
-                        <div className="pt-1 pb-4">
-                          <p className="text-sm font-bold text-slate-900 dark:text-white">{step.label}</p>
-                          {journeyEntry && <p className="text-[10px] text-slate-400">{fdatetime(journeyEntry.stage_date)}{journeyEntry.recorded_by_name ? ` by ${journeyEntry.recorded_by_name}` : ''}</p>}
-                          {journeyEntry?.notes && <p className="text-xs text-slate-500 mt-0.5">{journeyEntry.notes}</p>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {tab === 'discipleship' && (
-                <div className="space-y-3">
-                  {(() => {
-                    const presentCount = attendance.filter(a => Number(a.attended) === 1).length;
-                    const totalWeeks = attendance.length;
-                    const attendanceRate = totalWeeks > 0 ? Math.round((presentCount / totalWeeks) * 100) : 0;
-                    const metrics = [
-                      { label: 'Orientation Completion', value: member?.orientation_completion_date ? '100%' : '0%', icon: BookOpen },
-                      { label: 'Sunday Attendance', value: `${attendanceRate}%`, icon: Calendar },
-                      { label: 'Weeks Tracked', value: totalWeeks, icon: Clock },
-                      { label: 'Weeks Present', value: presentCount, icon: CheckCircle2 },
-                      { label: 'Assimilation Score', value: `${member?.assimilation_score || 0}/100`, icon: Award },
-                    ];
-                    return metrics.map((m, i) => (
-                      <div key={i} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 p-3">
-                        <div className="flex items-center gap-2">
-                          <m.icon className="w-4 h-4 text-slate-400" />
-                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{m.label}</span>
-                        </div>
-                        <span className="text-sm font-black text-slate-900 dark:text-white">{m.value}</span>
-                      </div>
-                    ));
-                  })()}
-                </div>
-              )}
-
-              {tab === 'follow-ups' && (
-                <div className="space-y-3">
-                  <button onClick={() => setShowFollowupForm(!showFollowupForm)}
-                    className="text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300">
-                    + Add Follow-up
-                  </button>
-                  {showFollowupForm && <FollowupForm memberId={member.id} onSaved={() => { setShowFollowupForm(false); onUpdate(); }} />}
-                  {followups.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-6">No follow-up records yet.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {followups.map((f, i) => (
-                        <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-indigo-600">{f.followup_type}</span>
-                            <span className="text-[10px] text-slate-400">{fdatetime(f.followup_date)}</span>
-                          </div>
-                          {f.notes && <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{f.notes}</p>}
-                          {f.next_followup_date && <p className="text-[10px] text-amber-600 mt-1">Next: {fdate(f.next_followup_date)}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {tab === 'graduation' && (
-                <div className="space-y-3">
-                  <GraduationChecklist member={member} attendance={attendance} />
-                  {member?.pipeline_stage === 'graduation_review' && (
-                    <button onClick={() => { onMove(member.id, 'permanent'); onClose(); }}
-                      className="w-full text-sm font-bold py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
-                      Approve & Graduate to Permanent Membership
-                    </button>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ── Helper Components ────────────────────────────────────────────────────
-const InfoCard = ({ label, value }) => (
-  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 p-2.5">
-    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-    <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{value}</p>
-  </div>
-);
-
-const FollowupForm = ({ memberId, onSaved }) => {
-  const [type, setType] = useState('phone_call');
-  const [notes, setNotes] = useState('');
-  const [nextDate, setNextDate] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await newMemberLeaderAPI.addFollowup(memberId, { followup_type: type, notes, next_followup_date: nextDate || null });
-      onSaved();
-    } catch (e) { console.error('Followup save failed:', e); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2">
-      <select value={type} onChange={e => setType(e.target.value)} className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs">
-        <option value="phone_call">Phone Call</option>
-        <option value="visit">Visit</option>
-        <option value="mentor_session">Mentor Session</option>
-        <option value="pastoral_meeting">Pastoral Meeting</option>
-        <option value="prayer_request">Prayer Request</option>
-      </select>
-      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes..." rows={2} className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs" />
-      <input type="date" value={nextDate} onChange={e => setNextDate(e.target.value)} className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs" />
-      <button type="submit" disabled={saving} className="w-full text-xs font-bold py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
-        {saving ? 'Saving...' : 'Save Follow-up'}
-      </button>
-    </form>
-  );
-};
-
-const GraduationChecklist = ({ member, attendance }) => {
-  const presentCount = attendance.filter(a => Number(a.attended) === 1).length;
-  const items = [
-    { label: 'Orientation Completed', done: !!member?.orientation_completion_date },
-    { label: 'Home Cell Active', done: !!member?.home_cell_id },
-    { label: 'Section Assigned', done: !!member?.section_name },
-    { label: 'Mentor Assigned', done: !!member?.mentor_name },
-    { label: 'Attends Church Consistently', done: presentCount >= 3 },
-    { label: 'Serving in Ministry', done: !!member?.ministry_department_id },
-    { label: 'In Graduation Review Stage', done: member?.pipeline_stage === 'graduation_review' },
-  ];
-  const completed = items.filter(i => i.done).length;
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-bold text-slate-900 dark:text-white">Graduation Checklist</span>
-        <span className={`text-xs font-black px-2 py-0.5 rounded-full ${completed === items.length ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{completed}/{items.length}</span>
-      </div>
-      {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 p-2">
-          {item.done ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <X className="w-4 h-4 text-slate-300" />}
-          <span className={`text-xs ${item.done ? 'text-slate-900 dark:text-white font-semibold' : 'text-slate-400'}`}>{item.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
 export default NewMemberPipeline;

@@ -44,6 +44,83 @@ function getWeekStart(date = new Date()) {
   return d.toISOString().split('T')[0];
 }
 
+
+const ReportsView = () => {
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const result = await newMemberLeaderAPI.getReport({ year });
+        setData(result.data);
+      } catch (err) {
+        console.error('Failed to load report:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [year]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Clock className="w-4 h-4 text-slate-400" />
+        <select
+          value={year}
+          onChange={(e) => setYear(parseInt(e.target.value))}
+          className="input w-32"
+        >
+          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <span className="text-sm text-slate-500">New Members Report</span>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12 text-slate-400">
+          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading...
+        </div>
+      ) : data.length === 0 ? (
+        <div className="text-center py-12 text-slate-400">No data for {year}</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="text-left py-3 px-4 font-medium text-slate-600">Month</th>
+                <th className="text-right py-3 px-4 font-medium text-slate-600">Probation</th>
+                <th className="text-right py-3 px-4 font-medium text-slate-600">Graduated</th>
+                <th className="text-right py-3 px-4 font-medium text-slate-600">Permanent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((row) => (
+                <tr key={row.month} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="py-3 px-4 text-slate-800">{fdate(row.month + '-01')}</td>
+                  <td className="py-3 px-4 text-right text-slate-600">{row.probation || 0}</td>
+                  <td className="py-3 px-4 text-right text-emerald-600 font-medium">
+                    {row.graduated || 0}
+                  </td>
+                  <td className="py-3 px-4 text-right text-blue-600 font-medium">
+                    {row.permanent || 0}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const NewMemberLeaderView = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('probation');
@@ -590,81 +667,4 @@ const NewMemberLeaderView = () => {
     </div>
   );
 };
-
-const ReportsView = () => {
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const result = await newMemberLeaderAPI.getReport({ year });
-        setData(result.data);
-      } catch (err) {
-        console.error('Failed to load report:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [year]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Clock className="w-4 h-4 text-slate-400" />
-        <select
-          value={year}
-          onChange={(e) => setYear(parseInt(e.target.value))}
-          className="input w-32"
-        >
-          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-        <span className="text-sm text-slate-500">New Members Report</span>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-slate-400">
-          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading...
-        </div>
-      ) : data.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">No data for {year}</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-3 px-4 font-medium text-slate-600">Month</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-600">Probation</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-600">Graduated</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-600">Permanent</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row) => (
-                <tr key={row.month} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-3 px-4 text-slate-800">{fdate(row.month + '-01')}</td>
-                  <td className="py-3 px-4 text-right text-slate-600">{row.probation || 0}</td>
-                  <td className="py-3 px-4 text-right text-emerald-600 font-medium">
-                    {row.graduated || 0}
-                  </td>
-                  <td className="py-3 px-4 text-right text-blue-600 font-medium">
-                    {row.permanent || 0}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-};
-
 export default NewMemberLeaderView;
