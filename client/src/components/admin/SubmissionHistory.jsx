@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Clock, CalendarDays, FileText, Users, Search, ChevronDown, ChevronUp, Phone } from 'lucide-react';
-import { addDays, formatDisplayDate, formatLocalDate, parseLocalDate, fdate, fdatetime } from '../../utils/date';
-
+import { Clock, CalendarDays, Search, ChevronDown, ChevronUp, Phone } from 'lucide-react';
+import {
+  addDays,
+  formatDisplayDate,
+  formatLocalDate,
+  parseLocalDate,
+  fdatetime
+} from '../../utils/date';
 
 const SubmittedRow = ({ log }) => (
   <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-sm transition-all">
@@ -16,18 +21,21 @@ const SubmittedRow = ({ log }) => (
             <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">
               {log.leader_name}
             </p>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-              log.service_name === 'Main Service' ? 'bg-amber-100 text-amber-700' :
-              log.service_name === 'Leaders Gathering' ? 'bg-indigo-100 text-indigo-700' :
-              log.service_name === 'Youth Service' ? 'bg-emerald-100 text-emerald-700' :
-              'bg-slate-100 text-slate-600'
-            }`}>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                log.service_name === 'Main Service'
+                  ? 'bg-amber-100 text-amber-700'
+                  : log.service_name === 'Leaders Gathering'
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : log.service_name === 'Youth Service'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-slate-100 text-slate-600'
+              }`}
+            >
               {log.service_name}
             </span>
           </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            {log.section_name}
-          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">{log.section_name}</p>
         </div>
       </div>
 
@@ -50,7 +58,7 @@ const SubmittedRow = ({ log }) => (
   </div>
 );
 
-const PendingRow = ({ leader, serviceName }) => (
+const PendingRow = ({ leader }) => (
   <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-sm transition-all">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -67,9 +75,7 @@ const PendingRow = ({ leader, serviceName }) => (
               Pending
             </span>
           </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500">
-            {leader.section_name}
-          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">{leader.section_name}</p>
         </div>
       </div>
 
@@ -84,42 +90,62 @@ const PendingRow = ({ leader, serviceName }) => (
             Call: {leader.phone}
           </a>
         ) : (
-          <span className="text-xs text-slate-400 dark:text-slate-500 italic">No phone on file</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+            No phone on file
+          </span>
         )}
       </div>
     </div>
   </div>
 );
 
-const DateSubmissionDetails = ({ date, logs, allLeaders, serviceTypes }) => {
+const DateSubmissionDetails = ({ logs, allLeaders }) => {
   const [activeTab, setActiveTab] = useState('submitted'); // 'submitted' or 'pending'
-  
-  // Group logs by service
-  const servicesMap = useMemo(() => {
-    const map = {};
-    logs.forEach(log => {
-      const svc = log.service_name || 'Selected Service';
-      if (!map[svc]) map[svc] = [];
-      map[svc].push(log);
-    });
-    return map;
-  }, [logs]);
 
-  // For each service, find pending leaders
-  const serviceDetails = useMemo(() => {
-    return Object.entries(servicesMap).map(([serviceName, svcLogs]) => {
-      const submittedNames = new Set(svcLogs.map(l => l.leader_name));
-      const pending = (allLeaders || []).filter(leader => !submittedNames.has(leader.full_name));
-      return {
-        serviceName,
-        submitted: svcLogs,
-        pending
-      };
+  // Group logs by section first, then by service within each section.
+  const sectionDetails = useMemo(() => {
+    const map = {};
+    logs.forEach((log) => {
+      const sectionName = log.section_name || 'Unassigned Section';
+      if (!map[sectionName]) map[sectionName] = [];
+      map[sectionName].push(log);
     });
-  }, [servicesMap, allLeaders]);
+
+    return Object.entries(map)
+      .sort(([sectionA], [sectionB]) => sectionA.localeCompare(sectionB))
+      .map(([sectionName, sectionLogs]) => {
+        const services = {};
+        sectionLogs.forEach((log) => {
+          const serviceName = log.service_name || 'Selected Service';
+          if (!services[serviceName]) services[serviceName] = [];
+          services[serviceName].push(log);
+        });
+
+        const sectionLeaders = (allLeaders || []).filter(
+          (leader) => (leader.section_name || 'Unassigned Section') === sectionName
+        );
+
+        return {
+          sectionName,
+          services: Object.entries(services).map(([serviceName, submitted]) => {
+            const submittedNames = new Set(submitted.map((log) => log.leader_name));
+            return {
+              serviceName,
+              submitted,
+              pending: sectionLeaders.filter((leader) => !submittedNames.has(leader.full_name))
+            };
+          })
+        };
+      });
+  }, [logs, allLeaders]);
 
   const totalSubmitted = logs.length;
-  const totalPending = serviceDetails.reduce((sum, s) => sum + s.pending.length, 0);
+  const totalPending = sectionDetails.reduce(
+    (sum, section) =>
+      sum +
+      section.services.reduce((serviceSum, service) => serviceSum + service.pending.length, 0),
+    0
+  );
 
   return (
     <div className="mt-2 ml-4 pl-6 border-l-2 border-slate-200 dark:border-slate-700 space-y-4">
@@ -148,49 +174,46 @@ const DateSubmissionDetails = ({ date, logs, allLeaders, serviceTypes }) => {
       </div>
 
       {/* Render based on selected inner tab */}
-      {activeTab === 'submitted' ? (
-        <div className="space-y-3">
-          {serviceDetails.map((svc, sIdx) => (
-            <div key={sIdx} className="space-y-2">
-              {serviceDetails.length > 1 && (
-                <h4 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">{svc.serviceName}</h4>
-              )}
-              {svc.submitted.map((log, idx) => (
-                <SubmittedRow key={idx} log={log} />
-              ))}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {serviceDetails.map((svc, sIdx) => (
-            <div key={sIdx} className="space-y-2">
-              {serviceDetails.length > 1 && (
-                <h4 className="text-xs font-bold text-slate-455 dark:text-slate-500 uppercase tracking-wider">{svc.serviceName}</h4>
-              )}
-              {svc.pending.length > 0 ? (
-                <div className="grid gap-2">
-                  {svc.pending.map((leader, idx) => (
-                    <PendingRow key={idx} leader={leader} serviceName={svc.serviceName} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-xs text-slate-400 italic py-2">
-                  All leaders have submitted for this service!
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="space-y-5">
+        {sectionDetails.map((section) => (
+          <section key={section.sectionName} className="space-y-3">
+            <h4 className="text-xs font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">
+              {section.sectionName}
+            </h4>
+
+            {section.services.map((service) => (
+              <div key={service.serviceName} className="space-y-2">
+                {section.services.length > 1 && (
+                  <h5 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                    {service.serviceName}
+                  </h5>
+                )}
+
+                {activeTab === 'submitted' ? (
+                  service.submitted.map((log, idx) => <SubmittedRow key={idx} log={log} />)
+                ) : service.pending.length > 0 ? (
+                  <div className="grid gap-2">
+                    {service.pending.map((leader, idx) => (
+                      <PendingRow key={idx} leader={leader} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-slate-400 italic py-2">
+                    All leaders in this section have submitted for this service!
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+        ))}
+      </div>
     </div>
   );
 };
 
-
-const SubmissionHistory = ({ 
-  history, 
-  historyLoading, 
+const SubmissionHistory = ({
+  history,
+  historyLoading,
   serviceTypes = [],
   selectedServiceId,
   onServiceChange,
@@ -260,7 +283,7 @@ const SubmissionHistory = ({
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
     });
   };
 
@@ -277,7 +300,10 @@ const SubmissionHistory = ({
   };
 
   const totalSubmissions = groupedByDate.reduce((sum, [, logs]) => sum + logs.length, 0);
-  const totalRecords = groupedByDate.reduce((sum, [, logs]) => sum + logs.reduce((s, l) => s + Number(l.records_count || 0), 0), 0);
+  const totalRecords = groupedByDate.reduce(
+    (sum, [, logs]) => sum + logs.reduce((s, l) => s + Number(l.records_count || 0), 0),
+    0
+  );
 
   if (historyLoading) {
     return (
@@ -320,7 +346,7 @@ const SubmissionHistory = ({
                 All
               </button>
 
-              {serviceTypes.map(service => (
+              {serviceTypes.map((service) => (
                 <button
                   key={service.id}
                   onClick={() => onServiceChange(service.id)}
@@ -380,7 +406,9 @@ const SubmissionHistory = ({
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-slate-400 dark:text-slate-500">{formatRelativeDate(date)}</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">
+                      {formatRelativeDate(date)}
+                    </span>
                     {isExpanded ? (
                       <ChevronUp className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
                     ) : (
@@ -390,14 +418,7 @@ const SubmissionHistory = ({
                 </button>
 
                 {/* Submissions List & Pending Details */}
-                {isExpanded && (
-                  <DateSubmissionDetails 
-                    date={date} 
-                    logs={logs} 
-                    allLeaders={leaders} 
-                    serviceTypes={serviceTypes} 
-                  />
-                )}
+                {isExpanded && <DateSubmissionDetails logs={logs} allLeaders={leaders} />}
               </div>
             );
           })}
@@ -407,9 +428,13 @@ const SubmissionHistory = ({
           <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
             <Clock className="w-8 h-8 text-slate-400 dark:text-slate-500" />
           </div>
-          <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">No submission history</h4>
+          <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
+            No submission history
+          </h4>
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm text-center">
-            {searchTerm ? 'No results match your search.' : 'Attendance submissions will appear here once leaders start reporting.'}
+            {searchTerm
+              ? 'No results match your search.'
+              : 'Attendance submissions will appear here once leaders start reporting.'}
           </p>
         </div>
       )}
