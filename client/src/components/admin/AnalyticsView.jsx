@@ -63,97 +63,8 @@ const TABS = [
   { key: 'risk', label: 'Risk Analysis', icon: Shield },
 ];
 
-const AnalyticsView = () => {
-  const [tab, setTab] = useState('executive');
-  const [period, setPeriod] = useState(90);
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({});
-
-  useEffect(() => { loadAll(); }, [period]);
-
-  const loadAll = async () => {
-    setLoading(true);
-    try {
-      const r = await Promise.allSettled([
-        analyticsAPI.getExecutiveDashboard(),
-        analyticsAPI.getSectionRankings(period),
-        analyticsAPI.getLeaderRankings(period),
-        analyticsAPI.getDepartments(period),
-        analyticsAPI.getMemberIntelligence(period),
-        analyticsAPI.getTrendsMA(26),
-        analyticsAPI.getAIInsights(),
-        analyticsAPI.getChurchGrowthIndex(),
-        analyticsAPI.getRiskAnalysis(),
-        analyticsAPI.getHeadLeaderAnalytics(period),
-        analyticsAPI.getLeaderWorkload(period),
-        analyticsAPI.getSectionComparison(period),
-        analyticsAPI.getYearOverYear(),
-        analyticsAPI.getAttendancePatterns(period),
-        analyticsAPI.getFinanceAnalytics(),
-      ]);
-      const ok = i => r[i].status === 'fulfilled' ? r[i].value.data : null;
-      setData({
-        executive: ok(0), sections: ok(1) || [], leaders: ok(2) || [],
-        departments: ok(3) || [], members: ok(4) || [],
-        trends: ok(5) || [], insights: ok(6) || [],
-        growth: ok(7), risk: ok(8),
-        headLeaders: ok(9) || [], workload: ok(10) || [],
-        sectionComparison: ok(11) || [], yearOverYear: ok(12) || [],
-        dayPatterns: ok(13) || [],
-        finance: ok(14) || null,
-      });
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  };
-
-  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
-
-  return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-6 text-white shadow-xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><BarChart3 className="w-5 h-5" /></div>
-            <div>
-              <h2 className="text-xl font-bold">Executive Analytics</h2>
-              <p className="text-white/80 text-sm">Church intelligence dashboard with charts</p>
-            </div>
-          </div>
-          <select value={period} onChange={e => setPeriod(Number(e.target.value))}
-            className="bg-white/20 border border-white/30 rounded-xl px-3 py-2 text-sm text-white focus:outline-none">
-            <option value={30} className="text-slate-900">Last 30 days</option>
-            <option value={90} className="text-slate-900">Last 90 days</option>
-            <option value={180} className="text-slate-900">Last 6 months</option>
-            <option value={365} className="text-slate-900">Last year</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
-        {TABS.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${tab === t.key ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
-            <t.icon className="w-3.5 h-3.5" />{t.label}
-          </button>
-        ))}
-      </div>
-
-          {tab === 'executive' && <ExecutiveSummary days={period} variant="reports" />}
-      {tab === 'finance' && <FinanceTab data={data} />}
-      {tab === 'sections' && <SectionsTab data={data} />}
-      {tab === 'leaders' && <LeadersTab data={data} />}
-      {tab === 'departments' && <DepartmentsTab data={data} />}
-      {tab === 'members' && <MembersTab data={data} />}
-      {tab === 'trends' && <TrendsTab data={data} />}
-      {tab === 'insights' && <InsightsTab data={data} />}
-      {tab === 'health' && <HealthTab data={data} />}
-      {tab === 'risk' && <RiskTab data={data} />}
-    </div>
-  );
-};
-
-// ExecutiveTab replaced by imported ExecutiveSummary component
+// Tab sub-components are declared below; AnalyticsView is defined after them
+// to avoid Temporal Dead Zone (TDZ) errors in the minified bundle.
 
 const SectionsTab = ({ data }) => {
   const s = data.sections || [];
@@ -992,6 +903,98 @@ const FinanceTab = ({ data }) => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// AnalyticsView defined here so all tab const components above are already
+// in scope at module evaluation time (avoids minifier TDZ bug).
+const AnalyticsView = () => {
+  const [tab, setTab] = useState('executive');
+  const [period, setPeriod] = useState(90);
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({});
+
+  useEffect(() => { loadAll(); }, [period]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const r = await Promise.allSettled([
+        analyticsAPI.getExecutiveDashboard(),
+        analyticsAPI.getSectionRankings(period),
+        analyticsAPI.getLeaderRankings(period),
+        analyticsAPI.getDepartments(period),
+        analyticsAPI.getMemberIntelligence(period),
+        analyticsAPI.getTrendsMA(26),
+        analyticsAPI.getAIInsights(),
+        analyticsAPI.getChurchGrowthIndex(),
+        analyticsAPI.getRiskAnalysis(),
+        analyticsAPI.getHeadLeaderAnalytics(period),
+        analyticsAPI.getLeaderWorkload(period),
+        analyticsAPI.getSectionComparison(period),
+        analyticsAPI.getYearOverYear(),
+        analyticsAPI.getAttendancePatterns(period),
+        analyticsAPI.getFinanceAnalytics(),
+      ]);
+      const ok = i => r[i].status === 'fulfilled' ? r[i].value.data : null;
+      setData({
+        executive: ok(0), sections: ok(1) || [], leaders: ok(2) || [],
+        departments: ok(3) || [], members: ok(4) || [],
+        trends: ok(5) || [], insights: ok(6) || [],
+        growth: ok(7), risk: ok(8),
+        headLeaders: ok(9) || [], workload: ok(10) || [],
+        sectionComparison: ok(11) || [], yearOverYear: ok(12) || [],
+        dayPatterns: ok(13) || [],
+        finance: ok(14) || null,
+      });
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-6 text-white shadow-xl">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
+        <div className="relative z-10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center"><BarChart3 className="w-5 h-5" /></div>
+            <div>
+              <h2 className="text-xl font-bold">Executive Analytics</h2>
+              <p className="text-white/80 text-sm">Church intelligence dashboard with charts</p>
+            </div>
+          </div>
+          <select value={period} onChange={e => setPeriod(Number(e.target.value))}
+            className="bg-white/20 border border-white/30 rounded-xl px-3 py-2 text-sm text-white focus:outline-none">
+            <option value={30} className="text-slate-900">Last 30 days</option>
+            <option value={90} className="text-slate-900">Last 90 days</option>
+            <option value={180} className="text-slate-900">Last 6 months</option>
+            <option value={365} className="text-slate-900">Last year</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${tab === t.key ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            <t.icon className="w-3.5 h-3.5" />{t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'executive' && <ExecutiveSummary days={period} variant="reports" />}
+      {tab === 'finance' && <FinanceTab data={data} />}
+      {tab === 'sections' && <SectionsTab data={data} />}
+      {tab === 'leaders' && <LeadersTab data={data} />}
+      {tab === 'departments' && <DepartmentsTab data={data} />}
+      {tab === 'members' && <MembersTab data={data} />}
+      {tab === 'trends' && <TrendsTab data={data} />}
+      {tab === 'insights' && <InsightsTab data={data} />}
+      {tab === 'health' && <HealthTab data={data} />}
+      {tab === 'risk' && <RiskTab data={data} />}
     </div>
   );
 };
