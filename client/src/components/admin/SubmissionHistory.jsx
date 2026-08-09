@@ -124,9 +124,14 @@ const DateSubmissionDetails = ({ logs, allLeaders }) => {
         const sectionLeaders = (allLeaders || []).filter(
           (leader) => (leader.section_name || 'Unassigned Section') === sectionName
         );
+        const headLeaders = sectionLeaders
+          .filter((leader) => Number(leader.is_head) === 1)
+          .map((leader) => leader.full_name)
+          .filter(Boolean);
 
         return {
           sectionName,
+          headLeaders,
           services: Object.entries(services).map(([serviceName, submitted]) => {
             const submittedNames = new Set(submitted.map((log) => log.leader_name));
             return {
@@ -179,6 +184,7 @@ const DateSubmissionDetails = ({ logs, allLeaders }) => {
           <section key={section.sectionName} className="space-y-3">
             <h4 className="text-xs font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">
               {section.sectionName}
+              {section.headLeaders.length > 0 && ` (${section.headLeaders.join(', ')})`}
             </h4>
 
             {section.services.map((service) => (
