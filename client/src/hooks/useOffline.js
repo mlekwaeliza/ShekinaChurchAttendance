@@ -27,13 +27,6 @@ const useOffline = () => {
     };
   }, []);
 
-  useEffect(() => {
-    if (isOnline) {
-      loadPendingCount();
-      loadConflicts();
-    }
-  }, [isOnline, loadPendingCount, loadConflicts]);
-
   const loadPendingCount = useCallback(async () => {
     try {
       const unsynced = await getUnsyncedSubmissions();
@@ -51,6 +44,13 @@ const useOffline = () => {
       console.error('Failed to load conflicts:', e);
     }
   }, []);
+
+  useEffect(() => {
+    if (isOnline) {
+      loadPendingCount();
+      loadConflicts();
+    }
+  }, [isOnline, loadPendingCount, loadConflicts]);
 
   const queueSubmission = useCallback(async (data) => {
     const existing = await getQueuedSubmissionForDate(data.date, data.service_id);
