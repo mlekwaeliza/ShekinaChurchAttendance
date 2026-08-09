@@ -50,28 +50,8 @@ const MONTH_NAMES = [
 const STAT_STYLE =
   'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
 
-const EvangelistDashboard = ({ subtab: propTab }) => {
-  const { tab } = useParams();
-  const { user } = useAuth();
-  const activeTab = propTab || tab || 'overview';
-
-  switch (activeTab) {
-    case 'outreach':
-      return <OutreachEvents />;
-    case 'souls':
-      return <SoulsWonRegistry />;
-    case 'follow-ups':
-      return <FollowUpManagement />;
-    case 'team':
-      return <EvangelismTeam />;
-    case 'baptism':
-      return <BaptismTracking />;
-    case 'reports':
-      return <EvangelismReports />;
-    default:
-      return <Overview user={user} />;
-  }
-};
+// EvangelistDashboard is defined after all tab sub-components to avoid TDZ
+// in minified bundles (esbuild renames consts to single letters).
 
 // ── Overview ────────────────────────────────────────────────────────
 const Overview = ({ user }) => {
@@ -2203,6 +2183,32 @@ const EventModal = ({ onClose, onSaved }) => {
       </div>
     </div>
   );
+};
+
+// EvangelistDashboard defined last so all tab sub-components (Overview,
+// OutreachEvents, SoulsWonRegistry, FollowUpManagement, EvangelismTeam,
+// BaptismTracking, EvangelismReports) are already in scope.
+const EvangelistDashboard = ({ subtab: propTab }) => {
+  const { tab } = useParams();
+  const { user } = useAuth();
+  const activeTab = propTab || tab || 'overview';
+
+  switch (activeTab) {
+    case 'outreach':
+      return <OutreachEvents />;
+    case 'souls':
+      return <SoulsWonRegistry />;
+    case 'follow-ups':
+      return <FollowUpManagement />;
+    case 'team':
+      return <EvangelismTeam />;
+    case 'baptism':
+      return <BaptismTracking />;
+    case 'reports':
+      return <EvangelismReports />;
+    default:
+      return <Overview user={user} />;
+  }
 };
 
 export default EvangelistDashboard;

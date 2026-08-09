@@ -9,30 +9,9 @@ import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import { contributionAPI, financeAPI, adminAPI } from '../services/api';
 import { HandCoins, Building2, Calendar, Users, PiggyBank, Wallet } from 'lucide-react';
 
-const AccountantDashboard = () => {
-  const { tab } = useParams();
-  const { showToast } = useToast();
-  const showMessage = useCallback(
-    (msg) => {
-      showToast({ type: 'success', message: msg });
-    },
-    [showToast]
-  );
-
-  if (!tab || tab === 'dashboard') {
-    return <AccountantOverview />;
-  }
-
-  if (tab === 'analytics') {
-    return <AnalyticsView />;
-  }
-
-  return (
-    <div className="space-y-6">
-      <FinanceView showMessage={showMessage} userRole="accountant" />
-    </div>
-  );
-};
+// AccountantDashboard is defined after AccountantOverview to avoid TDZ in
+// minified bundles (esbuild renames consts to single letters causing
+// "Cannot access 'm' before initialization" errors).
 
 const AccountantOverview = () => {
   const [data, setData] = useState({
@@ -249,6 +228,31 @@ const AccountantOverview = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const AccountantDashboard = () => {
+  const { tab } = useParams();
+  const { showToast } = useToast();
+  const showMessage = useCallback(
+    (msg) => {
+      showToast({ type: 'success', message: msg });
+    },
+    [showToast]
+  );
+
+  if (!tab || tab === 'dashboard') {
+    return <AccountantOverview />;
+  }
+
+  if (tab === 'analytics') {
+    return <AnalyticsView />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <FinanceView showMessage={showMessage} userRole="accountant" />
     </div>
   );
 };
