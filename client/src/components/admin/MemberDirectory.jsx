@@ -1212,7 +1212,7 @@ const MemberDirectory = ({
                         </td>
                         {/* Actions */}
                         <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-0.5">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1220,30 +1220,30 @@ const MemberDirectory = ({
                                 setTitleAssignMember(member.id);
                                 setTitleForm({ title_id: '', appointment_date: '', notes: '' });
                               }}
-                              className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
+                              className="p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
                               title="Assign Title"
                             >
-                              <Award className="w-3.5 h-3.5" />
+                              <Award className="w-5 h-5" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onEdit(member);
                               }}
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors active:scale-90"
+                              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors active:scale-90"
                               title="Edit"
                             >
-                              <Pencil className="w-3.5 h-3.5" />
+                              <Pencil className="w-5 h-5" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onDelete(member);
                               }}
-                              className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-505 transition-colors active:scale-90"
+                              className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-505 transition-colors active:scale-90"
                               title="Delete"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-5 h-5" />
                             </button>
                           </div>
                         </td>
@@ -1443,11 +1443,7 @@ const MemberDirectory = ({
       )}
 
       {/* Member Details Drawer */}
-      <MemberDetailsDrawer
-        member={detailsMember}
-        isOpen={!!detailsMember}
-        onClose={closeDetails}
-      />
+      <MemberDetailsDrawer member={detailsMember} isOpen={!!detailsMember} onClose={closeDetails} />
 
       {/* Bulk Edit Modal */}
       {showBulkEdit && (
