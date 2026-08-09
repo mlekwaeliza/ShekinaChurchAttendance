@@ -53,6 +53,317 @@ const STAT_STYLE =
 // EvangelistDashboard is defined after all tab sub-components to avoid TDZ
 // in minified bundles (esbuild renames consts to single letters).
 
+// ── Soul Winning Trend Chart ────────────────────────────────────────
+const SoulWinningTrendChart = ({ data }) => (
+  <div className={STAT_STYLE}>
+    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+      <TrendingUp className="w-5 h-5 text-primary-500" /> Soul Winning Trend
+    </h3>
+    {data.length === 0 ? (
+      <EmptyState
+        icon={TrendingUp}
+        title="No data available"
+        description="Soul winning trends will appear once outreach results are recorded."
+      />
+    ) : (
+      <div className="space-y-2">
+        {data.map((point, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <span className="text-xs font-medium text-slate-500 w-16">{point.month}</span>
+            <div className="flex-1 h-6 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all"
+                style={{
+                  width: `${Math.min((point.count / Math.max(...data.map((d) => d.count))) * 100, 100)}%`
+                }}
+              />
+            </div>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-10 text-right">
+              {point.count}
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
+// ── Conversion Funnel Chart ─────────────────────────────────────────
+const ConversionFunnelChart = ({ data }) => {
+  if (!data)
+    return (
+      <div className={STAT_STYLE}>
+        <p className="text-sm text-slate-400 py-8 text-center">Loading...</p>
+      </div>
+    );
+  const stages = [
+    { label: 'Visitors', value: data.visitors, color: 'bg-slate-400' },
+    { label: 'Saved', value: data.saved, color: 'bg-blue-400' },
+    { label: 'Followed Up', value: data.followed_up, color: 'bg-cyan-400' },
+    { label: 'Baptized', value: data.baptized, color: 'bg-emerald-400' },
+    { label: 'Members', value: data.members, color: 'bg-primary-500' }
+  ];
+  const maxVal = Math.max(...stages.map((s) => s.value), 1);
+  return (
+    <div className={STAT_STYLE}>
+      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+        <Activity className="w-5 h-5 text-primary-500" /> Conversion Funnel
+      </h3>
+      <div className="space-y-3">
+        {stages.map((stage, i) => (
+          <div key={i}>
+            <div className="flex justify-between text-sm mb-1">
+              <span className="font-medium text-slate-700 dark:text-slate-300">{stage.label}</span>
+              <span className="font-bold text-slate-900 dark:text-white">{stage.value}</span>
+            </div>
+            <div className="h-3 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${stage.color} transition-all`}
+                style={{ width: `${(stage.value / maxVal) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+// ── Convert Modal ──────────────────────────────────────────────────
+const ConvertModal = ({ onClose, onSaved }) => {
+  const [form, setForm] = useState({
+    full_name: '',
+    phone: '',
+    gender: '',
+    age_group: '',
+    location: '',
+    date_saved: new Date().toISOString().split('T')[0],
+    soul_winner: ''
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await evangelismAPI.createSoulWon(form);
+      onSaved();
+      onClose();
+    } catch (err) {
+      alert('Failed to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-modal">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Register New Convert</h3>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+            <input
+              type="text"
+              value={form.full_name}
+              onChange={(e) => setForm({ ...form, full_name: capitalizeName(e.target.value) })}
+              onPaste={(e) => {
+                e.preventDefault();
+                setForm({ ...form, full_name: capitalizeName(e.clipboardData.getData('text')) });
+              }}
+              className="input w-full"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+              <input
+                type="text"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: handlePhoneChange(e.target.value) })}
+                className="input w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+              <select
+                value={form.gender}
+                onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                className="input w-full"
+              >
+                <option value="">Select</option>
+                <option>Male</option>
+                <option>Female</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Age Group</label>
+              <select
+                value={form.age_group}
+                onChange={(e) => setForm({ ...form, age_group: e.target.value })}
+                className="input w-full"
+              >
+                <option value="">Select</option>
+                <option>0-12</option>
+                <option>13-17</option>
+                <option>18-25</option>
+                <option>26-35</option>
+                <option>36-50</option>
+                <option>50+</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date Saved</label>
+              <input
+                type="date"
+                value={form.date_saved}
+                onChange={(e) => setForm({ ...form, date_saved: e.target.value })}
+                className="input w-full"
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Soul Winner</label>
+            <input
+              type="text"
+              value={form.soul_winner}
+              onChange={(e) => setForm({ ...form, soul_winner: e.target.value })}
+              className="input w-full"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+            <input
+              type="text"
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              className="input w-full"
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={saving} className="btn-primary flex-1">
+              {saving ? 'Saving...' : 'Register Convert'}
+            </button>
+            <button type="button" onClick={onClose} className="btn-secondary">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ── Event Modal (quick create) ──────────────────────────────────────
+const EventModal = ({ onClose, onSaved }) => {
+  const [form, setForm] = useState({
+    name: '',
+    date: '',
+    location: '',
+    event_type: '',
+    organizer: ''
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await evangelismAPI.createOutreachEvent(form);
+      onSaved();
+      onClose();
+    } catch (err) {
+      alert('Failed to create');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-modal">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            Create Outreach Event
+          </h3>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Event Name *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="input w-full"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                className="input w-full"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+              <input
+                type="text"
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                className="input w-full"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Event Type</label>
+              <input
+                type="text"
+                value={form.event_type}
+                onChange={(e) => setForm({ ...form, event_type: e.target.value })}
+                className="input w-full"
+                placeholder="e.g. Crusade"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Organizer</label>
+              <input
+                type="text"
+                value={form.organizer}
+                onChange={(e) => setForm({ ...form, organizer: e.target.value })}
+                className="input w-full"
+              />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={saving} className="btn-primary flex-1">
+              {saving ? 'Creating...' : 'Create Event'}
+            </button>
+            <button type="button" onClick={onClose} className="btn-secondary">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
 // ── Overview ────────────────────────────────────────────────────────
 const Overview = ({ user }) => {
   const [stats, setStats] = useState(null);
@@ -257,82 +568,6 @@ const Overview = ({ user }) => {
         <ConvertModal onClose={() => setShowConvertModal(false)} onSaved={load} />
       )}
       {showEventModal && <EventModal onClose={() => setShowEventModal(false)} onSaved={load} />}
-    </div>
-  );
-};
-
-// ── Soul Winning Trend Chart ────────────────────────────────────────
-const SoulWinningTrendChart = ({ data }) => (
-  <div className={STAT_STYLE}>
-    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-      <TrendingUp className="w-5 h-5 text-primary-500" /> Soul Winning Trend
-    </h3>
-    {data.length === 0 ? (
-      <EmptyState
-        icon={TrendingUp}
-        title="No data available"
-        description="Soul winning trends will appear once outreach results are recorded."
-      />
-    ) : (
-      <div className="space-y-2">
-        {data.map((point, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <span className="text-xs font-medium text-slate-500 w-16">{point.month}</span>
-            <div className="flex-1 h-6 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all"
-                style={{
-                  width: `${Math.min((point.count / Math.max(...data.map((d) => d.count))) * 100, 100)}%`
-                }}
-              />
-            </div>
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-10 text-right">
-              {point.count}
-            </span>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-);
-
-// ── Conversion Funnel Chart ─────────────────────────────────────────
-const ConversionFunnelChart = ({ data }) => {
-  if (!data)
-    return (
-      <div className={STAT_STYLE}>
-        <p className="text-sm text-slate-400 py-8 text-center">Loading...</p>
-      </div>
-    );
-  const stages = [
-    { label: 'Visitors', value: data.visitors, color: 'bg-slate-400' },
-    { label: 'Saved', value: data.saved, color: 'bg-blue-400' },
-    { label: 'Followed Up', value: data.followed_up, color: 'bg-cyan-400' },
-    { label: 'Baptized', value: data.baptized, color: 'bg-emerald-400' },
-    { label: 'Members', value: data.members, color: 'bg-primary-500' }
-  ];
-  const maxVal = Math.max(...stages.map((s) => s.value), 1);
-  return (
-    <div className={STAT_STYLE}>
-      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-        <Activity className="w-5 h-5 text-primary-500" /> Conversion Funnel
-      </h3>
-      <div className="space-y-3">
-        {stages.map((stage, i) => (
-          <div key={i}>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="font-medium text-slate-700 dark:text-slate-300">{stage.label}</span>
-              <span className="font-bold text-slate-900 dark:text-white">{stage.value}</span>
-            </div>
-            <div className="h-3 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-              <div
-                className={`h-full rounded-full ${stage.color} transition-all`}
-                style={{ width: `${(stage.value / maxVal) * 100}%` }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
@@ -1944,243 +2179,6 @@ const EvangelismReports = () => {
           </div>
         </div>
       )}
-    </div>
-  );
-};
-
-// ── Convert Modal ──────────────────────────────────────────────────
-const ConvertModal = ({ onClose, onSaved }) => {
-  const [form, setForm] = useState({
-    full_name: '',
-    phone: '',
-    gender: '',
-    age_group: '',
-    location: '',
-    date_saved: new Date().toISOString().split('T')[0],
-    soul_winner: ''
-  });
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await evangelismAPI.createSoulWon(form);
-      onSaved();
-      onClose();
-    } catch (err) {
-      alert('Failed to save');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-modal">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Register New Convert</h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
-            <input
-              type="text"
-              value={form.full_name}
-              onChange={(e) => setForm({ ...form, full_name: capitalizeName(e.target.value) })}
-              onPaste={(e) => {
-                e.preventDefault();
-                setForm({ ...form, full_name: capitalizeName(e.clipboardData.getData('text')) });
-              }}
-              className="input w-full"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
-              <input
-                type="text"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: handlePhoneChange(e.target.value) })}
-                className="input w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
-              <select
-                value={form.gender}
-                onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                className="input w-full"
-              >
-                <option value="">Select</option>
-                <option>Male</option>
-                <option>Female</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Age Group</label>
-              <select
-                value={form.age_group}
-                onChange={(e) => setForm({ ...form, age_group: e.target.value })}
-                className="input w-full"
-              >
-                <option value="">Select</option>
-                <option>0-12</option>
-                <option>13-17</option>
-                <option>18-25</option>
-                <option>26-35</option>
-                <option>36-50</option>
-                <option>50+</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date Saved</label>
-              <input
-                type="date"
-                value={form.date_saved}
-                onChange={(e) => setForm({ ...form, date_saved: e.target.value })}
-                className="input w-full"
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Soul Winner</label>
-            <input
-              type="text"
-              value={form.soul_winner}
-              onChange={(e) => setForm({ ...form, soul_winner: e.target.value })}
-              className="input w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-            <input
-              type="text"
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-              className="input w-full"
-            />
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={saving} className="btn-primary flex-1">
-              {saving ? 'Saving...' : 'Register Convert'}
-            </button>
-            <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// ── Event Modal (quick create) ──────────────────────────────────────
-const EventModal = ({ onClose, onSaved }) => {
-  const [form, setForm] = useState({
-    name: '',
-    date: '',
-    location: '',
-    event_type: '',
-    organizer: ''
-  });
-  const [saving, setSaving] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await evangelismAPI.createOutreachEvent(form);
-      onSaved();
-      onClose();
-    } catch (err) {
-      alert('Failed to create');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-modal">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-            Create Outreach Event
-          </h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Event Name *</label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="input w-full"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
-              <input
-                type="date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                className="input w-full"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
-              <input
-                type="text"
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                className="input w-full"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Event Type</label>
-              <input
-                type="text"
-                value={form.event_type}
-                onChange={(e) => setForm({ ...form, event_type: e.target.value })}
-                className="input w-full"
-                placeholder="e.g. Crusade"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Organizer</label>
-              <input
-                type="text"
-                value={form.organizer}
-                onChange={(e) => setForm({ ...form, organizer: e.target.value })}
-                className="input w-full"
-              />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={saving} className="btn-primary flex-1">
-              {saving ? 'Creating...' : 'Create Event'}
-            </button>
-            <button type="button" onClick={onClose} className="btn-secondary">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
     </div>
   );
 };
