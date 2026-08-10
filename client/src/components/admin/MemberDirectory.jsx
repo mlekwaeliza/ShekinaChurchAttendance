@@ -1068,7 +1068,7 @@ const MemberDirectory = ({
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden sm:table-cell">
                     Details
                   </th>
-                  <th className="w-20 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="sticky right-0 z-20 min-w-[120px] w-32 bg-slate-50/95 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur-sm dark:bg-slate-800/95 dark:text-slate-400">
                     Actions
                   </th>
                 </tr>
@@ -1093,7 +1093,7 @@ const MemberDirectory = ({
                         } ${isSelected ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''}`}
                       >
                         {/* Checkbox */}
-                        <td className="px-4 py-3">
+                        <td className="sticky right-0 z-[1] min-w-[120px] w-32 bg-white/95 px-4 py-3 dark:bg-slate-800/95">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
