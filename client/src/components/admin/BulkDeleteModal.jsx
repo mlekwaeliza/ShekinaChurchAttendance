@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Users, AlertTriangle, Trash2 } from 'lucide-react';
+import { X, AlertTriangle, Trash2 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import { useModalA11y } from '../../hooks/useModalA11y';
 

@@ -1,12 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import {
-  ChevronRight, Search, Filter, Trash2, Edit2, UserPlus, X,
+  ChevronRight, Search, Trash2, Edit2, UserPlus, X,
   Users, MapPin, Calendar, CheckCircle, XCircle, ChevronLeft,
   Save, UserCheck,
 } from 'lucide-react';
 import { adminAPI } from '../../../services/api';
-
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const CapacityBar = ({ count, max }) => {
   if (!max) return <span className="text-xs text-slate-400">—</span>;
@@ -120,7 +118,7 @@ const CellProfile = ({ cell, cells, allLeaders, onClose, onRefresh, onAddMember 
                   { label: 'Capacity', value: cell.max_capacity ? `${pct}%` : 'No limit', icon: Users, cls: capColor },
                   { label: 'Meeting Day', value: cell.meeting_day || 'Not set', icon: Calendar },
                   { label: 'Location', value: cell.location || 'Not set', icon: MapPin },
-                ].map(({ label, value, icon: Icon, cls }) => (
+                ].map(({ label, value, cls }) => (
                   <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800">
                     <p className="text-xs font-semibold text-slate-400">{label}</p>
                     <p className={`mt-0.5 text-sm font-bold ${cls || 'text-slate-800 dark:text-slate-100'}`}>{value}</p>

@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserCog, Phone, AtSign, Eye, Plus, Pencil, Trash2, Search, Shield, Users, ChevronDown, ChevronUp, Layers } from 'lucide-react';
-import Badge from '../ui/Badge';
 
 const sectionStyles = [
   { gradient: 'from-violet-500 to-purple-600', bg: 'bg-violet-50 dark:bg-violet-900/20', border: 'border-violet-200 dark:border-violet-700/50', text: 'text-violet-700 dark:text-violet-300', dot: 'bg-violet-500', shadow: 'shadow-violet-500/10', bar: 'from-violet-500 to-purple-600' },
@@ -196,7 +195,6 @@ const LeaderDirectory = ({
             const style = sectionIdx >= 0 ? sectionStyles[sectionIdx % sectionStyles.length] : fallbackStyle;
             const isCollapsed = collapsedSections.has(sectionName);
             const headLeader = sectionLeaders.find((l) => l.is_head === 1);
-            const memberLeaders = sectionLeaders.filter((l) => l.is_head !== 1);
 
             return (
               <div key={sectionName}>

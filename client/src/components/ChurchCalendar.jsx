@@ -57,7 +57,7 @@ const ChurchCalendar = () => {
 
   useEffect(() => {
     loadEvents();
-  }, [year]);
+  }, [year]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setForm((current) => ({ ...current, event_date: `${year}-01-01` }));

@@ -33,14 +33,14 @@ const LeaderDashboard = () => {
     if (activeTab === 'reports') {
       data.loadTrends();
     }
-  }, [activeTab]);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load overview when overview tab is active (for head leaders)
   useEffect(() => {
     if (activeTab === 'overview' && data.isHead) {
       data.loadOverview();
     }
-  }, [activeTab, data.isHead, data.selectedDate, data.selectedServiceId]);
+  }, [activeTab, data.isHead, data.selectedDate, data.selectedServiceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (data.loading) {
     return (
@@ -242,7 +242,7 @@ const LeaderDashboard = () => {
           conflicts={conflicts}
           onResolve={(id, action) => {
             resolveConflict(id, action);
-            setShowConflicts((prev) => {
+            setShowConflicts((_prev) => {
               const remaining = conflicts.filter((c) => c.id !== id);
               return remaining.length > 0;
             });

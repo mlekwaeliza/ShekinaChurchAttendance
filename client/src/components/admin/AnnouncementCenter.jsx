@@ -27,7 +27,7 @@ const AnnouncementCenter = ({ sections = [], leaders = [], showMessage }) => {
 
   useEffect(() => {
     loadDrafts();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const audienceOptions = useMemo(() => [
     { value: 'all', label: 'All leaders and sections' },

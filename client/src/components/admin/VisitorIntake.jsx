@@ -31,7 +31,7 @@ const VisitorIntake = ({ showMessage }) => {
 
   useEffect(() => {
     loadVisitors();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateField = (key, value) => {
     if (key === 'full_name') value = capitalizeName(value);

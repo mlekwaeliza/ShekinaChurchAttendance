@@ -104,10 +104,11 @@ export function ToastProvider({ children, maxToasts = 4 }) {
   // Clear all timers on unmount to prevent leaks
   useEffect(() => {
     const timers = timersRef.current;
+    const endTimes = endTimeRef.current;
     return () => {
       for (const t of timers.values()) clearTimeout(t);
       timers.clear();
-      endTimeRef.current.clear();
+      endTimes.clear();
     };
   }, []);
 

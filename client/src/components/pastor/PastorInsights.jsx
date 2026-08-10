@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -21,7 +21,6 @@ import {
   AlertTriangle,
   Flame,
   ShieldAlert,
-  CalendarDays,
   Activity,
   Users,
   Target,

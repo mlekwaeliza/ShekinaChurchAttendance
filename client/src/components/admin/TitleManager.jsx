@@ -94,7 +94,7 @@ const TitleManager = ({ showMessage }) => {
 
   useEffect(() => {
     loadTitles();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredTitles = useMemo(() => {
     let list = titles;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { pastorAPI } from '../../services/api';
-import { Calendar, CheckCircle, XCircle, MessageSquare, AlertTriangle, Cake } from 'lucide-react';
+import { CheckCircle, XCircle, MessageSquare, AlertTriangle, Cake } from 'lucide-react';
 import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
 import { addDays, formatDisplayDate, formatLocalDate, getWeekStartString } from '../../utils/date';
@@ -14,7 +14,7 @@ const PastorWeeklySummary = () => {
 
   useEffect(() => {
     loadData();
-  }, [weekStart]);
+  }, [weekStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadData = async () => {
     setLoading(true);

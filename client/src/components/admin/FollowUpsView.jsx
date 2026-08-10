@@ -10,8 +10,8 @@ const FollowUpsView = ({ dashboardMetrics, leaders = [], showMessage }) => {
   const [tasksLoading, setTasksLoading] = useState(true);
   const [savingId, setSavingId] = useState(null);
 
-  const absentees = dashboardMetrics?.needsAttention?.absentees || [];
-  const visitors = dashboardMetrics?.needsAttention?.visitors || [];
+  const absentees = useMemo(() => dashboardMetrics?.needsAttention?.absentees || [], [dashboardMetrics]);
+  const visitors = useMemo(() => dashboardMetrics?.needsAttention?.visitors || [], [dashboardMetrics]);
 
   const candidates = useMemo(() => {
     const byId = new Map();
@@ -40,7 +40,7 @@ const FollowUpsView = ({ dashboardMetrics, leaders = [], showMessage }) => {
 
   useEffect(() => {
     loadTasks();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const createTask = async (person) => {
     const buttonId = `${person.type}-${person.id}`;

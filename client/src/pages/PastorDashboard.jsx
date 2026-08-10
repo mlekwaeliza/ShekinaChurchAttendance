@@ -291,7 +291,7 @@ const PastorDashboard = () => {
         setReportLoading(false);
       }
     },
-    [prioritizedMembers.length, reportSummary, sectionBreakdown, summaryMetrics, prioritizedMembers]
+    [reportSummary, sectionBreakdown, summaryMetrics, prioritizedMembers]
   );
 
   const renderOverview = () => {

@@ -72,7 +72,7 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
   const [isMemberDropdownOpen, setIsMemberDropdownOpen] = useState(false);
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
 
-  const [typesLoading, setTypesLoading] = useState(true);
+  const [, setTypesLoading] = useState(true);
 
   // Guarantee types load on mount independently of contributions list
   useEffect(() => {
@@ -92,7 +92,7 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
   useEffect(() => {
     setMembers(allMembers);
     loadInitial();
-  }, [allMembers.length]);
+  }, [allMembers.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadInitial() {
     setLoading(true);
@@ -523,7 +523,7 @@ export default function ContributionsView({ showMessage, allMembers = [] }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {summary.rows?.map((row, i) => (
+                    {summary.rows?.map((row, _i) => (
                       <tr
                         key={row.type_id}
                         className="border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors"

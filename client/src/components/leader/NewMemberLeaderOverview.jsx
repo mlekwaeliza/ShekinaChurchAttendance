@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { newMemberLeaderAPI } from '../../services/api';
 import { 
-  Users, CheckCircle2, GraduationCap, ClipboardList, Clock, 
-  Loader2, AlertTriangle, WifiOff, CloudOff, UserCheck, UserX, Calendar, Search
+  Users, CheckCircle2, GraduationCap, ClipboardList, 
+  Loader2, WifiOff, UserCheck, UserX, Search
 } from 'lucide-react';
 
 const NewMemberLeaderOverview = ({

@@ -7,7 +7,6 @@ import {
   XCircle,
   Clock,
   Loader2,
-  Search,
   Eye,
   Edit3,
   Send,
@@ -27,8 +26,6 @@ import {
 } from 'lucide-react';
 import { fdate, fdatetime } from '../../utils/date';
 import {
-  BarChart,
-  Bar,
   PieChart as RePie,
   Pie,
   Cell,
@@ -78,7 +75,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   const [filterStatus, setFilterStatus] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const [summary, setSummary] = useState(null);
-  const [trend, setTrend] = useState([]);
+  const [, setTrend] = useState([]);
   const [rptFrom, setRptFrom] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
@@ -149,7 +146,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
     } catch (e) {
       console.error(e);
     }
-  }, [rptFrom, rptTo]);
+  }, [rptFrom, rptTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeTab === 'dashboard') loadDashboard();

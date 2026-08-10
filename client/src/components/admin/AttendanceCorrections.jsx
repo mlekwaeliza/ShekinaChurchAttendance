@@ -15,10 +15,6 @@ import {
   RefreshCw,
   ClipboardList,
   AlertTriangle,
-  UserCheck,
-  UserX,
-  ChevronDown,
-  ChevronUp,
   Save,
   BarChart3,
   Info
@@ -364,7 +360,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
       })
       .catch(() => showMessage?.('Failed to load members.', 4000))
       .finally(() => setLoading(false));
-  }, [leader, date, serviceId]);
+  }, [leader, date, serviceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredMembers = useMemo(() => {
     if (!memberSearch) return members;
@@ -813,7 +809,7 @@ const AttendanceCorrections = ({ showMessage }) => {
 
   useEffect(() => {
     load();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFilterChange = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
   const filtersRef = useRef(filters);
@@ -1036,7 +1032,7 @@ const AttendanceCorrections = ({ showMessage }) => {
 
   useEffect(() => {
     if (activeTab === 'missing') loadMissingSubmissions();
-  }, [activeTab, mlsDate, mlsServiceId]);
+  }, [activeTab, mlsDate, mlsServiceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleClickOutside = (e) => {

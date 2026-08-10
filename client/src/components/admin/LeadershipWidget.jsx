@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Award, Users, UserCheck, UserX, ChevronRight } from 'lucide-react';
+import { Award, UserCheck, UserX, ChevronRight } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../ui/StatCard';

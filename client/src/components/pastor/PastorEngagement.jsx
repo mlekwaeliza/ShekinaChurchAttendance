@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { pastorAPI } from '../../services/api';
-import { TrendingUp, MessageSquare, CheckCircle, Users, Calendar, Award } from 'lucide-react';
+import { MessageSquare, CheckCircle, Users, Calendar, Award } from 'lucide-react';
 import StatCard from '../ui/StatCard';
 import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
@@ -16,7 +16,7 @@ const PastorEngagement = () => {
 
   useEffect(() => {
     loadEngagement();
-  }, [dateRange]);
+  }, [dateRange]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadEngagement = async () => {
     setLoading(true);

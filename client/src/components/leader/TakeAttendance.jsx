@@ -18,7 +18,6 @@ const TakeAttendance = ({
   isOnline,
   queuedForDate,
   isUnauthorized,
-  leaderAssignments,
   isHead = false,
   sectionLeaders = [],
   attendanceLeaderId,

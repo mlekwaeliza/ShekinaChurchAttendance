@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Calendar, MapPin, Users, CheckCircle } from 'lucide-react';
+import { Save, Calendar, MapPin, Users } from 'lucide-react';
 import { adminAPI } from '../../../services/api';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];

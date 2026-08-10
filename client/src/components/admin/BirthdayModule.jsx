@@ -3,8 +3,8 @@ import { birthdayAPI } from '../../services/api';
 import StatCard from '../ui/StatCard';
 import Badge from '../ui/Badge';
 import EmptyState from '../ui/EmptyState';
-import { Calendar, Cake, Mail, MessageSquare, Download, ChevronRight, ChevronDown, Filter, Plus } from 'lucide-react';
-import { addDays, formatDisplayDate, formatLocalDate, parseLocalDate, fdate } from '../../utils/date';
+import { Calendar, Cake, Mail, Download, ChevronRight, ChevronDown, Filter, Plus } from 'lucide-react';
+import { addDays, formatLocalDate, parseLocalDate, fdate } from '../../utils/date';
 
 const BirthdayModule = () => {
   const [data, setData] = useState({ members: [], stats: {} });
@@ -22,7 +22,7 @@ const BirthdayModule = () => {
 
   useEffect(() => {
     loadBirthdays();
-  }, [filter]);
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadBirthdays = async () => {
     setLoading(true);

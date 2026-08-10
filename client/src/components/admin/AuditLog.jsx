@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminAPI } from '../../services/api';
-import { Shield, Filter, Calendar, Search, User, FileText, Users, UserCog, Key, RefreshCw } from 'lucide-react';
+import { Shield, Filter, Calendar, User, FileText, Users, UserCog, RefreshCw } from 'lucide-react';
 import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
 import { fdatetime } from '../../utils/date';
@@ -19,7 +19,7 @@ const AuditLog = () => {
 
   useEffect(() => {
     loadAuditLog();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadAuditLog = async () => {
     setLoading(true);
@@ -165,7 +165,7 @@ const AuditLog = () => {
         </span>
       ),
     },
-  ], []);
+  ], []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-6 animate-fade-in">

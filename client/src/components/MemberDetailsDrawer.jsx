@@ -9,11 +9,9 @@ import {
   Activity,
   Calendar,
   Shield,
-  Users,
   Heart,
   MapPin,
   User,
-  ChevronRight,
   DollarSign
 } from 'lucide-react';
 import { adminAPI, leaderAPI, analyticsAPI, contributionAPI } from '../services/api';
@@ -189,7 +187,7 @@ const MemberDetailsDrawer = ({ member, isOpen, onClose }) => {
     };
 
     fetchDetails();
-  }, [isOpen, member?.id, user?.role, canViewFinancials]);
+  }, [isOpen, member?.id, user?.role, canViewFinancials]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen || !member) return null;
 

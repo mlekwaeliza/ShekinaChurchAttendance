@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { capitalizeName } from '../../utils/phone';
-import { Users, Plus, Pencil, Trash2, AlertTriangle, Phone, MessageSquare } from 'lucide-react';
+import { Users, Plus, Pencil, Trash2, AlertTriangle, Phone } from 'lucide-react';
 import DataTable from '../ui/DataTable';
 import Modal from '../ui/Modal';
 import Badge from '../ui/Badge';
@@ -186,7 +186,7 @@ const LeaderMembers = ({
         )
       }
     ],
-    [onEdit, setDeletingMember, absenceMap, followUpMap, isHead, setDetailsMember]
+    [onEdit, setDeletingMember, absenceMap, followUpMap, isHead, setDetailsMember] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   return (

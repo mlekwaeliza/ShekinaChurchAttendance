@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Check, ShieldAlert, Calendar } from 'lucide-react';
+import { X, Search, Check, ShieldAlert } from 'lucide-react';
 
 const ServiceAssignmentsModal = ({ 
   isOpen, 

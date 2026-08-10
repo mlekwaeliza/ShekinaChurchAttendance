@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { newMemberLeaderAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 import VisitorIntake from './VisitorIntake';
 import { fdate, fdatetime } from '../../utils/date';
 import { capitalizeName } from '../../utils/phone';
@@ -13,17 +12,14 @@ import {
   Calendar,
   CheckCircle2,
   X,
-  AlertTriangle,
   Loader2,
   ChevronDown,
   ChevronUp,
-  Search,
   Phone,
   Mail,
   MapPin,
   FileText,
-  Clock,
-  BookOpen
+  Clock
 } from 'lucide-react';
 
 const TABS = [
@@ -33,8 +29,6 @@ const TABS = [
   { key: 'visitors', label: 'Visitors', icon: UserPlus },
   { key: 'reports', label: 'Reports', icon: BarChart3 }
 ];
-
-const WEEK_OFFSETS = [0, 1, 2, 3];
 
 function getWeekStart(date = new Date()) {
   const d = new Date(date);
@@ -122,11 +116,10 @@ const ReportsView = () => {
 };
 
 const NewMemberLeaderView = () => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('probation');
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [sections, setSections] = useState([]);
+  const [, setSections] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [expanded, setExpanded] = useState(null);
   const [attendance, setAttendance] = useState({});

@@ -2,15 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   MessageSquare,
   Phone,
-  Mail,
   Home,
   Calendar,
   Search,
-  User,
   Users,
   TrendingUp,
   Activity,
-  Check,
   CheckCircle,
   Flag,
   Stethoscope,
@@ -75,7 +72,7 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
   useEffect(() => {
     loadData();
     loadLeaders();
-  }, [activeFilterTab, currentServiceId]);
+  }, [activeFilterTab, currentServiceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (activeMainTab === 'history') loadHistory();

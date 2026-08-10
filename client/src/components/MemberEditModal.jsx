@@ -4,7 +4,6 @@ import { adminAPI } from '../services/api';
 import {
   History,
   User,
-  Calendar,
   Sparkles,
   ChevronDown,
   RotateCcw,
@@ -167,7 +166,7 @@ const MemberEditModal = ({
     loadHomeCells();
   }, [isOpen, member, mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchSuggestion = async (currentMembershipId) => {
+  const fetchSuggestion = async (_currentMembershipId) => {
     setLoadingSuggestion(true);
     try {
       const res = await adminAPI.getSuggestAssignment();

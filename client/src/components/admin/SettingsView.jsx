@@ -22,20 +22,14 @@ import {
   Clock,
   Heart,
   Banknote,
-  Calendar,
-  Building2,
-  Megaphone,
-  FileText,
-  TrendingUp,
-  BarChart3
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import { capitalizeName } from '../../utils/phone';
 import TwoFactorSetup from '../TwoFactorSetup';
-import { fdate, fdatetime } from '../../utils/date';
+import { fdatetime } from '../../utils/date';
 import { handlePhoneChange } from '../../utils/phone';
-import Modal from '../ui/Modal';
 
 const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showMessage }) => {
   const { user, updateUser } = useAuth();
@@ -86,7 +80,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
     loadHallOfFameSettings();
     loadMembers();
     if (isAdmin) loadUsers();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMembers = async () => {
     try {

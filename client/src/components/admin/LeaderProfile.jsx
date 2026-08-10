@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminAPI, analyticsAPI } from '../../services/api';
-import { fdate, fdatetime } from '../../utils/date';
+import { fdate } from '../../utils/date';
 import {
   ArrowLeft, Phone, Mail, Users, Calendar, TrendingUp, Award, Clock,
-  UserCheck, UserX, Activity, Target, ChevronRight, Loader2, AlertTriangle,
+  UserCheck, Activity, Loader2, AlertTriangle,
   Crown, ClipboardList, Flame, CheckCircle2, Layers, Download
 } from 'lucide-react';
 
@@ -72,7 +72,7 @@ const EmptyState = ({ icon: Icon, message }) => (
   </div>
 );
 
-const OverviewTab = ({ leader, ranking, performance, activeMembers, attendanceRate, submissionRate, leadershipScore, historyCount }) => (
+const OverviewTab = ({ leader, performance, activeMembers, attendanceRate, submissionRate, leadershipScore, historyCount }) => (
   <div className="space-y-4">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
@@ -394,7 +394,7 @@ const PerformanceTab = ({ performance, ranking }) => {
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 
-const LeaderProfile = ({ leaderId, onBack, allMembers = [] }) => {
+const LeaderProfile = ({ leaderId, onBack }) => {
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(true);

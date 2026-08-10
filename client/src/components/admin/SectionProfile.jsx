@@ -4,9 +4,9 @@ import { adminAPI, analyticsAPI } from '../../services/api';
 import { fdate, fdatetime } from '../../utils/date';
 import {
   ArrowLeft, Users, TrendingUp, Award, Crown, Layers,
-  Activity, Target, Loader2, AlertTriangle, Flame,
-  CheckCircle2, UserCheck, Phone, Mail, Calendar,
-  ClipboardList, ChevronRight, Shield, Search, BarChart2,
+  Activity, Loader2, AlertTriangle, Flame,
+  UserCheck, Calendar,
+  ClipboardList, ChevronRight, Search, BarChart2,
   Download
 } from 'lucide-react';
 import WeeklyAttendanceMatrix from './WeeklyAttendanceMatrix';
@@ -55,7 +55,6 @@ const SectionOverview = ({ section, ranking, performance, leaders, activeMembers
   const totalPresent = asArray(trends).reduce((s, t) => s + R(t.present_count), 0);
   const totalAbsent  = asArray(trends).reduce((s, t) => s + R(t.absent_count), 0);
   const totalExcused = asArray(trends).reduce((s, t) => s + R(t.excused_count), 0);
-  const totalRecords = totalPresent + totalAbsent + totalExcused;
 
   return (
     <div className="space-y-4">
@@ -178,7 +177,7 @@ const SectionOverview = ({ section, ranking, performance, leaders, activeMembers
 };
 
 // ── Members Tab ───────────────────────────────────────────────────────────────
-const SectionMembers = ({ members, navigate }) => {
+const SectionMembers = ({ members }) => {
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
 

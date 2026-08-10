@@ -4,8 +4,6 @@ import {
   Bell,
   Check,
   CheckCheck,
-  X,
-  AlertTriangle,
   Clock,
   Users,
   Info,
@@ -13,7 +11,6 @@ import {
   Gift,
   ClipboardCheck,
   UserX,
-  ChevronRight,
   TrendingDown,
   FileText,
   DollarSign
@@ -25,7 +22,7 @@ const NotificationBell = ({ user }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const dropdownRef = useRef(null);
 

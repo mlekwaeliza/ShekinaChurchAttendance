@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { analyticsAPI, adminAPI } from '../../services/api';
-import { Search, Loader2, RefreshCw, Filter, Calendar } from 'lucide-react';
+import { Search, Loader2, Calendar } from 'lucide-react';
 
 const MONTHS_SHORT = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
@@ -52,7 +52,7 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
     } finally {
       setLoading(false);
     }
-  }, [weeksCount, serviceId, sectionId, leaderId]);
+  }, [weeksCount, serviceId, sectionId, leaderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadMatrix();

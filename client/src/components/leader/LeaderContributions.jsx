@@ -8,7 +8,6 @@ import {
   List,
   TrendingUp,
   Receipt,
-  Calendar,
   RotateCw,
   Wallet,
   ChevronDown
@@ -63,7 +62,7 @@ export default function LeaderContributions({ members: propMembers = [], showMes
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadData() {
     setLoading(true);

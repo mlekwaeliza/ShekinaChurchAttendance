@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Award, Search, Users, X, ChevronLeft, ChevronRight, Download, Plus } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import DataTable from '../ui/DataTable';
-import { fdate, fdatetime } from '../../utils/date';
+import { fdatetime } from '../../utils/date';
 import Badge from '../ui/Badge';
 import Modal from '../ui/Modal';
 
@@ -52,7 +52,7 @@ const LeadershipDirectory = () => {
     if (params.appointment_from) setAppointmentFrom(params.appointment_from);
     if (params.appointment_to) setAppointmentTo(params.appointment_to);
     if (params.page) setPage(parseInt(params.page));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadDirectory();
@@ -66,7 +66,7 @@ const LeadershipDirectory = () => {
     if (appointmentTo) nextParams.set('appointment_to', appointmentTo);
     if (page > 1) nextParams.set('page', String(page));
     setSearchParams(nextParams, { replace: true });
-  }, [titleFilter, statusFilter, sectionFilter, appointmentFrom, appointmentTo, page, setSearchParams]);
+  }, [titleFilter, statusFilter, sectionFilter, appointmentFrom, appointmentTo, page, setSearchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -193,7 +193,7 @@ const LeadershipDirectory = () => {
         .then((res) => setAllMembers(res.data || []))
         .catch((err) => { console.error('Failed to load members for assign modal:', err); alert('Failed to load members: ' + err.message); });
     }
-  }, [showAssignModal]);
+  }, [showAssignModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleClickOutside = (e) => {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  LayoutDashboard, Home, Users, UserCheck, Settings,
-  Plus, UserPlus, HelpCircle
+  LayoutDashboard, Home, Users, UserCheck, Settings
 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import HCDashboard from './home-cells/HCDashboard';
@@ -12,7 +11,7 @@ import HCSettings from './home-cells/HCSettings';
 import HCCreateModal from './home-cells/HCCreateModal';
 import HCAddMemberModal from './home-cells/HCAddMemberModal';
 
-const HomeCellModule = ({ leaders = [], allMembers: propAllMembers = [] }) => {
+const HomeCellModule = ({ allMembers: propAllMembers = [] }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [cells, setCells] = useState([]);
   const [loading, setLoading] = useState(true);

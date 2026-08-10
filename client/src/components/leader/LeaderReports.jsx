@@ -8,7 +8,7 @@ import StatCard from '../ui/StatCard';
 import ChartCard from '../ui/ChartCard';
 import DataTable from '../ui/DataTable';
 
-const LeaderReports = ({ trendsData, trendsLoading, loadTrends }) => {
+const LeaderReports = ({ trendsData, trendsLoading, _loadTrends }) => {
   const summaryStats = useMemo(() => {
     const total = trendsData.reduce((sum, d) => sum + Number(d.total_members), 0);
     const present = trendsData.reduce((sum, d) => sum + Number(d.present_count), 0);
@@ -17,7 +17,7 @@ const LeaderReports = ({ trendsData, trendsLoading, loadTrends }) => {
     return { total, present, absent, avgAttendance };
   }, [trendsData]);
 
-  const { total, present, absent, avgAttendance } = summaryStats;
+  const { present, absent, avgAttendance } = summaryStats;
 
   const columns = useMemo(() => [
     {

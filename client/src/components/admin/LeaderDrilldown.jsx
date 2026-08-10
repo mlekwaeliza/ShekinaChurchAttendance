@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 
 const LeaderDrilldown = ({ drilldownData, onClose }) => {
-  const { setCrumbs, clearCrumbs } = useBreadcrumbs();
+  const { setCrumbs } = useBreadcrumbs();
 
   useEffect(() => {
     if (drilldownData && drilldownData.data) {
