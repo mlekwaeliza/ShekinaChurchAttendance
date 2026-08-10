@@ -1,14 +1,12 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
-  BarChart3, TrendingUp, TrendingDown, AlertTriangle, Users, Building2,
-  Heart, Brain, UserCheck, Award, ArrowUp, ArrowDown, Minus,
-  CheckCircle2, XCircle, Info, Star, UserX, Clock, Target,
-  Activity, Shield, Zap, Eye, Download, RefreshCw, AlertCircle,
-  Thermometer, Flag, BarChart, PieChart, LineChart, ChevronRight
+  TrendingUp, TrendingDown, AlertTriangle, Users, Building2,
+  Heart, Brain, CheckCircle2, Info,
+  Activity, Zap, RefreshCw, AlertCircle, Minus
 } from 'lucide-react';
 import {
   BarChart as ReBar, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart as RePie, Pie, Cell, LineChart as ReLine, Line, Area, AreaChart,
+  PieChart as RePie, Pie, Cell, Area, AreaChart,
   Legend
 } from 'recharts';
 import { analyticsAPI } from '../../services/api';
@@ -18,7 +16,6 @@ const C = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#e
 const asArray = v => Array.isArray(v) ? v : [];
 const STATUS_COLORS = { success: '#10b981', warning: '#f59e0b', danger: '#ef4444', neutral: '#94a3b8' };
 const STATUS_BG = { success: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800', warning: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800', danger: 'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800', neutral: 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' };
-const PRIORITY_BADGE = { high: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400', medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', low: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400' };
 
 const fmt = (v, suffix = '') => {
   const n = Number(v) || 0;
@@ -77,7 +74,7 @@ const Badge = ({ children, variant = 'default' }) => {
   return <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${v}`}>{children}</span>;
 };
 
-const AlertCard = ({ alert, index }) => {
+const AlertCard = ({ alert }) => {
   const icons = { danger: AlertCircle, warning: AlertTriangle, success: CheckCircle2 };
   const Icon = icons[alert.type] || Info;
   const colors = { danger: 'text-rose-600 bg-rose-100 dark:bg-rose-900/30', warning: 'text-amber-600 bg-amber-100 dark:bg-amber-900/30', success: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' };
@@ -102,9 +99,7 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
   const [data, setData] = useState(null);
   const [periodDays, setPeriodDays] = useState(days);
 
-  useEffect(() => { fetchData(); }, [periodDays]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await analyticsAPI.getExecutiveSummary(periodDays);
@@ -113,7 +108,9 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
       console.error('Executive summary fetch error:', e);
       setData(null);
     } finally { setLoading(false); }
-  };
+  }, [periodDays]);
+
+  useEffect(() => { fetchData(); }, [periodDays, fetchData]);
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" /></div>;
@@ -129,10 +126,8 @@ const ExecutiveSummary = ({ days = 90, variant = 'analytics' }) => {
     );
   }
 
-  const { kpis, alerts, snapshot, sectionRankings, leaderRankings, healthBreakdown, actions, momentumData, benchmarkComparison, recommendations } = data || {};
-  const kpiList = Object.values(kpis || {}).filter(Boolean);
+  const { kpis, alerts, snapshot, sectionRankings, leaderRankings, healthBreakdown, actions, momentumData, recommendations } = data || {};
   const highPriorityAlerts = asArray(alerts).filter(a => a.priority === 'high');
-  const mediumPriorityAlerts = asArray(alerts).filter(a => a.priority === 'medium');
 
   const churchScore = kpis?.churchHealthScore;
   const scoreColor = churchScore?.current >= 75 ? '#10b981' : churchScore?.current >= 50 ? '#f59e0b' : '#ef4444';

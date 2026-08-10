@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { analyticsAPI } from '../../services/api';
-import { fdate, fdatetime } from '../../utils/date';
+import { fdate } from '../../utils/date';
 import {
   BarChart3,
   TrendingUp,
@@ -8,51 +8,31 @@ import {
   Users,
   Building2,
   Heart,
-  Shield,
   Brain,
   Layers,
   UserCheck,
   Award,
   CheckCircle2,
   XCircle,
-  Download,
   Printer,
-  FileText,
-  Eye,
   Info,
-  Star,
   UserX,
   Clock,
   Target,
   AlertTriangle,
-  Calendar,
   Filter,
-  ChevronDown,
-  ChevronUp,
   Search,
   AlertCircle,
   Activity,
   ArrowUp,
   ArrowDown,
   Minus,
-  Plus,
   RefreshCw,
-  HelpCircle,
-  Bell,
-  CalendarClock,
-  Sparkles
+  HelpCircle
 } from 'lucide-react';
-import {
-  KpiCard as SharedKpiCard,
-  AIExecutiveSummary,
-  STATUS,
-  statusForScore,
-  TrendIcon,
-  R as RShared
-} from './ReportShared';
+import { AIExecutiveSummary } from './ReportShared';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const fmt = (v) => `TZS ${Number(v || 0).toLocaleString()}`;
 const pct = (v) => `${Math.round(Number(v || 0) * 10) / 10}%`;
 const num = (v) => Number(v || 0).toLocaleString();
 const R = (v) => Math.round(Number(v || 0) * 10) / 10;
@@ -100,7 +80,7 @@ const Badge = ({ children, variant = 'neutral' }) => (
   </span>
 );
 
-const KpiCard = ({ label, value, prev, diff, pctChg, status, target, icon: Icon }) => {
+const KpiCard = ({ label, value, prev, diff, pctChg, status, icon: Icon }) => {
   const statusColor =
     status === 'above_target'
       ? 'emerald'
@@ -173,12 +153,11 @@ const ExecutiveComparison = () => {
   const [view, setView] = useState('summary');
   const [periodType, setPeriodType] = useState('month');
   const [periodCount, setPeriodCount] = useState(6);
-  const [customPeriods, setCustomPeriods] = useState([]);
+  const [customPeriods] = useState([]);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [expandedSection, setExpandedSection] = useState(null);
-  const [expandedLeader, setExpandedLeader] = useState(null);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('desc');
@@ -277,7 +256,7 @@ const ExecutiveComparison = () => {
     }
   };
 
-  const sortFn = (arr, key) => {
+  const sortFn = (arr) => {
     if (!sortKey || !arr) return arr || [];
     return [...arr].sort((a, b) => {
       const av = Number(a[sortKey]) || 0;
@@ -290,7 +269,7 @@ const ExecutiveComparison = () => {
   const latestPeriod = dataPeriods[dataPeriods.length - 1];
   const prevPeriod = dataPeriods[dataPeriods.length - 2];
   const kpis = data?.kpis || {};
-  const trends = data?.trends || {};
+  const trends = useMemo(() => data?.trends || {}, [data]);
   const rootCauses = data?.rootCauses || {};
   const actions = asArray(data?.actions);
 
