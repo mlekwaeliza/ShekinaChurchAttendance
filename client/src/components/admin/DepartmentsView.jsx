@@ -8,24 +8,17 @@ import {
   UserCog,
   Search,
   ChevronRight,
-  ArrowRight,
   ShieldCheck,
   Clock,
-  Check,
   X,
-  Info,
   GitBranch,
-  Shield,
-  MapPin,
-  Phone,
-  Mail,
   Award
 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import Modal from '../ui/Modal';
 import Badge from '../ui/Badge';
 import StatCard from '../ui/StatCard';
-import { fdate, fdatetime } from '../../utils/date';
+import { fdatetime } from '../../utils/date';
 
 const cardGradients = [
   {
@@ -131,7 +124,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadDepartmentDetail = async (id) => {
     setDetailLoading(true);
@@ -152,7 +145,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
     if (selectedDeptId && detailModalOpen) {
       loadDepartmentDetail(selectedDeptId);
     }
-  }, [selectedDeptId, detailModalOpen]);
+  }, [selectedDeptId, detailModalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Alphabetically sorted members list for dropdowns
   const sortedMembers = useMemo(() => {
@@ -210,13 +203,6 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
   const activeDeptCount = useMemo(() => {
     return departments.filter((d) => d.is_active).length;
   }, [departments]);
-
-  // Helper to resolve member names
-  const getMemberName = (id) => {
-    if (!id) return '';
-    const m = allMembers.find((mem) => mem.id === id);
-    return m ? m.full_name : `ID: ${id}`;
-  };
 
   const handleOpenCreate = () => {
     setForm(emptyForm);
@@ -335,12 +321,6 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
   const orgChartHierarchy = useMemo(() => {
     // 1. Filter out pastoral titles (usually under category 'Pastoral & Spiritual Care' or matching common pastor names)
     // 2. Map departments under their reporting pastor titles.
-    const pastoralTitles = titles.filter(
-      (t) =>
-        t.category === 'Pastoral & Spiritual Care' ||
-        t.name.toLowerCase().includes('pastor') ||
-        t.name.toLowerCase().includes('elder')
-    );
 
     // Build reporting lines
     const titleMap = {};

@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   BarChart3, TrendingUp, AlertTriangle, Users, Building2, Heart,
   Shield, Brain, Layers, UserCheck, Award, PieChart as PieChartIcon,
-  ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle, TrendingDown,
-  Download, Printer, FileText, Eye, Info, Star, UserX, Clock, Target,
+  CheckCircle2, XCircle, TrendingDown,
+  Info,
   DollarSign, HandCoins, Wallet
 } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area,
+import { BarChart, Bar, Line, PieChart, Pie, Cell, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { analyticsAPI } from '../../services/api';
 import { fdate } from '../../utils/date';
@@ -15,7 +15,7 @@ import ExecutiveSummary from './ExecutiveSummary';
 const R = v => Math.round(Number(v) || 0);
 const C = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316','#14b8a6','#84cc16'];
 
-const KpiCard = ({ label, value, prev, color = 'indigo', suffix = '' }) => {
+const KpiCard = ({ label, value, prev, suffix = '' }) => {
   const num = Number(value) || 0;
   const prevNum = Number(prev) || 0;
   const diff = prevNum ? num - prevNum : null;
@@ -915,7 +915,7 @@ const AnalyticsView = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({});
 
-  useEffect(() => { loadAll(); }, [period]);
+  useEffect(() => { loadAll(); }, [period]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadAll = async () => {
     setLoading(true);

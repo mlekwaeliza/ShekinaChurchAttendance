@@ -8,7 +8,6 @@ import {
   Heart,
   UserCheck,
   UserPlus,
-  MessageSquare,
   Send,
   Smartphone,
   CalendarDays,
@@ -17,26 +16,20 @@ import {
   Trophy,
   AlertTriangle,
   TrendingUp,
-  TrendingDown,
-  Minus,
   Sparkles,
-  Church,
   Home,
   Building2,
-  Star,
   Award,
   Zap,
   Clock,
   Database,
   ArrowUpRight,
-  ChevronDown,
-  ChevronRight,
   Calendar,
   Gift,
   Crown,
   Target
 } from 'lucide-react';
-import { STATUS, statusForScore, TrendIcon, R as Rn } from './ReportShared';
+import { STATUS, statusForScore } from './ReportShared';
 
 const R = (v) => Math.round(Number(v) || 0);
 const pct = (v) => `${R(Number(v || 0) * 10) / 10}%`;
@@ -182,10 +175,6 @@ const ExecutiveCommandCenter = (props) => {
     allMembers = [],
     sections = [],
     leaders = [],
-    serviceTypes = [],
-    selectedServiceId,
-    onServiceChange,
-    pastorName = 'Pastor',
     birthdays: birthdaysProp = [],
     // Executive data from useAdminData (fired in parallel with core data)
     summary: summaryProp = null,
