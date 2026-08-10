@@ -35,10 +35,7 @@ import {
   ArrowDown,
   Minus,
   RefreshCw,
-  Building2,
-  PieChart,
   XCircle,
-  HelpCircle,
   Sparkles
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
@@ -85,23 +82,11 @@ const TABS = [
   { id: 'ai', label: 'AI Insights', icon: Zap }
 ];
 
-const formatPeriodLabel = (filterType, filterValue) => {
-  if (!filterValue) return 'Select a period';
-  if (filterType === 'yearly') return filterValue;
-  if (filterType === 'monthly') {
-    const [year, month] = filterValue.split('-');
-    const date = new Date(year, parseInt(month, 10) - 1);
-    return fdate(date);
-  }
-  return filterValue.replace('-', ' ');
-};
-
 const MetricCard = ({
   label,
   value,
   previousValue,
   icon: Icon,
-  color = 'indigo',
   showDiff = true,
   suffix = ''
 }) => {
@@ -228,7 +213,7 @@ const IntelligenceTable = ({ columns, data, onRowClick, emptyMessage = 'No data 
   );
 };
 
-const InsightCard = ({ insight, index }) => {
+const InsightCard = ({ insight }) => {
   const typeColors = {
     success: {
       bg: 'bg-emerald-50 dark:bg-emerald-900/20',
@@ -269,43 +254,6 @@ const InsightCard = ({ insight, index }) => {
   );
 };
 
-const ActionCard = ({ action }) => {
-  const priorityColors = {
-    high: 'border-l-rose-500 bg-rose-50/50 dark:bg-rose-900/10',
-    medium: 'border-l-amber-500 bg-amber-50/50 dark:bg-amber-900/10',
-    low: 'border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/10'
-  };
-  const priorityBadge = {
-    high: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
-    medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    low: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-  };
-  return (
-    <div
-      className={`rounded-xl border-l-4 ${priorityColors[action.priority]} border border-slate-200/60 dark:border-slate-700 p-3`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${priorityBadge[action.priority]}`}
-            >
-              {action.priority}
-            </span>
-            {action.category && (
-              <span className="text-[9px] text-slate-400">{action.category}</span>
-            )}
-          </div>
-          <p className="text-xs font-medium text-slate-900 dark:text-white">{action.title}</p>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-            {action.description}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const AttendanceReports = ({
   filterType,
   setFilterType,
@@ -315,29 +263,24 @@ const AttendanceReports = ({
   overviewLoading,
   serviceTypes = [],
   selectedServiceId,
-  onServiceChange,
-  loadOverview,
-  onLeaderClick
+  loadOverview
 }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [analytics, setAnalytics] = useState({});
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [departmentsData, setDepartmentsData] = useState([]);
-  const [departmentsLoading, setDepartmentsLoading] = useState(false);
-  const [comparisonData, setComparisonData] = useState({});
-  const [compError, setCompError] = useState(null);
+  const [, setDepartmentsLoading] = useState(false);
+  const [, setComparisonData] = useState({});
+  const [, setCompError] = useState(null);
   const [historicalData, setHistoricalData] = useState({});
-  const [selectedDay, setSelectedDay] = useState(null);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedLeader, setSelectedLeader] = useState(null);
-  const [compType, setCompType] = useState('overall');
-  const [compPeriod, setCompPeriod] = useState('week');
-  const [p1Start, setP1Start] = useState('');
-  const [p1End, setP1End] = useState('');
-  const [p2Start, setP2Start] = useState('');
-  const [p2End, setP2End] = useState('');
-  const [comparisonMode, setComparisonMode] = useState('week');
+  const [compType] = useState('overall');
+  const [compPeriod] = useState('week');
+  const [p1Start] = useState('');
+  const [p1End] = useState('');
+  const [p2Start] = useState('');
+  const [p2End] = useState('');
+  const [comparisonMode] = useState('week');
   const [historicalPeriod, setHistoricalPeriod] = useState('monthly');
   const [customDate1, setCustomDate1] = useState('');
   const [customDate2, setCustomDate2] = useState('');
@@ -378,10 +321,10 @@ const AttendanceReports = ({
 
   useEffect(() => {
     if (filterValue) loadOverview();
-  }, [filterType, filterValue, selectedServiceId]);
+  }, [filterType, filterValue, selectedServiceId, loadOverview]);
   useEffect(() => {
     loadAnalytics();
-  }, [
+  }, [ // eslint-disable-line react-hooks/exhaustive-deps
     selectedServiceId,
     filterType,
     filterValue,
@@ -397,79 +340,11 @@ const AttendanceReports = ({
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
-  const formatDateShort = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length < 3) return dateStr;
-    return `${parts[2]}/${parts[1]}`;
-  };
-
   useEffect(() => {
     const now = new Date();
     setSelectedWeekDate(toDateStr(now));
     setComparisonWeekDate(toDateStr(new Date(now.getTime() - 7 * 86400000)));
   }, []);
-
-  const getDateRangeForMode = (mode) => {
-    const now = new Date();
-    switch (mode) {
-      case 'today': {
-        const yesterday = new Date(now.getTime() - 86400000);
-        return {
-          period1Start: toDateStr(now),
-          period1End: toDateStr(now),
-          period2Start: toDateStr(yesterday),
-          period2End: toDateStr(yesterday)
-        };
-      }
-      case 'week': {
-        const dow = now.getDay();
-        const monOffset = dow === 0 ? 6 : dow - 1;
-        const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - monOffset);
-        const sun = new Date(mon.getTime() + 6 * 86400000);
-        const prevMon = new Date(mon.getTime() - 7 * 86400000);
-        const prevSun = new Date(prevMon.getTime() + 6 * 86400000);
-        return {
-          period1Start: toDateStr(mon),
-          period1End: toDateStr(sun),
-          period2Start: toDateStr(prevMon),
-          period2End: toDateStr(prevSun)
-        };
-      }
-      case 'month': {
-        const y = now.getFullYear(),
-          m = now.getMonth();
-        return {
-          period1Start: toDateStr(new Date(y, m, 1)),
-          period1End: toDateStr(new Date(y, m + 1, 0)),
-          period2Start: toDateStr(new Date(y, m - 1, 1)),
-          period2End: toDateStr(new Date(y, m, 0))
-        };
-      }
-      case 'quarter': {
-        const q = Math.floor(now.getMonth() / 3);
-        return {
-          period1Start: toDateStr(new Date(now.getFullYear(), q * 3, 1)),
-          period1End: toDateStr(new Date(now.getFullYear(), q * 3 + 3, 0)),
-          period2Start: toDateStr(new Date(now.getFullYear(), q * 3 - 3, 1)),
-          period2End: toDateStr(new Date(now.getFullYear(), q * 3, 0))
-        };
-      }
-      case 'year':
-        return {
-          period1Start: `${now.getFullYear()}-01-01`,
-          period1End: `${now.getFullYear()}-12-31`,
-          period2Start: `${now.getFullYear() - 1}-01-01`,
-          period2End: `${now.getFullYear() - 1}-12-31`
-        };
-      case 'custom':
-        return p1Start && p1End && p2Start && p2End
-          ? { period1Start: p1Start, period1End: p1End, period2Start: p2Start, period2End: p2End }
-          : null;
-      default:
-        return null;
-    }
-  };
 
   const loadDepartments = async (mode) => {
     setDepartmentsLoading(true);
@@ -487,7 +362,7 @@ const AttendanceReports = ({
 
   useEffect(() => {
     loadDepartments(comparisonMode);
-  }, [comparisonMode]);
+  }, [comparisonMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getCompDates = (period) => {
     const now = new Date();
@@ -706,7 +581,7 @@ const AttendanceReports = ({
 
   useEffect(() => {
     loadComparisonData();
-  }, [compType, compPeriod]);
+  }, [compType, compPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const modeToMonths = { daily: 1, weekly: 3, monthly: 12, quarterly: 24, yearly: 60 };
 
@@ -745,7 +620,7 @@ const AttendanceReports = ({
 
   useEffect(() => {
     loadHistoricalData(historicalPeriod);
-  }, [historicalPeriod]);
+  }, [historicalPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getSecDates = (period) => {
     const now = new Date();
@@ -834,7 +709,7 @@ const AttendanceReports = ({
     if (secPeriod !== 'custom' || (secP1Start && secP1End && secP2Start && secP2End)) {
       loadSectionIntelligence();
     }
-  }, [secPeriod, secP1Start, secP1End, secP2Start, secP2End]);
+  }, [secPeriod, secP1Start, secP1End, secP2Start, secP2End]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (secPeriod === 'custom' && !secP1Start) {
@@ -912,58 +787,6 @@ const AttendanceReports = ({
     }
   };
 
-  const weekRangeFromDate = (dateStr) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    const day = d.getDay();
-    const mon = new Date(d);
-    mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-    const sun = new Date(mon);
-    sun.setDate(mon.getDate() + 6);
-    return { startDate: mon.toISOString().slice(0, 10), endDate: sun.toISOString().slice(0, 10) };
-  };
-
-  const deriveDateRange = () => {
-    if (filterType === 'weekly' && filterValue) {
-      const isISOWk = filterValue.includes('-W');
-      if (isISOWk) {
-        const [yearStr, weekPart] = filterValue.split('-W');
-        const year = Number(yearStr);
-        const week = Number(weekPart);
-        if (Number.isInteger(year) && Number.isInteger(week)) {
-          const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
-          const day = simple.getUTCDay();
-          const isoWeekStart = new Date(simple);
-          if (day <= 4) isoWeekStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
-          else isoWeekStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
-          const isoWeekEnd = new Date(isoWeekStart);
-          isoWeekEnd.setUTCDate(isoWeekStart.getUTCDate() + 6);
-          return {
-            startDate: isoWeekStart.toISOString().slice(0, 10),
-            endDate: isoWeekEnd.toISOString().slice(0, 10)
-          };
-        }
-      }
-      return weekRangeFromDate(filterValue);
-    }
-    if (filterType === 'monthly' && filterValue) {
-      const [year, month] = filterValue.split('-').map(Number);
-      if (year && month) {
-        const end = new Date(year, month, 0);
-        return {
-          startDate: `${year}-${String(month).padStart(2, '0')}-01`,
-          endDate: end.toISOString().slice(0, 10)
-        };
-      }
-    }
-    if (filterType === 'yearly' && filterValue) {
-      return { startDate: `${filterValue}-01-01`, endDate: `${filterValue}-12-31` };
-    }
-    if (filterType === 'daily' && filterValue) {
-      return { startDate: filterValue, endDate: filterValue };
-    }
-    return null;
-  };
-
   const loadMemberWeeklyMatrix = async (numWeeks = memberWeeksCount) => {
     setMemberWeeklyLoading(true);
     try {
@@ -981,38 +804,18 @@ const AttendanceReports = ({
 
   useEffect(() => {
     if (activeTab === 'members') loadMemberWeeklyMatrix(memberWeeksCount);
-  }, [activeTab, selectedServiceId]);
+  }, [activeTab, selectedServiceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = overviewData?.stats || {};
-  const leaders = overviewData?.subleaders || [];
   const currentService = serviceTypes.find((s) => s.id === selectedServiceId);
   const serviceLabel =
     selectedServiceId === 'all' ? 'All Services' : currentService?.name || 'Service';
-  const overviewServiceMatches =
-    String(overviewData?.service_id ?? selectedServiceId) === String(selectedServiceId);
-  const overviewFilterMatches =
-    !overviewData?.requestedFilterValue || overviewData.requestedFilterValue === filterValue;
-  const effectiveFilterValue =
-    overviewServiceMatches && overviewFilterMatches && overviewData?.filterValue
-      ? overviewData.filterValue
-      : filterValue;
-  const periodLabel = formatPeriodLabel(filterType, effectiveFilterValue);
-
   const totalPresent = stats.present || 0;
   const totalAbsent = stats.absent || 0;
   const totalExcused = stats.excused || 0;
   const totalMembers = totalPresent + totalAbsent + totalExcused;
   const attendanceRate = totalMembers > 0 ? Math.round((totalPresent / totalMembers) * 100) : 0;
   const unsubmitted = (stats.total_leaders || 0) - (stats.total_submitted_leaders || 0);
-  const leaderSubmissionRate =
-    (stats.total_leaders || 0) > 0
-      ? Math.round(((stats.total_submitted_leaders || 0) / (stats.total_leaders || 1)) * 100)
-      : 0;
-  const prevAttendanceRate = stats.prev_rate || 0;
-  const weeklyGrowth = stats.weekly_growth != null ? stats.weekly_growth : 0;
-  const monthlyGrowth = stats.monthly_growth != null ? stats.monthly_growth : 0;
-  const yearlyGrowth = stats.yearly_growth != null ? stats.yearly_growth : 0;
-
   const openMemberAttendanceDetails = async (member) => {
     setSelectedMemberDetails({ member, records: [], stats: null, date_range: null });
     setMemberDetailsLoading(true);
@@ -1030,14 +833,14 @@ const AttendanceReports = ({
     }
   };
 
-  const sectionComparison = analytics.sectionComparison || [];
-  const sectionRankings = analytics.sectionRankings || [];
-  const prevLeaderMetrics = analytics.prevLeaderMetrics || [];
-  const retention = analytics.retention || {};
-  const growthIndex = analytics.growthIndex || {};
-  const risk = analytics.risk || {};
-  const aiInsights = analytics.aiInsights || [];
-  const headLeaders = analytics.headLeaders || [];
+  const sectionComparison = useMemo(() => analytics.sectionComparison || [], [
+    analytics.sectionComparison
+  ]);
+  const sectionRankings = useMemo(() => analytics.sectionRankings || [], [
+    analytics.sectionRankings
+  ]);
+  const retention = useMemo(() => analytics.retention || {}, [analytics.retention]);
+  const aiInsights = useMemo(() => analytics.aiInsights || [], [analytics.aiInsights]);
 
   const leaderRankData = useMemo(() => {
     const source = analytics.leaderRankings?.length
@@ -1053,31 +856,6 @@ const AttendanceReports = ({
       .sort((a, b) => (b.attendance_rate || 0) - (a.attendance_rate || 0))
       .slice(0, 20);
   }, [analytics.leaderRankings, analytics.leaderMetrics]);
-
-  const sectionSummary = useMemo(() => {
-    const list = sectionRankings.length ? sectionRankings : sectionComparison;
-    if (!list.length) return null;
-    let totMem = 0,
-      totPres = 0,
-      totAbs = 0,
-      totExc = 0;
-    list.forEach((s) => {
-      totMem += s.member_count || 0;
-      totPres += s.total_present || 0;
-      totAbs += s.total_absent || 0;
-      totExc += s.total_excused || 0;
-    });
-    return {
-      totalSections: list.length,
-      totalMembers: totMem,
-      totalPresent: totPres,
-      totalAbsent: totAbs,
-      totalExcused: totExc,
-      avgRate: list.length
-        ? Math.round(list.reduce((acc, curr) => acc + (curr.attendance_rate || 0), 0) / list.length)
-        : 0
-    };
-  }, [sectionRankings, sectionComparison]);
 
   const insights = useMemo(() => {
     const list = [];
@@ -1188,135 +966,6 @@ const AttendanceReports = ({
     retention,
     aiInsights
   ]);
-
-  const actions = useMemo(() => {
-    const list = [];
-    if (unsubmitted > 0)
-      list.push({
-        priority: 'high',
-        category: 'Submission',
-        title: 'Remind Leaders to Submit',
-        description: `${unsubmitted} leader(s) have not submitted attendance. Send reminders immediately.`
-      });
-    const atRiskLeaders = leaderRankData.filter((l) => l.attendance_rate < 60);
-    atRiskLeaders.forEach((l) =>
-      list.push({
-        priority: 'high',
-        category: 'Performance',
-        title: `Follow up with ${l.leader_name}`,
-        description: `Section attendance at ${R(l.attendance_rate)}%. Requires pastoral intervention.`
-      })
-    );
-    const lowSections = sectionComparison.filter((s) => s.attendance_rate < 60);
-    lowSections.forEach((s) =>
-      list.push({
-        priority: 'medium',
-        category: 'Section',
-        title: `Address ${s.name}`,
-        description: `Only ${R(s.attendance_rate)}% attendance. Review section engagement strategies.`
-      })
-    );
-    const topLeaders = leaderRankData.filter((l) => l.attendance_rate >= 90);
-    topLeaders
-      .slice(0, 3)
-      .forEach((l) =>
-        list.push({
-          priority: 'low',
-          category: 'Recognition',
-          title: `Congratulate ${l.leader_name}`,
-          description: `Outstanding ${R(l.attendance_rate)}% attendance rate. Consider for recognition.`
-        })
-      );
-    if (analytics.streaks?.length > 0) {
-      const inactive = analytics.streaks.filter((s) => s.consecutive_absences >= 4);
-      if (inactive.length > 0)
-        list.push({
-          priority: 'high',
-          category: 'Follow-up',
-          title: `Visit ${inactive.length} Inactive Members`,
-          description: 'Members with 4+ consecutive absences need pastoral visitation.'
-        });
-    }
-    if (leaderSubmissionRate < 80)
-      list.push({
-        priority: 'medium',
-        category: 'Process',
-        title: 'Improve Leader Submission Rate',
-        description: `Current rate is ${leaderSubmissionRate}%. Set up automated reminders.`
-      });
-    if (attendanceRate < 70)
-      list.push({
-        priority: 'high',
-        category: 'Engagement',
-        title: 'Develop Attendance Improvement Plan',
-        description: `Current rate is ${attendanceRate}%. Organize outreach and engagement activities.`
-      });
-    return list;
-  }, [
-    unsubmitted,
-    leaderRankData,
-    sectionComparison,
-    analytics.streaks,
-    leaderSubmissionRate,
-    attendanceRate
-  ]);
-
-  const handleExportPDF = async () => {
-    try {
-      const [{ default: jsPDF }, autoTableModule] = await Promise.all([
-        import('jspdf'),
-        import('jspdf-autotable')
-      ]);
-      const doc = new jsPDF();
-      const autoTable = autoTableModule.default;
-      doc.setFontSize(18);
-      doc.text('Church Attendance Intelligence Report', 14, 22);
-      doc.setFontSize(11);
-      doc.text(`${serviceLabel} - ${periodLabel}`, 14, 30);
-      doc.text(`Generated: ${fdatetime(new Date())}`, 14, 36);
-      autoTable(doc, {
-        startY: 44,
-        head: [['Metric', 'Value']],
-        body: [
-          ['Attendance Rate', `${attendanceRate}%`],
-          ['Present', String(totalPresent)],
-          ['Absent', String(totalAbsent)],
-          ['Excused', String(totalExcused)],
-          ['Total Members', String(totalMembers)],
-          ['Leader Submission Rate', `${leaderSubmissionRate}%`]
-        ]
-      });
-      doc.save(`attendance-intelligence-${filterValue || 'export'}.pdf`);
-    } catch (e) {
-      console.error('PDF export failed:', e);
-    }
-  };
-
-  const handleCSVExport = () => {
-    const headers = ['Leader', 'Section', 'Submissions', 'Present', 'Absent', 'Excused', 'Rate'];
-    const rows = leaders.map((l) => {
-      const t = (l.stats?.present || 0) + (l.stats?.absent || 0) + (l.stats?.excused || 0);
-      return [
-        l.leader_name,
-        l.section_name,
-        l.submissions_count,
-        l.stats?.present,
-        l.stats?.absent,
-        l.stats?.excused,
-        t > 0 ? Math.round(((l.stats?.present || 0) / t) * 100) : 0
-      ];
-    });
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `attendance-${filterValue || 'export'}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handlePrint = () => window.print();
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -1430,13 +1079,6 @@ const AttendanceReports = ({
 
     // 1. Calculations & Filters for Section rankings table
     const sortedRankings = [...secRankings];
-    if (secSearch) {
-      const sLower = secSearch.toLowerCase();
-      sortedRankings.forEach((s, idx) => {
-        // filter on search term
-      });
-    }
-
     const filteredRankings = sortedRankings.filter(
       (s) => !secSearch || s.name?.toLowerCase().includes(secSearch.toLowerCase())
     );
