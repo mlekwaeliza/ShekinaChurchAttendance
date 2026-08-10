@@ -2,44 +2,29 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { financeAPI, adminAPI, evangelismAPI } from '../../services/api';
 import {
   DollarSign,
-  TrendingUp,
-  Calendar,
   CheckCircle2,
   XCircle,
   Clock,
   Loader2,
   Search,
-  Eye,
   ArrowUpCircle,
   Ban,
   Receipt,
   HandCoins,
   Sparkles,
-  AlertCircle,
   Send,
   CheckCheck,
   BarChart3,
   RefreshCw,
   X,
-  Shield,
-  Download,
   FileText,
-  TrendingDown,
   ArrowRight,
-  PiggyBank,
-  Banknote,
-  Activity,
   Plus,
   Save,
-  Trash2,
-  ChevronRight,
   Upload,
   File,
   StickyNote,
-  History,
-  Edit3,
-  Printer,
-  Pencil
+  History
 } from 'lucide-react';
 import { fdate, fdatetime } from '../../utils/date';
 
@@ -252,7 +237,6 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
     () => titheEntries.reduce((s, t) => s + (Number(t.amount) || 0), 0),
     [titheEntries]
   );
-  const hasTithes = useMemo(() => titheEntries.some((t) => Number(t.amount) > 0), [titheEntries]);
   const totalExpenses = useMemo(
     () => expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0),
     [expenses]

@@ -2,11 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
-  Trophy, Star, Crown, Award, TrendingUp, TrendingDown, Users,
-  Church, Heart, Flame, BookOpen, Target, Settings2, ChevronRight,
-  Calendar, Zap, Medal, BarChart2, Shield, GitMerge, Globe, 
+  Trophy, Crown, TrendingUp, Users,
+  Heart, Flame, Settings2, ChevronRight,
+  Zap, BarChart2, Shield,
   CheckCircle2, AlertCircle, Info, Loader2, RefreshCw, X,
-  ChevronDown, ChevronUp, ArrowUpRight, ArrowDownRight, Minus,
+  ArrowUpRight, ArrowDownRight, Minus,
   Sparkles, Building2, Home, UserPlus, Trash2, Search
 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
@@ -205,11 +205,6 @@ const FamilyManager = ({ families, allMembers, onRefresh, styles }) => {
   const [addMemberId, setAddMemberId] = useState('');
   const [addMemberRole, setAddMemberRole] = useState('member');
   const [busy, setBusy] = useState(false);
-  const [expandedFamily, setExpandedFamily] = useState(null);
-
-  const toggleFamily = (familyId) => {
-    setExpandedFamily(expandedFamily === familyId ? null : familyId);
-  };
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -232,15 +227,6 @@ const FamilyManager = ({ families, allMembers, onRefresh, styles }) => {
       setAddMemberRole('member');
       onRefresh();
     } catch (e) { console.error('Add family member error:', e); }
-    setBusy(false);
-  };
-
-  const handleRemoveMember = async (familyId, memberId) => {
-    setBusy(true);
-    try {
-      await adminAPI.removeFamilyMember(familyId, memberId);
-      onRefresh();
-    } catch (e) { console.error('Remove family member error:', e); }
     setBusy(false);
   };
 
@@ -442,7 +428,7 @@ const RewardsView = () => {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
 
@@ -1150,7 +1136,6 @@ const RewardsView = () => {
         const statLabel = { margin: 0, fontSize: 10, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' };
         const statValue = { margin: '2px 0 0', fontSize: 15, fontWeight: 800, color: '#F1F5F9' };
         const miniLabel = { margin: 0, fontSize: 9, fontWeight: 600, color: '#64748B' };
-        const miniValue = { margin: '1px 0 0', fontSize: 13, fontWeight: 700, color: '#CBD5E1' };
 
         const MetricRow = ({ label, value, sub, color }) => (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>

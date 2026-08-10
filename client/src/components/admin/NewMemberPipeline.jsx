@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { newMemberLeaderAPI, evangelismAPI } from '../../services/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { newMemberLeaderAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { fdate, fdatetime } from '../../utils/date';
-import { capitalizeName } from '../../utils/phone';
 import {
   Users, UserPlus, GraduationCap, BarChart3, Calendar, CheckCircle2, X, AlertTriangle,
-  Loader2, ChevronDown, ChevronUp, Search, Phone, Mail, MapPin, FileText, Clock,
-  BookOpen, Target, TrendingUp, Award, Home, UserCheck, Heart, Zap, ArrowRight,
-  Filter, Download, Plus, Sparkles, Flag, Activity, Layers
+  Loader2, Clock,
+  BookOpen, TrendingUp, Award, Home, UserCheck, Zap, ArrowRight,
+  Plus, Sparkles, Flag, Layers
 } from 'lucide-react';
 
 const PIPELINE_STAGES = [
@@ -46,15 +45,6 @@ const TABS = [
 ];
 
 const asArray = (v) => Array.isArray(v) ? v : [];
-const R = (v) => Math.round(Number(v) || 0);
-
-function getWeekStart(date = new Date()) {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split('T')[0];
-}
 
 function daysBetween(dateStr) {
   if (!dateStr) return null;
@@ -437,7 +427,6 @@ const NewMemberPipeline = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [awaitingTransfer, setAwaitingTransfer] = useState([]);
-  const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     full_name: '', phone: '', email: '', address: '',
     date_joined: new Date().toISOString().split('T')[0],
@@ -603,7 +592,6 @@ const NewMemberPipeline = () => {
 
   // ── Tasks View ──────────────────────────────────────────────────────────
   const renderTasks = () => {
-    const priorityColors = { high: 'rose', medium: 'amber', low: 'slate' };
     const priorityBg = { high: 'bg-rose-50 dark:bg-rose-950/20', medium: 'bg-amber-50 dark:bg-amber-950/20', low: 'bg-slate-50 dark:bg-slate-900/30' };
     const priorityText = { high: 'text-rose-700 dark:text-rose-300', medium: 'text-amber-700 dark:text-amber-300', low: 'text-slate-600 dark:text-slate-400' };
     const taskIcons = { missed_orientation: AlertTriangle, no_home_cell: Home, no_section: Users, no_mentor: UserCheck, inactive: Clock, ready_graduation: GraduationCap };
@@ -624,7 +612,6 @@ const NewMemberPipeline = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {tasks.map((task, i) => {
               const Icon = taskIcons[task.task_type] || Flag;
-              const pColor = priorityColors[task.priority] || 'slate';
               return (
                 <div key={i} className={`rounded-xl border border-slate-200 dark:border-slate-700 ${priorityBg[task.priority] || ''} p-4 hover:border-indigo-300 transition-colors cursor-pointer`}
                   onClick={() => { const m = { id: task.id, full_name: task.full_name, pipeline_stage: task.pipeline_stage }; setSelectedMember(m); }}>
