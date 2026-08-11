@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "echo \"See repo-root npm run lint\""
+    "lint": "eslint src --ext .js,.jsx --max-warnings 0"
   },
   "dependencies": {
     "@sentry/react": "^10.68.0",

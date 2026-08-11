@@ -17,13 +17,11 @@ jobs:
           node-version: '20.18.1'
           cache: 'npm'
       
-      - name: Install server dependencies
-        working-directory: server
+      - name: Install dependencies
         run: npm ci
       
       - name: Lint Server
-        working-directory: server
-        run: npm run lint || true  # Allow lint to fail without stopping tests
+        run: npm run lint --workspace=server
       
       - name: Run jest tests
         working-directory: server
@@ -51,13 +49,11 @@ jobs:
           node-version: '20.18.1'
           cache: 'npm'
       
-      - name: Install client dependencies
-        working-directory: client
+      - name: Install dependencies
         run: npm ci
       
       - name: Lint Client
-        working-directory: client
-        run: npm run lint || true  # Allow lint to fail without stopping build
+        run: npm run lint --workspace=client
       
       - name: Build
         working-directory: client
