@@ -18,7 +18,6 @@ import {
   Award,
   Plus,
   X as XIcon,
-  Crown,
   ShieldCheck
 } from 'lucide-react';
 import Badge from '../ui/Badge';
@@ -182,7 +181,6 @@ const MemberDirectory = ({
   loading = false
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'all');
   const [searchTerm, setSearchTerm] = useState('');
   const [localSectionFilter, setLocalSectionFilter] = useState('');
 
@@ -690,42 +688,6 @@ const MemberDirectory = ({
             Use contact and attendance details only for authorized ministry care and administration.
           </p>
         </div>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="border-b border-slate-200 dark:border-slate-700">
-        <nav className="flex gap-1 -mb-px overflow-x-auto">
-          {[
-            { id: 'all', label: 'All Members', icon: Users },
-            { id: 'new', label: 'New Members', icon: UserPlus },
-            { id: 'leadership', label: 'Leadership', icon: Crown },
-            { id: 'titles', label: 'Titles', icon: Award }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  if (tab.id !== 'all') {
-                    setSearchParams({ tab: tab.id });
-                  } else {
-                    setSearchParams({});
-                  }
-                }}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  isActive
-                    ? 'border-rose-500 text-rose-600 dark:text-rose-400 dark:border-rose-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400 dark:hover:text-slate-300 dark:hover:border-slate-600'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
       </div>
 
       <div className="flex w-full flex-wrap items-center justify-end gap-2">
