@@ -504,8 +504,15 @@ router.put('/settings/config', async (req, res) => {
     if (!config || typeof config !== 'object') {
       return res.status(400).json({ error: 'Invalid config object' });
     }
-
+    const ALLOWED_SETTINGS_KEYS = new Set([
+      'points_attendance', 'points_excused', 'points_leadership', 'points_first_timer_bonus',
+      'midweek_day', 'midweek_start', 'midweek_end', 'attendance_weight', 'leadership_weight',
+      'church_name', 'church_address', 'church_phone', 'church_email'
+    ]);
     for (const [key, value] of Object.entries(config)) {
+      if (!ALLOWED_SETTINGS_KEYS.has(key)) {
+        return res.status(400).json({ error: `Unknown setting key: ${key}` });
+      }
       await queries.updateSetting(key, String(value));
     }
 

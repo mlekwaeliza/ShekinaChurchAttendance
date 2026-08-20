@@ -40,14 +40,14 @@ function csrfProtect(options = {}) {
   return (req, res, next) => {
     const method = req.method;
 
-    // Always ensure CSRF token cookie exists
+    // Always ensure CSRF token cookie exists — 1h to match session idle, cleared on logout
     if (!req.cookies[cookieName]) {
       const token = generateToken();
       res.cookie(cookieName, token, {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000
+        maxAge: 60 * 60 * 1000
       });
     }
 

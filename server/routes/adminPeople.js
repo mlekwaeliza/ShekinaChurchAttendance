@@ -288,6 +288,22 @@ router.put('/members/:id', async (req, res) => {
       return res.status(400).json({ error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})` });
     }
 
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    if (phone && !/^[\d+\-\s()]{7,20}$/.test(phone)) {
+      return res.status(400).json({ error: 'Invalid phone format' });
+    }
+    if (secondary_phone && !/^[\d+\-\s()]{7,20}$/.test(secondary_phone)) {
+      return res.status(400).json({ error: 'Invalid secondary phone format' });
+    }
+    if (date_of_birth && Number.isNaN(Date.parse(date_of_birth))) {
+      return res.status(400).json({ error: 'Invalid date of birth' });
+    }
+    if (gender && !['Male', 'Female', 'Other', ''].includes(gender)) {
+      return res.status(400).json({ error: 'Invalid gender' });
+    }
+
     const sectionId = Number(section_id);
     const leaderId = Number(leader_id);
     if (!Number.isInteger(sectionId) || !Number.isInteger(leaderId)) {

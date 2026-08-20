@@ -336,6 +336,11 @@ CREATE INDEX IF NOT EXISTS idx_outreach_leader ON outreach_logs(leader_id);
 CREATE INDEX IF NOT EXISTS idx_outreach_member ON outreach_logs(member_id);
 CREATE INDEX IF NOT EXISTS idx_outreach_week ON outreach_logs(week_start);
 CREATE INDEX IF NOT EXISTS idx_outreach_leader_week ON outreach_logs(leader_id, week_start);
+CREATE INDEX IF NOT EXISTS idx_submission_leader_date_service ON submission_log(leader_id, date, service_type_id);
+CREATE INDEX IF NOT EXISTS idx_audit_entity_created ON audit_log(entity_type, entity_id, created_at DESC);
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS idx_members_fullname_trgm ON members USING gin (full_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_members_membership_trgm ON members USING gin (membership_id gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_reminders_scheduled ON scheduled_reminders(scheduled_for, sent);
 CREATE INDEX IF NOT EXISTS idx_reminders_type ON scheduled_reminders(type);
 

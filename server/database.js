@@ -2228,6 +2228,17 @@ async function ensureHomeCellSchema() {
         );
         await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_email ON members(email)');
         await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_phone ON members(phone)');
+        // P1-fix: additional composite indexes for hot paths
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_submission_log_leader_date_service ON submission_log(leader_id, date, service_type_id)');
+        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id, created_at DESC)');
+        // Trigram indexes for member search (requires pg_trgm)
+        try {
+          await pgPool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+          await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_fullname_trgm ON members USING gin (full_name gin_trgm_ops)');
+          await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_membership_trgm ON members USING gin (membership_id gin_trgm_ops)');
+        } catch (e) {
+          console.warn('Trigram index creation skipped (non-fatal):', e.message);
+        }
       } catch (e) {
         console.warn('Additional index creation failed (non-fatal):', e.message);
       }

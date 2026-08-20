@@ -167,7 +167,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Logout
+// Logout — clear session and CSRF cookie (token lifetime now 1h, matches session idle)
 router.post('/logout', (req, res) => {
   const userId = req.session?.userId || null;
   req.session.destroy((err) => {
@@ -176,6 +176,7 @@ router.post('/logout', (req, res) => {
     }
     recordSecurityEvent('logout', userId, null, req);
     res.clearCookie('sc.sid');
+    res.clearCookie('csrfToken');
     res.json({ message: 'Logged out successfully' });
   });
 });

@@ -210,7 +210,9 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   const sameOrigin = (origin) => {
     try {
-      return new URL(origin).host === req.headers.host;
+      const o = new URL(origin);
+      const hostUrl = new URL(`${req.protocol}://${req.headers.host}`);
+      return o.host === hostUrl.host && o.protocol === hostUrl.protocol;
     } catch {
       return false;
     }
@@ -219,7 +221,7 @@ app.use((req, res, next) => {
     origin: (origin, callback) => {
       // Allow same-origin (no Origin header) and configured client origin
       if (!origin || origin === clientUrl || sameOrigin(origin)) return callback(null, true);
-      return callback(new Error('CORS: origin not allowed'));
+      return callback(null, false);
     },
     credentials: true
   })(req, res, next);
