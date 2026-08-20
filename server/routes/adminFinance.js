@@ -43,6 +43,7 @@ router.get('/finance/members/search', async (req, res) => {
   }
 });
 
+const { validateImageContent } = require('../utils/imageValidator');
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf']);
 const uploadsDir = path.join(__dirname, '../uploads/finance');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -339,6 +340,19 @@ router.delete('/finance/expenses/:id', async (req, res) => {
 router.post('/finance/expenses/:id/receipt', upload.single('receipt'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Receipt file is required' });
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    if (ext !== '.pdf') {
+      try { await validateImageContent(req.file.path); } catch (imgErr) {
+        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
+        return res.status(400).json({ error: 'Invalid image file. File content does not match image type.' });
+      }
+    } else {
+      const header = fs.readFileSync(req.file.path, { encoding: 'utf8', flag: 'r' }).slice(0, 4);
+      if (!header.startsWith('%PDF')) {
+        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
+        return res.status(400).json({ error: 'Invalid PDF file.' });
+      }
+    }
     const receiptPath = '/uploads/finance/' + req.file.filename;
     await queries.updateFinanceExpenseReceipt(req.params.id, receiptPath);
     res.json({ message: 'Receipt uploaded', path: receiptPath });
@@ -353,6 +367,19 @@ router.post('/finance/records/:id/receipt/:type', upload.single('receipt'), asyn
     if (!req.file) return res.status(400).json({ error: 'Receipt file is required' });
     const { type } = req.params;
     if (!['bishop', 'evangelism', 'remaining'].includes(type)) return res.status(400).json({ error: 'Invalid receipt type' });
+    const ext2 = path.extname(req.file.originalname).toLowerCase();
+    if (ext2 !== '.pdf') {
+      try { await validateImageContent(req.file.path); } catch (imgErr) {
+        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
+        return res.status(400).json({ error: 'Invalid image file. File content does not match image type.' });
+      }
+    } else {
+      const hdr = fs.readFileSync(req.file.path, { encoding: 'utf8', flag: 'r' }).slice(0, 4);
+      if (!hdr.startsWith('%PDF')) {
+        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
+        return res.status(400).json({ error: 'Invalid PDF file.' });
+      }
+    }
     const receiptPath = `/uploads/finance/${req.file.filename}`;
     const fieldMap = { bishop: 'bishop_receipt', evangelism: 'evangelism_receipt', remaining: 'remaining_receipt' };
     await queries.updateFinanceRecord(req.params.id, { [fieldMap[type]]: receiptPath });

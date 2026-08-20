@@ -846,10 +846,12 @@ async function initializeUsers() {
     const bcrypt = require('bcryptjs');
 
     // Helper: look up a member by name keywords and return {id, full_name}
+    // H3-fix: parameterized to prevent injection; uses LIKE with bound params
     const findMemberByName = async (keywords) => {
       try {
-        const conditions = keywords.map((k) => `full_name LIKE '%${k}%'`).join(' OR ');
-        const rows = await all(`SELECT id, full_name FROM members WHERE ${conditions} LIMIT 1`);
+        const conditions = keywords.map(() => `full_name LIKE ?`).join(' OR ');
+        const params = keywords.map((k) => `%${k}%`);
+        const rows = await all(`SELECT id, full_name FROM members WHERE ${conditions} LIMIT 1`, params);
         return rows && rows[0] ? rows[0] : null;
       } catch {
         return null;
@@ -863,34 +865,45 @@ async function initializeUsers() {
         .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
         .join(' ');
 
-    // Helper: seed or re-seed a user. Always re-hashes the password so the
-    // configured password is the single source of truth on every startup.
+    // Helper: seed or create a user. Only creates if not exists; never overwrites
+    // existing password_hash to allow rotation via DB/admin UI without restart revert.
+    // Admin is the exception: its password is always synced from INITIAL_ADMIN_PASSWORD.
     const seedUser = async ({
       username,
       password,
       role,
       fullName,
       memberKeywords = null,
-      isNewMemberLeader = false
+      isNewMemberLeader = false,
+      forceUpdatePassword = false
     }) => {
-      const passwordHash = await bcrypt.hash(password, 10);
       let member = null;
       if (memberKeywords) member = await findMemberByName(memberKeywords);
       const finalName = member ? member.full_name : fullName || titleCase(username);
       const existing = await queries.findUserByUsername(username);
       try {
         if (!existing) {
+          const passwordHash = await bcrypt.hash(password, 12);
           await run(
             'INSERT INTO users (username, password_hash, role, full_name, member_id) VALUES (?, ?, ?, ?, ?)',
             [username, passwordHash, role, finalName, member ? member.id : null]
           );
           console.log(`User "${username}" created (${role}).`);
         } else {
-          await run(
-            'UPDATE users SET password_hash = ?, role = ?, full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
-            [passwordHash, role, finalName, username]
-          );
-          console.log(`User "${username}" password reset (${role}).`);
+          if (forceUpdatePassword) {
+            const passwordHash = await bcrypt.hash(password, 12);
+            await run(
+              'UPDATE users SET password_hash = ?, role = ?, full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
+              [passwordHash, role, finalName, username]
+            );
+            console.log(`User "${username}" password synced from env (${role}).`);
+          } else {
+            await run(
+              'UPDATE users SET role = ?, full_name = ?, updated_at = CURRENT_TIMESTAMP WHERE username = ?',
+              [role, finalName, username]
+            );
+            console.log(`User "${username}" exists — skipped password reset (${role}).`);
+          }
         }
         if (isNewMemberLeader) {
           const u = await queries.findUserByUsername(username);
@@ -909,7 +922,8 @@ async function initializeUsers() {
         password: initialPassword,
         role: 'admin',
         memberKeywords: ['Daniel', 'Mulesi'],
-        fullName: 'System Administrator'
+        fullName: 'System Administrator',
+        forceUpdatePassword: true
       });
     } else {
       console.warn(
@@ -917,15 +931,20 @@ async function initializeUsers() {
       );
     }
 
-    // ── Existing fixed accounts ──
-    await seedUser({
-      username: 'ghance',
-      password: 'password123',
-      role: 'leader',
-      memberKeywords: ['Genoveva', 'Hance'],
-      fullName: 'Genoveva Hance',
-      isNewMemberLeader: true
-    });
+    // ── Demo/starter accounts — only auto-seeded outside production, or when
+    // ALLOW_UNSAFE_SEED=true. In production they must be created via /api/admin
+    // invite flow which generates random passwords.
+    const allowUnsafeSeed =
+      process.env.ALLOW_UNSAFE_SEED === 'true' || process.env.NODE_ENV !== 'production';
+    if (allowUnsafeSeed) {
+      await seedUser({
+        username: 'ghance',
+        password: 'password123',
+        role: 'leader',
+        memberKeywords: ['Genoveva', 'Hance'],
+        fullName: 'Genoveva Hance',
+        isNewMemberLeader: true
+      });
     // Genoveva is the New Member Leader, not a section leader. Keep her
     // account and dedicated access, while removing any legacy section-leader
     // assignment that an earlier auto-repair may have created.
@@ -969,10 +988,13 @@ async function initializeUsers() {
       { u: 'irene_joseph', p: 'Irene@gvz7!26' },
       { u: 'joseph_chitanda', p: 'Joseph@VYE7!26' }
     ];
-    for (const { u, p } of leaders) {
-      await seedUser({ username: u, password: p, role: 'leader', fullName: titleCase(u) });
+      for (const { u, p } of leaders) {
+        await seedUser({ username: u, password: p, role: 'leader', fullName: titleCase(u) });
+      }
+      console.log(`Seeded ${leaders.length} leader accounts.`);
+    } else {
+      console.log('Skipping demo account seeding (production without ALLOW_UNSAFE_SEED).');
     }
-    console.log(`Seeded ${leaders.length} leader accounts.`);
   } catch (error) {
     console.error('Failed to seed users:', error);
   }

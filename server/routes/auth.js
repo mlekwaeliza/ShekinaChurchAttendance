@@ -2,9 +2,11 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const { recordSecurityEvent } = require('../utils/securityAudit');
 const { queries, get } = require('../database');
+const { validateImageContent } = require('../utils/imageValidator');
 
 const router = express.Router();
 
@@ -305,6 +307,14 @@ router.post('/profile-picture', async (req, res) => {
     }
 
     try {
+      // H5-fix: validate actual image content via magic bytes (not just mimetype)
+      try {
+        await validateImageContent(req.file.path);
+      } catch (imgErr) {
+        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
+        return res.status(400).json({ error: 'Invalid image file. File content does not match image type.' });
+      }
+
       // Create the URL path to save in DB
       const pictureUrl = `/uploads/profiles/${req.file.filename}`;
       

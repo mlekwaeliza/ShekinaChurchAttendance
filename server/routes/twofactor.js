@@ -96,7 +96,7 @@ const hashBackupCode = (code) => crypto
   .digest('hex');
 
 const generateBackupCodes = () => Array.from({ length: 8 }, () =>
-  crypto.randomBytes(4).toString('hex').toUpperCase()
+  crypto.randomBytes(10).toString('hex').toUpperCase()
 );
 
 const storeBackupCodes = (codes) => codes.map((code) => ({ hash: hashBackupCode(code) }));

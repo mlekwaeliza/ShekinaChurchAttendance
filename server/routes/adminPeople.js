@@ -12,6 +12,7 @@ const { formatLocalDate } = require('../utils/date');
 const { escapeCsvValue, toCsvRow } = require('../utils/csv');
 const { monthsAgo } = require('../utils/sqlDialect');
 const { withCache, invalidate } = require('../utils/cache');
+const { validateImageContent } = require('../utils/imageValidator');
 
 const router = express.Router();
 const upload = multer({
@@ -26,6 +27,7 @@ const upload = multer({
 });
 
 router.use(isAuthenticated);
+router.use(requireRole(['admin']));
 
 async function syncChurchMemberHomeCell(memberId, cellId, userId) {
   const parsedMemberId = Number(memberId);
@@ -172,9 +174,6 @@ router.get('/members', async (req, res) => {
   }
 });
 
-// Admin-only middleware for remaining routes
-router.use(requireRole(['admin']));
-
 // PUT bulk-update members. This must be registered before /members/:id.
 router.put('/members/bulk-update', async (req, res) => {
   try {
@@ -252,6 +251,12 @@ router.post('/members/:id/photo', uploadPhoto.single('photo'), async (req, res) 
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Image file is required' });
+    }
+    try {
+      await validateImageContent(req.file.path);
+    } catch (imgErr) {
+      try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
+      return res.status(400).json({ error: 'Invalid image file. File content does not match image type.' });
     }
     const photoUrl = `/uploads/profiles/${req.file.filename}`;
     await queries.updateMemberPhoto(req.params.id, photoUrl);
@@ -766,12 +771,6 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
       return null;
     };
 
-    if (rows.length > 0) {
-      console.log('--- CSV Upload Debug ---');
-      console.log('Raw Row Keys:', Object.keys(rows[0]));
-      console.log('Sample Row 0:', rows[0]);
-    }
-
     // Wrap all row processing in a single transaction for atomicity
     await transaction(async (_tx) => {
       for (const row of rows) {
@@ -957,11 +956,11 @@ router.get('/children-leaders', async (req, res) => {
     // Diagnostic: first check raw children_leaders count
     const rawCount = await all(`SELECT COUNT(*) as cnt FROM children_leaders`);
     const rawRows = await all(`SELECT cl.id, cl.user_id, cl.is_head, cl.is_active FROM children_leaders cl LIMIT 10`);
-    console.log(`[children-leaders-diag] Raw count: ${rawCount?.[0]?.cnt || 0}, rows:`, JSON.stringify(rawRows));
+    if (process.env.DEBUG) console.log(`[children-leaders-diag] Raw count: ${rawCount?.[0]?.cnt || 0}, rows:`, JSON.stringify(rawRows));
 
     // Diagnostic: check users table
     const userCount = await all(`SELECT COUNT(*) as cnt FROM users WHERE role = 'children_leader'`);
-    console.log(`[children-leaders-diag] Users with role children_leader: ${userCount?.[0]?.cnt || 0}`);
+    if (process.env.DEBUG) console.log(`[children-leaders-diag] Users with role children_leader: ${userCount?.[0]?.cnt || 0}`);
 
     // Auto-repair: users with role='children_leader' but no children_leaders row
     const missingLeaders = await all(`
@@ -971,14 +970,14 @@ router.get('/children-leaders', async (req, res) => {
       WHERE u.role = 'children_leader' AND cl.id IS NULL
     `);
     if (missingLeaders && missingLeaders.length > 0) {
-      console.log(`[children-leaders-diag] Found ${missingLeaders.length} users with role children_leader but no children_leaders row — auto-creating`);
+      if (process.env.DEBUG) console.log(`[children-leaders-diag] Found ${missingLeaders.length} users with role children_leader but no children_leaders row — auto-creating`);
       for (const user of missingLeaders) {
         try {
           await run(
             'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, 0)',
             [user.id, null, null]
           );
-          console.log(`[children-leaders-diag] Auto-created children_leaders row for user_id=${user.id} (${user.username})`);
+          if (process.env.DEBUG) console.log(`[children-leaders-diag] Auto-created children_leaders row for user_id=${user.id} (${user.username})`);
         } catch (insErr) {
           console.warn(`[children-leaders-diag] Failed to auto-create for user_id=${user.id}:`, insErr.message);
         }
@@ -991,7 +990,7 @@ router.get('/children-leaders', async (req, res) => {
       JOIN users u ON cl.user_id = u.id
       ORDER BY u.full_name
     `);
-    console.log(`[children-leaders-diag] JOIN result count: ${childrenLeaders?.length || 0}`);
+    if (process.env.DEBUG) console.log(`[children-leaders-diag] JOIN result count: ${childrenLeaders?.length || 0}`);
 
     // If JOIN returned empty but raw data exists, include diagnostic in response
     const rawCnt = rawCount?.[0]?.cnt || 0;
@@ -1003,12 +1002,12 @@ router.get('/children-leaders', async (req, res) => {
         LEFT JOIN users u ON cl.user_id = u.id
         ORDER BY cl.id
       `);
-      console.log(`[children-leaders-diag] Orphaned diagnostic:`, JSON.stringify(orphaned));
+      if (process.env.DEBUG) console.log(`[children-leaders-diag] Orphaned diagnostic:`, JSON.stringify(orphaned));
       // Auto-repair: delete orphaned records (user_id has no matching user)
       for (const row of orphaned) {
         if (!row.matched_user_id) {
           await run('DELETE FROM children_leaders WHERE id = ?', [row.id]);
-          console.log(`[children-leaders-diag] Auto-deleted orphaned children_leaders id=${row.id} user_id=${row.user_id}`);
+          if (process.env.DEBUG) console.log(`[children-leaders-diag] Auto-deleted orphaned children_leaders id=${row.id} user_id=${row.user_id}`);
         }
       }
       // Re-query after cleanup
@@ -1018,7 +1017,7 @@ router.get('/children-leaders', async (req, res) => {
         JOIN users u ON cl.user_id = u.id
         ORDER BY u.full_name
       `);
-      console.log(`[children-leaders-diag] After cleanup JOIN result count: ${cleanLeaders?.length || 0}`);
+      if (process.env.DEBUG) console.log(`[children-leaders-diag] After cleanup JOIN result count: ${cleanLeaders?.length || 0}`);
       return res.json(cleanLeaders);
     }
 

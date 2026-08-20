@@ -46,6 +46,13 @@ import ExecutiveSummary from './ExecutiveSummary';
 
 const R = (v) => Math.round(Number(v) || 0);
 const asArray = (v) => (Array.isArray(v) ? v : []);
+const escapeHtml = (str) =>
+  String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 const MONTHS_SHORT = [
   '',
@@ -1867,7 +1874,10 @@ const AttendanceReports = ({
                       <p
                         className="text-[11px] leading-relaxed text-slate-700 dark:text-slate-300"
                         dangerouslySetInnerHTML={{
-                          __html: ins.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          __html: escapeHtml(ins.text).replace(
+                            /\*\*(.*?)\*\*/g,
+                            '<strong>$1</strong>'
+                          )
                         }}
                       />
                     </div>

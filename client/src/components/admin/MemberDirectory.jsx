@@ -1202,7 +1202,7 @@ const MemberDirectory = ({
                                 e.stopPropagation();
                                 onDelete(member);
                               }}
-                              className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-505 transition-colors active:scale-90"
+                              className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors active:scale-90"
                               title="Delete"
                             >
                               <Trash2 className="w-5 h-5" />

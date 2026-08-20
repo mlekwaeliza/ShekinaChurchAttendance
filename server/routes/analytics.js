@@ -634,8 +634,6 @@ router.get('/member-weekly-matrix', async (req, res) => {
     const serviceParams = serviceId ? [serviceId] : [];
     const dateStart = weeks[0].start;
     const dateEnd = weeks[weeks.length - 1].end;
-    console.log(`[member-weekly-matrix] params: startDate=${req.query.startDate || 'none'}, endDate=${req.query.endDate || 'none'}, service_id=${req.query.service_id || 'none'}, section_id=${sectionIdParam || 'none'}, leader_id=${leaderIdParam || 'none'}`);
-    console.log(`[member-weekly-matrix] computed weeks: ${weeks.length} weeks from ${dateStart} to ${dateEnd}, members: ${members.length}`);
     const attendanceRows = await all(`
       SELECT a.member_id, a.date, a.status
       FROM attendance a
@@ -643,11 +641,6 @@ router.get('/member-weekly-matrix', async (req, res) => {
       WHERE ${memberWhere} AND a.date BETWEEN ? AND ? ${serviceCondition}
       ORDER BY a.member_id, a.date
     `, [...memberParams, dateStart, dateEnd, ...serviceParams]);
-    console.log(`[member-weekly-matrix] attendance rows: ${attendanceRows.length}`);
-    if (attendanceRows.length > 0) {
-      console.log(`[member-weekly-matrix] sample dates: ${attendanceRows.slice(0, 5).map(r => `${r.date}(${r.status})`).join(', ')}`);
-      console.log(`[member-weekly-matrix] date range in query: ${dateStart} to ${dateEnd}`);
-    }
 
     // Normalize dates to YYYY-MM-DD strings (PostgreSQL returns Date objects, SQLite returns strings)
     const normalizeDate = (d) => {

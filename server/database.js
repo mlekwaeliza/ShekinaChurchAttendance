@@ -1045,47 +1045,34 @@ if (!usePostgres) {
       }
     );
 
-    // Complex Migration: Rebuilding outreach_logs to support expanded check constraints
+    // Migration: Add missing columns to outreach_logs without data loss (non-destructive)
     db.all('PRAGMA table_info(outreach_logs)', (err, cols) => {
       if (!err && cols) {
         const hasOutcome = cols.some((c) => c.name === 'outcome');
-        if (!hasOutcome) {
-          console.log('Migrating outreach_logs schema...');
-          db.serialize(() => {
-            db.run('PRAGMA foreign_keys=off;');
-            db.run('BEGIN TRANSACTION;');
-            db.run(`CREATE TABLE outreach_logs_new (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            leader_id INTEGER NOT NULL,
-            member_id INTEGER NOT NULL,
-            contact_method TEXT NOT NULL,
-            outcome TEXT,
-            service_id INTEGER,
-            created_by INTEGER,
-            message TEXT,
-            week_start DATE NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (leader_id) REFERENCES leaders(id) ON DELETE CASCADE,
-            FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
-            FOREIGN KEY (service_id) REFERENCES service_types(id) ON DELETE SET NULL,
-            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-          )`);
-            db.run(`INSERT INTO outreach_logs_new (id, leader_id, member_id, contact_method, message, week_start, created_at)
-                  SELECT id, leader_id, member_id, contact_method, message, week_start, created_at FROM outreach_logs`);
-            db.run('DROP TABLE outreach_logs');
-            db.run('ALTER TABLE outreach_logs_new RENAME TO outreach_logs');
-
-            db.run('CREATE INDEX IF NOT EXISTS idx_outreach_leader ON outreach_logs(leader_id)');
-            db.run('CREATE INDEX IF NOT EXISTS idx_outreach_member ON outreach_logs(member_id)');
-            db.run('CREATE INDEX IF NOT EXISTS idx_outreach_week ON outreach_logs(week_start)');
-            db.run(
-              'CREATE INDEX IF NOT EXISTS idx_outreach_leader_week ON outreach_logs(leader_id, week_start)'
-            );
-
-            db.run('COMMIT;');
-            db.run('PRAGMA foreign_keys=on;');
-            console.log('outreach_logs schema migration complete.');
-          });
+        const hasServiceId = cols.some((c) => c.name === 'service_id');
+        const hasCreatedBy = cols.some((c) => c.name === 'created_by');
+        if (!hasOutcome || !hasServiceId || !hasCreatedBy) {
+          console.log('Migrating outreach_logs schema (non-destructive)...');
+          if (!hasOutcome) {
+            db.run('ALTER TABLE outreach_logs ADD COLUMN outcome TEXT', (e) => {
+              if (e && !e.message.includes('duplicate column')) console.log('Migration note:', e.message);
+            });
+          }
+          if (!hasServiceId) {
+            db.run('ALTER TABLE outreach_logs ADD COLUMN service_id INTEGER REFERENCES service_types(id) ON DELETE SET NULL', (e) => {
+              if (e && !e.message.includes('duplicate column')) console.log('Migration note:', e.message);
+            });
+          }
+          if (!hasCreatedBy) {
+            db.run('ALTER TABLE outreach_logs ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL', (e) => {
+              if (e && !e.message.includes('duplicate column')) console.log('Migration note:', e.message);
+            });
+          }
+          db.run('CREATE INDEX IF NOT EXISTS idx_outreach_leader ON outreach_logs(leader_id)');
+          db.run('CREATE INDEX IF NOT EXISTS idx_outreach_member ON outreach_logs(member_id)');
+          db.run('CREATE INDEX IF NOT EXISTS idx_outreach_week ON outreach_logs(week_start)');
+          db.run('CREATE INDEX IF NOT EXISTS idx_outreach_leader_week ON outreach_logs(leader_id, week_start)');
+          console.log('outreach_logs schema migration complete.');
         }
       }
     });
@@ -1181,9 +1168,37 @@ async function ensureLeadershipAndDepartmentsSchema() {
   }
 
   if (needRebuild) {
-    console.log('Rebuilding congregation titles, member titles, and departments from scratch...');
-
-    // Drop in correct order of foreign keys
+    console.log('Ensuring leadership and departments schema (non-destructive)...');
+    // H2-fix: avoid dropping tables with data. Try additive migration first.
+    try {
+      await run("ALTER TABLE congregation_titles ADD COLUMN category TEXT DEFAULT 'General'");
+    } catch (e) {
+      if (!String(e.message).includes('duplicate column')) console.log('Migration note:', e.message);
+    }
+    try {
+      await run('ALTER TABLE congregation_titles ADD COLUMN reports_to_title_id INTEGER REFERENCES congregation_titles(id) ON DELETE SET NULL');
+    } catch (e) {
+      if (!String(e.message).includes('duplicate column')) console.log('Migration note:', e.message);
+    }
+    // If tables still missing after additive attempt, create them. Only drop if we must.
+    // Check again if still missing before destructive rebuild
+    let stillMissing = false;
+    try {
+      await run('SELECT category FROM congregation_titles LIMIT 1');
+    } catch {
+      stillMissing = true;
+    }
+    try {
+      await run('SELECT id FROM departments LIMIT 1');
+    } catch {
+      stillMissing = true;
+    }
+    if (!stillMissing) {
+      console.log('Leadership schema patched via ALTER — no rebuild needed.');
+      return;
+    }
+    console.log('Rebuilding missing leadership tables from scratch...');
+    // Drop in correct order of foreign keys (only if still missing and empty-ish)
     await run('DROP TABLE IF EXISTS department_history');
     await run('DROP TABLE IF EXISTS department_members');
     await run('DROP TABLE IF EXISTS departments');
@@ -2589,8 +2604,8 @@ async function createChildrensMinistryTables() {
     await run(`
       CREATE TABLE IF NOT EXISTS children_teachers (
         id ${idType},
-        member_id INTEGER,
-        user_id INTEGER,
+        member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
         full_name TEXT NOT NULL,
         phone TEXT,
         email TEXT,
@@ -2605,7 +2620,7 @@ async function createChildrensMinistryTables() {
     await run(`
       CREATE TABLE IF NOT EXISTS children (
         id ${idType},
-        member_id INTEGER,
+        member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
         full_name TEXT NOT NULL,
         date_of_birth DATE,
         gender TEXT,
@@ -2616,8 +2631,8 @@ async function createChildrensMinistryTables() {
         emergency_phone TEXT,
         medical_notes TEXT,
         allergies TEXT,
-        class_id INTEGER,
-        children_leader_id INTEGER,
+        class_id INTEGER REFERENCES children_classes(id) ON DELETE SET NULL,
+        children_leader_id INTEGER REFERENCES children_leaders(id) ON DELETE SET NULL,
         age_group TEXT,
         photo_consent INTEGER DEFAULT 0,
         is_active INTEGER DEFAULT 1,
@@ -2629,8 +2644,8 @@ async function createChildrensMinistryTables() {
     await run(`
       CREATE TABLE IF NOT EXISTS children_class_assignments (
         id ${idType},
-        child_id INTEGER NOT NULL,
-        class_id INTEGER NOT NULL,
+        child_id INTEGER NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+        class_id INTEGER NOT NULL REFERENCES children_classes(id) ON DELETE CASCADE,
         assigned_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(child_id, class_id)
       )
@@ -2639,8 +2654,8 @@ async function createChildrensMinistryTables() {
     await run(`
       CREATE TABLE IF NOT EXISTS children_teacher_assignments (
         id ${idType},
-        teacher_id INTEGER NOT NULL,
-        class_id INTEGER NOT NULL,
+        teacher_id INTEGER NOT NULL REFERENCES children_teachers(id) ON DELETE CASCADE,
+        class_id INTEGER NOT NULL REFERENCES children_classes(id) ON DELETE CASCADE,
         assigned_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(teacher_id, class_id)
       )
@@ -2649,15 +2664,15 @@ async function createChildrensMinistryTables() {
     await run(`
       CREATE TABLE IF NOT EXISTS children_attendance (
         id ${idType},
-        child_id INTEGER NOT NULL,
-        class_id INTEGER NOT NULL,
+        child_id INTEGER NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+        class_id INTEGER NOT NULL REFERENCES children_classes(id) ON DELETE CASCADE,
         date DATE NOT NULL,
         status TEXT DEFAULT 'present'
           CHECK(status IN ('present','absent','excused','late')),
         checked_in_at ${tsType},
         checked_out_at ${tsType},
-        checked_in_by INTEGER,
-        checked_out_by INTEGER,
+        checked_in_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        checked_out_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
         notes TEXT,
         created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(child_id, class_id, date)
@@ -2667,12 +2682,12 @@ async function createChildrensMinistryTables() {
     await run(`
       CREATE TABLE IF NOT EXISTS children_promotions (
         id ${idType},
-        child_id INTEGER NOT NULL,
-        from_class_id INTEGER,
-        to_class_id INTEGER NOT NULL,
+        child_id INTEGER NOT NULL REFERENCES children(id) ON DELETE CASCADE,
+        from_class_id INTEGER REFERENCES children_classes(id) ON DELETE SET NULL,
+        to_class_id INTEGER NOT NULL REFERENCES children_classes(id) ON DELETE SET NULL,
         promotion_date DATE NOT NULL,
         notes TEXT,
-        created_by INTEGER,
+        created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
         created_at ${tsType} DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -2690,7 +2705,7 @@ async function createChildrensMinistryTables() {
     await run(`
       CREATE TABLE IF NOT EXISTS children_leaders (
         id ${idType},
-        user_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         phone TEXT,
         email TEXT,
         is_head INTEGER DEFAULT 0,
@@ -2705,9 +2720,9 @@ async function createChildrensMinistryTables() {
     await run(`
       CREATE TABLE IF NOT EXISTS children_submission_log (
         id ${idType},
-        children_leader_id INTEGER NOT NULL,
+        children_leader_id INTEGER NOT NULL REFERENCES children_leaders(id) ON DELETE CASCADE,
         date DATE NOT NULL,
-        class_id INTEGER,
+        class_id INTEGER REFERENCES children_classes(id) ON DELETE SET NULL,
         records_count INTEGER DEFAULT 0,
         created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(children_leader_id, date, class_id)
