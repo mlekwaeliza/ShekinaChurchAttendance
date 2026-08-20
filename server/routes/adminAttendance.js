@@ -658,63 +658,55 @@ router.get('/attendance/missing-submissions', async (req, res) => {
     const { date, service_id = 1 } = req.query;
     if (!date) return res.status(400).json({ error: 'Date query parameter required' });
 
-    const leaders = await all(`
-      SELECT l.id AS leader_id, u.full_name AS leader_name, s.id AS section_id, s.name AS section_name
-      FROM leaders l
-      JOIN users u ON l.user_id = u.id
-      JOIN sections s ON l.section_id = s.id
-      WHERE l.is_active = 1
-      ORDER BY s.name, u.full_name
-    `);
-
     const serviceType = await get('SELECT id, name FROM service_types WHERE id = ?', [Number(service_id)]);
     const serviceName = serviceType?.name || 'Main';
 
-    const result = [];
-    for (const leader of leaders) {
-      const expectedRow = await get(
-        'SELECT COUNT(*) AS cnt FROM members WHERE leader_id = ? AND is_active = 1',
-        [leader.leader_id]
-      );
-      const expected = expectedRow?.cnt || 0;
+    // P1-fix: single GROUP BY query replaces 3N round-trips (was 3 queries per leader)
+    const resultRows = await all(
+      `
+      SELECT
+        l.id AS leader_id,
+        u.full_name AS leader_name,
+        s.id AS section_id,
+        s.name AS section_name,
+        COUNT(DISTINCT CASE WHEN m.is_active = 1 THEN m.id END) AS expected,
+        COUNT(DISTINCT a.id) AS recorded,
+        sl.created_at AS submitted_at
+      FROM leaders l
+      JOIN users u ON l.user_id = u.id
+      JOIN sections s ON l.section_id = s.id
+      LEFT JOIN members m ON m.leader_id = l.id AND m.is_active = 1
+      LEFT JOIN attendance a ON a.member_id = m.id AND a.date = ? AND a.service_type_id = ?
+      LEFT JOIN submission_log sl ON sl.leader_id = l.id AND sl.date = ? AND sl.service_id = ?
+      WHERE l.is_active = 1
+      GROUP BY l.id, u.full_name, s.id, s.name, sl.created_at
+      ORDER BY s.name, u.full_name
+      `,
+      [date, Number(service_id), date, Number(service_id)]
+    );
 
-      const recordedRow = await get(
-        `SELECT COUNT(*) AS cnt FROM attendance a
-         JOIN members m ON a.member_id = m.id
-         WHERE m.leader_id = ? AND a.date = ? AND a.service_type_id = ?`,
-        [leader.leader_id, date, Number(service_id)]
-      );
-      const recorded = recordedRow?.cnt || 0;
-
-      const submissionLog = await get(
-        'SELECT id, created_at FROM submission_log WHERE leader_id = ? AND date = ? AND service_id = ?',
-        [leader.leader_id, date, Number(service_id)]
-      );
-
+    const result = resultRows.map((row) => {
+      const expected = Number(row.expected) || 0;
+      const recorded = Number(row.recorded) || 0;
+      const hasSubmission = !!row.submitted_at;
       let status;
-      if (submissionLog && recorded >= expected) {
-        status = 'submitted';
-      } else if (recorded > 0) {
-        status = 'partial';
-      } else if (submissionLog && recorded < expected) {
-        status = 'late';
-      } else {
-        status = 'missing';
-      }
-
-      result.push({
-        leader_id: leader.leader_id,
-        leader_name: leader.leader_name,
-        section_id: leader.section_id,
-        section_name: leader.section_name,
+      if (hasSubmission && recorded >= expected) status = 'submitted';
+      else if (recorded > 0) status = 'partial';
+      else if (hasSubmission && recorded < expected) status = 'late';
+      else status = 'missing';
+      return {
+        leader_id: row.leader_id,
+        leader_name: row.leader_name,
+        section_id: row.section_id,
+        section_name: row.section_name,
         service_id: Number(service_id),
         service_name: serviceName,
         expected_members: expected,
         recorded_members: recorded,
         status,
-        submitted_at: submissionLog?.created_at || null,
-      });
-    }
+        submitted_at: row.submitted_at || null,
+      };
+    });
 
     const summary = {
       missing: result.filter(r => r.status === 'missing').length,

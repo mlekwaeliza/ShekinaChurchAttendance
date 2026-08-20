@@ -88,35 +88,39 @@ router.get('/leader-trends', validateDateRange('start_date', 'end_date'), async 
 
     const trends = await queries.getLeaderPerformanceTrends(startDate, endDate);
 
-    // Calculate per-leader trend direction using first half vs second half of period
+    // P1-fix: single GROUP BY query replaces N*2 round-trips
     const { all } = require('../database');
     const midDate = formatLocalDate(
       new Date((parseDateInput(startDate).getTime() + parseDateInput(endDate).getTime()) / 2)
     );
 
-    const enrichedTrends = await Promise.all(trends.map(async (leader) => {
-      const firstHalf = await all(`
-        SELECT ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as rate
+    let rateMap = new Map();
+    if (trends.length > 0) {
+      const leaderIds = trends.map((l) => l.leader_id);
+      const placeholders = leaderIds.map(() => '?').join(',');
+      const rateRows = await all(
+        `
+        SELECT m.leader_id,
+          ROUND(AVG(CASE WHEN a.date BETWEEN ? AND ? THEN CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END END) * 100, 1) AS first_rate,
+          ROUND(AVG(CASE WHEN a.date BETWEEN ? AND ? THEN CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END END) * 100, 1) AS second_rate
         FROM attendance a
         JOIN members m ON a.member_id = m.id
-        WHERE m.leader_id = ? AND a.date BETWEEN ? AND ?
-      `, [leader.leader_id, startDate, midDate]);
+        WHERE m.leader_id IN (${placeholders}) AND a.date BETWEEN ? AND ?
+        GROUP BY m.leader_id
+        `,
+        [startDate, midDate, midDate, endDate, startDate, endDate, ...leaderIds]
+      );
+      rateMap = new Map(rateRows.map((r) => [Number(r.leader_id), r]));
+    }
 
-      const secondHalf = await all(`
-        SELECT ROUND(AVG(CASE WHEN a.status = 'present' THEN 1.0 ELSE 0.0 END) * 100, 1) as rate
-        FROM attendance a
-        JOIN members m ON a.member_id = m.id
-        WHERE m.leader_id = ? AND a.date BETWEEN ? AND ?
-      `, [leader.leader_id, midDate, endDate]);
-
-      const firstRate = firstHalf[0]?.rate || 0;
-      const secondRate = secondHalf[0]?.rate || 0;
+    const enrichedTrends = trends.map((leader) => {
+      const rates = rateMap.get(Number(leader.leader_id)) || {};
+      const firstRate = rates.first_rate || 0;
+      const secondRate = rates.second_rate || 0;
       const diff = secondRate - firstRate;
-
       let trend_direction = 'stable';
       if (diff > 3) trend_direction = 'improving';
       else if (diff < -3) trend_direction = 'declining';
-
       return {
         ...leader,
         first_half_rate: firstRate,
@@ -124,7 +128,7 @@ router.get('/leader-trends', validateDateRange('start_date', 'end_date'), async 
         trend_direction,
         trend_diff: Math.round(diff * 10) / 10,
       };
-    }));
+    });
 
     res.json(enrichedTrends);
   } catch (error) {
