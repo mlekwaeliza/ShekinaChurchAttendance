@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
+import { useTranslation } from 'react-i18next';
 import useOffline from '../hooks/useOffline';
 import { BreadcrumbProvider } from '../context/BreadcrumbContext';
 import Breadcrumbs from './ui/Breadcrumbs';
@@ -48,6 +49,7 @@ import {
   Heart,
   Cross,
   DollarSign,
+  Globe,
   Banknote,
   MapPin,
   Send,
@@ -63,6 +65,11 @@ const IDLE_WARNING_MS = 55 * 60 * 1000;
 const Layout = ({ children, showNav = true }) => {
   const { user, logout, updateUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { t, i18n } = useTranslation();
+  const toggleLanguage = () => {
+    const next = i18n.language?.startsWith('sw') ? 'en' : 'sw';
+    i18n.changeLanguage(next);
+  };
   const { isOnline, pendingCount, syncing, syncPending } = useOffline();
   const { showToast } = useToast();
   const location = useLocation();
@@ -217,60 +224,60 @@ const Layout = ({ children, showNav = true }) => {
     }
   };
 
-  // Navigation structure per role
+  // Navigation structure per role — labels resolved via i18n so EN/SW toggle updates instantly
   const navConfig = {
     admin: [
       {
-        section: 'OVERVIEW',
-        items: [{ path: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true }]
+        section: t('nav.sections.overview', 'OVERVIEW'),
+        items: [{ path: '/admin', label: t('nav.items.dashboard'), icon: LayoutDashboard, exact: true }]
       },
       {
-        section: 'MINISTRIES',
+        section: t('nav.sections.ministries'),
         items: [
-          { path: '/admin/sections', label: 'Sections', icon: Layers },
-          { path: '/admin/home-cells', label: 'Home Cells', icon: Home },
-          { path: '/admin/departments', label: 'Departments', icon: Building2 },
-          { path: '/admin/leadership', label: 'Leadership', icon: Award },
-          { path: '/admin/titles', label: 'Titles', icon: Tag }
+          { path: '/admin/sections', label: t('nav.items.sections'), icon: Layers },
+          { path: '/admin/home-cells', label: t('nav.items.homeCells'), icon: Home },
+          { path: '/admin/departments', label: t('nav.items.departments'), icon: Building2 },
+          { path: '/admin/leadership', label: t('nav.items.leadership'), icon: Award },
+          { path: '/admin/titles', label: t('nav.items.titles'), icon: Tag }
         ]
       },
       {
-        section: 'PEOPLE & CARE',
+        section: t('nav.sections.peopleCare'),
         items: [
-          { path: '/admin/members', label: 'Member Directory', icon: Users },
-          { path: '/admin/new-members', label: 'New Members', icon: UserPlus },
-          { path: '/admin/leaders', label: 'Leaders', icon: Crown },
-          { path: '/admin/children-leaders', label: 'Children Leaders', icon: Baby },
-          { path: '/admin/birthdays', label: 'Birthdays', icon: Cake },
-          { path: '/admin/rewards', label: 'Recognition', icon: Trophy }
+          { path: '/admin/members', label: t('nav.items.memberDirectory'), icon: Users },
+          { path: '/admin/new-members', label: t('nav.items.newMembers'), icon: UserPlus },
+          { path: '/admin/leaders', label: t('nav.items.leaders'), icon: Crown },
+          { path: '/admin/children-leaders', label: t('nav.items.childrenLeaders'), icon: Baby },
+          { path: '/admin/birthdays', label: t('nav.items.birthdays'), icon: Cake },
+          { path: '/admin/rewards', label: t('nav.items.recognition'), icon: Trophy }
         ]
       },
       {
-        section: 'SERVICES & ATTENDANCE',
+        section: t('nav.sections.servicesAttendance'),
         items: [
-          { path: '/admin/attendance-dashboard', label: 'Attendance Overview', icon: BarChart3 },
-          { path: '/admin/attendance-corrections', label: 'Review Attendance', icon: CheckSquare },
-          { path: '/admin/history', label: 'Service History', icon: Clock },
-          { path: '/admin/attendance-analytics', label: 'Attendance Insights', icon: TrendingUp }
+          { path: '/admin/attendance-dashboard', label: t('nav.items.attendanceOverview'), icon: BarChart3 },
+          { path: '/admin/attendance-corrections', label: t('nav.items.reviewAttendance'), icon: CheckSquare },
+          { path: '/admin/history', label: t('nav.items.serviceHistory'), icon: Clock },
+          { path: '/admin/attendance-analytics', label: t('nav.items.attendanceInsights'), icon: TrendingUp }
         ]
       },
       {
-        section: 'OUTREACH',
+        section: t('nav.sections.outreach'),
         items: [
-          { path: '/admin/evangelism', label: 'Outreach Overview', icon: Heart, exact: true },
+          { path: '/admin/evangelism', label: t('nav.items.outreachOverview'), icon: Heart, exact: true },
           {
             path: '/admin/evangelism',
-            label: 'Outreach Events',
+            label: t('nav.items.outreachEvents'),
             icon: Send,
             search: '?subtab=outreach'
           },
           {
             path: '/admin/evangelism',
-            label: 'New Believers',
+            label: t('nav.items.soulWinning'),
             icon: Users,
             search: '?subtab=souls'
           },
-          { path: '/admin/follow-ups', label: 'Care Follow-Ups', icon: ClipboardCheck },
+          { path: '/admin/follow-ups', label: t('nav.items.followUps'), icon: ClipboardCheck },
           {
             path: '/admin/evangelism',
             label: 'Baptism',
@@ -286,25 +293,25 @@ const Layout = ({ children, showNav = true }) => {
         ]
       },
       {
-        section: 'OPERATIONS',
+        section: t('nav.sections.finance', 'OPERATIONS'),
         items: [
-          { path: '/admin/finance', label: 'Finance', icon: Banknote },
-          { path: '/admin/calendar', label: 'Calendar', icon: Calendar },
-          { path: '/admin/announcements', label: 'Announcements', icon: Megaphone }
+          { path: '/admin/finance', label: t('nav.items.financeOverview'), icon: Banknote },
+          { path: '/admin/calendar', label: t('nav.items.calendar'), icon: Calendar },
+          { path: '/admin/announcements', label: t('nav.items.announcements'), icon: Megaphone }
         ]
       },
       {
-        section: 'INSIGHTS',
+        section: t('nav.sections.system', 'INSIGHTS'),
         items: [
-          { path: '/admin/reporting', label: 'Church Reports', icon: FileText },
-          { path: '/admin/executive', label: 'Executive Analytics', icon: Activity }
+          { path: '/admin/reporting', label: t('nav.items.reports'), icon: FileText },
+          { path: '/admin/executive', label: t('nav.items.attendanceInsights'), icon: Activity }
         ]
       },
       {
-        section: 'ADMINISTRATION',
+        section: t('nav.sections.system', 'ADMINISTRATION'),
         items: [
-          { path: '/admin/audit', label: 'Activity Log', icon: ShieldCheck },
-          { path: '/admin/settings', label: 'Settings', icon: Settings }
+          { path: '/admin/audit', label: t('nav.items.auditLog'), icon: ShieldCheck },
+          { path: '/admin/settings', label: t('nav.items.settings'), icon: Settings }
         ]
       }
     ],
@@ -865,6 +872,19 @@ const Layout = ({ children, showNav = true }) => {
 
                 {/* Notification bell */}
                 <NotificationBell user={user} />
+
+                {/* Language toggle */}
+                <button
+                  onClick={toggleLanguage}
+                  className="header-icon-button focus-ring"
+                  title={t('common.language')}
+                  aria-label={t('common.language')}
+                >
+                  <Globe className="w-5 h-5" />
+                  <span className="hidden sm:inline ml-1 text-xs font-bold">
+                    {i18n.language?.startsWith('sw') ? 'SW' : 'EN'}
+                  </span>
+                </button>
 
                 {/* Dark mode toggle */}
                 <button

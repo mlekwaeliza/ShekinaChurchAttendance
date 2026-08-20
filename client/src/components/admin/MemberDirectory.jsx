@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useToast } from '../../context/ToastContext';
 import {
   Users,
@@ -180,6 +181,7 @@ const MemberDirectory = ({
   onLeaderFilterChange,
   loading = false
 }) => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [localSectionFilter, setLocalSectionFilter] = useState('');
@@ -667,14 +669,12 @@ const MemberDirectory = ({
             <Users className="h-5 w-5" />
           </div>
           <div>
-            <p className="section-eyebrow">People &amp; care</p>
+            <p className="section-eyebrow">{t('memberDirectory.subtitle')}</p>
             <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
-              Member Directory
+              {t('memberDirectory.title')}
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {loading
-                ? 'Loading members...'
-                : `${allMembers.length} members · ${sections.length} sections`}
+              {loading ? t('common.loading') : t('memberDirectory.description', { count: allMembers.length, sections: sections.length })}
             </p>
           </div>
         </div>
@@ -683,9 +683,9 @@ const MemberDirectory = ({
       <div className="flex items-start gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-amber-950 dark:border-amber-700/40 dark:bg-amber-900/15 dark:text-amber-100">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
         <div>
-          <p className="text-xs font-bold">Confidential member information</p>
+          <p className="text-xs font-bold">{t('memberDirectory.confidentialTitle')}</p>
           <p className="mt-0.5 text-xs leading-relaxed text-amber-800/80 dark:text-amber-200/70">
-            Use contact and attendance details only for authorized ministry care and administration.
+            {t('memberDirectory.confidentialDesc')}
           </p>
         </div>
       </div>

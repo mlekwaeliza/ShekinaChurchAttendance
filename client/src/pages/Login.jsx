@@ -13,6 +13,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import TwoFactorVerify from '../components/TwoFactorVerify';
 import BrandMark from '../components/BrandMark';
 import api from '../services/api';
@@ -44,6 +45,7 @@ const featureCards = [
 ];
 
 const Login = () => {
+  const { t, i18n } = useTranslation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -173,11 +175,18 @@ const Login = () => {
               </div>
               <p className="section-eyebrow">Secure staff portal</p>
               <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.035em] text-slate-950 dark:text-white sm:text-4xl">
-                Welcome back
+                {t('auth.welcomeBack')}
               </h1>
               <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Sign in to continue to your Shekina workspace.
+                {t('auth.enterCredentials')}
               </p>
+              <button
+                type="button"
+                onClick={() => i18n.changeLanguage(i18n.language?.startsWith('sw') ? 'en' : 'sw')}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
+              >
+                {i18n.language?.startsWith('sw') ? 'English' : 'Kiswahili'} →
+              </button>
             </div>
 
             {expiredFlag && (
@@ -196,7 +205,7 @@ const Login = () => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="input-label" htmlFor="username">Username</label>
+                <label className="input-label" htmlFor="username">{t('auth.username')}</label>
                 <input
                   id="username"
                   type="text"
@@ -205,13 +214,13 @@ const Login = () => {
                   onChange={(event) => setUsername(event.target.value)}
                   autoComplete="username"
                   required
-                  placeholder="Enter your username"
+                  placeholder={t('auth.username')}
                 />
               </div>
 
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="password">Password</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300" htmlFor="password">{t('auth.password')}</label>
                   <span className="text-[11px] font-medium text-slate-400">Case sensitive</span>
                 </div>
                 <div className="relative">
@@ -223,7 +232,7 @@ const Login = () => {
                     onChange={(event) => setPassword(event.target.value)}
                     autoComplete="current-password"
                     required
-                    placeholder="Enter your password"
+                    placeholder={t('auth.password')}
                   />
                   <button
                     type="button"
@@ -240,11 +249,11 @@ const Login = () => {
                 {loading ? (
                   <>
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Signing in
+                    {t('auth.signingIn')}
                   </>
                 ) : (
                   <>
-                    Continue to workspace
+                    {t('auth.signIn')}
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

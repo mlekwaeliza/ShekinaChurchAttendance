@@ -9,6 +9,7 @@ import PWAInstallPrompt from './components/PWAInstallPrompt.jsx';
 import PWAUpdatePrompt from './components/PWAUpdatePrompt.jsx';
 import usePWA from './hooks/usePWA.js';
 import './index.css';
+import './i18n';
 
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard.jsx'));
 const LeaderDashboard = lazy(() => import('./pages/LeaderDashboard.jsx'));
