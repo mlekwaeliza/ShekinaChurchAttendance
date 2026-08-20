@@ -618,6 +618,12 @@ router.post('/leaders', async (req, res) => {
     if (!username || !full_name || !section_id) {
       return res.status(400).json({ error: 'Username, full name, and section are required' });
     }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    if (phone && !/^[\d+\-\s()]{7,20}$/.test(phone)) {
+      return res.status(400).json({ error: 'Invalid phone format' });
+    }
     const existingUser = await queries.findUserByUsername(username);
     if (existingUser) {
       return res.status(400).json({ error: 'Username already taken' });

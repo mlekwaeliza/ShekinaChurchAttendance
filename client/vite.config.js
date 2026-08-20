@@ -19,8 +19,11 @@ export default defineConfig({
             modulePath.includes('/react-router-dom/')
           )
             return 'react-vendor';
+          if (modulePath.includes('/recharts/')) return 'charts';
+          if (modulePath.includes('/jspdf/') || modulePath.includes('/pptxgenjs/')) return 'export';
           return undefined;
-        }
+        },
+        chunkSizeWarningLimit: 600
       }
     }
   },

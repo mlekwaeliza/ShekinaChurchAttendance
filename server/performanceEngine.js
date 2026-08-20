@@ -643,24 +643,33 @@ async function getGroupProfile(entityType, entityId, season) {
   const totalRecords = attRows.length;
   const groupAttendance = totalRecords ? Math.round((presentCount / totalRecords) * 100) : 0;
 
-  // Timeline (monthly attendance for the group)
-  const timeline = [];
+  // Timeline (monthly attendance for the group) — single GROUP BY replaces 12 sequential queries
   const now = new Date();
+  const firstMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const overallStart = `${firstMonth.getFullYear()}-${String(firstMonth.getMonth() + 1).padStart(2, '0')}-01`;
+  const lastDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const overallEnd = `${lastDate.getFullYear()}-${String(lastDate.getMonth() + 1).padStart(2, '0')}-${String(lastDate.getDate()).padStart(2, '0')}`;
+  const monthExpr = usePostgres ? "to_char(a.date::date, 'YYYY-MM')" : "strftime('%Y-%m', a.date)";
+  const memberCond = entityType === 'section' ? 'm.section_id = ?' : entityType === 'department' ? 'm.id IN (SELECT member_id FROM department_members WHERE department_id = ?)' : 'm.id IN (SELECT church_member_id FROM home_cell_members WHERE cell_id = ?)';
+  const timelineRows = await all(
+    `SELECT ${monthExpr} AS ym,
+       COUNT(*) AS total,
+       SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END) AS present
+     FROM attendance a
+     JOIN members m ON m.id = a.member_id
+     WHERE ${memberCond} AND a.date BETWEEN ? AND ?
+     GROUP BY ym`,
+    [entityId, overallStart, overallEnd]
+  );
+  const rowsByYm = new Map(timelineRows.map((r) => [r.ym, r]));
+  const timeline = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const mStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-    const mEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const mLabel = d.toLocaleString('default', { month: 'short' });
-    const mRow = await get(
-      `SELECT COUNT(*) AS total, SUM(CASE WHEN LOWER(TRIM(a.status))='present' THEN 1 ELSE 0 END) AS present
-       FROM attendance a
-       JOIN members m ON m.id = a.member_id
-       WHERE m.${entityType === 'section' ? 'section_id = ?' : entityType === 'department' ? 'id IN (SELECT member_id FROM department_members WHERE department_id = ?)' : 'id IN (SELECT church_member_id FROM home_cell_members WHERE cell_id = ?)'}
-       AND a.date BETWEEN ? AND ?`,
-      [entityId, mStart, mEnd]
-    );
-    const mTotal = Number(mRow?.total) || 0;
-    const mPresent = Number(mRow?.present) || 0;
+    const row = rowsByYm.get(ym);
+    const mTotal = Number(row?.total) || 0;
+    const mPresent = Number(row?.present) || 0;
     timeline.push({ month: mLabel, attendance: mTotal ? Math.round((mPresent / mTotal) * 100) : null, total: mTotal });
   }
   const validMonths = timeline.filter(m => m.attendance !== null);
