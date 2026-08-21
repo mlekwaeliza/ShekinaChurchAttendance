@@ -244,5 +244,23 @@
     "actions": "Actions",
     "noResults": "No results",
     "showing": "Showing {{shown}} of {{total}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "System configuration",
+    "profileSecurity": "Profile & Security",
+    "sections": "Sections",
+    "services": "Services",
+    "notifications": "Notifications",
+    "backup": "Backup",
+    "general": "General"
+  },
+  "outreach": {
+    "title": "Outreach",
+    "events": "Outreach Events",
+    "soulWinning": "Soul Winning",
+    "followUps": "Follow-ups",
+    "newBelievers": "New Believers",
+    "baptism": "Baptism"
   }
 }

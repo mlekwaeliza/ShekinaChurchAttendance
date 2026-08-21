@@ -244,5 +244,23 @@
     "actions": "Vitendo",
     "noResults": "Hakuna matokeo",
     "showing": "Inaonyesha {{shown}} kati ya {{total}}"
+  },
+  "settings": {
+    "title": "Mipangilio",
+    "subtitle": "Usanidi wa mfumo",
+    "profileSecurity": "Wasifu & Usalama",
+    "sections": "Sehemu",
+    "services": "Ibada",
+    "notifications": "Arifa",
+    "backup": "Nakala",
+    "general": "Jumla"
+  },
+  "outreach": {
+    "title": "Uinjilisti",
+    "events": "Matukio ya Uinjilisti",
+    "soulWinning": "Ushindi wa Roho",
+    "followUps": "Ufuatiliaji",
+    "newBelievers": "Waamini Wapya",
+    "baptism": "Ubatizo"
   }
 }
