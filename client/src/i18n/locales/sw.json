@@ -216,5 +216,33 @@
     "insights": "Maarifa",
     "weeklySummary": "Muhtasari wa Wiki",
     "memberCare": "Huduma kwa Wanachama"
+  },
+  "finance": {
+    "title": "Kazi ya Fedha",
+    "recordDate": "Tarehe ya Rekodi",
+    "morningOffering": "Sadaka ya Asubuhi",
+    "afternoonOffering": "Sadaka ya Mchana",
+    "totalTithes": "Jumla ya Zaka",
+    "evangelismOffering": "Sadaka ya Uinjilisti",
+    "contributions": "Michango",
+    "expenses": "Matumizi",
+    "summary": "Muhtasari",
+    "saveDraft": "Hifadhi Rasimu",
+    "submitForReview": "Wasilisha kwa Uhakiki",
+    "submitted": "Imewasilishwa",
+    "approved": "Imeidhinishwa"
+  },
+  "table": {
+    "name": "Jina",
+    "membershipId": "Namba ya Uanachama",
+    "phone": "Simu",
+    "section": "Sehemu",
+    "leader": "Kiongozi",
+    "homeCell": "Seli ya Nyumbani",
+    "ageGroup": "Kundi la Umri",
+    "gender": "Jinsia",
+    "actions": "Vitendo",
+    "noResults": "Hakuna matokeo",
+    "showing": "Inaonyesha {{shown}} kati ya {{total}}"
   }
 }

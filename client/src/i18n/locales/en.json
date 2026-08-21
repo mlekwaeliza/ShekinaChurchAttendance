@@ -216,5 +216,33 @@
     "insights": "Insights",
     "weeklySummary": "Weekly Summary",
     "memberCare": "Member Care"
+  },
+  "finance": {
+    "title": "Finance Workspace",
+    "recordDate": "Record Date",
+    "morningOffering": "Morning Offering",
+    "afternoonOffering": "Afternoon Offering",
+    "totalTithes": "Total Tithes",
+    "evangelismOffering": "Evangelism Offering",
+    "contributions": "Contributions",
+    "expenses": "Expenses",
+    "summary": "Summary",
+    "saveDraft": "Save Draft",
+    "submitForReview": "Submit for Review",
+    "submitted": "Submitted",
+    "approved": "Approved"
+  },
+  "table": {
+    "name": "Name",
+    "membershipId": "Membership ID",
+    "phone": "Phone",
+    "section": "Section",
+    "leader": "Leader",
+    "homeCell": "Home Cell",
+    "ageGroup": "Age Group",
+    "gender": "Gender",
+    "actions": "Actions",
+    "noResults": "No results",
+    "showing": "Showing {{shown}} of {{total}}"
   }
 }

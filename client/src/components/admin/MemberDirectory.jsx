@@ -1007,31 +1007,31 @@ const MemberDirectory = ({
                     className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer select-none"
                     onClick={() => handleSort('full_name')}
                   >
-                    Member
+                    {t('table.name')}
                     <SortIcon field="full_name" />
                   </th>
                   <th
                     className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer select-none"
                     onClick={() => handleSort('section_name')}
                   >
-                    Section
+                    {t('table.section')}
                     <SortIcon field="section_name" />
                   </th>
                   <th
                     className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden lg:table-cell cursor-pointer select-none"
                     onClick={() => handleSort('leader_name')}
                   >
-                    Leader
+                    {t('table.leader')}
                     <SortIcon field="leader_name" />
                   </th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden md:table-cell">
-                    Contact
+                    {t('common.phone')}
                   </th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden sm:table-cell">
-                    Details
+                    {t('common.details')}
                   </th>
                   <th className="sticky right-0 z-20 min-w-[120px] w-32 bg-slate-50/95 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur-sm dark:bg-slate-800/95 dark:text-slate-400">
-                    Actions
+                    {t('table.actions')}
                   </th>
                 </tr>
               </thead>

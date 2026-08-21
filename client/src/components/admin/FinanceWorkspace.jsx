@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { financeAPI, adminAPI, evangelismAPI } from '../../services/api';
 import {
   DollarSign,
@@ -114,6 +115,7 @@ const MiniStat = ({ label, value, color = 'slate' }) => (
 );
 
 const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole }) => {
+  const { t } = useTranslation();
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -655,19 +657,19 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     {
-                      label: 'Morning Offering',
+                      label: t('finance.morningOffering'),
                       value: fmt(calc.morning),
                       icon: ArrowUpCircle,
                       color: 'emerald'
                     },
                     {
-                      label: 'Afternoon Offering',
+                      label: t('finance.afternoonOffering'),
                       value: fmt(calc.afternoon),
                       icon: ArrowUpCircle,
                       color: 'sky'
                     },
                     {
-                      label: 'Total Tithes',
+                      label: t('finance.totalTithes'),
                       value: fmt(calc.tithes),
                       icon: HandCoins,
                       color: 'violet'
