@@ -188,7 +188,28 @@
     "noMembers": "Hakuna wanachama katika sehemu hii",
     "filterAll": "Wote",
     "filterUnmarked": "Hawajaorodheshwa",
-    "filterMarked": "Walioorodheshwa"
+    "filterMarked": "Walioorodheshwa",
+    "tabs": {
+      "overview": "Muhtasari",
+      "compare": "Linganisha",
+      "performance": "Utendaji",
+      "members": "Wanachama",
+      "history": "Historia",
+      "ai": "Maarifa ya AI"
+    },
+    "corrections": {
+      "title": "Marekebisho ya Mahudhurio",
+      "editTitle": "Hariri Mahudhurio",
+      "reasonLabel": "Sababu ya marekebisho",
+      "reasonPlaceholder": "Eleza kwa nini unarekebisha rekodi hii…",
+      "noPrior": "Hakuna marekebisho ya awali.",
+      "save": "Hifadhi Marekebisho",
+      "saving": "Inahifadhi..."
+    },
+    "reports": {
+      "title": "Ripoti za Mahudhurio",
+      "subtitle": "Maarifa & mienendo"
+    }
   },
   "pastor": {
     "engagement": "Ushiriki",

@@ -188,7 +188,28 @@
     "noMembers": "No members in this section",
     "filterAll": "All",
     "filterUnmarked": "Unmarked",
-    "filterMarked": "Marked"
+    "filterMarked": "Marked",
+    "tabs": {
+      "overview": "Overview",
+      "compare": "Compare",
+      "performance": "Performance",
+      "members": "Members",
+      "history": "History",
+      "ai": "AI Insights"
+    },
+    "corrections": {
+      "title": "Attendance Corrections",
+      "editTitle": "Edit Attendance",
+      "reasonLabel": "Reason for correction",
+      "reasonPlaceholder": "Explain why you are correcting this record…",
+      "noPrior": "No prior corrections.",
+      "save": "Save Correction",
+      "saving": "Saving..."
+    },
+    "reports": {
+      "title": "Attendance Reports",
+      "subtitle": "Insights & trends"
+    }
   },
   "pastor": {
     "engagement": "Engagement",

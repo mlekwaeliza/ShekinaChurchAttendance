@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { adminAPI } from '../../services/api';
 import { formatLocalDate, addDays, fdate, fdatetime } from '../../utils/date';
 import {
@@ -67,6 +68,7 @@ function SubmissionStatusBadge({ status }) {
 
 // ── Existing single-member edit modal (unchanged) ──
 const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
+  const { t } = useTranslation();
   const modalRef = useRef(null);
   useModalA11y(modalRef, true, onClose);
   const [status, setStatus] = useState(record?.status || 'present');
@@ -138,7 +140,7 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
                 id="edit-attendance-title"
                 className="text-base font-bold text-slate-900 dark:text-slate-100"
               >
-                Edit Attendance
+                {t('attendance.corrections.editTitle')}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {record.member_name} &middot; {fdate(record.date)}
