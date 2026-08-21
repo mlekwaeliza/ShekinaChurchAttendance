@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Loader2, WifiOff, CloudOff, UserCheck, UserX, Clock, XCircle, Search, Edit3, Save, X } from 'lucide-react';
 import PhotoViewer from '../PhotoViewer';
 
@@ -30,6 +31,7 @@ const TakeAttendance = ({
   onToggleEdit,
   onEditSubmit
 }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('all');
   const [editReason, setEditReason] = useState('');
@@ -147,7 +149,7 @@ const TakeAttendance = ({
                 className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${isActive ? config.active : config.inactive}`}
               >
                 <StatusIcon className="w-3.5 h-3.5" />
-                {status}
+                {t(`attendance.${status}`)}
               </button>
             );
           })}
@@ -165,16 +167,16 @@ const TakeAttendance = ({
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700 shadow-sm">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">Attendance Roster</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{t('attendance.takeAttendance')}</h3>
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-              Target: <span className="text-primary-600 font-bold">{serviceName}</span> • {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+              {t('attendance.markAttendanceFor')}: <span className="text-primary-600 font-bold">{serviceName}</span> • {new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
             </p>
           </div>
           <div className="text-right shrink-0">
             <p className="text-2xl font-black text-primary-600 dark:text-primary-400 leading-none">
               {completed.length}<span className="text-sm text-slate-400 font-bold ml-1">/ {members.length}</span>
             </p>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Marked</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('attendance.marked')}</p>
           </div>
         </div>
 
@@ -283,16 +285,16 @@ const TakeAttendance = ({
                 type="search"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by name, ID, or phone"
+                placeholder={t('attendance.searchMembers')}
                 className="input w-full pl-10"
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               {[
-                ['all', 'All'],
-                ['unmarked', 'Unmarked'],
-                ['marked', 'Marked'],
+                ['all', t('attendance.filterAll')],
+                ['unmarked', t('attendance.filterUnmarked')],
+                ['marked', t('attendance.filterMarked')],
               ].map(([mode, label]) => (
                 <button
                   key={mode}
@@ -382,15 +384,15 @@ const TakeAttendance = ({
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Finalizing...
+                    {t('attendance.submitting')}
                   </span>
                 ) : !isOnline ? (
                   <span className="flex items-center justify-center gap-2">
                     <CloudOff className="w-5 h-5" />
-                    Save Offline →
+                    {t('attendance.queuedOffline')}
                   </span>
                 ) : (
-                  'Submit Final Attendance →'
+                  t('attendance.submit') + ' →'
                 )}
               </button>
             </div>

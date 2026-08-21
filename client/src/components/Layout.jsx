@@ -317,48 +317,48 @@ const Layout = ({ children, showNav = true }) => {
     ],
     leader: [
       {
-        section: 'DASHBOARD',
-        items: [{ path: '/leader', label: 'Dashboard', icon: LayoutDashboard, exact: true }]
+        section: t('leader.dashboard'),
+        items: [{ path: '/leader', label: t('nav.items.dashboard'), icon: LayoutDashboard, exact: true }]
       },
       {
-        section: 'MY WORK',
+        section: t('leader.myWork'),
         items: [
-          { path: '/leader/members', label: 'My Members', icon: Users },
-          { path: '/leader/attendance', label: 'Take Attendance', icon: ClipboardList },
-          { path: '/leader/home-cells', label: 'Home Cell Members', icon: Home }
+          { path: '/leader/members', label: t('leader.myMembers'), icon: Users },
+          { path: '/leader/attendance', label: t('leader.takeAttendance'), icon: ClipboardList },
+          { path: '/leader/home-cells', label: t('leader.homeCells'), icon: Home }
         ]
       },
       {
-        section: 'OUTREACH',
-        items: [{ path: '/leader/outreach', label: 'Outreach', icon: MessageSquare }]
+        section: t('nav.sections.outreach'),
+        items: [{ path: '/leader/outreach', label: t('leader.outreach'), icon: MessageSquare }]
       },
       {
-        section: 'REPORTS',
+        section: t('nav.items.reports'),
         items: [
-          { path: '/leader/history', label: 'History', icon: Clock },
-          { path: '/leader/contributions', label: 'Contributions', icon: DollarSign },
-          { path: '/leader/reports', label: 'Reports', icon: BarChart3 }
+          { path: '/leader/history', label: t('leader.history'), icon: Clock },
+          { path: '/leader/contributions', label: t('leader.contributions'), icon: DollarSign },
+          { path: '/leader/reports', label: t('leader.reports'), icon: BarChart3 }
         ]
       },
       ...(user?.is_head
         ? [
             {
-              section: 'SECTION MANAGEMENT',
-              items: [{ path: '/leader/overview', label: 'Section Overview', icon: Eye }]
+              section: t('leader.sectionOverview'),
+              items: [{ path: '/leader/overview', label: t('leader.sectionOverview'), icon: Eye }]
             }
           ]
         : []),
       ...(user?.is_new_member_leader
         ? [
             {
-              section: 'NEW MEMBERS',
-              items: [{ path: '/leader/new-members', label: 'New Members', icon: UserPlus }]
+              section: t('nav.items.newMembers'),
+              items: [{ path: '/leader/new-members', label: t('nav.items.newMembers'), icon: UserPlus }]
             }
           ]
         : []),
       {
-        section: 'ACCOUNT',
-        items: [{ path: '/leader/calendar', label: 'Calendar', icon: Calendar }]
+        section: t('nav.items.calendar'),
+        items: [{ path: '/leader/calendar', label: t('nav.items.calendar'), icon: Calendar }]
       }
     ],
     evangelist: [
