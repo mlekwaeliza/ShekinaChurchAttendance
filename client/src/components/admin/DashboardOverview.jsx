@@ -20,6 +20,7 @@ import {
 import QuickActionsBar from './QuickActionsBar';
 import NeedsAttentionWidget from './NeedsAttentionWidget';
 import HallOfFamePreview from './HallOfFamePreview';
+import { useTranslation } from 'react-i18next';
 import StatCard from '../ui/StatCard';
 import { formatLocalDate, fdate, fdatetime, parseLocalDate } from '../../utils/date';
 
@@ -38,6 +39,7 @@ const DashboardOverview = ({
   onAssignDutyRoster,
   lastUpdated = new Date()
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const lastUpdatedStr = fdatetime(lastUpdated);
@@ -543,7 +545,7 @@ const DashboardOverview = ({
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
-          label="Total Members"
+          label={t('dashboard.totalMembers')}
           value={totalMembers}
           icon={Users}
           trend={newMembersMonth > 0 ? (newMembersMonth / totalMembers) * 100 : 0}
@@ -551,14 +553,14 @@ const DashboardOverview = ({
           onClick={() => navigate('/admin/members')}
         />
         <StatCard
-          label="Sections"
+          label={t('dashboard.totalSections')}
           value={sections.length}
           icon={Layers}
           variant="info"
           onClick={() => navigate('/admin/sections')}
         />
         <StatCard
-          label="Active Leaders"
+          label={t('dashboard.totalLeaders')}
           value={leaders.length}
           icon={UserCog}
           variant="success"
