@@ -234,7 +234,19 @@
     "saveDraft": "Hifadhi Rasimu",
     "submitForReview": "Wasilisha kwa Uhakiki",
     "submitted": "Imewasilishwa",
-    "approved": "Imeidhinishwa"
+    "approved": "Imeidhinishwa",
+    "recordMemberTithes": "Rekodi Zaka za Wanachama",
+    "recordExpenses": "Rekodi Matumizi",
+    "submitForApproval": "Wasilisha kwa Idhini",
+    "memberTithes": "Zaka za Wanachama",
+    "receipts": "Stakabadhi",
+    "overview": "Muhtasari",
+    "history": "Historia",
+    "tithes": "Zaka za Wanachama",
+    "income": "Mapato",
+    "notes": "Maelezo",
+    "submit": "Wasilisha kwa Idhini",
+    "review": "Mapitio"
   },
   "table": {
     "name": "Jina",

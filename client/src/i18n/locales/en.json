@@ -234,7 +234,19 @@
     "saveDraft": "Save Draft",
     "submitForReview": "Submit for Review",
     "submitted": "Submitted",
-    "approved": "Approved"
+    "approved": "Approved",
+    "recordMemberTithes": "Record Member Tithes",
+    "recordExpenses": "Record Expenses",
+    "submitForApproval": "Submit for Approval",
+    "memberTithes": "Member Tithes",
+    "receipts": "Receipts",
+    "overview": "Overview",
+    "history": "History",
+    "tithes": "Member Tithes",
+    "income": "Income",
+    "notes": "Notes",
+    "submit": "Submit for Approval",
+    "review": "Review Summary"
   },
   "table": {
     "name": "Name",
