@@ -215,7 +215,11 @@
     "engagement": "Ushiriki",
     "insights": "Maarifa",
     "weeklySummary": "Muhtasari wa Wiki",
-    "memberCare": "Huduma kwa Wanachama"
+    "memberCare": "Huduma kwa Wanachama",
+    "welcomePst": "Karibu, Mch. {{name}}",
+    "subtitle": "Afya ya mahudhurio, ripoti za viongozi, na vipaumbele vya ufuatiliaji kwa mtazamo mmoja.",
+    "report": "Ripoti",
+    "preparing": "Inaandaa..."
   },
   "finance": {
     "title": "Kazi ya Fedha",

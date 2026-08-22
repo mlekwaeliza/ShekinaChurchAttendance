@@ -215,7 +215,11 @@
     "engagement": "Engagement",
     "insights": "Insights",
     "weeklySummary": "Weekly Summary",
-    "memberCare": "Member Care"
+    "memberCare": "Member Care",
+    "welcomePst": "Welcome, Pst. {{name}}",
+    "subtitle": "Attendance health, leader reporting, and follow-up priorities in one working view.",
+    "report": "Report",
+    "preparing": "Preparing..."
   },
   "finance": {
     "title": "Finance Workspace",

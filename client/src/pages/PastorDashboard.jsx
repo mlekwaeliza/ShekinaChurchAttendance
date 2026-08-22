@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -62,6 +63,7 @@ function rateVariant(rate) {
 }
 
 const PastorDashboard = () => {
+  const { t } = useTranslation();
   const { tab } = useParams();
   const { user } = useAuth();
   const activeTab = tab || 'overview';
@@ -324,10 +326,10 @@ const PastorDashboard = () => {
             </div>
             <div>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                Welcome, Pst. {user?.full_name || 'Jeremiah'}
+                {t('pastor.welcomePst', { name: user?.full_name || 'Jeremiah' })}
               </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Attendance health, leader reporting, and follow-up priorities in one working view.
+                {t('pastor.subtitle')}
               </p>
             </div>
           </div>
@@ -362,7 +364,7 @@ const PastorDashboard = () => {
                 className="btn-primary btn-sm gap-2"
               >
                 <FileText className="w-4 h-4" />
-                <span>{reportLoading ? 'Preparing...' : 'Report'}</span>
+                <span>{reportLoading ? t('pastor.preparing') : t('pastor.report')}</span>
               </button>
               <button onClick={exportData} className="btn-secondary btn-sm gap-2">
                 <Download className="w-4 h-4" />
