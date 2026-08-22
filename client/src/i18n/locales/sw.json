@@ -294,7 +294,8 @@
   },
   "birthdays": {
     "title": "Siku za Kuzaliwa",
-    "upcoming": "Zijazo",
+    "subtitle": "Simamia na sherehekea hatua za wanachama",
+    "upcoming": "Siku za Kuzaliwa Zijazo",
     "thisWeek": "Wiki Hii",
     "thisMonth": "Mwezi Huu"
   },

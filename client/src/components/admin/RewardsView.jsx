@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import {
@@ -333,6 +334,7 @@ const FamilyManager = ({ families, allMembers, onRefresh, styles }) => {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 const RewardsView = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('members');
   const [filter, setFilter] = useState('month');
   const [searchQuery, setSearchQuery] = useState('');
@@ -628,9 +630,9 @@ const RewardsView = () => {
                 </div>
                 <div>
                   <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#F1F5F9', lineHeight: 1.2 }}>
-                    Church Performance &amp; Recognition Center
+                    {t('recognition.title')} — {t('recognition.hallOfFame')}
                   </h2>
-                  <p style={{ margin: 0, fontSize: 12, color: '#64748B' }}>Multi-dimensional ministry excellence tracking</p>
+                  <p style={{ margin: 0, fontSize: 12, color: '#64748B' }}>{t('pastor.weeklySummary')}</p>
                 </div>
               </div>
             </div>

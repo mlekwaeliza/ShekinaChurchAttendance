@@ -294,6 +294,7 @@
   },
   "birthdays": {
     "title": "Birthdays",
+    "subtitle": "Manage and celebrate congregant milestones",
     "upcoming": "Upcoming Birthdays",
     "thisWeek": "This Week",
     "thisMonth": "This Month"

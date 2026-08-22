@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { birthdayAPI } from '../../services/api';
 import StatCard from '../ui/StatCard';
 import Badge from '../ui/Badge';
@@ -7,6 +8,7 @@ import { Calendar, Cake, Mail, Download, ChevronRight, ChevronDown, Filter, Plus
 import { addDays, formatLocalDate, parseLocalDate, fdate } from '../../utils/date';
 
 const BirthdayModule = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState({ members: [], stats: {} });
   const [filter, setFilter] = useState('thisWeek');
   const [loading, setLoading] = useState(true);
@@ -92,8 +94,8 @@ const BirthdayModule = () => {
               <Cake className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">Member Birthdays</h2>
-              <p className="text-sm text-white/80">Manage and celebrate congregant milestones</p>
+              <h2 className="text-xl font-bold">{t('birthdays.title')}</h2>
+              <p className="text-sm text-white/80">{t('birthdays.subtitle')}</p>
             </div>
           </div>
           <button
