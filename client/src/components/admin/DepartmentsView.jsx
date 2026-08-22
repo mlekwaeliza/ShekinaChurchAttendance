@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Building2,
   Plus,
@@ -76,6 +77,7 @@ const emptyForm = {
 };
 
 const DepartmentsView = ({ allMembers = [], showMessage }) => {
+  const { t } = useTranslation();
   const [departments, setDepartments] = useState([]);
   const [titles, setTitles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -364,11 +366,11 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
               <Building2 className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Departments & Ministry Teams</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t('departments.title')} &amp; {t('nav.items.departments')} Teams</h1>
               <p className="text-sm text-teal-50/90 font-medium mt-0.5">
                 {loading
-                  ? 'Loading ministries...'
-                  : `${departments.length} departments · ${totalMembersInDepts} active listings`}
+                  ? t('common.loading')
+                  : `${departments.length} ${t('departments.totalDepartments').toLowerCase()} · ${totalMembersInDepts} ${t('common.active').toLowerCase()}`}
               </p>
             </div>
           </div>
