@@ -25,6 +25,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { authAPI, adminAPI, evangelismAPI } from '../../services/api';
 import { capitalizeName } from '../../utils/phone';
 import TwoFactorSetup from '../TwoFactorSetup';
@@ -32,6 +33,7 @@ import { fdatetime } from '../../utils/date';
 import { handlePhoneChange } from '../../utils/phone';
 
 const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showMessage }) => {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [profileName, setProfileName] = useState(user?.full_name || '');
@@ -318,16 +320,16 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
   const currentTabParam = searchParams.get('mod') || 'all';
 
   const MODULE_TABS = [
-    { id: 'all', label: 'All Modules', icon: Settings },
-    { id: 'profile', label: 'Profile & Security', icon: ShieldCheck },
-    { id: 'church-structure', label: 'Church Structure', icon: Layers },
-    { id: 'people', label: 'People & Leaders', icon: Users },
-    { id: 'attendance', label: 'Attendance', icon: Clock },
-    { id: 'evangelism', label: 'Evangelism', icon: Heart },
-    { id: 'finance', label: 'Finance', icon: Banknote },
-    { id: 'communication', label: 'Communication', icon: Calendar },
-    { id: 'reporting', label: 'Reporting & Audit', icon: ShieldCheck },
-    { id: 'system', label: 'System & Users', icon: Key }
+    { id: 'all', label: t('settings.general', 'All Modules'), icon: Settings },
+    { id: 'profile', label: t('settings.profileSecurity'), icon: ShieldCheck },
+    { id: 'church-structure', label: t('nav.items.sections'), icon: Layers },
+    { id: 'people', label: t('common.leaders'), icon: Users },
+    { id: 'attendance', label: t('attendance.takeAttendance'), icon: Clock },
+    { id: 'evangelism', label: t('outreach.title'), icon: Heart },
+    { id: 'finance', label: t('finance.title'), icon: Banknote },
+    { id: 'communication', label: t('settings.notifications'), icon: Calendar },
+    { id: 'reporting', label: t('nav.items.reports'), icon: ShieldCheck },
+    { id: 'system', label: t('nav.items.settings'), icon: Key }
   ];
 
   const handleTabChange = (tabId) => {
