@@ -266,5 +266,14 @@
     "followUps": "Follow-ups",
     "newBelievers": "New Believers",
     "baptism": "Baptism"
+  },
+  "children": {
+    "leadersTitle": "Children's Ministry Leaders",
+    "leadersDesc": "Manage leaders assigned to the children's ministry",
+    "addLeader": "Add Leader",
+    "totalLeaders": "Total Leaders",
+    "active": "Active",
+    "headLeaders": "Head Leaders",
+    "searchLeaders": "Search leaders..."
   }
 }

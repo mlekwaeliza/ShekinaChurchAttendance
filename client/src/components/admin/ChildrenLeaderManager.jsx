@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { adminAPI } from '../../services/api';
 import StatCard from '../ui/StatCard';
 import {
@@ -170,6 +171,7 @@ const MemberSearchInput = ({ members = [], selected, onSelect }) => {
 };
 
 export default function ChildrenLeaderManager({ showMessage }) {
+  const { t } = useTranslation();
   const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -372,29 +374,29 @@ export default function ChildrenLeaderManager({ showMessage }) {
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary-600" />
-            Children's Ministry Leaders
+            {t('children.leadersTitle')}
           </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Manage leaders assigned to the children's ministry
+            {t('children.leadersDesc')}
           </p>
         </div>
         <button onClick={openCreateModal} className="btn-primary flex items-center gap-2">
           <Plus className="h-4 w-4" />
-          Add Leader
+          {t('children.addLeader')}
         </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={Users} label="Total Leaders" value={leaders.length} variant="default" />
+        <StatCard icon={Users} label={t('children.totalLeaders')} value={leaders.length} variant="default" />
         <StatCard
           icon={CheckCircle}
-          label="Active"
+          label={t('children.active')}
           value={leaders.filter((l) => l.is_active !== false).length}
           variant="success"
         />
         <StatCard
           icon={ShieldCheck}
-          label="Head Leaders"
+          label={t('children.headLeaders')}
           value={leaders.filter((l) => l.is_head).length}
           variant="warning"
         />
@@ -404,7 +406,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           type="text"
-          placeholder="Search leaders..."
+          placeholder={t('children.searchLeaders')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="input pl-9 w-full max-w-sm"

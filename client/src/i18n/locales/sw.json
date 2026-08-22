@@ -266,5 +266,14 @@
     "followUps": "Ufuatiliaji",
     "newBelievers": "Waamini Wapya",
     "baptism": "Ubatizo"
+  },
+  "children": {
+    "leadersTitle": "Viongozi wa Huduma ya Watoto",
+    "leadersDesc": "Simamia viongozi wa huduma ya watoto",
+    "addLeader": "Ongeza Kiongozi",
+    "totalLeaders": "Jumla ya Viongozi",
+    "active": "Hai",
+    "headLeaders": "Viongozi Wakuu",
+    "searchLeaders": "Tafuta viongozi..."
   }
 }
