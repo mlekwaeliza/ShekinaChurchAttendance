@@ -287,5 +287,19 @@
     "active": "Active",
     "headLeaders": "Head Leaders",
     "searchLeaders": "Search leaders..."
+  },
+  "accountant": {
+    "dashboard": "Accountant Dashboard",
+    "financeOverview": "Finance Overview"
+  },
+  "birthdays": {
+    "title": "Birthdays",
+    "upcoming": "Upcoming Birthdays",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month"
+  },
+  "recognition": {
+    "title": "Recognition",
+    "hallOfFame": "Hall of Fame"
   }
 }

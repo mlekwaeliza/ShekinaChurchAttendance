@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import FinanceView from '../components/admin/FinanceView';
@@ -14,6 +15,7 @@ import { HandCoins, Building2, Calendar, Users, PiggyBank, Wallet } from 'lucide
 // "Cannot access 'm' before initialization" errors).
 
 const AccountantOverview = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState({
     contributions: [],
     finance: [],
@@ -53,7 +55,7 @@ const AccountantOverview = () => {
   if (loading)
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Accountant Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('accountant.dashboard')}</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
             <LoadingSkeleton key={i} type="card" />
@@ -137,7 +139,7 @@ const AccountantOverview = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Accountant Dashboard</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('accountant.dashboard')}</h1>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         {cards.map((card, i) => (

@@ -287,5 +287,19 @@
     "active": "Hai",
     "headLeaders": "Viongozi Wakuu",
     "searchLeaders": "Tafuta viongozi..."
+  },
+  "accountant": {
+    "dashboard": "Dashibodi ya Mhasibu",
+    "financeOverview": "Muhtasari wa Fedha"
+  },
+  "birthdays": {
+    "title": "Siku za Kuzaliwa",
+    "upcoming": "Zijazo",
+    "thisWeek": "Wiki Hii",
+    "thisMonth": "Mwezi Huu"
+  },
+  "recognition": {
+    "title": "Utambuzi",
+    "hallOfFame": "Ukumbi wa Fahari"
   }
 }
