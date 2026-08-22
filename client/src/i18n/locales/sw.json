@@ -292,6 +292,19 @@
     "dashboard": "Dashibodi ya Mhasibu",
     "financeOverview": "Muhtasari wa Fedha"
   },
+  "homeCells": {
+    "title": "Seli za Nyumbani",
+    "subtitle": "Makundi madogo & ufuatiliaji",
+    "addCell": "Ongeza Seli",
+    "totalCells": "Jumla ya Seli",
+    "activeCells": "Seli Hai"
+  },
+  "departments": {
+    "title": "Idara",
+    "subtitle": "Idara za huduma & timu",
+    "addDepartment": "Ongeza Idara",
+    "totalDepartments": "Jumla ya Idara"
+  },
   "birthdays": {
     "title": "Siku za Kuzaliwa",
     "subtitle": "Simamia na sherehekea hatua za wanachama",

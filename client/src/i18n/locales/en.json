@@ -292,6 +292,19 @@
     "dashboard": "Accountant Dashboard",
     "financeOverview": "Finance Overview"
   },
+  "homeCells": {
+    "title": "Home Cells",
+    "subtitle": "Small groups & discipleship",
+    "addCell": "Add Home Cell",
+    "totalCells": "Total Cells",
+    "activeCells": "Active Cells"
+  },
+  "departments": {
+    "title": "Departments",
+    "subtitle": "Ministry departments & teams",
+    "addDepartment": "Add Department",
+    "totalDepartments": "Total Departments"
+  },
   "birthdays": {
     "title": "Birthdays",
     "subtitle": "Manage and celebrate congregant milestones",
