@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react';
 import { useModalA11y } from '../hooks/useModalA11y';
-import { handlePhoneChange, capitalizeName } from '../utils/phone';
+import { handlePhoneChange, capitalizeName, sanitizePhone } from '../utils/phone';
 import PhotoViewer from './PhotoViewer';
 
 const MemberEditModal = ({
@@ -269,10 +269,15 @@ const MemberEditModal = ({
     e.preventDefault();
     setSaving(true);
     try {
+      const sanitized = {
+        ...formData,
+        phone: sanitizePhone(formData.phone),
+        secondary_phone: sanitizePhone(formData.secondary_phone),
+      };
       if (mode === 'edit') {
-        await onSave(member.id, formData);
+        await onSave(member.id, sanitized);
       } else {
-        await onSave(null, formData);
+        await onSave(null, sanitized);
       }
       onClose();
     } catch (error) {

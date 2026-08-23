@@ -722,6 +722,18 @@ if (!usePostgres) {
       }
     });
 
+    db.run(`ALTER TABLE members ADD COLUMN secondary_phone TEXT`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.log('Migration note:', err.message);
+      }
+    });
+
+    db.run(`ALTER TABLE members ADD COLUMN education_level TEXT`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.log('Migration note:', err.message);
+      }
+    });
+
     db.run(`UPDATE members SET is_active = 1 WHERE is_active IS NULL`);
     db.run(`UPDATE leaders SET is_active = 1 WHERE is_active IS NULL`);
 

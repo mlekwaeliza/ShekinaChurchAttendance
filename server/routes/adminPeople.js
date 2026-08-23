@@ -14,6 +14,22 @@ const { monthsAgo } = require('../utils/sqlDialect');
 const { withCache, invalidate } = require('../utils/cache');
 const { validateImageContent } = require('../utils/imageValidator');
 
+// Normalize phone: treat empty, whitespace-only, or incomplete TZ prefix (+255/255/0) as null
+// so members without a real phone don't hit "Invalid phone format" on edit.
+function normalizePhone(value) {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  if (s === '') return null;
+  if (s === '255' || s === '+255' || s === '0') return null;
+  // single prefix with trailing space already trimmed, but handle "255 " etc.
+  const digits = s.replace(/\D/g, '');
+  // If after stripping it's only the country code with no subscriber number, treat as empty
+  if (digits === '255' && /^\+?\s*255\s*$/.test(s)) return null;
+  if (digits === '0' && /^0\s*$/.test(s)) return null;
+  return s;
+}
+const phoneRegex = /^[\d+\-\s()]{7,20}$/;
+
 const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -291,10 +307,12 @@ router.put('/members/:id', async (req, res) => {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
-    if (phone && !/^[\d+\-\s()]{7,20}$/.test(phone)) {
+    const normalizedPhone = normalizePhone(phone);
+    const normalizedSecondaryPhone = normalizePhone(secondary_phone);
+    if (normalizedPhone && !phoneRegex.test(normalizedPhone)) {
       return res.status(400).json({ error: 'Invalid phone format' });
     }
-    if (secondary_phone && !/^[\d+\-\s()]{7,20}$/.test(secondary_phone)) {
+    if (normalizedSecondaryPhone && !phoneRegex.test(normalizedSecondaryPhone)) {
       return res.status(400).json({ error: 'Invalid secondary phone format' });
     }
     if (date_of_birth && Number.isNaN(Date.parse(date_of_birth))) {
@@ -316,7 +334,7 @@ router.put('/members/:id', async (req, res) => {
     }
 
     await queries.updateMember(
-      full_name, phone, email, gender, marital_status || null, occupation || null, age_group, 
+      full_name, normalizedPhone, email, gender, marital_status || null, occupation || null, age_group, 
       date_of_birth || null, show_age_to_leaders ? 1 : 0, 
       hide_from_birthday_list ? 1 : 0, 
       JSON.stringify(opt_out_services || []),
@@ -326,7 +344,7 @@ router.put('/members/:id', async (req, res) => {
       id,
       profile_picture || null,
       education_level || null,
-      secondary_phone || null
+      normalizedSecondaryPhone
     );
 
     await syncChurchMemberHomeCell(id, req.body.home_cell_id || null, req.session.userId);
@@ -621,7 +639,8 @@ router.post('/leaders', async (req, res) => {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Invalid email format' });
     }
-    if (phone && !/^[\d+\-\s()]{7,20}$/.test(phone)) {
+    const normalizedLeaderPhone = normalizePhone(phone);
+    if (normalizedLeaderPhone && !phoneRegex.test(normalizedLeaderPhone)) {
       return res.status(400).json({ error: 'Invalid phone format' });
     }
     const existingUser = await queries.findUserByUsername(username);
@@ -654,7 +673,7 @@ router.post('/leaders', async (req, res) => {
       }
       await tx.run(
         'INSERT INTO leaders (user_id, section_id, phone, email, is_head) VALUES (?, ?, ?, ?, ?)',
-        [insertedUserId, section_id, phone, email, is_head ? 1 : 0]
+        [insertedUserId, section_id, normalizedLeaderPhone, email, is_head ? 1 : 0]
       );
       await tx.run(
         'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
@@ -1464,9 +1483,21 @@ router.post('/members', async (req, res) => {
       return res.status(400).json({ error: 'Leader does not belong to the specified section' });
     }
 
+    const normalizedPhoneCreate = normalizePhone(phone);
+    const normalizedSecondaryCreate = normalizePhone(secondary_phone);
+    if (normalizedPhoneCreate && !phoneRegex.test(normalizedPhoneCreate)) {
+      return res.status(400).json({ error: 'Invalid phone format' });
+    }
+    if (normalizedSecondaryCreate && !phoneRegex.test(normalizedSecondaryCreate)) {
+      return res.status(400).json({ error: 'Invalid secondary phone format' });
+    }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
     const created = await queries.createMember(
       membership_id, full_name, sectionId, leaderId, 
-      phone || null, email || null, gender || null, marital_status || null, occupation || null, age_group || null,
+      normalizedPhoneCreate, email || null, gender || null, marital_status || null, occupation || null, age_group || null,
       date_of_birth || null, 
       show_age_to_leaders ? 1 : 0, 
       hide_from_birthday_list ? 1 : 0,
@@ -1474,7 +1505,7 @@ router.post('/members', async (req, res) => {
       address || null,
       req.body.profile_picture || null,
       education_level || null,
-      secondary_phone || null
+      normalizedSecondaryCreate
     );
 
     let memberId = created.lastID;

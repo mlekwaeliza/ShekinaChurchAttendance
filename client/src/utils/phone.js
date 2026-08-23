@@ -38,6 +38,24 @@ function formatDigits(digits) {
 export function handlePhoneChange(value) {
   if (!value) return '';
 
+  // If the field contains only the placeholder prefix, treat as empty so it
+  // can be cleared with backspace and doesn't trigger "Invalid phone format"
+  // on save (server also normalizes, but clearing UX matters).
+  const trimmed = String(value).trim();
+  if (trimmed === '+255' || trimmed === '+255 ' || trimmed === '255' || trimmed === '0') {
+    // If the user is deleting, let them clear to empty; keep prefix display
+    // only when they just typed "0"
+    if (trimmed === '0') return '+255 ';
+    // For other prefix-only values, don't force "+255 " — allow empty
+    // (handlePhoneChange is called on every keystroke, so returning '' lets
+    // backspace clear the field)
+    const rawForCheck = String(value).replace(/[^0-9+]/g, '');
+    if (rawForCheck === '0') return '+255 ';
+    // If the input is exactly the prefix, keep it as prefix for UX until
+    // they type more, but don't lock them in
+    if (trimmed === '+255' || trimmed === '255') return '+255 ';
+  }
+
   // Strip everything except digits and leading +
   const raw = String(value).replace(/[^0-9+]/g, '');
 
@@ -52,6 +70,23 @@ export function handlePhoneChange(value) {
 
   // For everything else, use the full formatter (handles +255, 255, paste, etc.)
   return formatPhone(value);
+}
+
+/**
+ * Sanitize phone for submit — converts placeholder-only values ("255", "+255", "+255 ", "0")
+ * and whitespace-only to empty string so server validation passes for members without phones.
+ * Keep in sync with server's normalizePhone().
+ */
+export function sanitizePhone(value) {
+  if (value == null) return '';
+  const s = String(value).trim();
+  if (s === '') return '';
+  if (s === '255' || s === '+255' || s === '0') return '';
+  const digits = s.replace(/\D/g, '');
+  if (digits === '255' && /^\+?\s*255\s*$/.test(s)) return '';
+  if (digits === '0' && /^0\s*$/.test(s)) return '';
+  // "+255 " after trim is "+255" -> already handled
+  return s;
 }
 
 /**
