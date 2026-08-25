@@ -2606,7 +2606,7 @@ async function ensureEvangelismSchema() {
 // Children's Ministry tables
 async function createChildrensMinistryTables() {
   try {
-    const idType = usePostgres ? 'SERIAL' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
+    const idType = usePostgres ? 'SERIAL PRIMARY KEY' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
     const tsType = usePostgres ? 'TIMESTAMPTZ' : 'DATETIME';
 
     await run(`
@@ -2637,6 +2637,21 @@ async function createChildrensMinistryTables() {
         is_active INTEGER DEFAULT 1,
         created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
         updated_at ${tsType} DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Children's ministry leaders must exist before children (FK target)
+    await run(`
+      CREATE TABLE IF NOT EXISTS children_leaders (
+        id ${idType},
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        phone TEXT,
+        email TEXT,
+        is_head INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
+        updated_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id)
       )
     `);
 
@@ -2723,21 +2738,6 @@ async function createChildrensMinistryTables() {
     await run(
       'CREATE INDEX IF NOT EXISTS idx_children_attendance_child ON children_attendance(child_id)'
     );
-
-    // Children's ministry leaders table
-    await run(`
-      CREATE TABLE IF NOT EXISTS children_leaders (
-        id ${idType},
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        phone TEXT,
-        email TEXT,
-        is_head INTEGER DEFAULT 0,
-        is_active INTEGER DEFAULT 1,
-        created_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
-        updated_at ${tsType} DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id)
-      )
-    `);
 
     // Children submission log
     await run(`
