@@ -8,6 +8,7 @@ const api = axios.create({
 
 // Helper to get cookie value
 function getCookie(name) {
+  if (typeof document === 'undefined') return null;
   const value = `; ${document.cookie}`;
   const parts = value.split(`; ${name}=`);
   if (parts.length === 2) {
@@ -18,11 +19,23 @@ function getCookie(name) {
 
 // Interceptor to add CSRF token to state-changing requests
 api.interceptors.request.use(
-  (config) => {
-    const method = config.method.toUpperCase();
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-      const csrfToken = getCookie('csrfToken');
+  async (config) => {
+    const method = String(config.method || 'get').toUpperCase();
+    if (
+      ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) &&
+      typeof document !== 'undefined'
+    ) {
+      let csrfToken = getCookie('csrfToken');
+      if (!csrfToken && !config._csrfBootstrap) {
+        await axios.get('/api/auth/csrf', {
+          withCredentials: true,
+          timeout: config.timeout || api.defaults.timeout
+        });
+        csrfToken = getCookie('csrfToken');
+      }
+
       if (csrfToken) {
+        config.headers = config.headers || {};
         config.headers['X-CSRF-Token'] = csrfToken;
       } else {
         console.warn('CSRF token not found - cookie may have expired');

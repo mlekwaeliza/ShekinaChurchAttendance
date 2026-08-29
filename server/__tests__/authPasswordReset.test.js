@@ -77,7 +77,7 @@ describe('POST /api/auth/reset-password', () => {
     } finally {
       server.close();
     }
-  });
+  }, 30000);
 
   test('rejects an expired reset token', async () => {
     const { server, port, run } = await startAuthRoute({

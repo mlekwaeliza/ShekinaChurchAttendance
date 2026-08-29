@@ -50,6 +50,10 @@ const upload = multer({
   }
 });
 
+router.get('/csrf', (req, res) => {
+  res.json({ ok: true });
+});
+
 // Login
 router.post('/login', async (req, res) => {
   try {
