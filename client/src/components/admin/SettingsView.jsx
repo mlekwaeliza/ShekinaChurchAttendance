@@ -293,16 +293,15 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
 
   const handleResetPassword = async (leaderId) => {
     try {
-      const res = await adminAPI.resetLeaderPassword(leaderId, { include_url: true });
-      if (!res.data.reset_url) {
-        throw new Error('The password reset link was not returned. Please try again.');
+      const res = await adminAPI.resetLeaderPassword(leaderId);
+      if (!res.data.temp_password) {
+        throw new Error('The temporary password was not returned. Please try again.');
       }
       setResetResult({
         username: res.data.username,
-        reset_url: res.data.reset_url,
-        expires_at: res.data.expires_at
+        temp_password: res.data.temp_password
       });
-      showMessage('Password reset link created successfully');
+      showMessage('Password reset successfully');
     } catch (error) {
       showMessage(`Failed: ${error.response?.data?.error || error.message}`);
     }
@@ -516,7 +515,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               Leader Password Reset
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-              Create a secure one-time link so a leader can choose their own new password.
+              Create a temporary password that the leader can use to sign in immediately.
             </p>
             <div className="flex gap-3">
               <select id="leaderResetSelect" className="select flex-1">
@@ -541,7 +540,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             {resetResult && (
               <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">
-                  Password Reset Link
+                  New Temporary Password
                 </p>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
@@ -560,15 +559,15 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                     </button>
                   </div>
                   <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="min-w-0 break-all pr-3 text-sm text-slate-600 dark:text-slate-400">
-                      Reset link: <strong>{resetResult.reset_url}</strong>
+                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                      Password: <strong>{resetResult.temp_password}</strong>
                     </span>
                     <button
-                      onClick={() => copyToClipboard(resetResult.reset_url, 'reset-link')}
+                      onClick={() => copyToClipboard(resetResult.temp_password, 'password')}
                       className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
-                      aria-label="Copy password reset link"
+                      aria-label="Copy temporary password"
                     >
-                      {copiedField === 'reset-link' ? (
+                      {copiedField === 'password' ? (
                         <Check className="w-4 h-4" />
                       ) : (
                         <Copy className="w-4 h-4" />
@@ -577,8 +576,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                   </div>
                 </div>
                 <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                  Share this link securely. It expires in one hour and can only be used once.
-                  {resetResult.expires_at && ` Expires ${fdatetime(resetResult.expires_at)}.`}
+                  Share these credentials securely and ask the leader to change their password
+                  after signing in.
                 </p>
                 <button
                   onClick={() => setResetResult(null)}

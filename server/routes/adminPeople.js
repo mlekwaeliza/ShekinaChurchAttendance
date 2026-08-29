@@ -1543,30 +1543,33 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
       return res.status(404).json({ error: 'Leader not found' });
     }
 
-    // Generate a one-time reset token instead of returning the new password.
-    // The admin shares the link with the user, who sets their own password.
-    // C3-fix: only include the reset URL in the response when the admin
-    // explicitly opts in via ?include_url=true. By default the URL is
-    // considered sensitive and must be sent out-of-band via email.
-    const resetToken = crypto.randomBytes(24).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+    let tempPassword = '';
+    const randomBytes = crypto.randomBytes(12);
+    for (let i = 0; i < 12; i++) {
+      tempPassword += chars[randomBytes[i] % chars.length];
+    }
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
 
     await run(
-      'UPDATE users SET password_reset_token = ?, password_reset_expires = ?, password_reset_used = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [tokenHash, expiresAt, leader.user_id]
+      `UPDATE users
+       SET password_hash = ?,
+           password_reset_token = NULL,
+           password_reset_expires = NULL,
+           password_reset_used = 1,
+           failed_login_attempts = 0,
+           locked_until = NULL,
+           lockout_count = 0,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [passwordHash, leader.user_id]
     );
 
-    const resetUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/reset-password?token=${resetToken}`;
-    const responseBody = {
-      message: 'Password reset link generated. It expires in 1 hour.',
+    res.json({
+      message: 'Password reset successfully',
       username: leader.username,
-      expires_at: expiresAt
-    };
-    if (String(req.query.include_url) === 'true' || (req.body && req.body.include_url === true)) {
-      responseBody.reset_url = resetUrl;
-    }
-    res.json(responseBody);
+      temp_password: tempPassword
+    });
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Failed to reset password' });
