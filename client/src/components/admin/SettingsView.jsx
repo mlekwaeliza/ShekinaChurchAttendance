@@ -55,6 +55,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState(
     user?.member_id ? Number(user.member_id) : null
   );
@@ -87,11 +88,16 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMembers = async () => {
+    setMembersLoading(true);
     try {
-      const res = isAdmin ? await adminAPI.getMembers() : await evangelismAPI.getMemberNames();
-      setMembers(res.data);
+      const res = await evangelismAPI.getMemberNames();
+      const memberList = Array.isArray(res.data) ? res.data : res.data?.members || [];
+      setMembers(memberList);
     } catch (e) {
       console.error('Failed to load members:', e);
+      setMembers([]);
+    } finally {
+      setMembersLoading(false);
     }
   };
 
@@ -400,7 +406,14 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                     }}
                     className="select flex-1"
                   >
-                    <option value="">Select a member...</option>
+                    <option value="">
+                      {membersLoading ? 'Loading members...' : 'Select a member...'}
+                    </option>
+                    {!membersLoading && members.length === 0 && (
+                      <option value="" disabled>
+                        No members found
+                      </option>
+                    )}
                     {members
                       .filter((m) => m.full_name)
                       .sort((a, b) => a.full_name.localeCompare(b.full_name))
