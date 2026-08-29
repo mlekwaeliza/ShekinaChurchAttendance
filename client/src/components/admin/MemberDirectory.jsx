@@ -15,7 +15,6 @@ import {
   Check,
   Clock,
   Award,
-  ShieldCheck
 } from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
@@ -622,41 +621,31 @@ const MemberDirectory = ({
   };
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-3 animate-fade-in">
       {/* Header Banner */}
-      <div className="product-surface relative overflow-hidden p-6">
-        <div className="absolute -right-20 -top-24 h-56 w-56 rounded-full bg-primary-100/60 blur-3xl dark:bg-primary-500/10" />
+      <div className="product-surface relative overflow-hidden px-4 py-3">
+        <div className="absolute -right-20 -top-24 h-48 w-48 rounded-full bg-primary-100/60 blur-3xl dark:bg-primary-500/10" />
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
             <Users className="h-5 w-5" />
           </div>
           <div>
             <p className="section-eyebrow">{t('memberDirectory.subtitle')}</p>
-            <h2 className="mt-1 text-xl font-bold text-slate-950 dark:text-white">
+            <h2 className="mt-0.5 text-lg font-bold text-slate-950 dark:text-white">
               {t('memberDirectory.title')}
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               {loading ? t('common.loading') : t('memberDirectory.description', { count: allMembers.length, sections: sections.length })}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-amber-950 dark:border-amber-700/40 dark:bg-amber-900/15 dark:text-amber-100">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" />
-        <div>
-          <p className="text-xs font-bold">{t('memberDirectory.confidentialTitle')}</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-amber-800/80 dark:text-amber-200/70">
-            {t('memberDirectory.confidentialDesc')}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex w-full flex-wrap items-center justify-end gap-2">
+      <div className="flex w-full flex-wrap items-center justify-end gap-1.5">
         <button
           type="button"
           onClick={exportPDF}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
         >
           <Download className="w-4 h-4" />
           PDF
@@ -664,7 +653,7 @@ const MemberDirectory = ({
         <button
           type="button"
           onClick={() => adminAPI.exportMembers()}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
         >
           <Download className="w-4 h-4" />
           CSV
@@ -673,7 +662,7 @@ const MemberDirectory = ({
           type="button"
           onClick={() => setShowBulkEdit(true)}
           disabled={selectedMembers.size === 0}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           title={selectedMembers.size === 0 ? 'Select members to edit' : 'Edit selected members'}
         >
           <Check className="w-4 h-4" />
@@ -683,7 +672,7 @@ const MemberDirectory = ({
           type="button"
           onClick={() => setShowBulkDelete(true)}
           disabled={selectedMembers.size === 0}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-rose-700/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-rose-700/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30"
           title={
             selectedMembers.size === 0
               ? 'Select members to remove'
@@ -696,7 +685,7 @@ const MemberDirectory = ({
         <button
           type="button"
           onClick={() => setShowPendingDeletion(true)}
-          className="relative inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 hover:shadow dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30"
+          className="relative inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 hover:shadow dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30"
           title="Review members awaiting permanent deletion"
         >
           <Clock className="w-4 h-4" />
@@ -710,7 +699,7 @@ const MemberDirectory = ({
         <button
           type="button"
           onClick={onAdd}
-          className="btn-primary group inline-flex h-11 items-center justify-center gap-3 px-4 pr-5 text-sm"
+          className="btn-primary group inline-flex h-10 items-center justify-center gap-2 px-3 pr-4 text-sm"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/18 ring-1 ring-white/20 transition-colors group-hover:bg-white/24">
             <UserPlus className="w-4 h-4" />
@@ -720,7 +709,7 @@ const MemberDirectory = ({
       </div>
 
       {/* Age Group Filter Pills */}
-      <div className="flex flex-wrap items-center gap-1.5 py-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         {[
           { id: 'all', label: 'All Ages' },
           { id: 'children', label: 'Children' },
