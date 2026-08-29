@@ -80,6 +80,8 @@ export const authAPI = {
       current_password: currentPassword,
       new_password: newPassword
     }),
+  resetPassword: (token, newPassword) =>
+    api.post('/auth/reset-password', { token, new_password: newPassword }),
   uploadProfilePicture: (file) => {
     const formData = new FormData();
     formData.append('image', file);
@@ -129,7 +131,8 @@ export const adminAPI = {
   createLeader: (data) => api.post('/admin/leaders', data),
   updateLeader: (id, data) => api.put(`/admin/leaders/${id}`, data),
   deleteLeader: (id) => api.delete(`/admin/leaders/${id}`),
-  resetLeaderPassword: (leaderId) => api.post(`/admin/leaders/${leaderId}/reset-password`),
+  resetLeaderPassword: (leaderId, data = {}) =>
+    api.post(`/admin/leaders/${leaderId}/reset-password`, data),
   createMember: (data) => api.post('/admin/members', data),
   getSuggestAssignment: () => api.get('/admin/members/suggest-assignment'),
   getNextMembershipId: () => api.get('/admin/members/next-id'),

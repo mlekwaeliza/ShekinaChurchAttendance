@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { recordSecurityEvent } = require('../utils/securityAudit');
-const { queries, get } = require('../database');
+const { queries, get, transaction } = require('../database');
 const { validateImageContent } = require('../utils/imageValidator');
 
 const router = express.Router();
@@ -26,7 +26,7 @@ const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../uploads/profiles/'))
+    cb(null, path.join(__dirname, '../uploads/profiles/'));
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = crypto.randomBytes(16).toString('hex');
@@ -34,11 +34,11 @@ const storage = multer.diskStorage({
     if (!ALLOWED_EXTENSIONS.has(ext)) {
       return cb(new Error('Invalid file type. Only JPG, PNG, GIF, and WebP images are allowed.'));
     }
-    cb(null, req.session.userId + '-' + uniqueSuffix + ext)
+    cb(null, req.session.userId + '-' + uniqueSuffix + ext);
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
@@ -61,7 +61,9 @@ router.post('/login', async (req, res) => {
 
     const ip = req.ip || req.connection?.remoteAddress || 'unknown';
     if (await checkIpLoginBlocked(ip)) {
-      return res.status(423).json({ error: 'Too many failed attempts from this network. Try again in 15 minutes.' });
+      return res
+        .status(423)
+        .json({ error: 'Too many failed attempts from this network. Try again in 15 minutes.' });
     }
 
     username = username.trim();
@@ -71,7 +73,10 @@ router.post('/login', async (req, res) => {
     if (!user) {
       // Constant-time-ish dummy compare to reduce user enumeration timing.
       // M4-fix: async to avoid blocking the event loop.
-      await bcrypt.compare(password, '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali');
+      await bcrypt.compare(
+        password,
+        '$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvali'
+      );
       await recordIpLoginFailure(ip);
       // I5-fix: audit unknown-username attempts (with the attempted
       // username in details — operator-grade, not user-facing).
@@ -85,8 +90,15 @@ router.post('/login', async (req, res) => {
       const lockExpiry = new Date(user.locked_until);
       if (new Date() < lockExpiry) {
         const minutesLeft = Math.ceil((lockExpiry - new Date()) / 60000);
-        recordSecurityEvent('login_blocked', user.id, { reason: 'account_locked', minutesLeft }, req);
-        return res.status(423).json({ error: `Account locked. Try again in ${minutesLeft} minutes.` });
+        recordSecurityEvent(
+          'login_blocked',
+          user.id,
+          { reason: 'account_locked', minutesLeft },
+          req
+        );
+        return res
+          .status(423)
+          .json({ error: `Account locked. Try again in ${minutesLeft} minutes.` });
       } else {
         await queries.resetFailedLogin(user.id);
       }
@@ -107,12 +119,28 @@ router.post('/login', async (req, res) => {
         const minutes = lockoutMinutes[Math.min(lockoutCount - 1, lockoutMinutes.length - 1)];
         const lockUntil = new Date(Date.now() + minutes * 60 * 1000);
         await queries.lockUser(user.id, lockUntil.toISOString());
-        recordSecurityEvent('account_locked', user.id, { attempts, lockoutCount, lockUntil: lockUntil.toISOString() }, req);
-        return res.status(423).json({ error: `Account locked due to too many failed attempts. Try again in ${minutes} minutes.` });
+        recordSecurityEvent(
+          'account_locked',
+          user.id,
+          { attempts, lockoutCount, lockUntil: lockUntil.toISOString() },
+          req
+        );
+        return res
+          .status(423)
+          .json({
+            error: `Account locked due to too many failed attempts. Try again in ${minutes} minutes.`
+          });
       }
 
-      recordSecurityEvent('login_failure', user.id, { username, attempts, reason: 'bad_password' }, req);
-      return res.status(401).json({ error: `Invalid credentials. ${10 - attempts} attempts remaining.` });
+      recordSecurityEvent(
+        'login_failure',
+        user.id,
+        { username, attempts, reason: 'bad_password' },
+        req
+      );
+      return res
+        .status(401)
+        .json({ error: `Invalid credentials. ${10 - attempts} attempts remaining.` });
     }
 
     await queries.resetFailedLogin(user.id);
@@ -256,7 +284,13 @@ router.post('/change-password', async (req, res) => {
       req.session.regenerate((err) => (err ? reject(err) : resolve()));
     });
     req.session.userId = user.id;
-    req.session.user = { id: user.id, username: user.username, role: user.role, full_name: user.full_name, is_new_member_leader: user.is_new_member_leader };
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      full_name: user.full_name,
+      is_new_member_leader: user.is_new_member_leader
+    };
     req.session.createdAt = Date.now();
     await new Promise((resolve, reject) => {
       req.session.save((err) => (err ? reject(err) : resolve()));
@@ -267,6 +301,74 @@ router.post('/change-password', async (req, res) => {
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Complete a one-time password reset requested by an administrator.
+router.post('/reset-password', async (req, res) => {
+  try {
+    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    const { new_password } = req.body || {};
+
+    if (!token || !new_password) {
+      return res.status(400).json({ error: 'Reset link and new password are required' });
+    }
+    if (new_password.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters' });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const passwordHash = await bcrypt.hash(new_password, 10);
+    const result = await transaction(async (tx) => {
+      const resetRequest = await tx.get(
+        `SELECT id, password_reset_expires
+         FROM users
+         WHERE password_reset_token = ? AND password_reset_used = 0`,
+        [tokenHash]
+      );
+
+      if (!resetRequest) return { status: 'invalid' };
+
+      if (
+        !resetRequest.password_reset_expires ||
+        Date.now() > new Date(resetRequest.password_reset_expires).getTime()
+      ) {
+        await tx.run(
+          'UPDATE users SET password_reset_used = 1, password_reset_token = NULL, password_reset_expires = NULL WHERE id = ?',
+          [resetRequest.id]
+        );
+        return { status: 'expired' };
+      }
+
+      const update = await tx.run(
+        `UPDATE users
+         SET password_hash = ?, password_reset_used = 1, password_reset_token = NULL,
+             password_reset_expires = NULL, failed_login_attempts = 0, locked_until = NULL,
+             lockout_count = 0, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND password_reset_token = ? AND password_reset_used = 0`,
+        [passwordHash, resetRequest.id, tokenHash]
+      );
+      return update.changes === 1
+        ? { status: 'success', userId: resetRequest.id }
+        : { status: 'invalid' };
+    });
+
+    if (result.status === 'expired') {
+      return res
+        .status(400)
+        .json({ error: 'This password reset link has expired. Request a new link.' });
+    }
+    if (result.status !== 'success') {
+      return res
+        .status(400)
+        .json({ error: 'This password reset link is invalid or has already been used.' });
+    }
+
+    recordSecurityEvent('password_reset_completed', result.userId, null, req);
+    res.json({ message: 'Password reset successfully. You can now sign in.' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 
@@ -312,20 +414,24 @@ router.post('/profile-picture', async (req, res) => {
       try {
         await validateImageContent(req.file.path);
       } catch (imgErr) {
-        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
-        return res.status(400).json({ error: 'Invalid image file. File content does not match image type.' });
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (_e) {} // eslint-disable-line no-empty
+        return res
+          .status(400)
+          .json({ error: 'Invalid image file. File content does not match image type.' });
       }
 
       // Create the URL path to save in DB
       const pictureUrl = `/uploads/profiles/${req.file.filename}`;
-      
+
       // Update database
       await queries.updateUserProfilePicture(pictureUrl, req.session.userId);
-      
+
       // Update session
       req.session.user.profile_picture = pictureUrl;
-      
-      res.json({ 
+
+      res.json({
         message: 'Profile picture updated successfully',
         profile_picture: pictureUrl
       });

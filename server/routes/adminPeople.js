@@ -58,41 +58,63 @@ async function syncChurchMemberHomeCell(memberId, cellId, userId) {
     return;
   }
 
-  const member = await get('SELECT id, membership_id, full_name, phone, email, address FROM members WHERE id = ? AND is_active = 1', [parsedMemberId]);
+  const member = await get(
+    'SELECT id, membership_id, full_name, phone, email, address FROM members WHERE id = ? AND is_active = 1',
+    [parsedMemberId]
+  );
   if (!member) return;
 
-  const cell = await get('SELECT id FROM home_cells WHERE id = ? AND is_active = 1', [parsedCellId]);
+  const cell = await get('SELECT id FROM home_cells WHERE id = ? AND is_active = 1', [
+    parsedCellId
+  ]);
   if (!cell) {
     const error = new Error('Selected home cell does not exist');
     error.statusCode = 400;
     throw error;
   }
 
-  const active = await get('SELECT id FROM home_cell_members WHERE church_member_id = ? AND is_active = 1', [parsedMemberId]);
+  const active = await get(
+    'SELECT id FROM home_cell_members WHERE church_member_id = ? AND is_active = 1',
+    [parsedMemberId]
+  );
   const duplicateKey = `member:${parsedMemberId}`;
   if (active) {
-    await run(`
+    await run(
+      `
       UPDATE home_cell_members
       SET cell_id = ?, full_name = ?, phone = ?, email = ?, address = ?, duplicate_key = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [parsedCellId, member.full_name, member.phone || null, member.email || null, member.address || null, duplicateKey, active.id]);
+    `,
+      [
+        parsedCellId,
+        member.full_name,
+        member.phone || null,
+        member.email || null,
+        member.address || null,
+        duplicateKey,
+        active.id
+      ]
+    );
     return;
   }
 
-  await run(`
+  await run(
+    `
     INSERT INTO home_cell_members
       (cell_id, church_member_id, full_name, phone, email, address, duplicate_key, added_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
-    parsedCellId,
-    parsedMemberId,
-    member.full_name,
-    member.phone || null,
-    member.email || null,
-    member.address || null,
-    duplicateKey,
-    userId || null
-  ]);
+  `,
+    [
+      parsedCellId,
+      parsedMemberId,
+      member.full_name,
+      member.phone || null,
+      member.email || null,
+      member.address || null,
+      duplicateKey,
+      userId || null
+    ]
+  );
 }
 // GET all sections
 router.get('/sections', async (req, res) => {
@@ -149,7 +171,8 @@ router.delete('/sections/:id', async (req, res) => {
     if (String(req.body?.confirm || '').toUpperCase() !== 'DELETE') {
       return res.status(400).json({
         error: 'Confirmation required',
-        details: 'Send { "confirm": "DELETE" } in the request body to delete a section. This action cascades to all leaders, members, attendance, and follow-ups.'
+        details:
+          'Send { "confirm": "DELETE" } in the request body to delete a section. This action cascades to all leaders, members, attendance, and follow-ups.'
       });
     }
     await queries.deleteSection(req.params.id);
@@ -172,12 +195,18 @@ router.get('/members', async (req, res) => {
 
     let members;
     if (age_group) {
-      members = await withCache(`admin-members-agegroup:${age_group}`, 120000, () => queries.getMembersByAgeGroup(age_group));
+      members = await withCache(`admin-members-agegroup:${age_group}`, 120000, () =>
+        queries.getMembersByAgeGroup(age_group)
+      );
     } else if (section_id) {
-      members = await withCache(`admin-members-section:${section_id}`, 30000, () => queries.getMembersBySection(section_id));
+      members = await withCache(`admin-members-section:${section_id}`, 30000, () =>
+        queries.getMembersBySection(section_id)
+      );
     } else if (leader_id) {
-      const membersByLeader = await withCache(`admin-members-leader:${leader_id}`, 30000, () => queries.getMembersByLeader(leader_id));
-      members = membersByLeader.map(m => ({
+      const membersByLeader = await withCache(`admin-members-leader:${leader_id}`, 30000, () =>
+        queries.getMembersByLeader(leader_id)
+      );
+      members = membersByLeader.map((m) => ({
         ...m,
         section_name: m.section_name || 'Unknown'
       }));
@@ -204,11 +233,17 @@ router.put('/members/bulk-update', async (req, res) => {
     const sectionId = Number(section_id);
     const leaderId = Number(leader_id);
     const memberIds = member_ids.map((id) => Number(id));
-    if (!Number.isInteger(sectionId) || !Number.isInteger(leaderId) || memberIds.some((id) => !Number.isInteger(id))) {
+    if (
+      !Number.isInteger(sectionId) ||
+      !Number.isInteger(leaderId) ||
+      memberIds.some((id) => !Number.isInteger(id))
+    ) {
       return res.status(400).json({ error: 'Invalid section, leader, or member selection' });
     }
 
-    const leader = await get('SELECT id, section_id, user_id FROM leaders WHERE id = ?', [leaderId]);
+    const leader = await get('SELECT id, section_id, user_id FROM leaders WHERE id = ?', [
+      leaderId
+    ]);
     if (!leader || Number(leader.section_id) !== sectionId) {
       return res.status(400).json({ error: 'Leader does not belong to the selected section' });
     }
@@ -217,17 +252,34 @@ router.put('/members/bulk-update', async (req, res) => {
     const params = [sectionId, leaderId, ...memberIds];
     let updatedCount = 0;
     await new Promise((resolve, reject) => {
-      db.run(`UPDATE members SET section_id = ?, leader_id = ? WHERE id IN (${placeholders})`, params, function (err) {
-        if (err) reject(err);
-        else { updatedCount = this.changes || 0; resolve(); }
-      });
+      db.run(
+        `UPDATE members SET section_id = ?, leader_id = ? WHERE id IN (${placeholders})`,
+        params,
+        function (err) {
+          if (err) reject(err);
+          else {
+            updatedCount = this.changes || 0;
+            resolve();
+          }
+        }
+      );
     });
 
     const userId = req.session?.userId;
     const auditPromises = [];
     for (const memberId of memberIds) {
       auditPromises.push(
-        queries.createAuditEntry(userId, 'update', 'member', memberId, null, { section_id: sectionId, leader_id: leaderId }, req.ip, req.headers['user-agent'])
+        queries
+          .createAuditEntry(
+            userId,
+            'update',
+            'member',
+            memberId,
+            null,
+            { section_id: sectionId, leader_id: leaderId },
+            req.ip,
+            req.headers['user-agent']
+          )
           .catch((e) => console.error('bulk-update audit error:', e.message))
       );
     }
@@ -271,8 +323,12 @@ router.post('/members/:id/photo', uploadPhoto.single('photo'), async (req, res) 
     try {
       await validateImageContent(req.file.path);
     } catch (imgErr) {
-      try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
-      return res.status(400).json({ error: 'Invalid image file. File content does not match image type.' });
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (_e) {} // eslint-disable-line no-empty
+      return res
+        .status(400)
+        .json({ error: 'Invalid image file. File content does not match image type.' });
     }
     const photoUrl = `/uploads/profiles/${req.file.filename}`;
     await queries.updateMemberPhoto(req.params.id, photoUrl);
@@ -287,10 +343,22 @@ router.post('/members/:id/photo', uploadPhoto.single('photo'), async (req, res) 
 // PUT update member
 router.put('/members/:id', async (req, res) => {
   try {
-    const { 
-      full_name, phone, email, gender, marital_status, occupation, age_group, 
-      date_of_birth, show_age_to_leaders, hide_from_birthday_list, 
-      opt_out_services, section_id, leader_id, profile_picture, education_level,
+    const {
+      full_name,
+      phone,
+      email,
+      gender,
+      marital_status,
+      occupation,
+      age_group,
+      date_of_birth,
+      show_age_to_leaders,
+      hide_from_birthday_list,
+      opt_out_services,
+      section_id,
+      leader_id,
+      profile_picture,
+      education_level,
       secondary_phone
     } = req.body;
     const { id } = req.params;
@@ -301,7 +369,11 @@ router.put('/members/:id', async (req, res) => {
 
     const duplicateName = await queries.findActiveMemberByName(full_name, id);
     if (duplicateName) {
-      return res.status(400).json({ error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})` });
+      return res
+        .status(400)
+        .json({
+          error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})`
+        });
     }
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -334,9 +406,16 @@ router.put('/members/:id', async (req, res) => {
     }
 
     await queries.updateMember(
-      full_name, normalizedPhone, email, gender, marital_status || null, occupation || null, age_group, 
-      date_of_birth || null, show_age_to_leaders ? 1 : 0, 
-      hide_from_birthday_list ? 1 : 0, 
+      full_name,
+      normalizedPhone,
+      email,
+      gender,
+      marital_status || null,
+      occupation || null,
+      age_group,
+      date_of_birth || null,
+      show_age_to_leaders ? 1 : 0,
+      hide_from_birthday_list ? 1 : 0,
       JSON.stringify(opt_out_services || []),
       req.body.address || null,
       sectionId,
@@ -348,7 +427,7 @@ router.put('/members/:id', async (req, res) => {
     );
 
     await syncChurchMemberHomeCell(id, req.body.home_cell_id || null, req.session.userId);
-    
+
     invalidate('admin-');
     res.json({ message: 'Member updated' });
   } catch (error) {
@@ -366,15 +445,19 @@ router.delete('/members/:id', async (req, res) => {
     if (String(req.body?.confirm || '').toUpperCase() !== 'SOFT-DELETE') {
       return res.status(400).json({
         error: 'Confirmation required',
-        details: 'Send { "confirm": "SOFT-DELETE" } in the request body to soft-delete a member. This sets is_active=0 and is recoverable via the restore endpoint.'
+        details:
+          'Send { "confirm": "SOFT-DELETE" } in the request body to soft-delete a member. This sets is_active=0 and is recoverable via the restore endpoint.'
       });
     }
     await run(
-      "UPDATE members SET is_active = 0, soft_deleted_at = CURRENT_TIMESTAMP, pending_deletion_at = NULL, deletion_confirmed_at = NULL, deletion_confirmed_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      'UPDATE members SET is_active = 0, soft_deleted_at = CURRENT_TIMESTAMP, pending_deletion_at = NULL, deletion_confirmed_at = NULL, deletion_confirmed_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [req.params.id]
     );
     invalidate('admin-');
-    res.json({ message: 'Member deactivated; will be eligible for permanent deletion after 6 months of inactivity' });
+    res.json({
+      message:
+        'Member deactivated; will be eligible for permanent deletion after 6 months of inactivity'
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete member' });
   }
@@ -435,7 +518,9 @@ router.get('/members/pending-deletion', async (req, res) => {
     `);
     res.json({ count: rows.length, members: rows });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch pending-deletion members', details: error.message });
+    res
+      .status(500)
+      .json({ error: 'Failed to fetch pending-deletion members', details: error.message });
   }
 });
 
@@ -443,7 +528,9 @@ router.get('/members/pending-deletion', async (req, res) => {
 router.post('/members/confirm-deletion', async (req, res) => {
   const { member_ids, confirm } = req.body || {};
   if (!confirm) {
-    return res.status(400).json({ error: 'Confirmation required; send { confirm: true, member_ids: [...] }' });
+    return res
+      .status(400)
+      .json({ error: 'Confirmation required; send { confirm: true, member_ids: [...] }' });
   }
   if (!Array.isArray(member_ids) || member_ids.length === 0) {
     return res.status(400).json({ error: 'member_ids array required' });
@@ -478,7 +565,10 @@ router.post('/members/confirm-deletion', async (req, res) => {
           action: 'permanent_delete_member',
           entity_type: 'member',
           entity_id: m.id,
-          details: JSON.stringify({ full_name: m.full_name, confirmed_by: req.session.user.username })
+          details: JSON.stringify({
+            full_name: m.full_name,
+            confirmed_by: req.session.user.username
+          })
         });
         await tx.run('DELETE FROM members WHERE id = ?', [m.id]);
         deletedCount += 1;
@@ -525,8 +615,13 @@ router.post('/members/restore', async (req, res) => {
     try {
       const { auditLog } = require('../middleware/audit');
       await auditLog(req, 'restore_member', 'member', null, JSON.stringify({ member_ids: ids }));
-    } catch (_) { /* noop */ }
-    res.json({ message: `Restored ${result.changes || 0} member(s)`, restored: result.changes || 0 });
+    } catch (_) {
+      /* noop */
+    }
+    res.json({
+      message: `Restored ${result.changes || 0} member(s)`,
+      restored: result.changes || 0
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to restore members', details: error.message });
   }
@@ -568,14 +663,25 @@ router.delete('/members/:id/permanent', async (req, res) => {
     if (!Number.isInteger(memberId) || memberId <= 0) {
       return res.status(400).json({ error: 'Valid member ID required' });
     }
-    const member = await get('SELECT id, full_name FROM members WHERE id = ? AND is_active = 0 AND soft_deleted_at IS NOT NULL', [memberId]);
+    const member = await get(
+      'SELECT id, full_name FROM members WHERE id = ? AND is_active = 0 AND soft_deleted_at IS NOT NULL',
+      [memberId]
+    );
     if (!member) {
       return res.status(404).json({ error: 'Member not found in trash' });
     }
     try {
       const { auditLog } = require('../middleware/audit');
-      await auditLog(req, 'permanent_delete_member', 'member', memberId, JSON.stringify({ full_name: member.full_name }));
-    } catch (_) { /* noop */ }
+      await auditLog(
+        req,
+        'permanent_delete_member',
+        'member',
+        memberId,
+        JSON.stringify({ full_name: member.full_name })
+      );
+    } catch (_) {
+      /* noop */
+    }
     await run('DELETE FROM members WHERE id = ?', [memberId]);
     res.json({ message: `${member.full_name} permanently deleted`, deleted: 1 });
   } catch (error) {
@@ -586,18 +692,31 @@ router.delete('/members/:id/permanent', async (req, res) => {
 // POST empty trash (permanently delete ALL soft-deleted members)
 router.post('/members/empty-trash', async (req, res) => {
   try {
-    const rows = await all('SELECT id, full_name FROM members WHERE is_active = 0 AND soft_deleted_at IS NOT NULL');
+    const rows = await all(
+      'SELECT id, full_name FROM members WHERE is_active = 0 AND soft_deleted_at IS NOT NULL'
+    );
     if (rows.length === 0) {
       return res.json({ message: 'Trash is already empty', deleted: 0 });
     }
-    const ids = rows.map(r => r.id);
+    const ids = rows.map((r) => r.id);
     const placeholders = ids.map(() => '?').join(',');
     try {
       const { auditLog } = require('../middleware/audit');
-      await auditLog(req, 'empty_trash', 'member', null, JSON.stringify({ count: ids.length, member_ids: ids }));
-    } catch (_) { /* noop */ }
+      await auditLog(
+        req,
+        'empty_trash',
+        'member',
+        null,
+        JSON.stringify({ count: ids.length, member_ids: ids })
+      );
+    } catch (_) {
+      /* noop */
+    }
     await run(`DELETE FROM members WHERE id IN (${placeholders})`, ids);
-    res.json({ message: `Trash emptied: ${rows.length} member(s) permanently deleted`, deleted: rows.length });
+    res.json({
+      message: `Trash emptied: ${rows.length} member(s) permanently deleted`,
+      deleted: rows.length
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to empty trash', details: error.message });
   }
@@ -610,7 +729,10 @@ router.post('/members/:id/restore', async (req, res) => {
     if (!Number.isInteger(memberId) || memberId <= 0) {
       return res.status(400).json({ error: 'Valid member ID required' });
     }
-    const member = await get('SELECT id, full_name FROM members WHERE id = ? AND is_active = 0 AND soft_deleted_at IS NOT NULL', [memberId]);
+    const member = await get(
+      'SELECT id, full_name FROM members WHERE id = ? AND is_active = 0 AND soft_deleted_at IS NOT NULL',
+      [memberId]
+    );
     if (!member) {
       return res.status(404).json({ error: 'Member not found in trash' });
     }
@@ -620,8 +742,16 @@ router.post('/members/:id/restore', async (req, res) => {
     );
     try {
       const { auditLog } = require('../middleware/audit');
-      await auditLog(req, 'restore_member', 'member', memberId, JSON.stringify({ full_name: member.full_name }));
-    } catch (_) { /* noop */ }
+      await auditLog(
+        req,
+        'restore_member',
+        'member',
+        memberId,
+        JSON.stringify({ full_name: member.full_name })
+      );
+    } catch (_) {
+      /* noop */
+    }
     res.json({ message: `${member.full_name} restored`, restored: 1 });
   } catch (error) {
     res.status(500).json({ error: 'Failed to restore member', details: error.message });
@@ -682,8 +812,12 @@ router.post('/leaders', async (req, res) => {
       return insertedUserId;
     });
     const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
-    const responseBody = { message: 'Leader created. A password-set link has been queued for email delivery.', userId, expires_at: expiresAt };
-    if (String(req.query.include_url) === 'true' || req.body && req.body.include_url === true) {
+    const responseBody = {
+      message: 'Leader created. A password-set link has been queued for email delivery.',
+      userId,
+      expires_at: expiresAt
+    };
+    if (String(req.query.include_url) === 'true' || (req.body && req.body.include_url === true)) {
       responseBody.set_url = setUrl;
     }
     invalidate('admin-');
@@ -733,14 +867,17 @@ router.delete('/leaders/:id', async (req, res) => {
   try {
     const { id } = req.params;
     let leader = await get('SELECT id, user_id FROM leaders WHERE id = ?', [id]);
-    
+
     // If not found in main leaders table, check children_leaders table
     if (!leader) {
       const childLeader = await get('SELECT id, user_id FROM children_leaders WHERE id = ?', [id]);
       if (childLeader) {
         await run('DELETE FROM children_leaders WHERE id = ?', [id]);
         if (childLeader.user_id) {
-          await run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [childLeader.user_id]);
+          await run(
+            "UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [childLeader.user_id]
+          );
         }
         invalidate('admin-');
         return res.json({ message: 'Leader removed successfully' });
@@ -750,7 +887,10 @@ router.delete('/leaders/:id', async (req, res) => {
 
     await run('DELETE FROM leaders WHERE id = ?', [id]);
     if (leader.user_id) {
-      await run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [leader.user_id]);
+      await run(
+        "UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [leader.user_id]
+      );
     }
     invalidate('admin-');
     res.json({ message: 'Leader removed successfully' });
@@ -786,9 +926,15 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
     const rows = await new Promise((resolve, reject) => {
       const data = [];
       fs.createReadStream(tempPath)
-        .pipe(csv({
-          mapHeaders: ({ header }) => header.trim().toLowerCase().replace(/^\ufeff/, '')
-        }))
+        .pipe(
+          csv({
+            mapHeaders: ({ header }) =>
+              header
+                .trim()
+                .toLowerCase()
+                .replace(/^\ufeff/, '')
+          })
+        )
         .on('data', (row) => data.push(row))
         .on('end', () => resolve(data))
         .on('error', reject);
@@ -799,7 +945,7 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
 
     // Pre-populate existing sections
     const existingSections = await queries.getAllSections();
-    existingSections.forEach(s => sectionsMap.set(s.name.toLowerCase().trim(), s.id));
+    existingSections.forEach((s) => sectionsMap.set(s.name.toLowerCase().trim(), s.id));
 
     const getValue = (row, keys) => {
       for (const key of keys) {
@@ -815,164 +961,193 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
     // Wrap all row processing in a single transaction for atomicity
     await transaction(async (_tx) => {
       for (const row of rows) {
-      try {
-        const fullName = getValue(row, ['fullname', 'full_name', 'name']);
-        const membershipId = getValue(row, ['membershipid', 'membership_id', 'id']);
-        const sectionNameOrId = getValue(row, ['section', 'section_id', 'section_name', 'sectionname']);
-        const leaderNameOrId = getValue(row, ['leadername', 'leader_id', 'leader_name', 'leader']);
+        try {
+          const fullName = getValue(row, ['fullname', 'full_name', 'name']);
+          const membershipId = getValue(row, ['membershipid', 'membership_id', 'id']);
+          const sectionNameOrId = getValue(row, [
+            'section',
+            'section_id',
+            'section_name',
+            'sectionname'
+          ]);
+          const leaderNameOrId = getValue(row, [
+            'leadername',
+            'leader_id',
+            'leader_name',
+            'leader'
+          ]);
 
-        if (!membershipId || !fullName || !sectionNameOrId || !leaderNameOrId) {
-          const missing = [];
-          if (!fullName) missing.push('FullName');
-          if (!membershipId) missing.push('MembershipID');
-          if (!sectionNameOrId) missing.push('Section');
-          if (!leaderNameOrId) missing.push('Leader');
-          
-          results.errors.push(`Row skipped: missing [${missing.join(', ')}] for ${fullName || 'unknown member'}`);
-          continue;
-        }
+          if (!membershipId || !fullName || !sectionNameOrId || !leaderNameOrId) {
+            const missing = [];
+            if (!fullName) missing.push('FullName');
+            if (!membershipId) missing.push('MembershipID');
+            if (!sectionNameOrId) missing.push('Section');
+            if (!leaderNameOrId) missing.push('Leader');
 
-        // Resolve Section
-        let sectionId;
-        if (/^\d+$/.test(sectionNameOrId)) {
-          sectionId = parseInt(sectionNameOrId);
-        } else {
-          sectionId = sectionsMap.get(sectionNameOrId.toLowerCase());
-          if (!sectionId) {
-            try {
-              await queries.createSection(sectionNameOrId);
-              const section = await queries.getSectionByName(sectionNameOrId);
-              sectionId = section.id;
-              sectionsMap.set(sectionNameOrId.toLowerCase(), sectionId);
-              results.sectionsCreated++;
-            } catch (error) {
-              if (error.message.includes('UNIQUE')) {
-                const section = await queries.getSectionByName(sectionNameOrId);
-                sectionId = section.id;
-                sectionsMap.set(sectionNameOrId.toLowerCase(), sectionId);
-              } else {
-                results.errors.push(`Failed to create section "${sectionNameOrId}": ${error.message}`);
-                continue;
-              }
-            }
-          }
-        }
-
-        // Resolve Leader
-        let leaderId;
-        if (/^\d+$/.test(leaderNameOrId)) {
-          leaderId = parseInt(leaderNameOrId);
-        } else {
-          const leaderUsername = leaderNameOrId.toLowerCase().replace(/\s+/g, '_');
-          let leaderUser = await queries.findUserByUsername(leaderUsername);
-
-          if (!leaderUser) {
-            // C3-fix: bcrypt placeholder + opt-in URL.
-            const setToken = crypto.randomBytes(24).toString('hex');
-            const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
-            const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
-            const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
-            try {
-              await queries.createUser(leaderUsername, placeholderHash, 'leader', leaderNameOrId);
-              leaderUser = await queries.findUserByUsername(leaderUsername);
-              await run(
-                'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
-                [tokenHash, expiresAt, leaderUser.id]
-              );
-              const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
-              if (String(req.query.include_url) === 'true' || (req.body && req.body.include_url === true)) {
-                userPasswords.set(leaderUsername, { url: setUrl, expires_at: expiresAt });
-              } else {
-                userPasswords.set(leaderUsername, { expires_at: expiresAt });
-              }
-              results.leadersCreated++;
-            } catch (error) {
-              results.errors.push(`Failed to create leader user "${leaderUsername}": ${error.message}`);
-              continue;
-            }
-          }
-
-          let leaderRecord = await queries.getLeaderByUserId(leaderUser.id);
-          if (!leaderRecord) {
-            try {
-              const leaderPhone = getValue(row, ['leaderphone', 'leader_phone', 'leader_contact']);
-              const leaderEmail = getValue(row, ['leaderemail', 'leader_email']);
-              await queries.createLeader(leaderUser.id, sectionId, leaderPhone, leaderEmail);
-              leaderRecord = await queries.getLeaderByUserId(leaderUser.id);
-            } catch (error) {
-              results.errors.push(`Failed to create leader record for ${leaderNameOrId}: ${error.message}`);
-              continue;
-            }
-          }
-          leaderId = leaderRecord.id;
-        }
-
-        // Check if member exists
-        const existingMember = await queries.getMemberByMembershipId(membershipId);
-        const memberPhone = getValue(row, ['phone', 'member_phone', 'mobile']);
-        const memberEmail = getValue(row, ['email', 'member_email']);
-        const memberGender = getValue(row, ['gender']);
-        const memberAgeGroup = getValue(row, ['agegroup', 'age_group', 'age']);
-        const address = getValue(row, ['address', 'addressline1']);
-
-        if (existingMember) {
-          const duplicateName = await queries.findActiveMemberByName(fullName, existingMember.id);
-          if (duplicateName) {
-            results.errors.push(`Row skipped: member name "${fullName}" already exists as ${duplicateName.membership_id}`);
+            results.errors.push(
+              `Row skipped: missing [${missing.join(', ')}] for ${fullName || 'unknown member'}`
+            );
             continue;
           }
 
-          await queries.updateMember(
-            fullName,
-            memberPhone,
-            memberEmail,
-            memberGender,
-            memberAgeGroup,
-            existingMember.date_of_birth,
-            existingMember.show_age_to_leaders,
-            existingMember.hide_from_birthday_list,
-            existingMember.opt_out_services,
-            address || existingMember.address,
-            sectionId,
-            leaderId,
-            existingMember.id
-          );
-          continue;
-        }
+          // Resolve Section
+          let sectionId;
+          if (/^\d+$/.test(sectionNameOrId)) {
+            sectionId = parseInt(sectionNameOrId);
+          } else {
+            sectionId = sectionsMap.get(sectionNameOrId.toLowerCase());
+            if (!sectionId) {
+              try {
+                await queries.createSection(sectionNameOrId);
+                const section = await queries.getSectionByName(sectionNameOrId);
+                sectionId = section.id;
+                sectionsMap.set(sectionNameOrId.toLowerCase(), sectionId);
+                results.sectionsCreated++;
+              } catch (error) {
+                if (error.message.includes('UNIQUE')) {
+                  const section = await queries.getSectionByName(sectionNameOrId);
+                  sectionId = section.id;
+                  sectionsMap.set(sectionNameOrId.toLowerCase(), sectionId);
+                } else {
+                  results.errors.push(
+                    `Failed to create section "${sectionNameOrId}": ${error.message}`
+                  );
+                  continue;
+                }
+              }
+            }
+          }
 
-        const duplicateName = await queries.findActiveMemberByName(fullName);
-        if (duplicateName) {
-          results.errors.push(`Row skipped: member name "${fullName}" already exists as ${duplicateName.membership_id}`);
-          continue;
-        }
+          // Resolve Leader
+          let leaderId;
+          if (/^\d+$/.test(leaderNameOrId)) {
+            leaderId = parseInt(leaderNameOrId);
+          } else {
+            const leaderUsername = leaderNameOrId.toLowerCase().replace(/\s+/g, '_');
+            let leaderUser = await queries.findUserByUsername(leaderUsername);
 
-        // Create new member
-        try {
-          const dob = getValue(row, ['dateofbirth', 'date_of_birth', 'dob']);
-          await queries.createMember(
-            membershipId,
-            fullName,
-            sectionId,
-            leaderId,
-            memberPhone,
-            memberEmail,
-            memberGender,
-            memberAgeGroup,
-            dob,
-            0,
-            0,
-            '[]',
-            address
-          );
-          results.membersCreated++;
+            if (!leaderUser) {
+              // C3-fix: bcrypt placeholder + opt-in URL.
+              const setToken = crypto.randomBytes(24).toString('hex');
+              const tokenHash = crypto.createHash('sha256').update(setToken).digest('hex');
+              const placeholderHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+              const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+              try {
+                await queries.createUser(leaderUsername, placeholderHash, 'leader', leaderNameOrId);
+                leaderUser = await queries.findUserByUsername(leaderUsername);
+                await run(
+                  'UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?',
+                  [tokenHash, expiresAt, leaderUser.id]
+                );
+                const setUrl = `${String(process.env.CLIENT_URL || 'http://localhost:3000').replace(/\/$/, '')}/set-password?token=${setToken}`;
+                if (
+                  String(req.query.include_url) === 'true' ||
+                  (req.body && req.body.include_url === true)
+                ) {
+                  userPasswords.set(leaderUsername, { url: setUrl, expires_at: expiresAt });
+                } else {
+                  userPasswords.set(leaderUsername, { expires_at: expiresAt });
+                }
+                results.leadersCreated++;
+              } catch (error) {
+                results.errors.push(
+                  `Failed to create leader user "${leaderUsername}": ${error.message}`
+                );
+                continue;
+              }
+            }
+
+            let leaderRecord = await queries.getLeaderByUserId(leaderUser.id);
+            if (!leaderRecord) {
+              try {
+                const leaderPhone = getValue(row, [
+                  'leaderphone',
+                  'leader_phone',
+                  'leader_contact'
+                ]);
+                const leaderEmail = getValue(row, ['leaderemail', 'leader_email']);
+                await queries.createLeader(leaderUser.id, sectionId, leaderPhone, leaderEmail);
+                leaderRecord = await queries.getLeaderByUserId(leaderUser.id);
+              } catch (error) {
+                results.errors.push(
+                  `Failed to create leader record for ${leaderNameOrId}: ${error.message}`
+                );
+                continue;
+              }
+            }
+            leaderId = leaderRecord.id;
+          }
+
+          // Check if member exists
+          const existingMember = await queries.getMemberByMembershipId(membershipId);
+          const memberPhone = getValue(row, ['phone', 'member_phone', 'mobile']);
+          const memberEmail = getValue(row, ['email', 'member_email']);
+          const memberGender = getValue(row, ['gender']);
+          const memberAgeGroup = getValue(row, ['agegroup', 'age_group', 'age']);
+          const address = getValue(row, ['address', 'addressline1']);
+
+          if (existingMember) {
+            const duplicateName = await queries.findActiveMemberByName(fullName, existingMember.id);
+            if (duplicateName) {
+              results.errors.push(
+                `Row skipped: member name "${fullName}" already exists as ${duplicateName.membership_id}`
+              );
+              continue;
+            }
+
+            await queries.updateMember(
+              fullName,
+              memberPhone,
+              memberEmail,
+              memberGender,
+              memberAgeGroup,
+              existingMember.date_of_birth,
+              existingMember.show_age_to_leaders,
+              existingMember.hide_from_birthday_list,
+              existingMember.opt_out_services,
+              address || existingMember.address,
+              sectionId,
+              leaderId,
+              existingMember.id
+            );
+            continue;
+          }
+
+          const duplicateName = await queries.findActiveMemberByName(fullName);
+          if (duplicateName) {
+            results.errors.push(
+              `Row skipped: member name "${fullName}" already exists as ${duplicateName.membership_id}`
+            );
+            continue;
+          }
+
+          // Create new member
+          try {
+            const dob = getValue(row, ['dateofbirth', 'date_of_birth', 'dob']);
+            await queries.createMember(
+              membershipId,
+              fullName,
+              sectionId,
+              leaderId,
+              memberPhone,
+              memberEmail,
+              memberGender,
+              memberAgeGroup,
+              dob,
+              0,
+              0,
+              '[]',
+              address
+            );
+            results.membersCreated++;
+          } catch (error) {
+            results.errors.push(`Failed to create member ${membershipId}: ${error.message}`);
+          }
         } catch (error) {
-          results.errors.push(`Failed to create member ${membershipId}: ${error.message}`);
+          results.errors.push(`Unexpected error: ${error.message}`);
         }
-      } catch (error) {
-        results.errors.push(`Unexpected error: ${error.message}`);
       }
-    }
-  });
+    });
 
     // Cleanup temp file
     fs.unlinkSync(tempPath);
@@ -980,7 +1155,10 @@ router.post('/upload-csv', upload.single('csv'), async (req, res) => {
     res.json({
       message: 'CSV uploaded successfully',
       results,
-      leaderInviteLinks: userPasswords.size > 0 ? Array.from(userPasswords.entries()).map(([username, info]) => ({ username, ...info })) : null
+      leaderInviteLinks:
+        userPasswords.size > 0
+          ? Array.from(userPasswords.entries()).map(([username, info]) => ({ username, ...info }))
+          : null
     });
   } catch (error) {
     if (fs.existsSync(tempPath)) {
@@ -996,12 +1174,21 @@ router.get('/children-leaders', async (req, res) => {
   try {
     // Diagnostic: first check raw children_leaders count
     const rawCount = await all(`SELECT COUNT(*) as cnt FROM children_leaders`);
-    const rawRows = await all(`SELECT cl.id, cl.user_id, cl.is_head, cl.is_active FROM children_leaders cl LIMIT 10`);
-    if (process.env.DEBUG) console.log(`[children-leaders-diag] Raw count: ${rawCount?.[0]?.cnt || 0}, rows:`, JSON.stringify(rawRows));
+    const rawRows = await all(
+      `SELECT cl.id, cl.user_id, cl.is_head, cl.is_active FROM children_leaders cl LIMIT 10`
+    );
+    if (process.env.DEBUG)
+      console.log(
+        `[children-leaders-diag] Raw count: ${rawCount?.[0]?.cnt || 0}, rows:`,
+        JSON.stringify(rawRows)
+      );
 
     // Diagnostic: check users table
     const userCount = await all(`SELECT COUNT(*) as cnt FROM users WHERE role = 'children_leader'`);
-    if (process.env.DEBUG) console.log(`[children-leaders-diag] Users with role children_leader: ${userCount?.[0]?.cnt || 0}`);
+    if (process.env.DEBUG)
+      console.log(
+        `[children-leaders-diag] Users with role children_leader: ${userCount?.[0]?.cnt || 0}`
+      );
 
     // Auto-repair: users with role='children_leader' but no children_leaders row
     const missingLeaders = await all(`
@@ -1011,16 +1198,25 @@ router.get('/children-leaders', async (req, res) => {
       WHERE u.role = 'children_leader' AND cl.id IS NULL
     `);
     if (missingLeaders && missingLeaders.length > 0) {
-      if (process.env.DEBUG) console.log(`[children-leaders-diag] Found ${missingLeaders.length} users with role children_leader but no children_leaders row — auto-creating`);
+      if (process.env.DEBUG)
+        console.log(
+          `[children-leaders-diag] Found ${missingLeaders.length} users with role children_leader but no children_leaders row — auto-creating`
+        );
       for (const user of missingLeaders) {
         try {
           await run(
             'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, 0)',
             [user.id, null, null]
           );
-          if (process.env.DEBUG) console.log(`[children-leaders-diag] Auto-created children_leaders row for user_id=${user.id} (${user.username})`);
+          if (process.env.DEBUG)
+            console.log(
+              `[children-leaders-diag] Auto-created children_leaders row for user_id=${user.id} (${user.username})`
+            );
         } catch (insErr) {
-          console.warn(`[children-leaders-diag] Failed to auto-create for user_id=${user.id}:`, insErr.message);
+          console.warn(
+            `[children-leaders-diag] Failed to auto-create for user_id=${user.id}:`,
+            insErr.message
+          );
         }
       }
     }
@@ -1031,7 +1227,8 @@ router.get('/children-leaders', async (req, res) => {
       JOIN users u ON cl.user_id = u.id
       ORDER BY u.full_name
     `);
-    if (process.env.DEBUG) console.log(`[children-leaders-diag] JOIN result count: ${childrenLeaders?.length || 0}`);
+    if (process.env.DEBUG)
+      console.log(`[children-leaders-diag] JOIN result count: ${childrenLeaders?.length || 0}`);
 
     // If JOIN returned empty but raw data exists, include diagnostic in response
     const rawCnt = rawCount?.[0]?.cnt || 0;
@@ -1043,12 +1240,16 @@ router.get('/children-leaders', async (req, res) => {
         LEFT JOIN users u ON cl.user_id = u.id
         ORDER BY cl.id
       `);
-      if (process.env.DEBUG) console.log(`[children-leaders-diag] Orphaned diagnostic:`, JSON.stringify(orphaned));
+      if (process.env.DEBUG)
+        console.log(`[children-leaders-diag] Orphaned diagnostic:`, JSON.stringify(orphaned));
       // Auto-repair: delete orphaned records (user_id has no matching user)
       for (const row of orphaned) {
         if (!row.matched_user_id) {
           await run('DELETE FROM children_leaders WHERE id = ?', [row.id]);
-          if (process.env.DEBUG) console.log(`[children-leaders-diag] Auto-deleted orphaned children_leaders id=${row.id} user_id=${row.user_id}`);
+          if (process.env.DEBUG)
+            console.log(
+              `[children-leaders-diag] Auto-deleted orphaned children_leaders id=${row.id} user_id=${row.user_id}`
+            );
         }
       }
       // Re-query after cleanup
@@ -1058,7 +1259,10 @@ router.get('/children-leaders', async (req, res) => {
         JOIN users u ON cl.user_id = u.id
         ORDER BY u.full_name
       `);
-      if (process.env.DEBUG) console.log(`[children-leaders-diag] After cleanup JOIN result count: ${cleanLeaders?.length || 0}`);
+      if (process.env.DEBUG)
+        console.log(
+          `[children-leaders-diag] After cleanup JOIN result count: ${cleanLeaders?.length || 0}`
+        );
       return res.json(cleanLeaders);
     }
 
@@ -1119,8 +1323,11 @@ router.post('/children-leaders', async (req, res) => {
         return res.status(400).json({ error: 'This user is already a children leader' });
       }
       // User exists but is not yet a children leader — reassign them
-    await transaction(async (tx) => {
-        await tx.run('UPDATE users SET role = ? WHERE id = ?', ['children_leader', existingUser.id]);
+      await transaction(async (tx) => {
+        await tx.run('UPDATE users SET role = ? WHERE id = ?', [
+          'children_leader',
+          existingUser.id
+        ]);
         await tx.run(
           'INSERT INTO children_leaders (user_id, phone, email, is_head) VALUES (?, ?, ?, ?)',
           [existingUser.id, phone || null, email || null, is_head ? 1 : 0]
@@ -1190,7 +1397,10 @@ router.put('/children-leaders/:id', async (req, res) => {
 
     await transaction(async (tx) => {
       await tx.run('UPDATE users SET full_name = ? WHERE id = ?', [full_name, leader.user_id]);
-      await tx.run('UPDATE children_leaders SET phone = ?, email = ?, is_head = ?, is_active = ? WHERE id = ?', [phone, email, is_head ? 1 : 0, is_active ? 1 : 0, id]);
+      await tx.run(
+        'UPDATE children_leaders SET phone = ?, email = ?, is_head = ?, is_active = ? WHERE id = ?',
+        [phone, email, is_head ? 1 : 0, is_active ? 1 : 0, id]
+      );
     });
     invalidate('admin-');
     invalidate('admin-children-');
@@ -1210,7 +1420,9 @@ router.delete('/children-leaders/:id', async (req, res) => {
 
     // Remove the children_leaders row and revert user role (preserve login account)
     await run('DELETE FROM children_leaders WHERE id = ?', [id]);
-    await run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [leader.user_id]);
+    await run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [
+      leader.user_id
+    ]);
 
     invalidate('admin-');
     invalidate('admin-children-');
@@ -1225,7 +1437,10 @@ router.delete('/children-leaders/:id', async (req, res) => {
 router.post('/children-leaders/:id/reset-password', async (req, res) => {
   try {
     const { id } = req.params;
-    const leader = await get('SELECT cl.user_id, u.username FROM children_leaders cl JOIN users u ON cl.user_id = u.id WHERE cl.id = ?', [id]);
+    const leader = await get(
+      'SELECT cl.user_id, u.username FROM children_leaders cl JOIN users u ON cl.user_id = u.id WHERE cl.id = ?',
+      [id]
+    );
     if (!leader) return res.status(404).json({ error: 'Children leader not found' });
 
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
@@ -1236,7 +1451,10 @@ router.post('/children-leaders/:id/reset-password', async (req, res) => {
     }
     const passwordHash = await bcrypt.hash(rawPassword, 10);
 
-    await run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [passwordHash, leader.user_id]);
+    await run('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+      passwordHash,
+      leader.user_id
+    ]);
 
     res.json({
       message: 'Password reset successfully',
@@ -1264,23 +1482,36 @@ router.get('/leaders', async (req, res) => {
       const sectionId = defaultSection?.id || 1;
       for (const user of missingLeaders) {
         try {
-          await run('INSERT INTO leaders (user_id, section_id, is_head, is_active) VALUES (?, ?, 0, 1)', [user.id, sectionId]);
-        } catch (_) { void 0; }
+          await run(
+            'INSERT INTO leaders (user_id, section_id, is_head, is_active) VALUES (?, ?, 0, 1)',
+            [user.id, sectionId]
+          );
+        } catch (_) {
+          void 0;
+        }
       }
     }
 
-    const leaders = await withCache('admin-leaders', 300000, () => new Promise((resolve, reject) => {
-      db.all(`
+    const leaders = await withCache(
+      'admin-leaders',
+      300000,
+      () =>
+        new Promise((resolve, reject) => {
+          db.all(
+            `
         SELECT l.id, l.section_id, u.username, u.full_name, u.profile_picture, COALESCE(s.name, 'Unassigned') as section_name, l.phone, l.email, l.is_head
         FROM leaders l
         JOIN users u ON l.user_id = u.id
         LEFT JOIN sections s ON l.section_id = s.id
         ORDER BY s.name, u.full_name
-      `, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    }));
+      `,
+            (err, rows) => {
+              if (err) reject(err);
+              else resolve(rows);
+            }
+          );
+        })
+    );
     res.json(leaders);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch leaders' });
@@ -1293,15 +1524,19 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
     const { id } = req.params;
 
     const leader = await new Promise((resolve, reject) => {
-      db.get(`
+      db.get(
+        `
         SELECT l.user_id, u.username
         FROM leaders l
         JOIN users u ON l.user_id = u.id
         WHERE l.id = ?
-      `, [id], (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
+      `,
+        [id],
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
     });
 
     if (!leader) {
@@ -1318,7 +1553,7 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
 
     await run(
-      'UPDATE users SET password_reset_token = ?, password_reset_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      'UPDATE users SET password_reset_token = ?, password_reset_expires = ?, password_reset_used = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [tokenHash, expiresAt, leader.user_id]
     );
 
@@ -1341,8 +1576,10 @@ router.post('/leaders/:id/reset-password', async (req, res) => {
 // GET next membership number
 router.get('/members/next-id', async (req, res) => {
   try {
-    const row = await get(`SELECT membership_id FROM members WHERE membership_id LIKE 'SHACM%' ORDER BY CAST(SUBSTR(membership_id, 6) AS INTEGER) DESC LIMIT 1`);
-    const maxNum = row ? (parseInt(row.membership_id.slice(5), 10) || 0) : 0;
+    const row = await get(
+      `SELECT membership_id FROM members WHERE membership_id LIKE 'SHACM%' ORDER BY CAST(SUBSTR(membership_id, 6) AS INTEGER) DESC LIMIT 1`
+    );
+    const maxNum = row ? parseInt(row.membership_id.slice(5), 10) || 0 : 0;
     res.json({ next_id: `SHACM${String(maxNum + 1).padStart(4, '0')}` });
   } catch (error) {
     console.error('Next ID error:', error);
@@ -1407,23 +1644,26 @@ router.get('/members/suggest-assignment', async (req, res) => {
     // Best leader = fewest members within best section, otherwise global minimum
     let bestLeader = null;
     if (bestSection) {
-      const inBest = leaders.filter(l => Number(l.section_id) === Number(bestSection.section_id));
+      const inBest = leaders.filter((l) => Number(l.section_id) === Number(bestSection.section_id));
       bestLeader = inBest[0] || leaders[0] || null;
     } else {
       bestLeader = leaders[0] || null;
     }
 
     res.json({
-      suggestion: bestSection && bestLeader ? {
-        section_id:           bestSection.section_id,
-        section_name:         bestSection.section_name,
-        section_member_count: bestSection.member_count,
-        leader_id:            bestLeader.leader_id,
-        leader_name:          bestLeader.leader_name,
-        leader_member_count:  bestLeader.member_count,
-      } : null,
+      suggestion:
+        bestSection && bestLeader
+          ? {
+              section_id: bestSection.section_id,
+              section_name: bestSection.section_name,
+              section_member_count: bestSection.member_count,
+              leader_id: bestLeader.leader_id,
+              leader_name: bestLeader.leader_name,
+              leader_member_count: bestLeader.member_count
+            }
+          : null,
       sections,
-      leaders,
+      leaders
     });
   } catch (error) {
     console.error('Suggest assignment error:', error);
@@ -1435,15 +1675,29 @@ router.get('/members/suggest-assignment', async (req, res) => {
 
 router.post('/members', async (req, res) => {
   try {
-    const { 
-      membership_id, full_name, section_id, leader_id, 
-      phone, email, gender, marital_status, occupation, age_group, 
-      date_of_birth, show_age_to_leaders, hide_from_birthday_list, address, education_level,
+    const {
+      membership_id,
+      full_name,
+      section_id,
+      leader_id,
+      phone,
+      email,
+      gender,
+      marital_status,
+      occupation,
+      age_group,
+      date_of_birth,
+      show_age_to_leaders,
+      hide_from_birthday_list,
+      address,
+      education_level,
       secondary_phone
     } = req.body;
-    
+
     if (!membership_id || !full_name || !section_id || !leader_id) {
-      return res.status(400).json({ error: 'Membership ID, Name, Section, and Leader are required' });
+      return res
+        .status(400)
+        .json({ error: 'Membership ID, Name, Section, and Leader are required' });
     }
 
     const existingMember = await queries.getMemberByMembershipId(membership_id);
@@ -1453,7 +1707,11 @@ router.post('/members', async (req, res) => {
 
     const duplicateName = await queries.findActiveMemberByName(full_name);
     if (duplicateName) {
-      return res.status(400).json({ error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})` });
+      return res
+        .status(400)
+        .json({
+          error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})`
+        });
     }
 
     const sectionId = Number(section_id);
@@ -1464,7 +1722,8 @@ router.post('/members', async (req, res) => {
 
     const section = await new Promise((resolve, reject) => {
       db.get('SELECT id FROM sections WHERE id = ?', [sectionId], (err, row) => {
-        if (err) reject(err); else resolve(row);
+        if (err) reject(err);
+        else resolve(row);
       });
     });
     if (!section) {
@@ -1473,7 +1732,8 @@ router.post('/members', async (req, res) => {
 
     const leader = await new Promise((resolve, reject) => {
       db.get('SELECT id, section_id FROM leaders WHERE id = ?', [leaderId], (err, row) => {
-        if (err) reject(err); else resolve(row);
+        if (err) reject(err);
+        else resolve(row);
       });
     });
     if (!leader) {
@@ -1496,10 +1756,18 @@ router.post('/members', async (req, res) => {
     }
 
     const created = await queries.createMember(
-      membership_id, full_name, sectionId, leaderId, 
-      normalizedPhoneCreate, email || null, gender || null, marital_status || null, occupation || null, age_group || null,
-      date_of_birth || null, 
-      show_age_to_leaders ? 1 : 0, 
+      membership_id,
+      full_name,
+      sectionId,
+      leaderId,
+      normalizedPhoneCreate,
+      email || null,
+      gender || null,
+      marital_status || null,
+      occupation || null,
+      age_group || null,
+      date_of_birth || null,
+      show_age_to_leaders ? 1 : 0,
       hide_from_birthday_list ? 1 : 0,
       JSON.stringify(req.body.opt_out_services || []),
       address || null,
@@ -1538,10 +1806,32 @@ router.get('/members/export', async (req, res) => {
       LIMIT 10000
     `);
 
-    const headers = ['MembershipID', 'FullName', 'Phone', 'Address', 'Email', 'Gender', 'AgeGroup', 'Section', 'Leader'];
+    const headers = [
+      'MembershipID',
+      'FullName',
+      'Phone',
+      'Address',
+      'Email',
+      'Gender',
+      'AgeGroup',
+      'Section',
+      'Leader'
+    ];
     const csvRows = [headers.map(escapeCsvValue).join(',')];
-    members.forEach(row => {
-      csvRows.push(toCsvRow([row.membership_id, row.full_name, row.phone, row.address, row.email, row.gender, row.age_group, row.section_name, row.leader_name]));
+    members.forEach((row) => {
+      csvRows.push(
+        toCsvRow([
+          row.membership_id,
+          row.full_name,
+          row.phone,
+          row.address,
+          row.email,
+          row.gender,
+          row.age_group,
+          row.section_name,
+          row.leader_name
+        ])
+      );
     });
 
     res.setHeader('Content-Type', 'text/csv');
@@ -1571,7 +1861,14 @@ router.post('/titles', async (req, res) => {
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Title name is required' });
     }
-    await queries.createTitleFull(name.trim(), description || null, category || 'General', sort_order || 0, reports_to_title_id || null, is_active !== undefined ? is_active : true);
+    await queries.createTitleFull(
+      name.trim(),
+      description || null,
+      category || 'General',
+      sort_order || 0,
+      reports_to_title_id || null,
+      is_active !== undefined ? is_active : true
+    );
     res.json({ message: 'Title created' });
   } catch (error) {
     if (error.message && error.message.includes('UNIQUE')) {
@@ -1589,7 +1886,15 @@ router.put('/titles/:id', async (req, res) => {
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Title name is required' });
     }
-    await queries.updateTitleFull(id, name.trim(), description || null, category || 'General', sort_order || 0, reports_to_title_id || null, is_active !== undefined ? (is_active ? 1 : 0) : 1);
+    await queries.updateTitleFull(
+      id,
+      name.trim(),
+      description || null,
+      category || 'General',
+      sort_order || 0,
+      reports_to_title_id || null,
+      is_active !== undefined ? (is_active ? 1 : 0) : 1
+    );
     res.json({ message: 'Title updated' });
   } catch (error) {
     if (error.message && error.message.includes('UNIQUE')) {
@@ -1603,7 +1908,17 @@ router.put('/titles/:id', async (req, res) => {
 router.delete('/titles/:id', async (req, res) => {
   try {
     await queries.deleteTitle(req.params.id);
-    await queries.addMemberTitleHistory(null, req.params.id, 'title_deleted', req.session.userId, null, null, null, null, 'Title definition deleted');
+    await queries.addMemberTitleHistory(
+      null,
+      req.params.id,
+      'title_deleted',
+      req.session.userId,
+      null,
+      null,
+      null,
+      null,
+      'Title definition deleted'
+    );
     res.json({ message: 'Title deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete title' });
@@ -1627,8 +1942,24 @@ router.post('/members/:id/titles', async (req, res) => {
     if (!title_id) {
       return res.status(400).json({ error: 'title_id is required' });
     }
-    await queries.assignMemberTitle(req.params.id, title_id, req.session.userId, appointment_date || null, notes || null);
-    await queries.addMemberTitleHistory(req.params.id, title_id, 'assigned', req.session.userId, null, 'active', null, notes || null, notes || null);
+    await queries.assignMemberTitle(
+      req.params.id,
+      title_id,
+      req.session.userId,
+      appointment_date || null,
+      notes || null
+    );
+    await queries.addMemberTitleHistory(
+      req.params.id,
+      title_id,
+      'assigned',
+      req.session.userId,
+      null,
+      'active',
+      null,
+      notes || null,
+      notes || null
+    );
     res.json({ message: 'Title assigned' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to assign title' });
@@ -1641,16 +1972,44 @@ router.put('/members/:id/titles/:titleId', async (req, res) => {
     const { status, notes } = req.body;
     const { id, titleId } = req.params;
 
-    const current = await get('SELECT status, notes FROM member_titles WHERE member_id = ? AND title_id = ?', [id, titleId]);
+    const current = await get(
+      'SELECT status, notes FROM member_titles WHERE member_id = ? AND title_id = ?',
+      [id, titleId]
+    );
     if (!current) return res.status(404).json({ error: 'Assignment not found' });
 
-    await queries.updateMemberTitle(id, titleId, status || current.status, notes !== undefined ? notes : current.notes);
+    await queries.updateMemberTitle(
+      id,
+      titleId,
+      status || current.status,
+      notes !== undefined ? notes : current.notes
+    );
 
     if (status && status !== current.status) {
-      await queries.addMemberTitleHistory(id, titleId, 'status_changed', req.session.userId, current.status, status, current.notes, notes, `Status changed from ${current.status} to ${status}`);
+      await queries.addMemberTitleHistory(
+        id,
+        titleId,
+        'status_changed',
+        req.session.userId,
+        current.status,
+        status,
+        current.notes,
+        notes,
+        `Status changed from ${current.status} to ${status}`
+      );
     }
     if (notes !== undefined && notes !== current.notes && (!status || status === current.status)) {
-      await queries.addMemberTitleHistory(id, titleId, 'notes_updated', req.session.userId, current.status, current.status, current.notes, notes, 'Notes updated');
+      await queries.addMemberTitleHistory(
+        id,
+        titleId,
+        'notes_updated',
+        req.session.userId,
+        current.status,
+        current.status,
+        current.notes,
+        notes,
+        'Notes updated'
+      );
     }
 
     res.json({ message: 'Assignment updated' });
@@ -1663,9 +2022,22 @@ router.put('/members/:id/titles/:titleId', async (req, res) => {
 router.delete('/members/:id/titles/:titleId', async (req, res) => {
   try {
     const { id, titleId } = req.params;
-    const current = await get('SELECT status, notes FROM member_titles WHERE member_id = ? AND title_id = ?', [id, titleId]);
+    const current = await get(
+      'SELECT status, notes FROM member_titles WHERE member_id = ? AND title_id = ?',
+      [id, titleId]
+    );
     if (current) {
-      await queries.addMemberTitleHistory(id, titleId, 'removed', req.session.userId, current.status, null, current.notes, null, 'Title removed');
+      await queries.addMemberTitleHistory(
+        id,
+        titleId,
+        'removed',
+        req.session.userId,
+        current.status,
+        null,
+        current.notes,
+        null,
+        'Title removed'
+      );
     }
     await queries.removeMemberTitle(id, titleId);
     res.json({ message: 'Title removed' });
@@ -1687,50 +2059,82 @@ router.get('/members/:id/titles/:titleId/history', async (req, res) => {
 // Leadership Directory
 router.get('/leadership-directory', async (req, res) => {
   try {
-    const { title_id, status, search, section_id, appointment_from, appointment_to, page = 1, limit = 50 } = req.query;
+    const {
+      title_id,
+      status,
+      search,
+      section_id,
+      appointment_from,
+      appointment_to,
+      page = 1,
+      limit = 50
+    } = req.query;
     const p = parseInt(page) || 1;
     const lim = parseInt(limit) || 50;
     const offset = (p - 1) * lim;
 
     const [directoryResult, titlesResult, sectionsResult, countResult] = await Promise.race([
       Promise.allSettled([
-      queries.getLeadershipDirectory({
-        titleId: title_id || null,
-        status: status || null,
-        search: search || null,
-        sectionId: section_id || null,
-        appointmentFrom: appointment_from || null,
-        appointmentTo: appointment_to || null,
-        limit: lim,
-        offset,
-      }),
-      queries.getAllTitles(),
-      queries.getAllSections(),
-      queries.getLeadershipDirectoryCount({
-        titleId: title_id || null,
-        status: status || null,
-        search: search || null,
-        sectionId: section_id || null,
-        appointmentFrom: appointment_from || null,
-        appointmentTo: appointment_to || null,
-      }),
-    ]),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Leadership directory queries timed out after 30s')), 30000))
-  ]);
+        queries.getLeadershipDirectory({
+          titleId: title_id || null,
+          status: status || null,
+          search: search || null,
+          sectionId: section_id || null,
+          appointmentFrom: appointment_from || null,
+          appointmentTo: appointment_to || null,
+          limit: lim,
+          offset
+        }),
+        queries.getAllTitles(),
+        queries.getAllSections(),
+        queries.getLeadershipDirectoryCount({
+          titleId: title_id || null,
+          status: status || null,
+          search: search || null,
+          sectionId: section_id || null,
+          appointmentFrom: appointment_from || null,
+          appointmentTo: appointment_to || null
+        })
+      ]),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Leadership directory queries timed out after 30s')),
+          30000
+        )
+      )
+    ]);
 
     const errors = [];
 
-    if (directoryResult.status === 'rejected') { errors.push(`getLeadershipDirectory: ${directoryResult.reason?.message}`); console.error('getLeadershipDirectory error:', directoryResult.reason?.message); }
-    if (titlesResult.status === 'rejected') { errors.push(`getAllTitles: ${titlesResult.reason?.message}`); console.error('getAllTitles error:', titlesResult.reason?.message); }
-    if (sectionsResult.status === 'rejected') { errors.push(`getAllSections: ${sectionsResult.reason?.message}`); console.error('getAllSections error:', sectionsResult.reason?.message); }
-    if (countResult.status === 'rejected') { errors.push(`getLeadershipDirectoryCount: ${countResult.reason?.message}`); console.error('getLeadershipDirectoryCount error:', countResult.reason?.message); }
+    if (directoryResult.status === 'rejected') {
+      errors.push(`getLeadershipDirectory: ${directoryResult.reason?.message}`);
+      console.error('getLeadershipDirectory error:', directoryResult.reason?.message);
+    }
+    if (titlesResult.status === 'rejected') {
+      errors.push(`getAllTitles: ${titlesResult.reason?.message}`);
+      console.error('getAllTitles error:', titlesResult.reason?.message);
+    }
+    if (sectionsResult.status === 'rejected') {
+      errors.push(`getAllSections: ${sectionsResult.reason?.message}`);
+      console.error('getAllSections error:', sectionsResult.reason?.message);
+    }
+    if (countResult.status === 'rejected') {
+      errors.push(`getLeadershipDirectoryCount: ${countResult.reason?.message}`);
+      console.error('getLeadershipDirectoryCount error:', countResult.reason?.message);
+    }
 
     const directory = directoryResult.status === 'fulfilled' ? directoryResult.value : [];
     const titles = titlesResult.status === 'fulfilled' ? titlesResult.value : [];
     const sections = sectionsResult.status === 'fulfilled' ? sectionsResult.value : [];
-    const total = countResult.status === 'fulfilled' ? (countResult.value[0]?.total || 0) : 0;
+    const total = countResult.status === 'fulfilled' ? countResult.value[0]?.total || 0 : 0;
 
-    res.json({ directory, titles, sections, total, errors: errors.length > 0 ? errors : undefined });
+    res.json({
+      directory,
+      titles,
+      sections,
+      total,
+      errors: errors.length > 0 ? errors : undefined
+    });
   } catch (error) {
     console.error('Leadership directory error:', error.message, error.stack?.split('\n')[1]);
     res.status(500).json({ error: error.message || 'Failed to fetch leadership directory' });
@@ -1767,11 +2171,13 @@ router.get('/departments', async (req, res) => {
     const result = await withCache('admin-departments', 30000, async () => {
       const [departmentsResult, titlesResult] = await Promise.allSettled([
         queries.getAllDepartments(),
-        queries.getAllTitlesWithCategory ? queries.getAllTitlesWithCategory() : queries.getAllTitles(),
+        queries.getAllTitlesWithCategory
+          ? queries.getAllTitlesWithCategory()
+          : queries.getAllTitles()
       ]);
       return {
         departments: departmentsResult.status === 'fulfilled' ? departmentsResult.value : [],
-        titles: titlesResult.status === 'fulfilled' ? titlesResult.value : [],
+        titles: titlesResult.status === 'fulfilled' ? titlesResult.value : []
       };
     });
     res.json(result);
@@ -1787,12 +2193,21 @@ router.get('/departments/:id', async (req, res) => {
     const [deptResult, membersResult, historyResult] = await Promise.allSettled([
       queries.getDepartmentById(req.params.id),
       queries.getDepartmentMembers(req.params.id),
-      queries.getDepartmentHistory(req.params.id),
+      queries.getDepartmentHistory(req.params.id)
     ]);
     const errors = [];
-    if (deptResult.status === 'rejected') { errors.push(`getDepartmentById: ${deptResult.reason?.message}`); console.error('getDepartmentById error:', deptResult.reason?.message); }
-    if (membersResult.status === 'rejected') { errors.push(`getDepartmentMembers: ${membersResult.reason?.message}`); console.error('getDepartmentMembers error:', membersResult.reason?.message); }
-    if (historyResult.status === 'rejected') { errors.push(`getDepartmentHistory: ${historyResult.reason?.message}`); console.error('getDepartmentHistory error:', historyResult.reason?.message); }
+    if (deptResult.status === 'rejected') {
+      errors.push(`getDepartmentById: ${deptResult.reason?.message}`);
+      console.error('getDepartmentById error:', deptResult.reason?.message);
+    }
+    if (membersResult.status === 'rejected') {
+      errors.push(`getDepartmentMembers: ${membersResult.reason?.message}`);
+      console.error('getDepartmentMembers error:', membersResult.reason?.message);
+    }
+    if (historyResult.status === 'rejected') {
+      errors.push(`getDepartmentHistory: ${historyResult.reason?.message}`);
+      console.error('getDepartmentHistory error:', historyResult.reason?.message);
+    }
 
     const dept = deptResult.status === 'fulfilled' ? deptResult.value : null;
     if (!dept) return res.status(404).json({ error: 'Department not found' });
@@ -1801,7 +2216,7 @@ router.get('/departments/:id', async (req, res) => {
       department: dept,
       members: membersResult.status === 'fulfilled' ? membersResult.value : [],
       history: historyResult.status === 'fulfilled' ? historyResult.value : [],
-      errors: errors.length > 0 ? errors : undefined,
+      errors: errors.length > 0 ? errors : undefined
     });
   } catch (error) {
     console.error('Department detail error:', error.message);
@@ -1812,13 +2227,23 @@ router.get('/departments/:id', async (req, res) => {
 // POST create department
 router.post('/departments', async (req, res) => {
   try {
-    const { name, description, reports_to_title_id, leader_id, assistant_leader_id, secretary_id } = req.body;
-    if (!name || !name.trim()) return res.status(400).json({ error: 'Department name is required' });
-    await queries.createDepartment(name.trim(), description || null, reports_to_title_id || null, leader_id || null, assistant_leader_id || null, secretary_id || null);
+    const { name, description, reports_to_title_id, leader_id, assistant_leader_id, secretary_id } =
+      req.body;
+    if (!name || !name.trim())
+      return res.status(400).json({ error: 'Department name is required' });
+    await queries.createDepartment(
+      name.trim(),
+      description || null,
+      reports_to_title_id || null,
+      leader_id || null,
+      assistant_leader_id || null,
+      secretary_id || null
+    );
     const created = await get('SELECT id FROM departments WHERE name = ?', [name.trim()]);
     res.json({ message: 'Department created', id: created?.id });
   } catch (error) {
-    if (error.message && error.message.includes('UNIQUE')) return res.status(400).json({ error: 'A department with this name already exists' });
+    if (error.message && error.message.includes('UNIQUE'))
+      return res.status(400).json({ error: 'A department with this name already exists' });
     res.status(500).json({ error: 'Failed to create department' });
   }
 });
@@ -1827,20 +2252,61 @@ router.post('/departments', async (req, res) => {
 router.put('/departments/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, reports_to_title_id, leader_id, assistant_leader_id, secretary_id, is_active } = req.body;
-    if (!name || !name.trim()) return res.status(400).json({ error: 'Department name is required' });
+    const {
+      name,
+      description,
+      reports_to_title_id,
+      leader_id,
+      assistant_leader_id,
+      secretary_id,
+      is_active
+    } = req.body;
+    if (!name || !name.trim())
+      return res.status(400).json({ error: 'Department name is required' });
     const existing = await queries.getDepartmentById(id);
     if (!existing) return res.status(404).json({ error: 'Department not found' });
-    await queries.updateDepartment(id, name.trim(), description || null, reports_to_title_id || null, leader_id || null, assistant_leader_id || null, secretary_id || null, is_active !== undefined ? (is_active ? 1 : 0) : 1);
+    await queries.updateDepartment(
+      id,
+      name.trim(),
+      description || null,
+      reports_to_title_id || null,
+      leader_id || null,
+      assistant_leader_id || null,
+      secretary_id || null,
+      is_active !== undefined ? (is_active ? 1 : 0) : 1
+    );
 
     // Track leadership changes in history
     const changes = [];
-    if (String(existing.leader_id) !== String(leader_id || '')) changes.push({ role: 'leader', old_member_id: existing.leader_id, new_member_id: leader_id || null });
-    if (String(existing.assistant_leader_id) !== String(assistant_leader_id || '')) changes.push({ role: 'assistant_leader', old_member_id: existing.assistant_leader_id, new_member_id: assistant_leader_id || null });
-    if (String(existing.secretary_id) !== String(secretary_id || '')) changes.push({ role: 'secretary', old_member_id: existing.secretary_id, new_member_id: secretary_id || null });
+    if (String(existing.leader_id) !== String(leader_id || ''))
+      changes.push({
+        role: 'leader',
+        old_member_id: existing.leader_id,
+        new_member_id: leader_id || null
+      });
+    if (String(existing.assistant_leader_id) !== String(assistant_leader_id || ''))
+      changes.push({
+        role: 'assistant_leader',
+        old_member_id: existing.assistant_leader_id,
+        new_member_id: assistant_leader_id || null
+      });
+    if (String(existing.secretary_id) !== String(secretary_id || ''))
+      changes.push({
+        role: 'secretary',
+        old_member_id: existing.secretary_id,
+        new_member_id: secretary_id || null
+      });
     for (const ch of changes) {
-      await run('INSERT INTO department_leadership_history (department_id, role, old_member_id, new_member_id, changed_by) VALUES (?, ?, ?, ?, ?)',
-        [id, ch.role, ch.old_member_id || null, ch.new_member_id || null, req.session?.userId || null]);
+      await run(
+        'INSERT INTO department_leadership_history (department_id, role, old_member_id, new_member_id, changed_by) VALUES (?, ?, ?, ?, ?)',
+        [
+          id,
+          ch.role,
+          ch.old_member_id || null,
+          ch.new_member_id || null,
+          req.session?.userId || null
+        ]
+      );
     }
 
     res.json({ message: 'Department updated' });
@@ -1877,7 +2343,8 @@ router.post('/departments/:id/members', async (req, res) => {
     await queries.addDepartmentMember(req.params.id, member_id);
     res.json({ message: 'Member added to department' });
   } catch (error) {
-    if (error.message && error.message.includes('UNIQUE')) return res.status(400).json({ error: 'Member already in this department' });
+    if (error.message && error.message.includes('UNIQUE'))
+      return res.status(400).json({ error: 'Member already in this department' });
     res.status(500).json({ error: 'Failed to add member to department' });
   }
 });

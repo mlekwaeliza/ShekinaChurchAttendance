@@ -18,11 +18,16 @@ const EvangelistDashboard = lazy(() => import('./pages/EvangelistDashboard.jsx')
 const AccountantDashboard = lazy(() => import('./pages/AccountantDashboard.jsx'));
 const ChildrenLeaderDashboard = lazy(() => import('./components/ChildrenLeaderDashboard.jsx'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage.jsx'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage.jsx'));
 const ChurchCalendar = lazy(() => import('./components/ChurchCalendar.jsx'));
 
 function LoadingScreen({ message = 'Loading...' }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950" role="status" aria-live="polite">
+    <div
+      className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950"
+      role="status"
+      aria-live="polite"
+    >
       <div className="flex flex-col items-center gap-3">
         <div className="h-8 w-8 animate-spin-slow rounded-full border-2 border-primary-600 border-t-transparent" />
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{message}</p>
@@ -44,7 +49,18 @@ function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (!allowedRoles || !allowedRoles.includes(user.role)) {
-    const redirectPath = user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'pastor' ? '/pastor' : user.role === 'evangelist' ? '/evangelist' : user.role === 'children_leader' ? '/children-leader' : '/leader';
+    const redirectPath =
+      user.role === 'admin'
+        ? '/admin'
+        : user.role === 'accountant'
+          ? '/accountant'
+          : user.role === 'pastor'
+            ? '/pastor'
+            : user.role === 'evangelist'
+              ? '/evangelist'
+              : user.role === 'children_leader'
+                ? '/children-leader'
+                : '/leader';
     return <Navigate to={redirectPath} />;
   }
 
@@ -58,77 +74,144 @@ function AppRoutes() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/login" element={user ? <Navigate to={user.role === 'admin' ? '/admin' : user.role === 'accountant' ? '/accountant' : user.role === 'evangelist' ? '/evangelist' : user.role === 'children_leader' ? '/children-leader' : user.role === 'leader' ? '/leader' : '/pastor'} /> : <Login />} />
+        <Route
+          path="/login"
+          element={
+            user ? (
+              <Navigate
+                to={
+                  user.role === 'admin'
+                    ? '/admin'
+                    : user.role === 'accountant'
+                      ? '/accountant'
+                      : user.role === 'evangelist'
+                        ? '/evangelist'
+                        : user.role === 'children_leader'
+                          ? '/children-leader'
+                          : user.role === 'leader'
+                            ? '/leader'
+                            : '/pastor'
+                }
+              />
+            ) : (
+              <Login />
+            )
+          }
+        />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/set-password" element={<ResetPasswordPage />} />
 
         {/* Admin Routes */}
-        <Route path="/admin/:tab?" element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <Layout>
-              <AdminDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/admin/:tab?"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Layout>
+                <AdminDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Leader Routes */}
-        <Route path="/leader/:tab?" element={
-          <ProtectedRoute allowedRoles={['leader']}>
-            <Layout>
-              <LeaderDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/leader/:tab?"
+          element={
+            <ProtectedRoute allowedRoles={['leader']}>
+              <Layout>
+                <LeaderDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Pastor Routes */}
-        <Route path="/pastor/:tab?" element={
-          <ProtectedRoute allowedRoles={['pastor']}>
-            <Layout>
-              <PastorDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/pastor/:tab?"
+          element={
+            <ProtectedRoute allowedRoles={['pastor']}>
+              <Layout>
+                <PastorDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Evangelist Routes */}
-        <Route path="/evangelist/:tab?" element={
-          <ProtectedRoute allowedRoles={['pastor', 'admin', 'evangelist']}>
-            <Layout>
-              <EvangelistDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/evangelist/:tab?"
+          element={
+            <ProtectedRoute allowedRoles={['pastor', 'admin', 'evangelist']}>
+              <Layout>
+                <EvangelistDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Accountant Routes */}
-        <Route path="/accountant/:tab?" element={
-          <ProtectedRoute allowedRoles={['accountant', 'admin']}>
-            <Layout>
-              <AccountantDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/accountant/:tab?"
+          element={
+            <ProtectedRoute allowedRoles={['accountant', 'admin']}>
+              <Layout>
+                <AccountantDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* Children Leader Routes */}
-        <Route path="/children-leader/:tab?" element={
-          <ProtectedRoute allowedRoles={['children_leader', 'admin']}>
-            <Layout>
-              <ChildrenLeaderDashboard />
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/children-leader/:tab?"
+          element={
+            <ProtectedRoute allowedRoles={['children_leader', 'admin']}>
+              <Layout>
+                <ChildrenLeaderDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/change-password" element={
-          <ProtectedRoute allowedRoles={['admin', 'accountant', 'leader', 'pastor', 'evangelist', 'children_leader']}>
-            <Layout>
-              <ChangePasswordPage />
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'admin',
+                'accountant',
+                'leader',
+                'pastor',
+                'evangelist',
+                'children_leader'
+              ]}
+            >
+              <Layout>
+                <ChangePasswordPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/calendar" element={
-          <ProtectedRoute allowedRoles={['admin', 'accountant', 'leader', 'pastor', 'evangelist', 'children_leader']}>
-            <Layout>
-              <ChurchCalendar />
-            </Layout>
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute
+              allowedRoles={[
+                'admin',
+                'accountant',
+                'leader',
+                'pastor',
+                'evangelist',
+                'children_leader'
+              ]}
+            >
+              <Layout>
+                <ChurchCalendar />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
@@ -146,9 +229,7 @@ function App() {
           <ErrorBoundary>
             <AppRoutes />
             <PWAInstallPrompt />
-            {updateAvailable && (
-              <PWAUpdatePrompt onRefresh={updateApp} onDismiss={dismissUpdate} />
-            )}
+            {updateAvailable && <PWAUpdatePrompt onRefresh={updateApp} onDismiss={dismissUpdate} />}
           </ErrorBoundary>
         </AuthProvider>
       </ThemeProvider>

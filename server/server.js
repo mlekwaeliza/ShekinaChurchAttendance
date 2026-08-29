@@ -525,6 +525,8 @@ app.use((req, res, next) => {
 
 // API Routes
 app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/change-password', passwordChangeLimiter);
+app.use('/api/auth/reset-password', passwordChangeLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminContributionsRoutes);
 app.use('/api/admin', adminFinanceRoutes);
@@ -555,7 +557,6 @@ app.use('/api/evangelism', evangelismRoutes);
 // H3-fix: per-route limiters mounted as middleware on the specific
 // sensitive paths. These run BEFORE the route handlers because the
 // mount points above happen later. Unused limiters cost nothing.
-app.use('/api/auth/change-password', passwordChangeLimiter);
 app.use('/api/auth/profile-picture', uploadLimiter);
 app.use('/api/admin/members/bulk-soft-delete', bulkOpLimiter);
 app.use('/api/admin/members/confirm-deletion', bulkOpLimiter);
