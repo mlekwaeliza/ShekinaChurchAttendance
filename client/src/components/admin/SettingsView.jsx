@@ -55,7 +55,9 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [members, setMembers] = useState([]);
-  const [selectedMemberId, setSelectedMemberId] = useState(null);
+  const [selectedMemberId, setSelectedMemberId] = useState(
+    user?.member_id ? Number(user.member_id) : null
+  );
 
   // User Management state
   const [users, setUsers] = useState([]);
@@ -389,12 +391,12 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <label className="input-label">Display Name</label>
                 <div className="flex gap-3">
                   <select
-                    value={profileName}
+                    value={selectedMemberId || ''}
                     onChange={(e) => {
-                      const val = e.target.value;
-                      const [name, id] = val.split('|');
-                      setProfileName(name);
-                      setSelectedMemberId(id ? Number(id) : null);
+                      const memberId = e.target.value ? Number(e.target.value) : null;
+                      const member = members.find((item) => Number(item.id) === memberId);
+                      setSelectedMemberId(memberId);
+                      setProfileName(member?.full_name || '');
                     }}
                     className="select flex-1"
                   >
@@ -403,7 +405,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                       .filter((m) => m.full_name)
                       .sort((a, b) => a.full_name.localeCompare(b.full_name))
                       .map((m) => (
-                        <option key={m.id} value={`${m.full_name}|${m.id}`}>
+                        <option key={m.id} value={m.id}>
                           {m.full_name}
                         </option>
                       ))}
