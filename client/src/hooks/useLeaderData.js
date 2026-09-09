@@ -486,20 +486,35 @@ const useLeaderData = () => {
     [submitted, editMode]
   );
 
-  // Bulk-mark every eligible roster member (e.g. "Mark all present") or clear
-  // all marks when status is null. Respects the submitted/edit-mode lock.
+  // Bulk-mark a set of roster members (e.g. "Mark all present") or clear
+  // marks when status is null. Callers pass the currently visible member
+  // ids so bulk actions respect search/filter; omitting ids targets the
+  // whole eligible roster. Respects the submitted/edit-mode lock.
   const handleBulkMark = useCallback(
-    (status) => {
+    (status, ids) => {
       if (submitted && !editMode) return;
+      const targets = Array.isArray(ids) ? ids : eligibleMembers.map((m) => m.id);
       if (status == null) {
-        setAttendance({});
+        if (!Array.isArray(ids)) {
+          setAttendance({});
+          return;
+        }
+        setAttendance((prev) => {
+          const next = { ...prev };
+          targets.forEach((id) => {
+            delete next[id];
+          });
+          return next;
+        });
         return;
       }
-      const next = {};
-      eligibleMembers.forEach((m) => {
-        next[m.id] = status;
+      setAttendance((prev) => {
+        const next = { ...prev };
+        targets.forEach((id) => {
+          next[id] = status;
+        });
+        return next;
       });
-      setAttendance(next);
     },
     [submitted, editMode, eligibleMembers]
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { Clock, CheckCircle2 } from 'lucide-react';
 import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
+import { parseLocalDate } from '../../utils/date';
 
 const LeaderHistory = ({ history, historyLoading, isHead }) => {
   const columns = [
@@ -11,14 +12,14 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
       sortable: true,
       render: (row) => (
         <span className="font-medium text-slate-900 dark:text-slate-100">
-          {new Date(row.date).toLocaleDateString(undefined, {
+          {parseLocalDate(row.date).toLocaleDateString(undefined, {
             weekday: 'short',
             year: 'numeric',
             month: 'short',
-            day: 'numeric',
+            day: 'numeric'
           })}
         </span>
-      ),
+      )
     },
     {
       accessor: 'service_name',
@@ -28,7 +29,7 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
         <Badge variant={row.service_id === 1 ? 'info' : 'primary'}>
           {row.service_name || 'Main Service'}
         </Badge>
-      ),
+      )
     },
     ...(isHead
       ? [
@@ -47,8 +48,8 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
                   </p>
                 )}
               </div>
-            ),
-          },
+            )
+          }
         ]
       : []),
     {
@@ -58,7 +59,7 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
         <span className="text-slate-500 dark:text-slate-400">
           {new Date(row.submitted_at).toLocaleString()}
         </span>
-      ),
+      )
     },
     {
       accessor: 'records_count',
@@ -68,7 +69,7 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
         <span className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
           {row.records_count}
         </span>
-      ),
+      )
     },
     {
       id: 'status',
@@ -78,8 +79,8 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
           <CheckCircle2 className="w-3 h-3" />
           Recorded
         </Badge>
-      ),
-    },
+      )
+    }
   ];
 
   if (historyLoading) {

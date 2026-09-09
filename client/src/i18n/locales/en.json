@@ -192,6 +192,7 @@
     "markAllPresent": "Mark all present",
     "clearMarks": "Clear marks",
     "completeToSubmit": "Mark all members to enable submission",
+    "confirmSubmit": "Tap again to confirm",
     "tabs": {
       "overview": "Overview",
       "compare": "Compare",

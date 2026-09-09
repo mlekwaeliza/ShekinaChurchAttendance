@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
@@ -90,14 +90,7 @@ const TABS = [
   { id: 'ai', label: 'AI Insights', icon: Zap }
 ];
 
-const MetricCard = ({
-  label,
-  value,
-  previousValue,
-  icon: Icon,
-  showDiff = true,
-  suffix = ''
-}) => {
+const MetricCard = ({ label, value, previousValue, icon: Icon, showDiff = true, suffix = '' }) => {
   const num = typeof value === 'number' ? value : Number(value) || 0;
   const prevNum = typeof previousValue === 'number' ? previousValue : Number(previousValue) || 0;
   const diff = showDiff && previousValue != null ? num - prevNum : null;
@@ -333,7 +326,8 @@ const AttendanceReports = ({
   }, [filterType, filterValue, selectedServiceId, loadOverview]);
   useEffect(() => {
     loadAnalytics();
-  }, [ // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
     selectedServiceId,
     filterType,
     filterValue,
@@ -736,64 +730,95 @@ const AttendanceReports = ({
     }
   }, [secPeriod, secP1Start]);
 
+  // Lazy extras (members/history tabs) load once per filter signature.
+  // The signature mirrors the core reload triggers so a filter change
+  // invalidates visited tabs and the next visit refetches.
+  const lazySigRef = useRef('');
+  const lazyLoadedRef = useRef({});
+  const lazySignature = [filterType, filterValue, selectedServiceId].join('|');
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+
   const loadAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
       const endDate = new Date().toISOString().split('T')[0];
       const startDate90 = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
-      const startDatePrev90 = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0];
 
+      // Core set only — every key here is rendered (performance tab +
+      // shared insights used by members/ai tabs). Dropped from the old
+      // 20-request fan-out: 10 payloads no tab reads (trends, anomalies,
+      // demographics, engagement scores, dashboard metrics, growth index,
+      // head-leader analytics, risk, prev-period leader metrics/retention).
+      // memberIntelligence + yearOverYear load lazily per tab below.
       const results = await Promise.allSettled([
-        adminAPI.getAttendanceTrends(90),
         adminAPI.getAttendancePrediction(),
-        adminAPI.getSectionAnomalies(),
         adminAPI.getMemberStreaks(20),
         adminAPI.getLeaderPerformance(startDate90, endDate),
-        adminAPI.getLeaderPerformance(startDatePrev90, startDate90),
-        analyticsAPI.getDemographics(),
-        analyticsAPI.getYearOverYear(),
         analyticsAPI.getRetention(90),
-        analyticsAPI.getRetention(180),
-        analyticsAPI.getEngagementScores(10),
-        analyticsAPI.getDashboardMetrics(selectedServiceId),
         analyticsAPI.getSectionComparison(90),
         analyticsAPI.getSectionRankings(90),
-        analyticsAPI.getRiskAnalysis(),
         analyticsAPI.getAIInsights(),
-        analyticsAPI.getChurchGrowthIndex(),
-        analyticsAPI.getHeadLeaderAnalytics(90),
-        analyticsAPI.getLeaderRankings(90),
-        analyticsAPI.getMemberIntelligence(180, null, null, selectedServiceId)
+        analyticsAPI.getLeaderRankings(90)
       ]);
 
       const ok = (i) => (results[i].status === 'fulfilled' ? results[i].value?.data : null);
-      setAnalytics({
-        trends: asArray(ok(0)?.trends),
-        prediction: ok(1),
-        anomalies: asArray(ok(2)),
-        streaks: asArray(ok(3)),
-        leaderMetrics: asArray(ok(4)),
-        prevLeaderMetrics: asArray(ok(5)),
-        demographics: ok(6),
-        yearOverYear: asArray(ok(7)),
-        retention: ok(8) || {},
-        prevRetention: ok(9) || {},
-        engagementScores: asArray(ok(10)),
-        dashboardMetrics: ok(11),
-        sectionComparison: asArray(ok(12)),
-        sectionRankings: asArray(ok(13)),
-        risk: ok(14),
-        aiInsights: asArray(ok(15)),
-        growthIndex: ok(16),
-        headLeaders: asArray(ok(17)),
-        leaderRankings: asArray(ok(18)),
-        memberIntelligence: asArray(ok(19))
-      });
+      const core = {
+        prediction: ok(0),
+        streaks: asArray(ok(1)),
+        leaderMetrics: asArray(ok(2)),
+        retention: ok(3) || {},
+        sectionComparison: asArray(ok(4)),
+        sectionRankings: asArray(ok(5)),
+        aiInsights: asArray(ok(6)),
+        leaderRankings: asArray(ok(7))
+      };
+      const sigChanged = lazySigRef.current !== lazySignature;
+      setAnalytics((prev) => ({
+        ...core,
+        // Keep visited-tab extras across identical-signature reloads so the
+        // current tab doesn't blank while core refreshes.
+        ...(prev && !sigChanged
+          ? { memberIntelligence: prev.memberIntelligence, yearOverYear: prev.yearOverYear }
+          : {})
+      }));
+      lazySigRef.current = lazySignature;
+      // A filter change landing while visiting a lazy tab refreshes its extras.
+      if (sigChanged) {
+        if (activeTabRef.current === 'members') await loadMembersIntelligence();
+        if (activeTabRef.current === 'history') await loadHistoryExtras();
+      }
     } catch (e) {
       console.error('Failed to load analytics:', e);
     } finally {
       setAnalyticsLoading(false);
     }
+  };
+
+  const loadMembersIntelligence = async () => {
+    try {
+      const res = await analyticsAPI.getMemberIntelligence(180, null, null, selectedServiceId);
+      setAnalytics((prev) => ({ ...prev, memberIntelligence: asArray(res.data) }));
+    } catch (e) {
+      console.error('Failed to load member intelligence:', e);
+    }
+  };
+
+  const loadHistoryExtras = async () => {
+    try {
+      const res = await analyticsAPI.getYearOverYear();
+      setAnalytics((prev) => ({ ...prev, yearOverYear: asArray(res.data) }));
+    } catch (e) {
+      console.error('Failed to load year-over-year:', e);
+    }
+  };
+
+  const ensureLazyExtras = (tab) => {
+    const key = `${tab}|${lazySignature}`;
+    if (lazyLoadedRef.current[key]) return;
+    lazyLoadedRef.current[key] = true;
+    if (tab === 'members') loadMembersIntelligence();
+    if (tab === 'history') loadHistoryExtras();
   };
 
   const loadMemberWeeklyMatrix = async (numWeeks = memberWeeksCount) => {
@@ -812,8 +837,12 @@ const AttendanceReports = ({
   };
 
   useEffect(() => {
-    if (activeTab === 'members') loadMemberWeeklyMatrix(memberWeeksCount);
-  }, [activeTab, selectedServiceId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (activeTab === 'members') {
+      loadMemberWeeklyMatrix(memberWeeksCount);
+      ensureLazyExtras('members');
+    }
+    if (activeTab === 'history') ensureLazyExtras('history');
+  }, [activeTab, selectedServiceId, filterType, filterValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = overviewData?.stats || {};
   const currentService = serviceTypes.find((s) => s.id === selectedServiceId);
@@ -842,12 +871,14 @@ const AttendanceReports = ({
     }
   };
 
-  const sectionComparison = useMemo(() => analytics.sectionComparison || [], [
-    analytics.sectionComparison
-  ]);
-  const sectionRankings = useMemo(() => analytics.sectionRankings || [], [
-    analytics.sectionRankings
-  ]);
+  const sectionComparison = useMemo(
+    () => analytics.sectionComparison || [],
+    [analytics.sectionComparison]
+  );
+  const sectionRankings = useMemo(
+    () => analytics.sectionRankings || [],
+    [analytics.sectionRankings]
+  );
   const retention = useMemo(() => analytics.retention || {}, [analytics.retention]);
   const aiInsights = useMemo(() => analytics.aiInsights || [], [analytics.aiInsights]);
 
@@ -954,15 +985,13 @@ const AttendanceReports = ({
     }
 
     if (aiInsights.length > 0)
-      aiInsights
-        .slice(0, 3)
-        .forEach((ins) =>
-          list.push({
-            type: ins.type || 'info',
-            text: ins.text || ins.message,
-            icon: ins.icon || Info
-          })
-        );
+      aiInsights.slice(0, 3).forEach((ins) =>
+        list.push({
+          type: ins.type || 'info',
+          text: ins.text || ins.message,
+          icon: ins.icon || Info
+        })
+      );
 
     return list.slice(0, 12);
   }, [

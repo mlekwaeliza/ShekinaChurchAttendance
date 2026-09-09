@@ -18,7 +18,9 @@ import {
   AlertTriangle,
   Save,
   BarChart3,
-  Info
+  Info,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import Badge from '../ui/Badge';
 import { useModalA11y } from '../../hooks/useModalA11y';
@@ -771,6 +773,8 @@ const AttendanceCorrections = ({ showMessage }) => {
   const [activeTab, setActiveTab] = useState('edit');
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null);
   const [filters, setFilters] = useState({ q: '', start_date: '', end_date: '', status: '' });
@@ -802,13 +806,21 @@ const AttendanceCorrections = ({ showMessage }) => {
     };
   }, []);
 
-  // ── Tab 1: Edit Attendance (unchanged) ──
-  const load = async (activeFilters = filters) => {
+  // ── Tab 1: Edit Attendance (server-driven pagination) ──
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const pageRef = useRef(1);
+  const pageSizeRef = useRef(50);
+  const load = async (
+    activeFilters = filtersRef.current,
+    targetPage = pageRef.current,
+    targetSize = pageSizeRef.current
+  ) => {
     setLoading(true);
     try {
       const params = {
-        page: 1,
-        page_size: 1000,
+        page: targetPage,
+        page_size: targetSize,
         ...(activeFilters.q ? { q: activeFilters.q } : {}),
         ...(activeFilters.start_date ? { start_date: activeFilters.start_date } : {}),
         ...(activeFilters.end_date ? { end_date: activeFilters.end_date } : {}),
@@ -817,6 +829,9 @@ const AttendanceCorrections = ({ showMessage }) => {
       const res = await adminAPI.searchAttendance(params);
       setRecords(res.data.rows || []);
       setTotal(res.data.total || 0);
+      const returnedPage = Number(res.data.page) || targetPage;
+      pageRef.current = returnedPage;
+      setPage(returnedPage);
     } catch (err) {
       console.error('Failed to load attendance corrections:', err);
       showMessage?.('Failed to load attendance records.', 4000);
@@ -825,17 +840,44 @@ const AttendanceCorrections = ({ showMessage }) => {
     }
   };
 
+  // Filter changes always restart from page 1; page/size controls keep filters.
+  const loadFirstPage = (nextFilters) => {
+    pageRef.current = 1;
+    setPage(1);
+    load(nextFilters, 1, pageSizeRef.current);
+  };
+  const handlePageChange = (nextPage) => {
+    const totalPages = Math.max(1, Math.ceil(total / pageSizeRef.current));
+    const clamped = Math.min(Math.max(1, nextPage), totalPages);
+    if (clamped === pageRef.current) return;
+    pageRef.current = clamped;
+    setPage(clamped);
+    load(filtersRef.current, clamped, pageSizeRef.current);
+  };
+  const handlePageSizeChange = (nextSize) => {
+    pageSizeRef.current = nextSize;
+    setPageSize(nextSize);
+    pageRef.current = 1;
+    setPage(1);
+    load(filtersRef.current, 1, nextSize);
+  };
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, total);
+  const pageNumbers = useMemo(() => {
+    const pages = new Set([1, totalPages, page - 1, page, page + 1]);
+    return [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+  }, [page, totalPages]);
+
   useEffect(() => {
     load();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFilterChange = (key, value) => setFilters((prev) => ({ ...prev, [key]: value }));
-  const filtersRef = useRef(filters);
-  filtersRef.current = filters;
   const debounceRef = useRef(null);
   const debouncedLoad = () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => load(filtersRef.current), 300);
+    debounceRef.current = setTimeout(() => loadFirstPage(filtersRef.current), 300);
   };
   useEffect(
     () => () => {
@@ -843,9 +885,6 @@ const AttendanceCorrections = ({ showMessage }) => {
     },
     []
   );
-  const loadRef = useRef(load);
-  loadRef.current = load;
-
   const searchMembers = async (q) => {
     if (!q || q.length < 1) {
       setMemberSuggestions([]);
@@ -867,15 +906,15 @@ const AttendanceCorrections = ({ showMessage }) => {
     filtersRef.current = next;
     setShowMemberDropdown(false);
     setMemberSuggestions([]);
-    load(next);
+    loadFirstPage(next);
   };
 
-  const handleApplyFilters = () => load(filters);
+  const handleApplyFilters = () => loadFirstPage(filtersRef.current);
   const handleClearFilters = () => {
     const empty = { q: '', start_date: '', end_date: '', status: '' };
     setFilters(empty);
     filtersRef.current = empty;
-    load(empty);
+    loadFirstPage(empty);
   };
 
   const buildRange = (kind) => {
@@ -910,14 +949,14 @@ const AttendanceCorrections = ({ showMessage }) => {
     const next = { ...filtersRef.current, ...range };
     setFilters(next);
     filtersRef.current = next;
-    load(next);
+    loadFirstPage(next);
   };
 
   const handleClearDates = () => {
     const next = { ...filtersRef.current, start_date: '', end_date: '' };
     setFilters(next);
     filtersRef.current = next;
-    load(next);
+    loadFirstPage(next);
   };
 
   const hasDateFilter = Boolean(filters.start_date || filters.end_date);
@@ -1159,7 +1198,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                       filtersRef.current = next;
                       setMemberSuggestions([]);
                       setShowMemberDropdown(false);
-                      load(next);
+                      loadFirstPage(next);
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                     title="Clear search"
@@ -1211,7 +1250,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => load(filters)}
+                  onClick={() => load()}
                   className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                   aria-label="Refresh"
                   title="Refresh"
@@ -1374,7 +1413,9 @@ const AttendanceCorrections = ({ showMessage }) => {
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {loading
                   ? 'Loading…'
-                  : `${total} record${total === 1 ? '' : 's'} found${filters.q || hasDateFilter || filters.status ? ' (filtered)' : ''}`}
+                  : total === 0
+                    ? 'No records'
+                    : `Showing ${rangeStart}–${rangeEnd} of ${total} record${total === 1 ? '' : 's'}${filters.q || hasDateFilter || filters.status ? ' (filtered)' : ''}`}
               </p>
               {(filters.q || hasDateFilter || filters.status) && (
                 <button
@@ -1448,6 +1489,69 @@ const AttendanceCorrections = ({ showMessage }) => {
                 </tbody>
               </table>
             </div>
+            <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <label htmlFor="corrections-page-size" className="font-semibold">
+                  Rows
+                </label>
+                <select
+                  id="corrections-page-size"
+                  value={pageSize}
+                  onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                  className="input h-8 text-xs"
+                >
+                  {[25, 50, 100, 200].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+                <span aria-live="polite">
+                  Page {page} of {totalPages}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={loading || page <= 1}
+                  aria-label="Previous page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                {pageNumbers.map((p, i, arr) => (
+                  <span key={p} className="inline-flex items-center gap-1">
+                    {i > 0 && p - arr[i - 1] > 1 && (
+                      <span className="px-1 text-xs text-slate-400">…</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(p)}
+                      disabled={loading}
+                      aria-label={`Page ${p}`}
+                      aria-current={p === page ? 'page' : undefined}
+                      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-bold transition-colors ${
+                        p === page
+                          ? 'bg-primary-600 text-white shadow-sm'
+                          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={loading || page >= totalPages}
+                  aria-label="Next page"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
 
           {editing && (
@@ -1456,7 +1560,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               onClose={() => setEditing(null)}
               onSaved={() => {
                 setEditing(null);
-                load(filters);
+                load();
               }}
               showMessage={showMessage}
             />

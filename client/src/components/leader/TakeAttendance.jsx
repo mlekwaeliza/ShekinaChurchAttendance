@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   CheckCircle2,
@@ -17,7 +17,137 @@ import {
   Eraser
 } from 'lucide-react';
 import PhotoViewer from '../PhotoViewer';
-import { formatLocalDate } from '../../utils/date';
+import { formatLocalDate, parseLocalDate } from '../../utils/date';
+
+const STATUS_CONFIG = {
+  present: {
+    active:
+      'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-400/50',
+    inactive:
+      'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400',
+    icon: UserCheck
+  },
+  absent: {
+    active:
+      'bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-lg shadow-rose-500/30 ring-2 ring-rose-400/50',
+    inactive:
+      'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400',
+    icon: UserX
+  },
+  excused: {
+    active:
+      'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 ring-2 ring-amber-400/50',
+    inactive:
+      'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400',
+    icon: Clock
+  }
+};
+
+// Memoized member card: marking one member must not re-render every other
+// card on large rosters. Receives a per-member status string plus stable
+// callbacks, so untouched cards bail out via shallow prop comparison.
+const MemberCard = memo(function MemberCard({
+  member,
+  status,
+  isEditable,
+  onStatusChange,
+  onViewPhoto,
+  t
+}) {
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${
+        status === 'present'
+          ? 'border-emerald-300 dark:border-emerald-700'
+          : status === 'absent'
+            ? 'border-rose-300 dark:border-rose-700'
+            : status === 'excused'
+              ? 'border-amber-300 dark:border-amber-700'
+              : ''
+      }`}
+    >
+      {status && (
+        <div
+          className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+            status === 'present'
+              ? 'from-emerald-500 to-teal-500'
+              : status === 'absent'
+                ? 'from-rose-500 to-pink-500'
+                : 'from-amber-500 to-orange-500'
+          }`}
+        />
+      )}
+
+      <div className="mb-4 relative z-10 pt-1">
+        {/* Avatar */}
+        <div className="flex justify-center mb-3">
+          {member.profile_picture ? (
+            <button
+              type="button"
+              onClick={() => onViewPhoto(member)}
+              aria-label={`View photo of ${member.full_name}`}
+              title="Click to view full photo"
+              className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-black text-white shadow-md cursor-pointer hover:scale-105 hover:ring-2 hover:ring-indigo-400 transition-all focus-ring"
+            >
+              <img
+                src={member.profile_picture}
+                alt={member.full_name}
+                className="h-full w-full object-cover object-[center_20%]"
+              />
+            </button>
+          ) : (
+            <div
+              aria-hidden="true"
+              className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-black text-white shadow-md"
+            >
+              <span>
+                {member.full_name
+                  .split(' ')
+                  .map((n) => n[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()}
+              </span>
+            </div>
+          )}
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5 text-center">
+          ID: {member.membership_id}
+        </p>
+        <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 text-center leading-tight">
+          {member.full_name}
+        </h4>
+        {member.phone && (
+          <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mt-0.5 text-center">
+            {member.phone}
+          </p>
+        )}
+      </div>
+
+      <div className="flex gap-2 relative z-10">
+        {['present', 'absent', 'excused'].map((option) => {
+          const isActive = status === option;
+          const config = STATUS_CONFIG[option];
+          const StatusIcon = config.icon;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => onStatusChange(member.id, option)}
+              disabled={!isEditable}
+              aria-pressed={isActive}
+              aria-label={`Mark ${member.full_name} as ${option}`}
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${isActive ? config.active : config.inactive}`}
+            >
+              <StatusIcon className="w-3.5 h-3.5" />
+              {t(`attendance.${option}`)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
 
 const TakeAttendance = ({
   members,
@@ -62,6 +192,31 @@ const TakeAttendance = ({
   const progress = members.length > 0 ? (completed.length / members.length) * 100 : 0;
   const todayStr = useMemo(() => formatLocalDate(new Date()), []);
   const canBulkEdit = isEditable && members.length > 0;
+
+  // Two-tap confirm on large rosters: bulk actions make it easy to submit
+  // without noticing a mis-tap, so the first tap arms and shows the
+  // present/absent/excused breakdown instead of submitting immediately.
+  const needsConfirm = members.length >= 15;
+  const [confirmArmed, setConfirmArmed] = useState(false);
+  useEffect(() => {
+    setConfirmArmed(false);
+  }, [attendance]);
+  const statusCounts = useMemo(() => {
+    const counts = { present: 0, absent: 0, excused: 0 };
+    Object.values(attendance).forEach((s) => {
+      if (counts[s] !== undefined) counts[s] += 1;
+    });
+    return counts;
+  }, [attendance]);
+  const requestSubmit = () => {
+    if (needsConfirm && !confirmArmed) {
+      setConfirmArmed(true);
+      return;
+    }
+    setConfirmArmed(false);
+    onSubmit();
+  };
+  const confirmLabel = `${t('attendance.confirmSubmit')} (${statusCounts.present} ${t('attendance.present')}, ${statusCounts.absent} ${t('attendance.absent')}, ${statusCounts.excused} ${t('attendance.excused')})`;
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredMembers = useMemo(
     () =>
@@ -89,126 +244,19 @@ const TakeAttendance = ({
     );
   }, [sectionLeaders, attendanceLeaderId]);
 
-  const statusConfig = {
-    present: {
-      active:
-        'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-400/50',
-      inactive:
-        'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400',
-      icon: UserCheck
-    },
-    absent: {
-      active:
-        'bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-lg shadow-rose-500/30 ring-2 ring-rose-400/50',
-      inactive:
-        'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400',
-      icon: UserX
-    },
-    excused: {
-      active:
-        'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 ring-2 ring-amber-400/50',
-      inactive:
-        'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400',
-      icon: Clock
-    }
-  };
-
-  const MemberCard = ({ member }) => {
-    const currentStatus = attendance[member.id];
-    return (
-      <div
-        className={`group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${
-          currentStatus === 'present'
-            ? 'border-emerald-300 dark:border-emerald-700'
-            : currentStatus === 'absent'
-              ? 'border-rose-300 dark:border-rose-700'
-              : currentStatus === 'excused'
-                ? 'border-amber-300 dark:border-amber-700'
-                : ''
-        }`}
-      >
-        {currentStatus && (
-          <div
-            className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
-              currentStatus === 'present'
-                ? 'from-emerald-500 to-teal-500'
-                : currentStatus === 'absent'
-                  ? 'from-rose-500 to-pink-500'
-                  : 'from-amber-500 to-orange-500'
-            }`}
-          />
-        )}
-
-        <div className="mb-4 relative z-10 pt-1">
-          {/* Avatar */}
-          <div className="flex justify-center mb-3">
-            {member.profile_picture ? (
-              <button
-                type="button"
-                onClick={() => setSelectedPhotoMember(member)}
-                aria-label={`View photo of ${member.full_name}`}
-                title="Click to view full photo"
-                className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-black text-white shadow-md cursor-pointer hover:scale-105 hover:ring-2 hover:ring-indigo-400 transition-all focus-ring"
-              >
-                <img
-                  src={member.profile_picture}
-                  alt={member.full_name}
-                  className="h-full w-full object-cover object-[center_20%]"
-                />
-              </button>
-            ) : (
-              <div
-                aria-hidden="true"
-                className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-black text-white shadow-md"
-              >
-                <span>
-                  {member.full_name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .slice(0, 2)
-                    .join('')
-                    .toUpperCase()}
-                </span>
-              </div>
-            )}
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5 text-center">
-            ID: {member.membership_id}
-          </p>
-          <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 text-center leading-tight">
-            {member.full_name}
-          </h4>
-          {member.phone && (
-            <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mt-0.5 text-center">
-              {member.phone}
-            </p>
-          )}
-        </div>
-
-        <div className="flex gap-2 relative z-10">
-          {['present', 'absent', 'excused'].map((status) => {
-            const isActive = attendance[member.id] === status;
-            const config = statusConfig[status];
-            const StatusIcon = config.icon;
-            return (
-              <button
-                key={status}
-                type="button"
-                onClick={() => onStatusChange(member.id, status)}
-                disabled={!isEditable}
-                aria-pressed={isActive}
-                aria-label={`Mark ${member.full_name} as ${status}`}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${isActive ? config.active : config.inactive}`}
-              >
-                <StatusIcon className="w-3.5 h-3.5" />
-                {t(`attendance.${status}`)}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
+  // Renders one member card. Props are primitives/stable callbacks so memo
+  // skips untouched cards when a sibling's status changes.
+  const renderMemberCard = (member) => (
+    <MemberCard
+      key={member.id}
+      member={member}
+      status={attendance[member.id]}
+      isEditable={isEditable}
+      onStatusChange={onStatusChange}
+      onViewPhoto={setSelectedPhotoMember}
+      t={t}
+    />
+  );
 
   const isOfflineSubmit = !isOnline && queuedForDate;
   const submittedCount = sectionLeaders.filter((l) => l.has_submitted).length;
@@ -225,7 +273,7 @@ const TakeAttendance = ({
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
               {t('attendance.markAttendanceFor')}:{' '}
               <span className="text-primary-600 font-bold">{serviceName}</span> •{' '}
-              {new Date(selectedDate).toLocaleDateString(undefined, {
+              {parseLocalDate(selectedDate).toLocaleDateString(undefined, {
                 weekday: 'long',
                 month: 'short',
                 day: 'numeric'
@@ -398,18 +446,31 @@ const TakeAttendance = ({
           <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-700">
             <button
               type="button"
-              onClick={() => onBulkMark?.('present')}
-              disabled={!canBulkEdit}
-              title={t('attendance.markAllPresent')}
+              onClick={() =>
+                onBulkMark?.(
+                  'present',
+                  filteredMembers.map((m) => m.id)
+                )
+              }
+              disabled={!canBulkEdit || filteredMembers.length === 0}
+              title={`${t('attendance.markAllPresent')} (${filteredMembers.length})`}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ListChecks className="h-4 w-4" />
               {t('attendance.markAllPresent')}
+              {filteredMembers.length !== members.length && (
+                <span className="opacity-80">({filteredMembers.length})</span>
+              )}
             </button>
             <button
               type="button"
-              onClick={() => onBulkMark?.(null)}
-              disabled={!canBulkEdit || completed.length === 0}
+              onClick={() =>
+                onBulkMark?.(
+                  null,
+                  filteredMembers.map((m) => m.id)
+                )
+              }
+              disabled={!canBulkEdit || !filteredMembers.some((m) => attendance[m.id])}
               title={t('attendance.clearMarks')}
               className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"
             >
@@ -476,9 +537,7 @@ const TakeAttendance = ({
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredUnmarked.map((member) => (
-                  <MemberCard key={member.id} member={member} />
-                ))}
+                {filteredUnmarked.map((member) => renderMemberCard(member))}
               </div>
             </div>
           )}
@@ -497,12 +556,14 @@ const TakeAttendance = ({
               </p>
 
               <button
-                onClick={onSubmit}
+                onClick={requestSubmit}
                 disabled={submitting}
                 className={`w-full max-w-sm py-4 text-base font-bold rounded-2xl transition-all duration-300 ${
-                  !isOnline
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20'
-                    : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1'
+                  confirmArmed
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl shadow-amber-500/20 hover:-translate-y-1'
+                    : !isOnline
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20'
+                      : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1'
                 }`}
               >
                 {submitting ? (
@@ -510,6 +571,8 @@ const TakeAttendance = ({
                     <Loader2 className="w-5 h-5 animate-spin" />
                     {t('attendance.submitting')}
                   </span>
+                ) : confirmArmed ? (
+                  confirmLabel
                 ) : !isOnline ? (
                   <span className="flex items-center justify-center gap-2">
                     <CloudOff className="w-5 h-5" />
@@ -582,9 +645,7 @@ const TakeAttendance = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredMembers.map((member) => (
-                  <MemberCard key={member.id} member={member} />
-                ))}
+                {filteredMembers.map((member) => renderMemberCard(member))}
               </div>
             </div>
           )}
@@ -636,9 +697,7 @@ const TakeAttendance = ({
                 </h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
-                {filteredCompleted.map((member) => (
-                  <MemberCard key={member.id} member={member} />
-                ))}
+                {filteredCompleted.map((member) => renderMemberCard(member))}
               </div>
             </div>
           )}
@@ -663,16 +722,28 @@ const TakeAttendance = ({
           </p>
           <button
             type="button"
-            onClick={onSubmit}
+            onClick={requestSubmit}
             disabled={submitting || unmarked.length > 0}
-            title={unmarked.length > 0 ? t('attendance.completeToSubmit') : t('attendance.submit')}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition-all hover:from-emerald-700 hover:to-teal-700 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 disabled:shadow-none dark:disabled:from-slate-700 dark:disabled:to-slate-700 dark:disabled:text-slate-400"
+            title={
+              unmarked.length > 0
+                ? t('attendance.completeToSubmit')
+                : confirmArmed
+                  ? confirmLabel
+                  : t('attendance.submit')
+            }
+            className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:shadow-none ${
+              confirmArmed
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20 hover:from-amber-600 hover:to-orange-600'
+                : 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 dark:disabled:from-slate-700 dark:disabled:to-slate-700 dark:disabled:text-slate-400'
+            }`}
           >
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 {t('attendance.submitting')}
               </>
+            ) : confirmArmed ? (
+              confirmLabel
             ) : (
               <>{t('attendance.submit')} →</>
             )}
