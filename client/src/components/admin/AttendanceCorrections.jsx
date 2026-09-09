@@ -782,9 +782,25 @@ const AttendanceCorrections = ({ showMessage }) => {
   // Missing submissions state
   const [mlsDate, setMlsDate] = useState(formatLocalDate(new Date()));
   const [mlsServiceId, setMlsServiceId] = useState(1);
+  const [mlsServices, setMlsServices] = useState([]);
   const [mlsData, setMlsData] = useState(null);
   const [mlsLoading, setMlsLoading] = useState(false);
   const [bulkLeader, setBulkLeader] = useState(null);
+
+  // Load real service types so the missing-submissions filter matches the
+  // services leaders actually submit against (falls back to Main/Midweek).
+  useEffect(() => {
+    let cancelled = false;
+    adminAPI
+      .getServiceTypes()
+      .then((res) => {
+        if (!cancelled && Array.isArray(res.data)) setMlsServices(res.data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ── Tab 1: Edit Attendance (unchanged) ──
   const load = async (activeFilters = filters) => {
@@ -1471,8 +1487,17 @@ const AttendanceCorrections = ({ showMessage }) => {
                   onChange={(e) => setMlsServiceId(Number(e.target.value))}
                   className="input h-9 text-xs"
                 >
-                  <option value={1}>Main</option>
-                  <option value={2}>Midweek</option>
+                  {(mlsServices.length > 0
+                    ? mlsServices
+                    : [
+                        { id: 1, name: 'Main' },
+                        { id: 2, name: 'Midweek' }
+                      ]
+                  ).map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <button

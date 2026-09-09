@@ -57,7 +57,7 @@ const LeaderDashboard = () => {
   const handleSubmitAndRedirect = async () => {
     const success = await data.handleSubmit();
     if (success) {
-      alert('Attendance submitted successfully!');
+      data.showMessage('Attendance submitted successfully!');
       navigate('/leader');
     }
   };
@@ -104,6 +104,7 @@ const LeaderDashboard = () => {
             actingOnBehalf={data.actingOnBehalf}
             onAttendanceLeaderChange={data.handleAttendanceLeaderSelection}
             onStatusChange={data.handleStatusChange}
+            onBulkMark={data.handleBulkMark}
             onSubmit={handleSubmitAndRedirect}
             isOnline={data.isOnline}
             queuedForDate={data.queuedForDate}

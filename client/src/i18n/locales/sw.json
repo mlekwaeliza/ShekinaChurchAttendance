@@ -189,6 +189,9 @@
     "filterAll": "Wote",
     "filterUnmarked": "Hawajaorodheshwa",
     "filterMarked": "Walioorodheshwa",
+    "markAllPresent": "Weka wote wamefika",
+    "clearMarks": "Futa alama",
+    "completeToSubmit": "Weka alama kwa wanachama wote ili kuwasilisha",
     "tabs": {
       "overview": "Muhtasari",
       "compare": "Linganisha",

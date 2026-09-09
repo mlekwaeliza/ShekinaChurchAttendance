@@ -189,6 +189,9 @@
     "filterAll": "All",
     "filterUnmarked": "Unmarked",
     "filterMarked": "Marked",
+    "markAllPresent": "Mark all present",
+    "clearMarks": "Clear marks",
+    "completeToSubmit": "Mark all members to enable submission",
     "tabs": {
       "overview": "Overview",
       "compare": "Compare",

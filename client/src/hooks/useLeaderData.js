@@ -486,6 +486,24 @@ const useLeaderData = () => {
     [submitted, editMode]
   );
 
+  // Bulk-mark every eligible roster member (e.g. "Mark all present") or clear
+  // all marks when status is null. Respects the submitted/edit-mode lock.
+  const handleBulkMark = useCallback(
+    (status) => {
+      if (submitted && !editMode) return;
+      if (status == null) {
+        setAttendance({});
+        return;
+      }
+      const next = {};
+      eligibleMembers.forEach((m) => {
+        next[m.id] = status;
+      });
+      setAttendance(next);
+    },
+    [submitted, editMode, eligibleMembers]
+  );
+
   const handleToggleEdit = useCallback(() => {
     setEditError('');
     setEditMode((prev) => !prev);
@@ -813,6 +831,7 @@ const useLeaderData = () => {
     actingOnBehalf,
     handleAttendanceLeaderSelection,
     handleStatusChange,
+    handleBulkMark,
     handleSubmit,
     queuedForDate,
     submitError,
