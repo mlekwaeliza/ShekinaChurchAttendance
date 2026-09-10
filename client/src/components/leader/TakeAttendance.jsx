@@ -164,6 +164,8 @@ const TakeAttendance = ({
   onBulkMark,
   onSubmit,
   isOnline,
+  pendingCount = 0,
+  syncing = false,
   queuedForDate,
   isUnauthorized,
   isHead = false,
@@ -493,6 +495,28 @@ const TakeAttendance = ({
           <p className="text-sm font-medium">
             You are offline. Attendance will be saved locally and synced automatically when you
             reconnect.
+            {pendingCount > 0 && (
+              <span className="font-bold">
+                {' '}
+                {pendingCount} submission{pendingCount === 1 ? '' : 's'} waiting to sync.
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Pending sync status — visible while online until the queue drains */}
+      {isOnline && pendingCount > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-900/20 dark:to-indigo-900/20 border border-sky-200/60 dark:border-sky-700/60 text-sky-800 dark:text-sky-300">
+          {syncing ? (
+            <Loader2 className="w-5 h-5 shrink-0 animate-spin" />
+          ) : (
+            <CloudOff className="w-5 h-5 shrink-0" />
+          )}
+          <p className="text-sm font-medium" aria-live="polite">
+            {syncing
+              ? `Syncing ${pendingCount} offline submission${pendingCount === 1 ? '' : 's'}…`
+              : `${pendingCount} offline submission${pendingCount === 1 ? '' : 's'} still pending — they will sync automatically. Keep the app open.`}
           </p>
         </div>
       )}

@@ -12,11 +12,9 @@ import {
   Calendar,
   Download,
   Printer,
-  FileText,
   Activity,
   Shield,
   X,
-  Zap,
   Award,
   Clock,
   Eye,
@@ -44,216 +42,13 @@ import Badge from '../ui/Badge';
 import { fdate, fdatetime } from '../../utils/date';
 import ExecutiveComparison from './ExecutiveComparison';
 import ExecutiveSummary from './ExecutiveSummary';
+import DepartmentsTab from './reports/DepartmentsTab';
+import HistoryTab from './reports/HistoryTab';
+import InsightsTab from './reports/InsightsTab';
+import { R, asArray, escapeHtml, weekToDate, TABS } from './reports/reportShared';
 
-const R = (v) => Math.round(Number(v) || 0);
-const asArray = (v) => (Array.isArray(v) ? v : []);
-const escapeHtml = (str) =>
-  String(str ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-const MONTHS_SHORT = [
-  '',
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec'
-];
-const weekToDate = (weekStr) => {
-  const [y, w] = String(weekStr).split('-W').map(Number);
-  if (!y || !w) return weekStr;
-  const simple = new Date(Date.UTC(y, 0, 1 + (w - 1) * 7));
-  const day = simple.getUTCDay();
-  const isoStart = new Date(simple);
-  if (day <= 4) isoStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
-  else isoStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
-  return `${isoStart.getUTCDate()} ${MONTHS_SHORT[isoStart.getUTCMonth() + 1]}`;
-};
-
-const TABS = [
-  { id: 'overview', label: 'Overview', icon: Eye },
-  { id: 'compare', label: 'Compare', icon: ArrowUp },
-  { id: 'performance', label: 'Performance', icon: Layers },
-  { id: 'members', label: 'Members', icon: UserCheck },
-  { id: 'history', label: 'History', icon: Calendar },
-  { id: 'ai', label: 'AI Insights', icon: Zap }
-];
-
-const MetricCard = ({ label, value, previousValue, icon: Icon, showDiff = true, suffix = '' }) => {
-  const num = typeof value === 'number' ? value : Number(value) || 0;
-  const prevNum = typeof previousValue === 'number' ? previousValue : Number(previousValue) || 0;
-  const diff = showDiff && previousValue != null ? num - prevNum : null;
-  const pctDiff = showDiff && prevNum > 0 ? Math.round(((num - prevNum) / prevNum) * 100) : null;
-  return (
-    <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-          {label}
-        </span>
-        {Icon && (
-          <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-700 flex items-center justify-center">
-            <Icon className="w-3.5 h-3.5 text-slate-500" />
-          </div>
-        )}
-      </div>
-      <p className="text-xl font-bold text-slate-900 dark:text-white">
-        {suffix === '%' ? R(num) : num.toLocaleString()}
-        {suffix}
-      </p>
-      {diff != null && (
-        <div className="flex items-center gap-1.5 mt-1">
-          <span
-            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}
-          >
-            {diff >= 0 ? '+' : ''}
-            {diff.toLocaleString()}
-            {suffix}
-          </span>
-          {pctDiff != null && (
-            <span
-              className={`text-[10px] font-medium ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
-            >
-              ({diff >= 0 ? '+' : ''}
-              {pctDiff}%)
-            </span>
-          )}
-        </div>
-      )}
-      {previousValue != null && showDiff && (
-        <p className="text-[9px] text-slate-400 mt-0.5">
-          Prev: {prevNum.toLocaleString()}
-          {suffix}
-        </p>
-      )}
-    </div>
-  );
-};
-
-const IntelligenceTable = ({ columns, data, onRowClick, emptyMessage = 'No data available' }) => {
-  const [sortKey, setSortKey] = useState(null);
-  const [sortDir, setSortDir] = useState('desc');
-
-  const handleSort = (key) => {
-    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    else {
-      setSortKey(key);
-      setSortDir('desc');
-    }
-  };
-
-  const sorted = useMemo(() => {
-    if (!sortKey) return data;
-    return [...data].sort((a, b) => {
-      const aVal = a[sortKey] ?? 0;
-      const bVal = b[sortKey] ?? 0;
-      if (typeof aVal === 'string')
-        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-  }, [data, sortKey, sortDir]);
-
-  if (!data.length)
-    return <div className="text-center py-12 text-slate-400 text-sm">{emptyMessage}</div>;
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
-          <tr className="border-b border-slate-200 dark:border-slate-700">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                onClick={() => col.sortable !== false && handleSort(col.key)}
-                className={`py-2.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.sortable !== false ? 'cursor-pointer hover:text-slate-600' : ''}`}
-              >
-                <span className="inline-flex items-center gap-1">
-                  {col.label}
-                  {sortKey === col.key &&
-                    (sortDir === 'asc' ? (
-                      <ChevronUp className="w-3 h-3" />
-                    ) : (
-                      <ChevronDown className="w-3 h-3" />
-                    ))}
-                </span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row, i) => (
-            <tr
-              key={row.id || i}
-              onClick={() => (onRowClick ? onRowClick(row) : null)}
-              title={onRowClick ? 'Click to view attendance details' : undefined}
-              className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${onRowClick ? 'cursor-pointer hover:ring-1 hover:ring-indigo-300 dark:hover:ring-indigo-700' : ''}`}
-            >
-              {columns.map((col) => (
-                <td
-                  key={col.key}
-                  className={`py-2.5 px-3 ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.className || ''}`}
-                >
-                  {col.render ? col.render(row[col.key], row, i) : (row[col.key] ?? '—')}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-const InsightCard = ({ insight }) => {
-  const typeColors = {
-    success: {
-      bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-      border: 'border-emerald-200 dark:border-emerald-800',
-      icon: 'text-emerald-600',
-      iconBg: 'bg-emerald-100 dark:bg-emerald-900/30'
-    },
-    warning: {
-      bg: 'bg-amber-50 dark:bg-amber-900/20',
-      border: 'border-amber-200 dark:border-amber-800',
-      icon: 'text-amber-600',
-      iconBg: 'bg-amber-100 dark:bg-amber-900/30'
-    },
-    danger: {
-      bg: 'bg-rose-50 dark:bg-rose-900/20',
-      border: 'border-rose-200 dark:border-rose-800',
-      icon: 'text-rose-600',
-      iconBg: 'bg-rose-100 dark:bg-rose-900/30'
-    },
-    info: {
-      bg: 'bg-sky-50 dark:bg-sky-900/20',
-      border: 'border-sky-200 dark:border-sky-800',
-      icon: 'text-sky-600',
-      iconBg: 'bg-sky-100 dark:bg-sky-900/30'
-    }
-  };
-  const c = typeColors[insight.type] || typeColors.info;
-  const Icon = insight.icon || Info;
-  return (
-    <div className={`flex items-start gap-3 rounded-xl border ${c.border} ${c.bg} p-3`}>
-      <div className={`w-7 h-7 rounded-lg ${c.iconBg} flex items-center justify-center shrink-0`}>
-        <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
-      </div>
-      <p className="text-xs text-slate-700 dark:text-slate-300">
-        {typeof insight.text === 'string' ? insight.text : String(insight.text ?? '')}
-      </p>
-    </div>
-  );
-};
+/* MetricCard, IntelligenceTable, InsightCard and shared helpers live in
+   ./reports/reportShared.jsx — imported above. */
 
 const AttendanceReports = ({
   filterType,
@@ -273,21 +68,11 @@ const AttendanceReports = ({
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [departmentsData, setDepartmentsData] = useState([]);
   const [, setDepartmentsLoading] = useState(false);
-  const [, setComparisonData] = useState({});
-  const [, setCompError] = useState(null);
   const [historicalData, setHistoricalData] = useState({});
-  const [compType] = useState('overall');
-  const [compPeriod] = useState('week');
-  const [p1Start] = useState('');
-  const [p1End] = useState('');
-  const [p2Start] = useState('');
-  const [p2End] = useState('');
   const [comparisonMode] = useState('week');
   const [historicalPeriod, setHistoricalPeriod] = useState('monthly');
   const [customDate1, setCustomDate1] = useState('');
   const [customDate2, setCustomDate2] = useState('');
-  const [selectedWeekDate, setSelectedWeekDate] = useState('');
-  const [comparisonWeekDate, setComparisonWeekDate] = useState('');
   const [secPeriod, setSecPeriod] = useState('month');
   const [secP1Start, setSecP1Start] = useState('');
   const [secP1End, setSecP1End] = useState('');
@@ -343,12 +128,6 @@ const AttendanceReports = ({
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
-  useEffect(() => {
-    const now = new Date();
-    setSelectedWeekDate(toDateStr(now));
-    setComparisonWeekDate(toDateStr(new Date(now.getTime() - 7 * 86400000)));
-  }, []);
-
   const loadDepartments = async (mode) => {
     setDepartmentsLoading(true);
     try {
@@ -363,228 +142,18 @@ const AttendanceReports = ({
     }
   };
 
+  // Departments feed the performance tab only — load on first visit, retry
+  // on revisit while empty (e.g. after a failed load).
   useEffect(() => {
-    loadDepartments(comparisonMode);
-  }, [comparisonMode]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const getCompDates = (period) => {
-    const now = new Date();
-    let cStart, cEnd, pStart, pEnd;
-    switch (period) {
-      case 'week': {
-        const dow = now.getDay();
-        const mon = new Date(now);
-        mon.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
-        const sun = new Date(mon);
-        sun.setDate(mon.getDate() + 6);
-        const pMon = new Date(mon);
-        pMon.setDate(mon.getDate() - 7);
-        const pSun = new Date(sun);
-        pSun.setDate(sun.getDate() - 7);
-        cStart = toDateStr(mon);
-        cEnd = toDateStr(sun);
-        pStart = toDateStr(pMon);
-        pEnd = toDateStr(pSun);
-        break;
-      }
-      case 'month': {
-        const y = now.getFullYear(),
-          m = now.getMonth();
-        cStart = toDateStr(new Date(y, m, 1));
-        cEnd = toDateStr(new Date(y, m + 1, 0));
-        pStart = toDateStr(new Date(y, m - 1, 1));
-        pEnd = toDateStr(new Date(y, m, 0));
-        break;
-      }
-      case 'quarter': {
-        const q = Math.floor(now.getMonth() / 3);
-        cStart = toDateStr(new Date(now.getFullYear(), q * 3, 1));
-        cEnd = toDateStr(new Date(now.getFullYear(), q * 3 + 3, 0));
-        pStart = toDateStr(new Date(now.getFullYear(), q * 3 - 3, 1));
-        pEnd = toDateStr(new Date(now.getFullYear(), q * 3, 0));
-        break;
-      }
-      case 'year': {
-        cStart = `${now.getFullYear()}-01-01`;
-        cEnd = `${now.getFullYear()}-12-31`;
-        pStart = `${now.getFullYear() - 1}-01-01`;
-        pEnd = `${now.getFullYear() - 1}-12-31`;
-        break;
-      }
-      case 'custom': {
-        if (p1Start && p1End && p2Start && p2End) {
-          cStart = p1Start;
-          cEnd = p1End;
-          pStart = p2Start;
-          pEnd = p2End;
-        } else return null;
-        break;
-      }
-      case 'churchWeek': {
-        if (!selectedWeekDate || !comparisonWeekDate) return null;
-        const d1 = new Date(selectedWeekDate + 'T12:00:00');
-        const dow1 = d1.getDay();
-        const sun1 = new Date(d1);
-        sun1.setDate(d1.getDate() - dow1);
-        const fri1 = new Date(sun1);
-        fri1.setDate(sun1.getDate() + 5);
-
-        const d2 = new Date(comparisonWeekDate + 'T12:00:00');
-        const dow2 = d2.getDay();
-        const sun2 = new Date(d2);
-        sun2.setDate(d2.getDate() - dow2);
-        const fri2 = new Date(sun2);
-        fri2.setDate(sun2.getDate() + 5);
-
-        cStart = toDateStr(sun1);
-        cEnd = toDateStr(fri1);
-        pStart = toDateStr(sun2);
-        pEnd = toDateStr(fri2);
-        break;
-      }
-      default:
-        return null;
+    if (activeTab === 'performance' && departmentsData.length === 0) {
+      loadDepartments(comparisonMode);
     }
-    return { cStart, cEnd, pStart, pEnd };
-  };
+  }, [activeTab, comparisonMode, departmentsData.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadComparisonData = async () => {
-    const dates = getCompDates(compPeriod);
-    if (!dates) return;
-    setAnalyticsLoading(true);
-    setCompError(null);
-    try {
-      if (compType === 'overall') {
-        const res = await analyticsAPI.getComparison({
-          period1Start: dates.cStart,
-          period1End: dates.cEnd,
-          period2Start: dates.pStart,
-          period2End: dates.pEnd
-        });
-        const d = res.data || {};
-        setComparisonData({
-          type: 'overall',
-          current: {
-            present: d.p1_present || 0,
-            absent: d.p1_absent || 0,
-            excused: d.p1_excused || 0,
-            total: d.p1_total || 0,
-            records: d.p1_records || 0,
-            rate: d.p1_rate || 0,
-            serviceDays: d.p1_service_days || 0,
-            leadersSubmitted: d.p1_leaders_submitted || 0,
-            activeSections: d.p1_active_sections || 0
-          },
-          previous: {
-            present: d.p2_present || 0,
-            absent: d.p2_absent || 0,
-            excused: d.p2_excused || 0,
-            total: d.p2_total || 0,
-            records: d.p2_records || 0,
-            rate: d.p2_rate || 0,
-            serviceDays: d.p2_service_days || 0,
-            leadersSubmitted: d.p2_leaders_submitted || 0,
-            activeSections: d.p2_active_sections || 0
-          },
-          totalLeaders: d.total_leaders || 0,
-          dates
-        });
-      } else if (compType === 'sections') {
-        const [curRes, prevRes] = await Promise.all([
-          analyticsAPI.getSectionComparison(365, dates.cStart, dates.cEnd),
-          analyticsAPI.getSectionComparison(365, dates.pStart, dates.pEnd)
-        ]);
-        setComparisonData({
-          type: 'sections',
-          currentList: curRes.data || [],
-          previousList: prevRes.data || [],
-          dates
-        });
-      } else if (compType === 'leaders') {
-        const [curRes, prevRes] = await Promise.all([
-          analyticsAPI.getLeaderTrends({ start_date: dates.cStart, end_date: dates.cEnd }),
-          analyticsAPI.getLeaderTrends({ start_date: dates.pStart, end_date: dates.pEnd })
-        ]);
-        setComparisonData({
-          type: 'leaders',
-          currentList: curRes.data || [],
-          previousList: prevRes.data || [],
-          dates
-        });
-      } else if (compType === 'departments') {
-        const [curRes, prevRes] = await Promise.all([
-          analyticsAPI.getDepartments(365, dates.cStart, dates.cEnd),
-          analyticsAPI.getDepartments(365, dates.pStart, dates.pEnd)
-        ]);
-        setComparisonData({
-          type: 'departments',
-          currentList: curRes.data || [],
-          previousList: prevRes.data || [],
-          dates
-        });
-      } else if (compType === 'services') {
-        const [curRes, prevRes] = await Promise.all([
-          analyticsAPI.getServiceComparison(365, dates.cStart, dates.cEnd),
-          analyticsAPI.getServiceComparison(365, dates.pStart, dates.pEnd)
-        ]);
-        setComparisonData({
-          type: 'services',
-          currentList: curRes.data || [],
-          previousList: prevRes.data || [],
-          dates
-        });
-      } else if (compType === 'daily') {
-        const isCW = compPeriod === 'churchWeek';
-        if (isCW) {
-          const [curRes, prevRes] = await Promise.all([
-            analyticsAPI.getHistorical({ startDate: dates.cStart, endDate: dates.cEnd }),
-            analyticsAPI.getHistorical({ startDate: dates.pStart, endDate: dates.pEnd })
-          ]);
-          const daily = (curRes.data?.daily || []).map((r) => ({
-            date: r.date,
-            present: r.present || 0,
-            absent: r.absent || 0,
-            excused: r.excused || 0,
-            total: r.total || 0,
-            rate: r.rate || 0
-          }));
-          const previousDaily = (prevRes.data?.daily || []).map((r) => ({
-            date: r.date,
-            present: r.present || 0,
-            absent: r.absent || 0,
-            excused: r.excused || 0,
-            total: r.total || 0,
-            rate: r.rate || 0
-          }));
-          setComparisonData({ type: 'daily', daily, previousDaily, dates });
-        } else {
-          const res = await analyticsAPI.getHistorical({
-            startDate: dates.cStart,
-            endDate: dates.cEnd
-          });
-          const daily = (res.data?.daily || []).map((r) => ({
-            date: r.date,
-            present: r.present || 0,
-            absent: r.absent || 0,
-            excused: r.excused || 0,
-            total: r.total || 0,
-            rate: r.rate || 0
-          }));
-          setComparisonData({ type: 'daily', daily, dates });
-        }
-      }
-    } catch (e) {
-      console.error('Comparison load error:', e.message, e);
-      setCompError(e.message || 'Failed to load comparison data');
-      setComparisonData({});
-    } finally {
-      setAnalyticsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadComparisonData();
-  }, [compType, compPeriod]); // eslint-disable-line react-hooks/exhaustive-deps
+  // NOTE: a legacy loadComparisonData fan-out (getComparison, leader
+  // trends, service comparison ×2 each) was removed — it wrote only to
+  // write-only state no tab reads, while toggling the page loading flag.
+  // The compare tab renders ExecutiveComparison, which fetches its own data.
 
   const modeToMonths = { daily: 1, weekly: 3, monthly: 12, quarterly: 24, yearly: 60 };
 
@@ -708,11 +277,17 @@ const AttendanceReports = ({
     }
   };
 
+  // Section intelligence feeds the performance tab only — fetch on first
+  // visit and whenever its period inputs change while visiting.
+  const secLoadedSigRef = useRef('');
+  const secSig = [secPeriod, secP1Start, secP1End, secP2Start, secP2End].join('|');
   useEffect(() => {
-    if (secPeriod !== 'custom' || (secP1Start && secP1End && secP2Start && secP2End)) {
-      loadSectionIntelligence();
-    }
-  }, [secPeriod, secP1Start, secP1End, secP2Start, secP2End]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (activeTab !== 'performance') return;
+    if (secPeriod === 'custom' && !(secP1Start && secP1End && secP2Start && secP2End)) return;
+    if (secLoadedSigRef.current === secSig) return;
+    secLoadedSigRef.current = secSig;
+    loadSectionIntelligence();
+  }, [activeTab, secSig, secPeriod, secP1Start, secP1End, secP2Start, secP2End]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (secPeriod === 'custom' && !secP1Start) {
@@ -2983,118 +2558,7 @@ const AttendanceReports = ({
     );
   };
 
-  const renderDepartmentsTab = () => {
-    const depts = departmentsData;
-    return (
-      <div className="space-y-6">
-        {depts.length > 0 ? (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Department Report
-              </h3>
-            </div>
-            <IntelligenceTable
-              columns={[
-                {
-                  key: 'rank',
-                  label: '#',
-                  render: (_, __, i) => (
-                    <span className="text-xs font-bold text-slate-400">#{i + 1}</span>
-                  )
-                },
-                {
-                  key: 'name',
-                  label: 'Department',
-                  render: (v) => (
-                    <span className="font-medium text-slate-900 dark:text-white">{v}</span>
-                  )
-                },
-                { key: 'member_count', label: 'Members', align: 'right' },
-                {
-                  key: 'present',
-                  label: 'Present',
-                  align: 'right',
-                  render: (v) => <span className="text-emerald-600">{v || 0}</span>
-                },
-                {
-                  key: 'absent',
-                  label: 'Absent',
-                  align: 'right',
-                  render: (v) => <span className="text-rose-500">{v || 0}</span>
-                },
-                {
-                  key: 'attendance_rate',
-                  label: 'Rate',
-                  align: 'right',
-                  render: (v) => (
-                    <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>
-                      {R(v)}%
-                    </Badge>
-                  )
-                },
-                {
-                  key: 'rate_change',
-                  label: 'Diff',
-                  align: 'right',
-                  render: (v) => {
-                    const d = Number(v) || 0;
-                    return (
-                      <span
-                        className={`font-bold ${d >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
-                      >
-                        {d >= 0 ? '+' : ''}
-                        {R(d)}%
-                      </span>
-                    );
-                  }
-                },
-                {
-                  key: 'growth_rate',
-                  label: 'Growth',
-                  align: 'right',
-                  render: (v) => (
-                    <span className={v >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
-                      {v >= 0 ? '+' : ''}
-                      {R(v)}%
-                    </span>
-                  )
-                },
-                {
-                  key: 'consistency_score',
-                  label: 'Consistency',
-                  align: 'right',
-                  render: (v) => (
-                    <span
-                      className={`font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}
-                    >
-                      {v || 0}
-                    </span>
-                  )
-                },
-                {
-                  key: 'performance_score',
-                  label: 'Score',
-                  align: 'right',
-                  render: (v) => (
-                    <Badge variant={v >= 75 ? 'success' : v >= 50 ? 'warning' : 'danger'}>
-                      {v || 0}
-                    </Badge>
-                  )
-                }
-              ]}
-              data={depts.map((d, i) => ({ ...d, rank: i + 1 }))}
-            />
-          </div>
-        ) : (
-          <div className="text-center py-12 text-slate-400 text-sm">
-            <BarChart3 className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-            Department data not available for current filter
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderDepartmentsTab = () => <DepartmentsTab departmentsData={departmentsData} />;
 
   const renderMembersTab = () => {
     const rawMembers = asArray(analytics.memberIntelligence);
@@ -4301,217 +3765,17 @@ const AttendanceReports = ({
     );
   };
 
-  const renderHistoricalTab = () => {
-    const hist = historicalData;
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-2 flex-wrap">
-          {['daily', 'weekly', 'monthly', 'quarterly', 'yearly'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setHistoricalPeriod(p)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${historicalPeriod === p ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700'}`}
-            >
-              {p.charAt(0).toUpperCase() + p.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <MetricCard
-            label="Highest Attendance"
-            value={hist.highest || 0}
-            icon={TrendingUp}
-            color="emerald"
-            showDiff={false}
-          />
-          <MetricCard
-            label="Lowest Attendance"
-            value={hist.lowest || 0}
-            icon={TrendingDown}
-            color="rose"
-            showDiff={false}
-          />
-          <MetricCard
-            label="Average Attendance"
-            value={hist.average || 0}
-            icon={Activity}
-            color="indigo"
-            showDiff={false}
-          />
-          <MetricCard
-            label="Total Records"
-            value={hist.total_records || 0}
-            icon={FileText}
-            color="slate"
-            showDiff={false}
-          />
-          <MetricCard
-            label="Attendance Rate"
-            value={hist.avg_rate || 0}
-            suffix="%"
-            icon={Target}
-            color="sky"
-            showDiff={false}
-          />
-        </div>
-
-        {historicalData.daily?.length > 0 && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Historical Attendance Records
-              </h3>
-            </div>
-            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-              <table className="min-w-full text-sm">
-                <thead className="sticky top-0 bg-white dark:bg-slate-800">
-                  <tr className="border-b border-slate-200 dark:border-slate-700">
-                    {['Date', 'Present', 'Absent', 'Excused', 'Total', 'Rate'].map((h) => (
-                      <th
-                        key={h}
-                        className={`py-2 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Date' ? 'text-left' : 'text-right'}`}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {historicalData.daily.slice(0, 60).map((t, i) => {
-                    const rate =
-                      t.total_members > 0
-                        ? Math.round((t.present_count / t.total_members) * 100)
-                        : 0;
-                    return (
-                      <tr
-                        key={i}
-                        className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
-                      >
-                        <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">
-                          {fdate(t.date)}
-                        </td>
-                        <td className="py-2 px-3 text-right text-emerald-600">{t.present_count}</td>
-                        <td className="py-2 px-3 text-right text-rose-500">{t.absent_count}</td>
-                        <td className="py-2 px-3 text-right text-amber-500">{t.excused_count}</td>
-                        <td className="py-2 px-3 text-right font-medium">{t.total_members}</td>
-                        <td className="py-2 px-3 text-right">
-                          <Badge
-                            variant={rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger'}
-                          >
-                            {rate}%
-                          </Badge>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {analytics.yearOverYear?.length > 0 && (
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Year-over-Year Comparison
-              </h3>
-            </div>
-            <IntelligenceTable
-              columns={[
-                { key: 'month_name', label: 'Month' },
-                {
-                  key: 'current_rate',
-                  label: 'Current',
-                  align: 'right',
-                  render: (v) => <span className="font-bold">{R(v)}%</span>
-                },
-                {
-                  key: 'previous_rate',
-                  label: 'Previous',
-                  align: 'right',
-                  render: (v) => <span className="text-slate-500">{R(v)}%</span>
-                },
-                {
-                  key: 'difference',
-                  label: 'Difference',
-                  align: 'right',
-                  render: (v) => (
-                    <span className={`font-bold ${v >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {v >= 0 ? '+' : ''}
-                      {R(v)}%
-                    </span>
-                  )
-                }
-              ]}
-              data={analytics.yearOverYear}
-            />
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderHistoricalTab = () => (
+    <HistoryTab
+      historicalData={historicalData}
+      historicalPeriod={historicalPeriod}
+      onPeriodChange={setHistoricalPeriod}
+      yearOverYear={analytics.yearOverYear}
+    />
+  );
 
   const renderInsightsTab = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        <Zap className="w-5 h-5 text-indigo-600" />
-        AI Executive Insights
-      </h3>
-      {insights.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 text-sm">
-          <Brain className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-          No insights available for current data
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {insights.map((insight, i) => (
-            <InsightCard key={i} insight={insight} index={i} />
-          ))}
-        </div>
-      )}
-
-      {analytics.prediction?.weeks_analyzed > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
-            Predictive Analytics
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <MetricCard
-              label="Predicted Rate"
-              value={analytics.prediction.predicted_rate || 0}
-              suffix="%"
-              icon={TrendingUp}
-              color="indigo"
-              showDiff={false}
-            />
-            <MetricCard
-              label="Trend"
-              value={analytics.prediction.trend || 'Stable'}
-              icon={Activity}
-              color={analytics.prediction.trend === 'increasing' ? 'emerald' : 'amber'}
-              showDiff={false}
-            />
-            <MetricCard
-              label="Weeks Analyzed"
-              value={analytics.prediction.weeks_analyzed || 0}
-              icon={Calendar}
-              color="sky"
-              showDiff={false}
-            />
-            <MetricCard
-              label="Confidence"
-              value={analytics.prediction.confidence || 0}
-              suffix="%"
-              icon={Shield}
-              color="violet"
-              showDiff={false}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+    <InsightsTab insights={insights} prediction={analytics.prediction} />
   );
 
   return (

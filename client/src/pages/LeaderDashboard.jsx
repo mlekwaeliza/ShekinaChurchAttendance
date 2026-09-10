@@ -107,6 +107,8 @@ const LeaderDashboard = () => {
             onBulkMark={data.handleBulkMark}
             onSubmit={handleSubmitAndRedirect}
             isOnline={data.isOnline}
+            pendingCount={data.pendingCount}
+            syncing={data.syncing}
             queuedForDate={data.queuedForDate}
             editMode={data.editMode}
             editSaving={data.editSaving}

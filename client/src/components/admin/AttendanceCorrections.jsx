@@ -633,7 +633,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
                         filteredMembers.map((m) => (
                           <tr
                             key={m.member_id}
-                            className={`hover:bg-slate-50/50 dark:hover:bg-slate-900/30 ${m.status ? 'bg-slate-50/30' : 'bg-amber-50/20 dark:bg-amber-900/5'}`}
+                            className={`hover:bg-slate-50/50 dark:hover:bg-slate-900/30 [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${m.status ? 'bg-slate-50/30' : 'bg-amber-50/20 dark:bg-amber-900/5'}`}
                           >
                             <td className="px-3 py-2">
                               <input
@@ -1477,7 +1477,10 @@ const AttendanceCorrections = ({ showMessage }) => {
                     </tr>
                   ) : (
                     records.map((row) => (
-                      <tr key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                      <tr
+                        key={row.id}
+                        className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 [content-visibility:auto] [contain-intrinsic-size:auto_44px]"
+                      >
                         {columns.map((c) => (
                           <td key={c.header} className="px-4 py-2.5 align-middle">
                             {c.render(row)}

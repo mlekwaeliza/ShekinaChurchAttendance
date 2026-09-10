@@ -30,7 +30,7 @@ const useOffline = () => {
   const loadPendingCount = useCallback(async () => {
     try {
       const unsynced = await getUnsyncedSubmissions();
-      setPendingCount(unsynced.filter(r => !r.conflict).length);
+      setPendingCount(unsynced.filter((r) => !r.conflict).length);
     } catch (e) {
       console.error('Failed to load pending count:', e);
     }
@@ -39,87 +39,96 @@ const useOffline = () => {
   const loadConflicts = useCallback(async () => {
     try {
       const all = await getAllQueuedRecords();
-      setConflicts(all.filter(r => r.conflict));
+      setConflicts(all.filter((r) => r.conflict));
     } catch (e) {
       console.error('Failed to load conflicts:', e);
     }
   }, []);
 
   useEffect(() => {
-    if (isOnline) {
-      loadPendingCount();
-      loadConflicts();
-    }
+    // IndexedDB is local: counts must load even while offline (that is when
+    // the pending queue matters most). Only the actual sync needs network.
+    loadPendingCount();
+    loadConflicts();
   }, [isOnline, loadPendingCount, loadConflicts]);
 
-  const queueSubmission = useCallback(async (data) => {
-    const existing = await getQueuedSubmissionForDate(data.date, data.service_id);
-    if (existing) {
-      return { success: false, reason: 'already_queued', record: existing };
-    }
-    const id = await queueAttendanceSubmission(data);
-    await loadPendingCount();
-    return { success: true, id };
-  }, [loadPendingCount]);
+  const queueSubmission = useCallback(
+    async (data) => {
+      const existing = await getQueuedSubmissionForDate(data.date, data.service_id);
+      if (existing) {
+        return { success: false, reason: 'already_queued', record: existing };
+      }
+      const id = await queueAttendanceSubmission(data);
+      await loadPendingCount();
+      return { success: true, id };
+    },
+    [loadPendingCount]
+  );
 
-  const syncPending = useCallback(async (submitFn) => {
-    if (syncInProgress.current || !isOnline) return { synced: 0, failed: 0, conflicts: 0 };
-    syncInProgress.current = true;
-    setSyncing(true);
+  const syncPending = useCallback(
+    async (submitFn) => {
+      if (syncInProgress.current || !isOnline) return { synced: 0, failed: 0, conflicts: 0 };
+      syncInProgress.current = true;
+      setSyncing(true);
 
-    try {
-      const unsynced = await getUnsyncedSubmissions();
-      let synced = 0;
-      let failed = 0;
-      let conflictCount = 0;
+      try {
+        const unsynced = await getUnsyncedSubmissions();
+        let synced = 0;
+        let failed = 0;
+        let conflictCount = 0;
 
-      for (const record of unsynced) {
-        if (record.conflict) continue;
-        try {
-          await submitFn(record);
-          await markAsSynced(record.id);
-          synced++;
-        } catch (error) {
-          const errorMsg = error.response?.data?.error || '';
-          if (errorMsg.includes('already submitted') || errorMsg.includes('Already')) {
+        for (const record of unsynced) {
+          if (record.conflict) continue;
+          try {
+            await submitFn(record);
             await markAsSynced(record.id);
             synced++;
-          } else {
-            failed++;
+          } catch (error) {
+            const errorMsg = error.response?.data?.error || '';
+            if (errorMsg.includes('already submitted') || errorMsg.includes('Already')) {
+              await markAsSynced(record.id);
+              synced++;
+            } else {
+              failed++;
+            }
+          }
+        }
+
+        await loadPendingCount();
+        await loadConflicts();
+        return { synced, failed, conflicts: conflictCount };
+      } catch (error) {
+        console.error('Failed to sync pending attendance:', error);
+        return { synced: 0, failed: 1, conflicts: 0 };
+      } finally {
+        syncInProgress.current = false;
+        setSyncing(false);
+      }
+    },
+    [isOnline, loadPendingCount, loadConflicts]
+  );
+
+  const resolveConflict = useCallback(
+    async (id, action) => {
+      if (action === 'discard') {
+        await deleteQueuedRecord(id);
+      } else if (action === 'overwrite') {
+        const all = await getAllQueuedRecords();
+        const record = all.find((r) => r.id === id);
+        if (record) {
+          try {
+            await leaderAPI.submitAttendance(record.date, record.attendance, record.service_id);
+            await markAsSynced(record.id);
+          } catch (e) {
+            console.error('Failed to overwrite:', e);
           }
         }
       }
-
       await loadPendingCount();
       await loadConflicts();
-      return { synced, failed, conflicts: conflictCount };
-    } catch (error) {
-      console.error('Failed to sync pending attendance:', error);
-      return { synced: 0, failed: 1, conflicts: 0 };
-    } finally {
-      syncInProgress.current = false;
-      setSyncing(false);
-    }
-  }, [isOnline, loadPendingCount, loadConflicts]);
-
-  const resolveConflict = useCallback(async (id, action) => {
-    if (action === 'discard') {
-      await deleteQueuedRecord(id);
-    } else if (action === 'overwrite') {
-      const all = await getAllQueuedRecords();
-      const record = all.find(r => r.id === id);
-      if (record) {
-        try {
-          await leaderAPI.submitAttendance(record.date, record.attendance, record.service_id);
-          await markAsSynced(record.id);
-        } catch (e) {
-          console.error('Failed to overwrite:', e);
-        }
-      }
-    }
-    await loadPendingCount();
-    await loadConflicts();
-  }, [loadPendingCount, loadConflicts]);
+    },
+    [loadPendingCount, loadConflicts]
+  );
 
   return {
     isOnline,

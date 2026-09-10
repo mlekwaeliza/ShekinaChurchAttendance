@@ -76,7 +76,7 @@ const writeLeaderCoreCache = (leaderId, snapshot) => {
 };
 
 const useLeaderData = () => {
-  const { isOnline, queueSubmission, syncPending } = useOffline();
+  const { isOnline, queueSubmission, syncPending, pendingCount, syncing } = useOffline();
   const { user } = useAuth();
 
   // Section & Members
@@ -838,6 +838,8 @@ const useLeaderData = () => {
     submitted,
     submitting,
     isOnline,
+    pendingCount,
+    syncing,
     isUnauthorized,
     leaderAssignments,
     sectionLeaders,
