@@ -2714,6 +2714,44 @@ function createQueries({ run, get, all, usePostgres }) {
           userAgent
         ]
       ),
+    // Shared attendance-correction audit writer. Leader (single + bulk)
+    // edits and admin corrections previously built three divergent
+    // new_value shapes; one shape keeps the audit-trail UI stable:
+    // { status, reason, original_leader, corrected_by, editor_name }.
+    // correctedBy is 'head_leader' or 'admin'. leaderName is null for
+    // single-row edits (no roster context loaded — bulk paths pass it).
+    logAttendanceCorrection: ({
+      userId,
+      action,
+      attendanceId,
+      oldStatus = null,
+      newStatus,
+      reason = null,
+      leaderName = null,
+      correctedBy,
+      editorName = null,
+      ipAddress = null,
+      userAgent = null
+    }) =>
+      run(
+        'INSERT INTO audit_log (user_id, action, entity_type, entity_id, old_value, new_value, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          userId,
+          action,
+          'attendance',
+          attendanceId,
+          oldStatus ? JSON.stringify({ status: oldStatus }) : null,
+          JSON.stringify({
+            status: newStatus,
+            reason: reason || null,
+            original_leader: leaderName,
+            corrected_by: correctedBy,
+            editor_name: editorName
+          }),
+          ipAddress,
+          userAgent
+        ]
+      ),
 
     // Member export
     getAllMembersForExport: () =>

@@ -767,12 +767,18 @@ router.put('/attendance/:id', async (req, res) => {
 
     const ipAddress = req.ip || req.connection?.remoteAddress || req.socket?.remoteAddress || null;
     const userAgent = req.headers['user-agent'] || null;
-    queries.createAuditEntry(
-      req.session.userId, 'update', 'attendance', id,
-      { status: record.status },
-      { status, reason: trimmedReason || null, edited_by_head_leader: true, editor_name: req.session.user?.full_name },
-      ipAddress, userAgent
-    ).catch((err) => console.error('Head leader edit audit log failed:', err.message));
+    queries.logAttendanceCorrection({
+      userId: req.session.userId,
+      action: 'update',
+      attendanceId: id,
+      oldStatus: record.status,
+      newStatus: status,
+      reason: trimmedReason,
+      correctedBy: 'head_leader',
+      editorName: req.session.user?.full_name,
+      ipAddress,
+      userAgent
+    }).catch((err) => console.error('Head leader edit audit log failed:', err.message));
 
     invalidateCache(); // Invalidate dashboard/analytics cache on database mutation
     res.json({ message: 'Attendance updated', id, status, reason: trimmedReason || null });
@@ -823,24 +829,37 @@ router.post('/attendance/bulk-edit', async (req, res) => {
               'UPDATE attendance SET status = ?, submitted_by = ?, submitted_at = CURRENT_TIMESTAMP WHERE id = ?',
               [record.status, req.session.userId, existing.id]
             );
-            queries.createAuditEntry(
-              req.session.userId, 'update', 'attendance', existing.id,
-              { status: existing.status },
-              { status: record.status, reason: trimmedReason, original_leader: leader.leader_name, edited_by_head_leader: true, editor_name: req.session.user?.full_name },
-              ipAddress, userAgent
-            ).catch(e => console.error('Audit write failed:', e.message));
+            queries.logAttendanceCorrection({
+              userId: req.session.userId,
+              action: 'update',
+              attendanceId: existing.id,
+              oldStatus: existing.status,
+              newStatus: record.status,
+              reason: trimmedReason,
+              leaderName: leader.leader_name,
+              correctedBy: 'head_leader',
+              editorName: req.session.user?.full_name,
+              ipAddress,
+              userAgent
+            }).catch(e => console.error('Audit write failed:', e.message));
           }
         } else {
           const insertResult = await tx.run(
             'INSERT INTO attendance (member_id, date, status, submitted_by, service_type_id) VALUES (?, ?, ?, ?, ?)',
             [record.member_id, date, record.status, req.session.userId, Number(service_id)]
           );
-          queries.createAuditEntry(
-            req.session.userId, 'create', 'attendance', insertResult?.lastID || 0,
-            null,
-            { status: record.status, reason: trimmedReason, original_leader: leader.leader_name, edited_by_head_leader: true, editor_name: req.session.user?.full_name },
-            ipAddress, userAgent
-          ).catch(e => console.error('Audit write failed:', e.message));
+          queries.logAttendanceCorrection({
+            userId: req.session.userId,
+            action: 'create',
+            attendanceId: insertResult?.lastID || 0,
+            newStatus: record.status,
+            reason: trimmedReason,
+            leaderName: leader.leader_name,
+            correctedBy: 'head_leader',
+            editorName: req.session.user?.full_name,
+            ipAddress,
+            userAgent
+          }).catch(e => console.error('Audit write failed:', e.message));
         }
       }
 
