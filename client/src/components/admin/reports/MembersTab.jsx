@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Activity,
@@ -10,6 +10,7 @@ import {
   Brain,
   Calendar,
   CheckCircle2,
+  Download,
   Flame,
   Heart,
   RefreshCw,
@@ -563,234 +564,389 @@ const MembersTab = ({ data, actions: tabActions }) => {
   // Weekly matrix can span hundreds of members — render progressively so
   // the tab paints fast and reveals more on demand.
   const [matrixLimit, setMatrixLimit] = useState(50);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const [pdfExportError, setPdfExportError] = useState('');
   useEffect(() => {
     setMatrixLimit(50);
   }, [memberSearch, memberWeeklyMatrix]);
-  const matrixRows = (memberWeeklyMatrix || []).filter((m) => {
-    if (!memberSearch) return true;
-    const haystack = [m.full_name, m.section_name, m.membership_id].join(' ').toLowerCase();
-    return haystack.includes(memberSearch.toLowerCase());
-  });
+  const filteredMemberIds = new Set(filteredMembers.map((member) => String(member.id)));
+  const matrixRows = (memberWeeklyMatrix || []).filter((member) =>
+    filteredMemberIds.has(String(member.member_id))
+  );
   const visibleMatrixRows = matrixRows.slice(0, matrixLimit);
+  const priorityCategoryIds = [
+    'all',
+    'leaving-risk',
+    'visitation',
+    'missing-3',
+    'counseling',
+    'new',
+    'returning',
+    'perfect'
+  ];
+  const visibleCategories = showAllCategories
+    ? categories
+    : categories.filter(
+        (category) => priorityCategoryIds.includes(category.id) || category.id === memberCategory
+      );
+
+  const exportMemberIntelligencePdf = useCallback(async () => {
+    if (!filteredMembers.length) return;
+
+    setPdfExporting(true);
+    setPdfExportError('');
+    try {
+      const [{ jsPDF }, { autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      const includeMatrix = memberView === 'matrix' && matrixRows.length > 0;
+      const doc = new jsPDF({ orientation: includeMatrix ? 'landscape' : 'portrait' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+      const filters = [
+        `Group: ${activeCategory.label}`,
+        memberRiskFilter === 'all' ? 'Risk: all levels' : `Risk: ${memberRiskFilter}`,
+        memberSearch.trim() ? `Search: ${memberSearch.trim()}` : null,
+        `Service: ${serviceLabel}`
+      ]
+        .filter(Boolean)
+        .join(' | ');
+
+      doc.setFillColor(30, 64, 175);
+      doc.rect(0, 0, pageWidth, 31, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.text('Member Intelligence Drill-down', margin, 15);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text('Filtered member attendance and pastoral intelligence', margin, 22);
+
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(8);
+      const filterLines = doc.splitTextToSize(filters, pageWidth - margin * 2);
+      doc.text(filterLines, margin, 39);
+      const tableStartY = 42 + filterLines.length * 4;
+
+      const tableOptions = includeMatrix
+        ? {
+            head: [
+              ['Member', 'Section', ...memberWeeklyMatrixWeeks.map((week) => weekToDate(week))]
+            ],
+            body: matrixRows.map((member) => [
+              member.full_name,
+              member.section_name || '—',
+              ...asArray(member.weekly).map((status) =>
+                status === 'present'
+                  ? 'P'
+                  : status === 'absent'
+                    ? 'A'
+                    : status === 'excused'
+                      ? 'E'
+                      : '—'
+              )
+            ]),
+            columnStyles: {
+              0: { cellWidth: 40 },
+              1: { cellWidth: 28 }
+            }
+          }
+        : {
+            head: [['#', 'Member', 'Section', 'P', 'A', 'E', 'Rate', 'Streak', 'Risk']],
+            body: filteredMembers.map((member, index) => [
+              index + 1,
+              member.full_name,
+              member.section_name || '—',
+              member.present_count || 0,
+              member.absent_count || 0,
+              member.excused_count || 0,
+              `${member.attendance_rate || 0}%`,
+              member.current_attendance_streak || 0,
+              member.risk_level || 'Low'
+            ])
+          };
+
+      autoTable(doc, {
+        ...tableOptions,
+        startY: tableStartY,
+        margin: { left: margin, right: margin, bottom: 16 },
+        styles: {
+          font: 'helvetica',
+          fontSize: includeMatrix ? 6.5 : 8,
+          cellPadding: includeMatrix ? 1.5 : 2
+        },
+        headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] }
+      });
+
+      const pages = doc.internal.getNumberOfPages();
+      for (let page = 1; page <= pages; page += 1) {
+        doc.setPage(page);
+        doc.setFontSize(7);
+        doc.setTextColor(100, 116, 139);
+        doc.text(
+          `Shekina Church Management System | Page ${page} of ${pages}`,
+          margin,
+          pageHeight - 8
+        );
+      }
+
+      const categorySlug = activeCategory.id.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+      doc.save(`member-intelligence-${categorySlug}.pdf`);
+    } catch (error) {
+      console.error('Member intelligence PDF export failed:', error);
+      setPdfExportError('The PDF could not be created. Please try again.');
+    } finally {
+      setPdfExporting(false);
+    }
+  }, [
+    activeCategory.id,
+    activeCategory.label,
+    filteredMembers,
+    matrixRows,
+    memberRiskFilter,
+    memberSearch,
+    memberView,
+    memberWeeklyMatrixWeeks,
+    serviceLabel
+  ]);
+
+  useEffect(() => {
+    window.addEventListener('member-intelligence-download-pdf', exportMemberIntelligencePdf);
+    return () =>
+      window.removeEventListener('member-intelligence-download-pdf', exportMemberIntelligencePdf);
+  }, [exportMemberIntelligencePdf]);
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
+    <div className="flex flex-col gap-6">
+      <div className="order-2 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
             <UserCheck className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-slate-950 dark:text-white">
-              Member Intelligence & Pastoral Care Center
+            <h3 className="text-base font-black text-slate-950 dark:text-white">
+              Member intelligence workspace
             </h3>
             <p className="text-xs text-slate-500">
-              Executive member health, retention, engagement, attendance behavior, and pastoral care
-              priorities.
+              Search a member first, then open the supporting operational picture only when needed.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
-        {kpis.map(({ label, value, category, icon: Icon }) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => openCategory(category)}
-            className={`rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${memberCategory === category ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/20' : 'border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800'}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
-                {label}
-              </span>
-              <Icon className="w-4 h-4 text-indigo-500" />
-            </div>
-            <p className="text-xl font-black text-slate-950 dark:text-white mt-2">{value}</p>
-          </button>
-        ))}
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-black text-slate-950 dark:text-white">
-              Member Intelligence Record Window
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Counts below are calculated from member attendance history for the last 180 days -{' '}
-              {serviceLabel}.
-            </p>
-          </div>
-          <Badge variant="info">{memberRecordTotal.toLocaleString()} tracked records</Badge>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-          <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-            <p className="text-[9px] font-bold uppercase text-slate-400">Historical Present</p>
-            <p className="text-xl font-black text-emerald-600">{memberRecordTotals.present}</p>
-          </div>
-          <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-            <p className="text-[9px] font-bold uppercase text-slate-400">Historical Absent</p>
-            <p className="text-xl font-black text-rose-600">{memberRecordTotals.absent}</p>
-          </div>
-          <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
-            <p className="text-[9px] font-bold uppercase text-slate-400">Historical Excused</p>
-            <p className="text-xl font-black text-amber-600">{memberRecordTotals.excused}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-            Attendance Behavior Analysis
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Average Attendance</p>
-              <p className="text-lg font-black">{avg(members)}%</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Improving</p>
-              <p className="text-lg font-black text-emerald-600">
-                {categories.find((c) => c.id === 'improving')?.members.length || 0}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Declining</p>
-              <p className="text-lg font-black text-rose-600">
-                {categories.find((c) => c.id === 'declining')?.members.length || 0}
-              </p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Consistency</p>
-              <p className="text-lg font-black">{consistentMembers.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-            Member Retention Intelligence
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Retained</p>
-              <p className="text-lg font-black text-emerald-600">{retainedMembers.length}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Lost/Critical</p>
-              <p className="text-lg font-black text-rose-600">{lostMembers.length}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Recovered</p>
-              <p className="text-lg font-black text-indigo-600">{recoveredMembers.length}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Recovery %</p>
-              <p className="text-lg font-black">{recoveryPct}%</p>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-            Member Movement Analysis
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">New Registrations</p>
-              <p className="text-lg font-black">{newMembers.length}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Conversions</p>
-              <p className="text-lg font-black">{visitorConversions.length}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Returning</p>
-              <p className="text-lg font-black">{returningMembers.length}</p>
-            </div>
-            <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
-              <p className="text-slate-400">Removed/Inactive</p>
-              <p className="text-lg font-black">{inactiveMembers.length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-            Pastoral Care Intelligence
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {[
-              'missing-1',
-              'missing-2',
-              'missing-3',
-              'missing-1m',
-              'missing-3m',
-              'visitation',
-              'counseling',
-              'prayer'
-            ].map((id) => {
-              const cat = categories.find((c) => c.id === id);
-              return (
-                <button
-                  key={id}
-                  onClick={() => openCategory(id)}
-                  className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 p-3 text-left"
-                >
-                  <p className="text-[9px] font-bold text-slate-400 uppercase">{cat?.label}</p>
-                  <p className="text-lg font-black mt-1">{cat?.members.length || 0}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
-            Executive Insights
-          </h3>
-          <div className="space-y-2">
-            {insights.map((text, i) => (
-              <div
-                key={i}
-                className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3 text-xs text-slate-600 dark:text-slate-300"
+      <details className="order-3 rounded-2xl border border-slate-200/60 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 text-sm font-bold text-slate-900 marker:hidden dark:text-white">
+          <span>Operational overview</span>
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            KPIs, pastoral priorities, insights and action queues
+          </span>
+        </summary>
+        <div className="space-y-6 border-t border-slate-100 p-4 dark:border-slate-700">
+          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+            {kpis.map(({ label, value, category, icon: Icon }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => openCategory(category)}
+                className={`rounded-2xl border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${memberCategory === category ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/20' : 'border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800'}`}
               >
-                {text}
-              </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                    {label}
+                  </span>
+                  <Icon className="w-4 h-4 text-indigo-500" />
+                </div>
+                <p className="text-xl font-black text-slate-950 dark:text-white mt-2">{value}</p>
+              </button>
             ))}
           </div>
-        </div>
-      </div>
 
-      <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Action Center</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {actions.map((action) => (
-            <button
-              key={action.title}
-              type="button"
-              onClick={() => openCategory(action.category)}
-              className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 p-3 text-left hover:border-indigo-300 transition-colors"
-            >
-              <div className="flex items-center justify-between gap-2">
-                {renderPriorityBadge(action.priority)}
-                <span className="text-xs font-black text-slate-900 dark:text-white">
-                  {action.members.length} members
-                </span>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-950 dark:text-white">
+                  Member Intelligence Record Window
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Counts below are calculated from member attendance history for the last 180 days -{' '}
+                  {serviceLabel}.
+                </p>
               </div>
-              <p className="text-xs font-bold text-slate-900 dark:text-white mt-2">
-                {action.title}
-              </p>
-              <p className="text-[10px] text-slate-500 mt-1">
-                Open drill-down list for affected members.
-              </p>
-            </button>
-          ))}
-        </div>
-      </div>
+              <Badge variant="info">{memberRecordTotal.toLocaleString()} tracked records</Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+              <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+                <p className="text-[9px] font-bold uppercase text-slate-400">Historical Present</p>
+                <p className="text-xl font-black text-emerald-600">{memberRecordTotals.present}</p>
+              </div>
+              <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+                <p className="text-[9px] font-bold uppercase text-slate-400">Historical Absent</p>
+                <p className="text-xl font-black text-rose-600">{memberRecordTotals.absent}</p>
+              </div>
+              <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3">
+                <p className="text-[9px] font-bold uppercase text-slate-400">Historical Excused</p>
+                <p className="text-xl font-black text-amber-600">{memberRecordTotals.excused}</p>
+              </div>
+            </div>
+          </div>
 
-      <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+                Attendance Behavior Analysis
+              </h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Average Attendance</p>
+                  <p className="text-lg font-black">{avg(members)}%</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Improving</p>
+                  <p className="text-lg font-black text-emerald-600">
+                    {categories.find((c) => c.id === 'improving')?.members.length || 0}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Declining</p>
+                  <p className="text-lg font-black text-rose-600">
+                    {categories.find((c) => c.id === 'declining')?.members.length || 0}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Consistency</p>
+                  <p className="text-lg font-black">{consistentMembers.length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+                Member Retention Intelligence
+              </h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Retained</p>
+                  <p className="text-lg font-black text-emerald-600">{retainedMembers.length}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Lost/Critical</p>
+                  <p className="text-lg font-black text-rose-600">{lostMembers.length}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Recovered</p>
+                  <p className="text-lg font-black text-indigo-600">{recoveredMembers.length}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Recovery %</p>
+                  <p className="text-lg font-black">{recoveryPct}%</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+                Member Movement Analysis
+              </h3>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">New Registrations</p>
+                  <p className="text-lg font-black">{newMembers.length}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Conversions</p>
+                  <p className="text-lg font-black">{visitorConversions.length}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Returning</p>
+                  <p className="text-lg font-black">{returningMembers.length}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3">
+                  <p className="text-slate-400">Removed/Inactive</p>
+                  <p className="text-lg font-black">{inactiveMembers.length}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+                Pastoral Care Intelligence
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {[
+                  'missing-1',
+                  'missing-2',
+                  'missing-3',
+                  'missing-1m',
+                  'missing-3m',
+                  'visitation',
+                  'counseling',
+                  'prayer'
+                ].map((id) => {
+                  const cat = categories.find((c) => c.id === id);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => openCategory(id)}
+                      className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 p-3 text-left"
+                    >
+                      <p className="text-[9px] font-bold text-slate-400 uppercase">{cat?.label}</p>
+                      <p className="text-lg font-black mt-1">{cat?.members.length || 0}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">
+                Executive Insights
+              </h3>
+              <div className="space-y-2">
+                {insights.map((text, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-3 text-xs text-slate-600 dark:text-slate-300"
+                  >
+                    {text}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Action Center</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {actions.map((action) => (
+                <button
+                  key={action.title}
+                  type="button"
+                  onClick={() => openCategory(action.category)}
+                  className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 p-3 text-left hover:border-indigo-300 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    {renderPriorityBadge(action.priority)}
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      {action.members.length} members
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white mt-2">
+                    {action.title}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Open drill-down list for affected members.
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <div className="order-1 rounded-2xl bg-white dark:bg-slate-800 border-2 border-indigo-200 dark:border-indigo-900/60 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 dark:border-slate-700 space-y-3">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
@@ -798,21 +954,34 @@ const MembersTab = ({ data, actions: tabActions }) => {
                 Member Intelligence Drill-down
               </h3>
               <p className="text-[10px] text-slate-400 mt-0.5">
-                {activeCategory.label}: {filteredMembers.length} member(s)
+                {activeCategory.label}: {filteredMembers.length} member(s) · Select a row for the
+                full attendance history and pastoral profile.
               </p>
             </div>
-            <div className="relative">
-              <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
-              <input
-                value={memberSearch}
-                onChange={(e) => setMemberSearch(e.target.value)}
-                placeholder="Search member, leader, section..."
-                className="pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white lg:min-w-[280px] w-full focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
+            <div className="flex w-full items-center gap-2 lg:w-auto">
+              <button
+                type="button"
+                onClick={exportMemberIntelligencePdf}
+                disabled={pdfExporting || filteredMembers.length === 0}
+                className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-indigo-600 px-3 text-xs font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Download className="h-3.5 w-3.5" />
+                {pdfExporting ? 'Creating PDF…' : 'Download PDF'}
+              </button>
+              <div className="relative flex-1 lg:w-72 lg:flex-none">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                <input
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                  placeholder="Search member, leader, section..."
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                />
+              </div>
             </div>
           </div>
+          {pdfExportError && <p className="text-xs font-medium text-rose-600">{pdfExportError}</p>}
           <div className="flex flex-wrap gap-1.5">
-            {categories.map((cat) => (
+            {visibleCategories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setMemberCategory(cat.id)}
@@ -821,6 +990,15 @@ const MembersTab = ({ data, actions: tabActions }) => {
                 {cat.label} · {cat.members.length}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setShowAllCategories((visible) => !visible)}
+              className="rounded-full border border-dashed border-indigo-300 px-2.5 py-1 text-[10px] font-bold text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+            >
+              {showAllCategories
+                ? 'Show fewer filters'
+                : `More filters (${categories.length - visibleCategories.length})`}
+            </button>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mr-1">

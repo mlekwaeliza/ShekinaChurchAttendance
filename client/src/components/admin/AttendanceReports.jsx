@@ -697,6 +697,15 @@ const AttendanceReports = ({
     <InsightsTab insights={insights} prediction={analytics.prediction} />
   );
 
+  const downloadCurrentReport = () => {
+    setQuickActionsOpen(false);
+    if (activeTab === 'members') {
+      window.dispatchEvent(new Event('member-intelligence-download-pdf'));
+      return;
+    }
+    window.print();
+  };
+
   return (
     <div className="space-y-3 animate-fade-in">
       {/* ── Single Compact Header ── */}
@@ -729,7 +738,7 @@ const AttendanceReports = ({
                   {
                     label: 'Download PDF',
                     icon: Download,
-                    onClick: () => window.print(),
+                    onClick: downloadCurrentReport,
                     color: 'text-blue-600'
                   },
                   {

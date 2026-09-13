@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { autoTable } from 'jspdf-autotable';
 
 // PDF Report Generator for Executive Reporting Center
 // Generates printable PDF reports from report data
@@ -17,16 +17,16 @@ export class PDFReportGenerator {
   addHeader(title, subtitle) {
     this.doc.setFillColor(99, 102, 241); // Indigo
     this.doc.rect(0, 0, this.pageWidth, 35, 'F');
-    
+
     this.doc.setTextColor(255, 255, 255);
     this.doc.setFontSize(18);
     this.doc.setFont('helvetica', 'bold');
     this.doc.text(title, this.margin, 18);
-    
+
     this.doc.setFontSize(10);
     this.doc.setFont('helvetica', 'normal');
     this.doc.text(subtitle || `Generated: ${new Date().toLocaleDateString()}`, this.margin, 28);
-    
+
     this.currentY = 45;
   }
 
@@ -37,7 +37,7 @@ export class PDFReportGenerator {
     this.doc.setFont('helvetica', 'bold');
     this.doc.text(title, this.margin, this.currentY);
     this.currentY += 8;
-    
+
     // Add underline
     this.doc.setDrawColor(99, 102, 241);
     this.doc.setLineWidth(0.5);
@@ -49,12 +49,12 @@ export class PDFReportGenerator {
   addStatCard(label, value, x, y, width = 40) {
     this.doc.setFillColor(248, 250, 252); // Light gray
     this.doc.roundedRect(x, y, width, 25, 3, 3, 'F');
-    
+
     this.doc.setTextColor(100, 116, 139); // Slate-500
     this.doc.setFontSize(8);
     this.doc.setFont('helvetica', 'normal');
     this.doc.text(label, x + 5, y + 8);
-    
+
     this.doc.setTextColor(30, 41, 59); // Slate-800
     this.doc.setFontSize(14);
     this.doc.setFont('helvetica', 'bold');
@@ -64,8 +64,8 @@ export class PDFReportGenerator {
   // Add table
   addTable(headers, data, startY) {
     if (startY) this.currentY = startY;
-    
-    this.doc.autoTable({
+
+    autoTable(this.doc, {
       head: [headers],
       body: data,
       startY: this.currentY,
@@ -74,21 +74,21 @@ export class PDFReportGenerator {
         fontSize: 8,
         cellPadding: 3,
         overflow: 'linebreak',
-        font: 'helvetica',
+        font: 'helvetica'
       },
       headStyles: {
         fillColor: [99, 102, 241],
         textColor: 255,
-        fontStyle: 'bold',
+        fontStyle: 'bold'
       },
       alternateRowStyles: {
-        fillColor: [248, 250, 252],
+        fillColor: [248, 250, 252]
       },
       columnStyles: {
-        0: { cellWidth: 'auto' },
-      },
+        0: { cellWidth: 'auto' }
+      }
     });
-    
+
     this.currentY = this.doc.lastAutoTable.finalY + 10;
   }
 
@@ -127,7 +127,12 @@ export class PDFReportGenerator {
     this.addStatCard('Total Attendees', data.overall?.total_attendees || 0, this.margin, statsY);
     this.addStatCard('Present', data.overall?.present_count || 0, this.margin + 45, statsY);
     this.addStatCard('Absent', data.overall?.absent_count || 0, this.margin + 90, statsY);
-    this.addStatCard('Attendance Rate', `${data.overall?.attendance_rate || 0}%`, this.margin + 135, statsY);
+    this.addStatCard(
+      'Attendance Rate',
+      `${data.overall?.attendance_rate || 0}%`,
+      this.margin + 135,
+      statsY
+    );
     this.currentY = statsY + 35;
 
     // Section breakdown
@@ -135,7 +140,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Attendance by Section');
       const headers = ['Section', 'Attendees', 'Present', 'Rate'];
-      const tableData = data.bySection.map(s => [
+      const tableData = data.bySection.map((s) => [
         s.section_name,
         s.total_attendees,
         s.present_count,
@@ -149,12 +154,9 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Top Performers (Top 10)');
       const headers = ['#', 'Name', 'Section', 'Rate'];
-      const tableData = data.topPerformers.slice(0, 10).map((p, i) => [
-        i + 1,
-        p.name,
-        p.section_name,
-        `${p.rate}%`
-      ]);
+      const tableData = data.topPerformers
+        .slice(0, 10)
+        .map((p, i) => [i + 1, p.name, p.section_name, `${p.rate}%`]);
       this.addTable(headers, tableData);
     }
 
@@ -163,11 +165,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('At-Risk Members (Below 30% Attendance)');
       const headers = ['Name', 'Section', 'Rate'];
-      const tableData = data.riskMembers.map(m => [
-        m.name,
-        m.section_name,
-        `${m.rate}%`
-      ]);
+      const tableData = data.riskMembers.map((m) => [m.name, m.section_name, `${m.rate}%`]);
       this.addTable(headers, tableData);
     }
 
@@ -193,12 +191,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Members by Section');
       const headers = ['Section', 'Total', 'Active', 'New Joins'];
-      const tableData = data.bySection.map(s => [
-        s.section_name,
-        s.total,
-        s.active,
-        s.new_joins
-      ]);
+      const tableData = data.bySection.map((s) => [s.section_name, s.total, s.active, s.new_joins]);
       this.addTable(headers, tableData);
     }
 
@@ -207,7 +200,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(40);
       this.addSectionTitle('Gender Distribution');
       const headers = ['Gender', 'Count'];
-      const tableData = data.byGender.map(g => [g.gender, g.count]);
+      const tableData = data.byGender.map((g) => [g.gender, g.count]);
       this.addTable(headers, tableData);
     }
 
@@ -216,7 +209,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(40);
       this.addSectionTitle('Age Distribution');
       const headers = ['Age Group', 'Count'];
-      const tableData = data.byAgeGroup.map(a => [a.age_group, a.count]);
+      const tableData = data.byAgeGroup.map((a) => [a.age_group, a.count]);
       this.addTable(headers, tableData);
     }
 
@@ -231,9 +224,27 @@ export class PDFReportGenerator {
     // Stats
     this.addSectionTitle('Summary');
     const statsY = this.currentY;
-    this.addStatCard('Total Contributions', `₦${(data.overview?.total_contributions || 0).toLocaleString()}`, this.margin, statsY, 55);
-    this.addStatCard('Contributors', data.overview?.unique_contributors || 0, this.margin + 60, statsY, 45);
-    this.addStatCard('Avg/Day', `₦${(data.overview?.avg_per_day || 0).toLocaleString()}`, this.margin + 110, statsY, 45);
+    this.addStatCard(
+      'Total Contributions',
+      `₦${(data.overview?.total_contributions || 0).toLocaleString()}`,
+      this.margin,
+      statsY,
+      55
+    );
+    this.addStatCard(
+      'Contributors',
+      data.overview?.unique_contributors || 0,
+      this.margin + 60,
+      statsY,
+      45
+    );
+    this.addStatCard(
+      'Avg/Day',
+      `₦${(data.overview?.avg_per_day || 0).toLocaleString()}`,
+      this.margin + 110,
+      statsY,
+      45
+    );
     this.currentY = statsY + 35;
 
     // By type
@@ -241,7 +252,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Contributions by Type');
       const headers = ['Type', 'Total', 'Count'];
-      const tableData = data.byType.map(t => [
+      const tableData = data.byType.map((t) => [
         t.type_name,
         `₦${t.total.toLocaleString()}`,
         t.count
@@ -254,12 +265,14 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Top Contributors');
       const headers = ['#', 'Name', 'Total', 'Count'];
-      const tableData = data.topContributors.slice(0, 10).map((c, i) => [
-        i + 1,
-        c.name,
-        `₦${c.total_contributed.toLocaleString()}`,
-        c.contribution_count
-      ]);
+      const tableData = data.topContributors
+        .slice(0, 10)
+        .map((c, i) => [
+          i + 1,
+          c.name,
+          `₦${c.total_contributed.toLocaleString()}`,
+          c.contribution_count
+        ]);
       this.addTable(headers, tableData);
     }
 
@@ -276,7 +289,12 @@ export class PDFReportGenerator {
     const statsY = this.currentY;
     this.addStatCard('Total Leaders', data.overview?.total_leaders || 0, this.margin, statsY);
     this.addStatCard('Head Leaders', data.overview?.head_leaders || 0, this.margin + 45, statsY);
-    this.addStatCard('Active Leaders', data.overview?.active_leaders || 0, this.margin + 90, statsY);
+    this.addStatCard(
+      'Active Leaders',
+      data.overview?.active_leaders || 0,
+      this.margin + 90,
+      statsY
+    );
     this.currentY = statsY + 35;
 
     // Rankings
@@ -284,12 +302,9 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Leader Rankings');
       const headers = ['#', 'Name', 'Section', 'Submissions'];
-      const tableData = data.rankings.slice(0, 15).map((l, i) => [
-        i + 1,
-        l.name,
-        l.section_name,
-        l.submissions
-      ]);
+      const tableData = data.rankings
+        .slice(0, 15)
+        .map((l, i) => [i + 1, l.name, l.section_name, l.submissions]);
       this.addTable(headers, tableData);
     }
 
@@ -305,8 +320,18 @@ export class PDFReportGenerator {
     this.addSectionTitle('Summary');
     const statsY = this.currentY;
     this.addStatCard('Souls Won', data.overview?.total_souls_won || 0, this.margin, statsY);
-    this.addStatCard('Follow-ups Done', data.overview?.follow_ups_completed || 0, this.margin + 45, statsY);
-    this.addStatCard('Follow-ups Pending', data.overview?.follow_ups_pending || 0, this.margin + 90, statsY);
+    this.addStatCard(
+      'Follow-ups Done',
+      data.overview?.follow_ups_completed || 0,
+      this.margin + 45,
+      statsY
+    );
+    this.addStatCard(
+      'Follow-ups Pending',
+      data.overview?.follow_ups_pending || 0,
+      this.margin + 90,
+      statsY
+    );
     this.addStatCard('Baptisms', data.baptisms?.completed || 0, this.margin + 135, statsY);
     this.currentY = statsY + 35;
 
@@ -315,7 +340,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Souls Won by Month');
       const headers = ['Month', 'Souls Won'];
-      const tableData = data.byMonth.map(m => [m.month, m.souls_won]);
+      const tableData = data.byMonth.map((m) => [m.month, m.souls_won]);
       this.addTable(headers, tableData);
     }
 
@@ -330,9 +355,19 @@ export class PDFReportGenerator {
     // Stats
     this.addSectionTitle('Summary');
     const statsY = this.currentY;
-    this.addStatCard('Total New Members', data.overview?.total_new_members || 0, this.margin, statsY);
+    this.addStatCard(
+      'Total New Members',
+      data.overview?.total_new_members || 0,
+      this.margin,
+      statsY
+    );
     this.addStatCard('Active', data.overview?.active || 0, this.margin + 50, statsY);
-    this.addStatCard('Conversion Rate', `${(data.conversionRates?.conversion_rate || 0).toFixed(1)}%`, this.margin + 100, statsY);
+    this.addStatCard(
+      'Conversion Rate',
+      `${(data.conversionRates?.conversion_rate || 0).toFixed(1)}%`,
+      this.margin + 100,
+      statsY
+    );
     this.currentY = statsY + 35;
 
     // By stage
@@ -340,7 +375,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('By Pipeline Stage');
       const headers = ['Stage', 'Count'];
-      const tableData = data.byStage.map(s => [s.stage, s.count]);
+      const tableData = data.byStage.map((s) => [s.stage, s.count]);
       this.addTable(headers, tableData);
     }
 
@@ -349,7 +384,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Recent New Members');
       const headers = ['Name', 'Stage', 'Join Date'];
-      const tableData = data.recentMembers.map(m => [
+      const tableData = data.recentMembers.map((m) => [
         m.name,
         m.stage,
         new Date(m.join_date).toLocaleDateString()
@@ -363,14 +398,22 @@ export class PDFReportGenerator {
 
   // Generate Children Report PDF
   generateChildrenReport(data) {
-    this.addHeader('Children Ministry Report', `Period: ${data.period.start} to ${data.period.end}`);
+    this.addHeader(
+      'Children Ministry Report',
+      `Period: ${data.period.start} to ${data.period.end}`
+    );
 
     // Stats
     this.addSectionTitle('Summary');
     const statsY = this.currentY;
     this.addStatCard('Total Children', data.overview?.total_children || 0, this.margin, statsY);
     this.addStatCard('Active Classes', data.overview?.total_classes || 0, this.margin + 50, statsY);
-    this.addStatCard('Active Teachers', data.overview?.total_teachers || 0, this.margin + 100, statsY);
+    this.addStatCard(
+      'Active Teachers',
+      data.overview?.total_teachers || 0,
+      this.margin + 100,
+      statsY
+    );
     this.currentY = statsY + 35;
 
     // By class
@@ -378,7 +421,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Enrollment by Class');
       const headers = ['Class', 'Age Group', 'Enrolled', 'Capacity'];
-      const tableData = data.byClass.map(c => [
+      const tableData = data.byClass.map((c) => [
         c.class_name,
         c.age_group || 'N/A',
         c.enrolled,
@@ -392,7 +435,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Medical Alerts');
       const headers = ['Name', 'Allergies', 'Medical Notes'];
-      const tableData = data.medicalAlerts.map(c => [
+      const tableData = data.medicalAlerts.map((c) => [
         c.full_name,
         c.allergies || 'None',
         c.medical_notes || 'None'
@@ -421,7 +464,7 @@ export class PDFReportGenerator {
       this.checkPageBreak(60);
       this.addSectionTitle('Home Cells');
       const headers = ['Cell Name', 'Cell #', 'Members', 'Leaders'];
-      const tableData = data.byCell.map(c => [
+      const tableData = data.byCell.map((c) => [
         c.cell_name,
         c.cell_number,
         c.member_count,
