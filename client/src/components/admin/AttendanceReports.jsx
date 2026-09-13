@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { Suspense, lazy, useEffect, useState, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   TrendingUp,
@@ -21,14 +21,23 @@ import {
   Sparkles
 } from 'lucide-react';
 import { adminAPI, analyticsAPI } from '../../services/api';
-import ExecutiveComparison from './ExecutiveComparison';
-import ExecutiveSummary from './ExecutiveSummary';
-import DepartmentsTab from './reports/DepartmentsTab';
-import HistoryTab from './reports/HistoryTab';
-import InsightsTab from './reports/InsightsTab';
-import MembersTab from './reports/MembersTab';
-import SectionsTab from './reports/SectionsTab';
 import { R, asArray, TABS } from './reports/reportShared';
+
+// Tab modules split into separate chunks — each tab's code (and its
+// data, fetched lazily in batch-4 work) loads only when first visited.
+const ExecutiveComparison = lazy(() => import('./ExecutiveComparison'));
+const ExecutiveSummary = lazy(() => import('./ExecutiveSummary'));
+const DepartmentsTab = lazy(() => import('./reports/DepartmentsTab'));
+const HistoryTab = lazy(() => import('./reports/HistoryTab'));
+const InsightsTab = lazy(() => import('./reports/InsightsTab'));
+const MembersTab = lazy(() => import('./reports/MembersTab'));
+const SectionsTab = lazy(() => import('./reports/SectionsTab'));
+
+const TabFallback = () => (
+  <div className="flex items-center justify-center py-16" aria-label="Loading tab">
+    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 /* MetricCard, IntelligenceTable, InsightCard and shared helpers live in
    ./reports/reportShared.jsx — imported above. */
@@ -822,11 +831,11 @@ const AttendanceReports = ({
       </div>
 
       {analyticsLoading || overviewLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        </div>
+        <TabFallback />
       ) : (
-        <div>{renderTabContent()}</div>
+        <div>
+          <Suspense fallback={<TabFallback />}>{renderTabContent()}</Suspense>
+        </div>
       )}
     </div>
   );

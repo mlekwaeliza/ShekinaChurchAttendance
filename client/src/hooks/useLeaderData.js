@@ -23,6 +23,50 @@ const WEEKDAY_NAMES = [
   'Saturday'
 ];
 
+// Local draft marks (survive refresh/close until submitted). Keyed by
+// roster owner + service + date so switching context keeps each draft.
+const DRAFT_PREFIX = 'attendance-draft:';
+const DRAFT_TTL_DAYS = 7;
+const getDraftKey = (leaderId, serviceId, date) =>
+  `${DRAFT_PREFIX}${leaderId || 'self'}:${serviceId}:${date}`;
+const readDraft = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed.attendance === 'object' ? parsed.attendance : null;
+  } catch {
+    return null;
+  }
+};
+const writeDraft = (key, attendance) => {
+  try {
+    if (Object.keys(attendance).length === 0) {
+      localStorage.removeItem(key);
+      return;
+    }
+    localStorage.setItem(key, JSON.stringify({ attendance, savedAt: new Date().toISOString() }));
+    // Prune stale drafts so per-date keys don't accumulate forever.
+    const cutoff = Date.now() - DRAFT_TTL_DAYS * 86400000;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith(DRAFT_PREFIX) || k === key) continue;
+      const parts = k.split(':');
+      const stamp = Date.parse(parts[parts.length - 1]);
+      if (!Number.isNaN(stamp) && stamp < cutoff) localStorage.removeItem(k);
+    }
+  } catch {
+    /* private mode / quota — marking still works in memory */
+  }
+};
+const removeDraft = (key) => {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* noop */
+  }
+};
+
 const normalizeDay = (day) => (day || '').trim().toLowerCase();
 
 const getWeekdayNameForDate = (dateString) => {
@@ -129,6 +173,9 @@ const useLeaderData = () => {
   const serviceSelectionWasManualRef = useRef(false);
   const previousSelectedDateRef = useRef(selectedDate);
   const membersLoadSeqRef = useRef(0);
+  // Draft-restore guard: each roster key restores at most once, so an
+  // explicit Clear is never resurrected and server data always wins.
+  const draftRestoredRef = useRef('');
   const showMessage = useCallback((msg, duration = 4000) => {
     setMessage(msg);
     if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
@@ -157,9 +204,15 @@ const useLeaderData = () => {
       if (rules.gender && member.gender && rules.gender !== 'All' && member.gender !== rules.gender)
         return false;
 
-      // Section check
+      // Section check — seed rules list section names ("Youth") while
+      // admin-saved rules may hold ids; accept either form.
       if (rules.sections && rules.sections.length > 0) {
-        if (!rules.sections.includes(member.section_id)) return false;
+        const candidates = new Set(
+          [member.section_id, member.section_name, member.sectionName]
+            .filter((v) => v !== undefined && v !== null)
+            .map((v) => String(v))
+        );
+        if (!rules.sections.some((s) => candidates.has(String(s)))) return false;
       }
 
       // Role check
@@ -237,6 +290,7 @@ const useLeaderData = () => {
         setActingOnBehalf(snapshot.actingOnBehalf);
         setServiceTypes(snapshot.serviceTypes);
         setAttendance({});
+        draftRestoredRef.current = '';
 
         const weekStart = getWeekStart(new Date(selectedDate));
         const attRes = await newMemberLeaderAPI.getWeekAttendance(weekStart);
@@ -283,6 +337,7 @@ const useLeaderData = () => {
       setActingOnBehalf(snapshot.actingOnBehalf);
       setServiceTypes(snapshot.serviceTypes);
       setAttendance({});
+      draftRestoredRef.current = '';
       writeLeaderCoreCache(snapshot.attendanceLeaderId || attendanceLeaderId, snapshot);
     } catch (error) {
       if (seq !== membersLoadSeqRef.current) return;
@@ -314,6 +369,7 @@ const useLeaderData = () => {
   const handleAttendanceLeaderSelection = useCallback((leaderId) => {
     setAttendanceLeaderId(leaderId ? Number(leaderId) : null);
     setAttendance({});
+    draftRestoredRef.current = '';
     setSubmitted(false);
   }, []);
 
@@ -441,7 +497,9 @@ const useLeaderData = () => {
           });
           setAttendance(existing);
         } else {
-          setAttendance({});
+          // Never wipe in-progress marks (e.g. a restored draft) on a late
+          // empty response — roster switches reset explicitly via loadMembers.
+          setAttendance((prev) => (Object.keys(prev).length > 0 ? prev : {}));
         }
         return;
       }
@@ -459,6 +517,10 @@ const useLeaderData = () => {
       }
       setIsUnauthorized(false);
       setSubmitted(response.data.submitted);
+      if (response.data.submitted) {
+        // Server already holds this roster — any stored draft is stale.
+        removeDraft(getDraftKey(attendanceLeaderId, selectedServiceId, selectedDate));
+      }
       if (response.data.attendance && response.data.attendance.length > 0) {
         const existing = {};
         response.data.attendance.forEach((a) => {
@@ -466,7 +528,9 @@ const useLeaderData = () => {
         });
         setAttendance(existing);
       } else {
-        setAttendance({});
+        // Never wipe in-progress marks (e.g. a restored draft) on a late
+        // empty response — roster switches reset explicitly via loadMembers.
+        setAttendance((prev) => (Object.keys(prev).length > 0 ? prev : {}));
       }
     } catch (error) {
       console.error('Failed to check submission:', error);
@@ -489,23 +553,26 @@ const useLeaderData = () => {
   // Bulk-mark a set of roster members (e.g. "Mark all present") or clear
   // marks when status is null. Callers pass the currently visible member
   // ids so bulk actions respect search/filter; omitting ids targets the
-  // whole eligible roster. Respects the submitted/edit-mode lock.
+  // whole eligible roster. Respects the submitted/edit-mode lock. Clearing
+  // to empty removes the stored draft explicitly (the persist effect below
+  // is write-only and never deletes, so a restore can never race a save).
   const handleBulkMark = useCallback(
     (status, ids) => {
       if (submitted && !editMode) return;
+      const key = getDraftKey(attendanceLeaderId, selectedServiceId, selectedDate);
       const targets = Array.isArray(ids) ? ids : eligibleMembers.map((m) => m.id);
       if (status == null) {
         if (!Array.isArray(ids)) {
           setAttendance({});
+          removeDraft(key);
           return;
         }
-        setAttendance((prev) => {
-          const next = { ...prev };
-          targets.forEach((id) => {
-            delete next[id];
-          });
-          return next;
+        const next = { ...attendance };
+        targets.forEach((id) => {
+          delete next[id];
         });
+        setAttendance(next);
+        if (Object.keys(next).length === 0) removeDraft(key);
         return;
       }
       setAttendance((prev) => {
@@ -516,7 +583,15 @@ const useLeaderData = () => {
         return next;
       });
     },
-    [submitted, editMode, eligibleMembers]
+    [
+      submitted,
+      editMode,
+      eligibleMembers,
+      attendance,
+      attendanceLeaderId,
+      selectedServiceId,
+      selectedDate
+    ]
   );
 
   const handleToggleEdit = useCallback(() => {
@@ -596,6 +671,7 @@ const useLeaderData = () => {
           )
         );
         setSubmitted(true);
+        removeDraft(getDraftKey(attendanceLeaderId, selectedServiceId, selectedDate));
         showMessage('Attendance submitted successfully!');
         return true;
       }
@@ -604,6 +680,7 @@ const useLeaderData = () => {
         member_id: parseInt(member_id),
         status
       }));
+      const draftKey = getDraftKey(attendanceLeaderId, selectedServiceId, selectedDate);
 
       if (!isOnline) {
         if (actingOnBehalf) {
@@ -622,6 +699,7 @@ const useLeaderData = () => {
         if (result.success) {
           setQueuedForDate(selectedDate);
           setSubmitted(true);
+          removeDraft(draftKey);
           showMessage('Attendance saved offline — will sync when you reconnect');
           return true;
         } else if (result.reason === 'already_queued') {
@@ -638,6 +716,7 @@ const useLeaderData = () => {
         attendanceLeaderId
       );
       setSubmitted(true);
+      removeDraft(draftKey);
       loadHistory();
       showMessage('Attendance submitted successfully!');
       return true;
@@ -779,6 +858,52 @@ const useLeaderData = () => {
   useEffect(() => {
     checkSubmission();
   }, [checkSubmission, selectedServiceId]);
+
+  // Restore a stored draft once per roster key, and only when nothing is
+  // marked yet — server data (applied by checkSubmission) always wins.
+  // Skipped for unauthorized rosters (cards hidden; nothing to restore into).
+  // Declared BEFORE the persist effect so a mount reads the draft first.
+  useEffect(() => {
+    if (loading || submitted || isUnauthorized || members.length === 0) return;
+    if (Object.keys(attendance).length > 0) return;
+    const key = getDraftKey(attendanceLeaderId, selectedServiceId, selectedDate);
+    if (draftRestoredRef.current === key) return;
+    draftRestoredRef.current = key;
+    const draft = readDraft(key);
+    if (!draft) return;
+    const validIds = new Set(members.map((m) => String(m.id)));
+    const entries = Object.entries(draft).filter(
+      ([id, status]) =>
+        validIds.has(String(id)) && ['present', 'absent', 'excused'].includes(status)
+    );
+    if (entries.length === 0) return;
+    setAttendance(Object.fromEntries(entries));
+    showMessage(
+      `Restored ${entries.length} unsent mark${entries.length === 1 ? '' : 's'} from your last session.`
+    );
+  }, [
+    loading,
+    submitted,
+    isUnauthorized,
+    members,
+    attendance,
+    attendanceLeaderId,
+    selectedServiceId,
+    selectedDate,
+    showMessage
+  ]);
+
+  // Persist in-progress marks per roster so a refresh, crash, or closed
+  // tab never loses marking progress. Write-only by design: it never
+  // deletes, so a same-commit restore can never be erased by a stale
+  // empty snapshot. Drafts are removed explicitly on submit, on Clear,
+  // or when the server reports the roster submitted — plus 7-day TTL.
+  // Skipped for unauthorized rosters (nothing markable is shown).
+  useEffect(() => {
+    if (submitted || isUnauthorized) return;
+    if (Object.keys(attendance).length === 0) return;
+    writeDraft(getDraftKey(attendanceLeaderId, selectedServiceId, selectedDate), attendance);
+  }, [attendance, submitted, isUnauthorized, attendanceLeaderId, selectedServiceId, selectedDate]);
 
   useEffect(() => {
     if (!isOnline) {
