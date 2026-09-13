@@ -22,7 +22,9 @@ import {
   Clock,
   Heart,
   Banknote,
-  Calendar
+  Calendar,
+  Database,
+  Activity
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -80,12 +82,37 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
 
+  // System health (database, backups, server) — compact ops overview.
+  // Each source is optional: a failed probe shows "Unknown", never a crash.
+  const [healthStatus, setHealthStatus] = useState(null);
+  const [backupStatus, setBackupStatus] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(false);
+
   useEffect(() => {
     load2FAStatus();
     loadHallOfFameSettings();
     loadMembers();
-    if (isAdmin) loadUsers();
+    if (isAdmin) {
+      loadUsers();
+      loadSystemHealth();
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadSystemHealth = async () => {
+    setHealthLoading(true);
+    try {
+      const [healthRes, backupRes] = await Promise.allSettled([
+        adminAPI.getHealth(),
+        adminAPI.getBackupStatus()
+      ]);
+      setHealthStatus(healthRes.status === 'fulfilled' ? healthRes.value.data : null);
+      setBackupStatus(backupRes.status === 'fulfilled' ? backupRes.value.data : null);
+    } catch (e) {
+      console.error('Failed to load system health:', e);
+    } finally {
+      setHealthLoading(false);
+    }
+  };
 
   const loadMembers = async () => {
     setMembersLoading(true);
@@ -802,6 +829,68 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {/* System & User Management */}
       {isAdmin && isTabActive('system') && (
         <div className="space-y-6">
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Activity className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+                System Health
+              </h3>
+              <button
+                onClick={loadSystemHealth}
+                disabled={healthLoading}
+                className="btn-secondary text-sm"
+              >
+                <RefreshCw className={`w-4 h-4 ${healthLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3 text-center">
+                <Database className="w-4 h-4 mx-auto mb-1 text-slate-400" />
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">Database</p>
+                <p
+                  className={`text-sm font-bold ${healthStatus?.database?.status === 'connected' ? 'text-emerald-600' : 'text-slate-500'}`}
+                >
+                  {healthStatus?.database?.status === 'connected'
+                    ? 'Online'
+                    : (healthStatus?.database?.status ?? 'Unknown')}
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3 text-center">
+                <ShieldCheck className="w-4 h-4 mx-auto mb-1 text-slate-400" />
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">Server</p>
+                <p
+                  className={`text-sm font-bold ${healthStatus?.status === 'ok' ? 'text-emerald-600' : 'text-slate-500'}`}
+                >
+                  {healthStatus?.status === 'ok'
+                    ? 'Healthy'
+                    : (healthStatus?.status ?? 'Unknown')}
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3 text-center">
+                <Clock className="w-4 h-4 mx-auto mb-1 text-slate-400" />
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">Last Backup</p>
+                <p
+                  className={`text-sm font-bold ${backupStatus?.warning ? 'text-amber-600' : 'text-slate-900 dark:text-slate-100'}`}
+                >
+                  {backupStatus?.last_backup_at ? fdatetime(backupStatus.last_backup_at) : 'Unknown'}
+                </p>
+              </div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3 text-center">
+                <Activity className="w-4 h-4 mx-auto mb-1 text-slate-400" />
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">Uptime</p>
+                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {healthStatus?.uptime ?? 'Unknown'}
+                </p>
+              </div>
+            </div>
+            {backupStatus?.warning && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {backupStatus.warning}
+              </p>
+            )}
+          </div>
           <div className="card p-6">
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">

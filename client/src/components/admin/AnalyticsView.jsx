@@ -3,7 +3,7 @@ import {
   BarChart3, TrendingUp, AlertTriangle, Users, Building2, Heart,
   Shield, Brain, Layers, UserCheck, Award, PieChart as PieChartIcon,
   CheckCircle2, XCircle, TrendingDown,
-  Info,
+  Info, Zap,
   DollarSign, HandCoins, Wallet
 } from 'lucide-react';
 import { BarChart, Bar, Line, PieChart, Pie, Cell, AreaChart, Area,
@@ -474,7 +474,13 @@ const TrendsTab = ({ data }) => {
 };
 
 const InsightsTab = ({ data }) => {
-  const insights = data.insights || [];
+  const insights = Array.isArray(data.insights) ? data.insights : [];
+  // Recommendations come from the executive summary payload (fetched
+  // alongside everything else below) — surfacing them here keeps insights
+  // and their follow-up actions on one screen.
+  const recommendations = Array.isArray(data.execSummary?.recommendations)
+    ? data.execSummary.recommendations
+    : [];
   const icons = { success: CheckCircle2, warning: AlertTriangle, danger: XCircle, info: TrendingUp };
   return (
     <div className="space-y-4">
@@ -491,6 +497,27 @@ const InsightsTab = ({ data }) => {
           </div>
         );
       })}
+      {recommendations.length > 0 && (
+        <div className="pt-2">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Recommended Actions</h3>
+          <div className="space-y-3">
+            {recommendations.slice(0, 5).map((r, i) => (
+              <div key={i} className="flex items-start gap-3 rounded-2xl border border-violet-200/60 dark:border-violet-800/50 bg-violet-50/50 dark:bg-violet-900/10 p-4 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center shrink-0">
+                  <Zap className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{r.recommendation}</p>
+                    {r.priority && <Badge variant={r.priority === 'high' ? 'danger' : 'warning'}>{r.priority}</Badge>}
+                  </div>
+                  {r.expectedImpact && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Expected: {r.expectedImpact}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -936,6 +963,7 @@ const AnalyticsView = () => {
         analyticsAPI.getYearOverYear(),
         analyticsAPI.getAttendancePatterns(period),
         analyticsAPI.getFinanceAnalytics(),
+        analyticsAPI.getExecutiveSummary(period),
       ]);
       const ok = i => r[i].status === 'fulfilled' ? r[i].value.data : null;
       setData({
@@ -947,6 +975,7 @@ const AnalyticsView = () => {
         sectionComparison: ok(11) || [], yearOverYear: ok(12) || [],
         dayPatterns: ok(13) || [],
         finance: ok(14) || null,
+        execSummary: ok(15) || null,
       });
     } catch (e) { console.error(e); }
     finally { setLoading(false); }

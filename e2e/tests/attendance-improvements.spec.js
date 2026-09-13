@@ -70,17 +70,19 @@ test.describe('Attendance hardening (server validation)', () => {
 
 test.describe('Attendance hardening (leader UI)', () => {
   test('bulk mark-all-present completes the roster', async ({ page }) => {
+    test.slow();
     await uiLoginAsLeader(page);
     await page.goto('/leader/attendance');
-    // Main Service has no eligibility rules, so it shows the full roster
-    // regardless of weekday auto-selection (e.g. gender/section services).
-    await page.getByRole('button', { name: 'Main Service', exact: true }).click();
     const bulkButton = page.getByRole('button', { name: /mark all present/i });
     const emptyState = page.getByText(/no eligible members found/i);
     // Either the roster toolbar or the empty state must appear; the empty
     // roster means this environment cannot exercise marking — skip then.
     await expect(bulkButton.or(emptyState)).toBeVisible({ timeout: 30000 });
     test.skip((await emptyState.count()) > 0, 'Leader roster is empty in this environment');
+    // Main Service has no eligibility rules, so it shows the full roster
+    // regardless of weekday auto-selection (e.g. gender/section services).
+    await page.getByRole('button', { name: 'Main Service', exact: true }).click();
+    await expect(bulkButton).toBeVisible({ timeout: 30000 });
     await bulkButton.click();
     // Sticky action bar shows a full count and an enabled submit.
     const submit = page.getByRole('button', { name: /submit attendance/i }).first();
@@ -93,13 +95,14 @@ test.describe('Attendance hardening (leader UI)', () => {
     test.slow();
     await uiLoginAsLeader(page);
     await page.goto('/leader/attendance');
-    await page.getByRole('button', { name: 'Main Service', exact: true }).click();
     const markButton = page
       .locator('button[aria-label^="Mark "][aria-label$=" as present"]')
       .first();
     const emptyState = page.getByText(/no eligible members found/i);
     await expect(markButton.or(emptyState)).toBeVisible({ timeout: 30000 });
     test.skip((await emptyState.count()) > 0, 'Leader roster is empty in this environment');
+    await page.getByRole('button', { name: 'Main Service', exact: true }).click();
+    await expect(markButton).toBeVisible({ timeout: 30000 });
     // Mark one member only — never submit, so the server is untouched.
     await markButton.click();
     await expect(

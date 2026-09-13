@@ -302,10 +302,7 @@ const Layout = ({ children, showNav = true }) => {
       },
       {
         section: t('nav.sections.system', 'INSIGHTS'),
-        items: [
-          { path: '/admin/reporting', label: t('nav.items.reports'), icon: FileText },
-          { path: '/admin/executive', label: t('nav.items.attendanceInsights'), icon: Activity }
-        ]
+        items: [{ path: '/admin/reporting', label: t('nav.items.reports'), icon: FileText }]
       },
       {
         section: t('nav.sections.system', 'ADMINISTRATION'),

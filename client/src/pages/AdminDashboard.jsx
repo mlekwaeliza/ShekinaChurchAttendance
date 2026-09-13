@@ -10,7 +10,6 @@ import { CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
 // only when its tab is opened so the initial admin route stays responsive.
 const MemberEditModal = lazy(() => import('../components/MemberEditModal'));
 const DashboardOverview = lazy(() => import('../components/admin/DashboardOverview'));
-const ExecutiveCommandCenter = lazy(() => import('../components/admin/ExecutiveCommandCenter'));
 const MemberDirectory = lazy(() => import('../components/admin/MemberDirectory'));
 const LeaderDirectory = lazy(() => import('../components/admin/LeaderDirectory'));
 const AttendanceReports = lazy(() => import('../components/admin/AttendanceReports'));
@@ -50,16 +49,7 @@ const AdminDashboard = () => {
   const activeTab = tab || 'dashboard';
   const { user } = useAuth();
   const data = useAdminData();
-  const { loadExecutiveDataOnce } = data;
   const { setCrumbs, clearCrumbs } = useBreadcrumbs();
-
-  // Load heavy executive analytics only when the dashboard tab is active.
-  // This prevents the 10-call analytics burst from hitting on every admin mount.
-  React.useEffect(() => {
-    if (activeTab === 'executive') {
-      loadExecutiveDataOnce();
-    }
-  }, [activeTab, loadExecutiveDataOnce]);
 
   // Handle Dynamic Breadcrumbs for Sections
   React.useEffect(() => {
@@ -170,28 +160,17 @@ const AdminDashboard = () => {
           />
         );
 
+      // Merged: the standalone Executive Command Center was folded into
+      // Attendance Analytics (one "Attendance Insights" surface). The old
+      // /admin/executive route renders the same view so bookmarks keep working.
       case 'executive':
+      case 'attendance-analytics':
+      case 'analytics':
         return (
-          <ExecutiveCommandCenter
-            allMembers={data.allMembers}
-            sections={data.sections}
-            leaders={data.leaders}
-            pastorName={user?.full_name}
-            serviceTypes={data.serviceTypes}
-            selectedServiceId={data.selectedServiceId}
-            onServiceChange={data.setSelectedServiceId}
-            birthdays={data.birthdays}
-            summary={data.execSummary}
-            comparison={data.execComparison}
-            aiInsights={data.aiInsights}
-            homeCells={data.homeCells}
-            departments={data.departments}
-            auditLog={data.auditLog}
-            hallOfFame={data.hallOfFame}
-            backup={data.backupStatus}
-            health={data.healthStatus}
-            notifCount={data.notifCount}
-            onRefresh={data.loadExecutiveData}
+          <AnalyticsView
+            trends={data.trends}
+            trendsLoading={data.trendsLoading}
+            loadTrends={data.loadTrends}
           />
         );
 
@@ -342,16 +321,6 @@ const AdminDashboard = () => {
 
       case 'trash':
         return <TrashView />;
-
-      case 'attendance-analytics':
-      case 'analytics':
-        return (
-          <AnalyticsView
-            trends={data.trends}
-            trendsLoading={data.trendsLoading}
-            loadTrends={data.loadTrends}
-          />
-        );
 
       case 'rewards':
         return <RewardsView />;

@@ -91,19 +91,6 @@ const useAdminData = () => {
   const [assignmentsLoading, setAssignmentsLoading] = useState(false);
   const [assignedLeaderIds, setAssignedLeaderIds] = useState([]);
 
-  // Executive Command Center data (fired in parallel with core data)
-  const [execSummary, setExecSummary] = useState(null);
-  const [execComparison, setExecComparison] = useState(null);
-  const [aiInsights, setAiInsights] = useState([]);
-  const [homeCells, setHomeCells] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [auditLog, setAuditLog] = useState([]);
-  const [hallOfFame, setHallOfFame] = useState(null);
-  const [backupStatus, setBackupStatus] = useState(null);
-  const [healthStatus, setHealthStatus] = useState(null);
-  const [notifCount, setNotifCount] = useState(0);
-  const execDataLoadedRef = useRef(false);
-
   const messageTimerRef = useRef(null);
   const overviewRequestRef = useRef(0);
   const showMessage = useCallback((msg, duration = 3000) => {
@@ -225,80 +212,6 @@ const useAdminData = () => {
       setMetricsLoading(false);
     }
   }, [selectedServiceId]);
-
-  // Build N periods backward from today for executive comparison
-  const buildPeriods = useCallback((periodType, count) => {
-    const periods = [];
-    const now = new Date();
-    for (let i = count - 1; i >= 0; i--) {
-      let start, end, label;
-      if (periodType === 'month') {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-        const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-        end = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
-        label = d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
-      } else if (periodType === 'week') {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i * 7 - d.getDay());
-        start = d.toISOString().split('T')[0];
-        const e = new Date(d);
-        e.setDate(e.getDate() + 6);
-        end = e.toISOString().split('T')[0];
-        label = `W${i + 1}`;
-      } else {
-        const d = new Date(now.getFullYear() - i, 0, 1);
-        start = `${d.getFullYear()}-01-01`;
-        end = `${d.getFullYear()}-12-31`;
-        label = `${d.getFullYear()}`;
-      }
-      periods.push({ id: `p${i}`, label, start, end });
-    }
-    return periods;
-  }, []);
-
-  // Fire all executive command center API calls in parallel
-  const loadExecutiveData = useCallback(async () => {
-    try {
-      const asArray = (v) => (Array.isArray(v) ? v : []);
-      const [
-        sumRes,
-        compRes,
-        aiRes,
-        cellRes,
-        deptRes,
-        auditRes,
-        perfRes,
-        backupRes,
-        healthRes,
-        notifRes
-      ] = await Promise.allSettled([
-        analyticsAPI.getExecutiveSummary(90),
-        analyticsAPI.getExecutiveComparison({ periods: buildPeriods('month', 6), mode: 'overall' }),
-        analyticsAPI.getAIInsights(),
-        adminAPI.getHomeCells(),
-        adminAPI.getDepartments(),
-        adminAPI.getAuditLog({ limit: 12 }),
-        adminAPI.getPerformanceDashboard({ filter: 'month', service_id: selectedServiceId }),
-        adminAPI.getBackupStatus(),
-        adminAPI.getHealth(),
-        adminAPI.getUnreadNotificationCount()
-      ]);
-      if (sumRes.status === 'fulfilled') setExecSummary(sumRes.value.data);
-      if (compRes.status === 'fulfilled') setExecComparison(compRes.value.data);
-      if (aiRes.status === 'fulfilled') setAiInsights(asArray(aiRes.value.data));
-      if (cellRes.status === 'fulfilled') setHomeCells(asArray(cellRes.value.data));
-      if (deptRes.status === 'fulfilled')
-        setDepartments(asArray(deptRes.value.data?.departments ?? deptRes.value.data));
-      if (auditRes.status === 'fulfilled') setAuditLog(asArray(auditRes.value.data));
-      if (perfRes.status === 'fulfilled') setHallOfFame(perfRes.value.data);
-      if (backupRes.status === 'fulfilled') setBackupStatus(backupRes.value.data);
-      if (healthRes.status === 'fulfilled') setHealthStatus(healthRes.value.data);
-      if (notifRes.status === 'fulfilled') setNotifCount(notifRes.value.data?.count || 0);
-    } catch (e) {
-      console.error('Failed to load executive data:', e);
-    }
-  }, [selectedServiceId, buildPeriods]);
 
   const loadOverview = useCallback(async () => {
     if (!filterValue) return;
@@ -496,20 +409,12 @@ const useAdminData = () => {
   );
 
   // Initial load — fire core data calls in parallel immediately.
-  // Executive data (heavy analytics) is deferred until the dashboard tab is actually visited.
+  // Heavy analytics views self-fetch when opened, so the admin shell stays light.
   useEffect(() => {
     loadCoreData();
     loadLeaders();
     loadDashboardMetrics();
   }, [loadCoreData, loadLeaders, loadDashboardMetrics]);
-
-  // Lazy loader for executive data — only fires when called from the dashboard tab,
-  // and only once per session (unless manually refreshed).
-  const loadExecutiveDataOnce = useCallback(async () => {
-    if (execDataLoadedRef.current) return;
-    execDataLoadedRef.current = true;
-    await loadExecutiveData();
-  }, [loadExecutiveData]);
 
   const [lastUpdated, setLastUpdated] = useState(new Date());
 
@@ -603,8 +508,6 @@ const useAdminData = () => {
     loadCoreData,
     loadLeaders,
     loadServiceTypes,
-    loadExecutiveData,
-    loadExecutiveDataOnce,
     // Dashboard metrics
     dashboardMetrics,
     metricsLoading,
@@ -647,18 +550,7 @@ const useAdminData = () => {
     assignedLeaderIds,
     setAssignedLeaderIds,
     loadServiceInstance,
-    handleSaveServiceAssignments,
-    // Executive Command Center data
-    execSummary,
-    execComparison,
-    aiInsights,
-    homeCells,
-    departments,
-    auditLog,
-    hallOfFame,
-    backupStatus,
-    healthStatus,
-    notifCount
+    handleSaveServiceAssignments
   };
 };
 
