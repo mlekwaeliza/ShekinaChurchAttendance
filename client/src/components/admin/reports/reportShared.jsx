@@ -47,6 +47,9 @@ export const weekToDate = (weekStr) => {
   const isoStart = new Date(simple);
   if (day <= 4) isoStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
   else isoStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+  // Attendance is reviewed and submitted for Sunday services. ISO weeks begin
+  // on Monday, so label each column with its ending Sunday rather than Monday.
+  isoStart.setUTCDate(isoStart.getUTCDate() + 6);
   return `${isoStart.getUTCDate()} ${MONTHS_SHORT[isoStart.getUTCMonth() + 1]}`;
 };
 

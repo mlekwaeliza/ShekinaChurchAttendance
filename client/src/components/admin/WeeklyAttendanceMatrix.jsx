@@ -2,7 +2,21 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { analyticsAPI, adminAPI } from '../../services/api';
 import { Search, Loader2, Calendar } from 'lucide-react';
 
-const MONTHS_SHORT = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+const MONTHS_SHORT = [
+  '',
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC'
+];
 
 const weekToDate = (weekStr) => {
   const [y, w] = String(weekStr).split('-W').map(Number);
@@ -12,24 +26,31 @@ const weekToDate = (weekStr) => {
   const isoStart = new Date(simple);
   if (day <= 4) isoStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
   else isoStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+  isoStart.setUTCDate(isoStart.getUTCDate() + 6);
   return `${isoStart.getUTCDate()} ${MONTHS_SHORT[isoStart.getUTCMonth() + 1]}`;
 };
 
-const asArray = (v) => Array.isArray(v) ? v : [];
+const asArray = (v) => (Array.isArray(v) ? v : []);
 
-const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly Attendance Matrix' }) => {
+const WeeklyAttendanceMatrix = ({
+  sectionId,
+  leaderId,
+  memberId,
+  title = 'Weekly Attendance Matrix'
+}) => {
   const [weeksCount, setWeeksCount] = useState(12);
-  const [serviceId, setServiceId]   = useState('all');
-  const [search, setSearch]         = useState('');
-  const [loading, setLoading]       = useState(true);
+  const [serviceId, setServiceId] = useState('all');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
   const [matrixData, setMatrixData] = useState([]);
-  const [weeksList, setWeeksList]   = useState([]);
+  const [weeksList, setWeeksList] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
 
   // Load service types once
   useEffect(() => {
-    adminAPI.getServiceTypes()
-      .then(res => setServiceTypes(asArray(res.data)))
+    adminAPI
+      .getServiceTypes()
+      .then((res) => setServiceTypes(asArray(res.data)))
       .catch(() => setServiceTypes([]));
   }, []);
 
@@ -41,7 +62,7 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
         serviceId: serviceId === 'all' ? undefined : serviceId,
         sectionId: sectionId || undefined,
         leaderId: leaderId || undefined,
-        memberId: memberId || undefined,
+        memberId: memberId || undefined
       });
       setMatrixData(asArray(res.data?.matrix));
       setWeeksList(asArray(res.data?.weeks));
@@ -58,7 +79,7 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
     loadMatrix();
   }, [loadMatrix]);
 
-  const filteredMatrix = matrixData.filter(m => {
+  const filteredMatrix = matrixData.filter((m) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -77,7 +98,8 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
             <Calendar className="w-4 h-4 text-indigo-500" /> {title}
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Showing member attendance records per week (Green P = Present, Red A = Absent, Amber E = Excused)
+            Showing member attendance records per week (Green P = Present, Red A = Absent, Amber E =
+            Excused)
           </p>
         </div>
 
@@ -88,7 +110,7 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
             <input
               type="text"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Search member..."
               className="h-8 w-full pl-8 pr-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
             />
@@ -98,12 +120,14 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
           {serviceTypes.length > 0 && (
             <select
               value={serviceId}
-              onChange={e => setServiceId(e.target.value)}
+              onChange={(e) => setServiceId(e.target.value)}
               className="h-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
             >
               <option value="all">All Services</option>
-              {serviceTypes.map(st => (
-                <option key={st.id} value={st.id}>{st.name}</option>
+              {serviceTypes.map((st) => (
+                <option key={st.id} value={st.id}>
+                  {st.name}
+                </option>
               ))}
             </select>
           )}
@@ -113,7 +137,7 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
             <span className="text-[10px] font-semibold text-slate-400 uppercase">Weeks:</span>
             <select
               value={weeksCount}
-              onChange={e => setWeeksCount(Number(e.target.value))}
+              onChange={(e) => setWeeksCount(Number(e.target.value))}
               className="h-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
             >
               <option value={4}>4 weeks</option>
@@ -127,7 +151,9 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
 
           {/* Legend */}
           <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Legend:</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              Legend:
+            </span>
             <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 dark:text-emerald-300">
               <span className="w-2.5 h-2.5 rounded bg-emerald-500" /> P
             </span>
@@ -160,8 +186,12 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
                 Member
               </div>
               <div className="w-28 shrink-0 px-3 py-2.5">Section</div>
-              {weeksList.map(w => (
-                <div key={w} className="w-14 shrink-0 px-1 py-2.5 text-center font-bold text-slate-600 dark:text-slate-300" title={w}>
+              {weeksList.map((w) => (
+                <div
+                  key={w}
+                  className="w-14 shrink-0 px-1 py-2.5 text-center font-bold text-slate-600 dark:text-slate-300"
+                  title={w}
+                >
                   {weekToDate(w)}
                 </div>
               ))}
@@ -174,30 +204,51 @@ const WeeklyAttendanceMatrix = ({ sectionId, leaderId, memberId, title = 'Weekly
                 className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-violet-50/30 dark:hover:bg-violet-950/20 transition-colors"
               >
                 <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-44 shrink-0 px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 truncate">
-                  <span className="font-semibold text-slate-900 dark:text-white block truncate">{m.full_name}</span>
-                  {m.membership_id && <span className="text-[10px] text-slate-400 block">{m.membership_id}</span>}
+                  <span className="font-semibold text-slate-900 dark:text-white block truncate">
+                    {m.full_name}
+                  </span>
+                  {m.membership_id && (
+                    <span className="text-[10px] text-slate-400 block">{m.membership_id}</span>
+                  )}
                 </div>
-                <div className="w-28 shrink-0 px-3 py-2.5 text-slate-500 truncate" title={m.section_name || ''}>
+                <div
+                  className="w-28 shrink-0 px-3 py-2.5 text-slate-500 truncate"
+                  title={m.section_name || ''}
+                >
                   {m.section_name || '—'}
                 </div>
                 {asArray(m.weekly).map((status, wi) => (
-                  <div key={wi} className="w-14 shrink-0 px-1 py-2 text-center flex items-center justify-center">
+                  <div
+                    key={wi}
+                    className="w-14 shrink-0 px-1 py-2 text-center flex items-center justify-center"
+                  >
                     {status === 'present' && (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-black shadow-sm" title="Present">
+                      <span
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-black shadow-sm"
+                        title="Present"
+                      >
                         P
                       </span>
                     )}
                     {status === 'absent' && (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-rose-700 bg-rose-100 dark:bg-rose-900/40 dark:text-rose-300 text-[10px] font-black shadow-sm" title="Absent">
+                      <span
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-rose-700 bg-rose-100 dark:bg-rose-900/40 dark:text-rose-300 text-[10px] font-black shadow-sm"
+                        title="Absent"
+                      >
                         A
                       </span>
                     )}
                     {status === 'excused' && (
-                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-md text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-black shadow-sm" title="Excused">
+                      <span
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-black shadow-sm"
+                        title="Excused"
+                      >
                         E
                       </span>
                     )}
-                    {!status && <span className="text-slate-300 dark:text-slate-600 font-bold">·</span>}
+                    {!status && (
+                      <span className="text-slate-300 dark:text-slate-600 font-bold">·</span>
+                    )}
                   </div>
                 ))}
               </div>

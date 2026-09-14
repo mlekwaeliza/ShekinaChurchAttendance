@@ -60,6 +60,7 @@ const weekToDate = (weekStr) => {
   const isoStart = new Date(simple);
   if (day <= 4) isoStart.setUTCDate(simple.getUTCDate() - simple.getUTCDay() + 1);
   else isoStart.setUTCDate(simple.getUTCDate() + 8 - simple.getUTCDay());
+  isoStart.setUTCDate(isoStart.getUTCDate() + 6);
   return `${isoStart.getUTCDate()} ${MONTHS_SHORT[isoStart.getUTCMonth() + 1]}`;
 };
 
