@@ -62,6 +62,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
     setSelectedMemberDetails
   } = tabActions;
   const rawMembers = memberIntelligence;
+  const [groupByOwner, setGroupByOwner] = useState(false);
   const daysBetween = (dateStr) => {
     if (!dateStr) return null;
     const d = new Date(dateStr);
@@ -352,6 +353,14 @@ const MembersTab = ({ data, actions: tabActions }) => {
       .toLowerCase();
     return haystack.includes(memberSearch.toLowerCase());
   });
+  const ownershipGroupLabel = (member) =>
+    `${member.section_name || 'Unassigned section'} · ${followUpOwner(member)}`;
+  const displayedMembers = groupByOwner
+    ? [...filteredMembers].sort((a, b) => {
+        const groupOrder = ownershipGroupLabel(a).localeCompare(ownershipGroupLabel(b));
+        return groupOrder || a.full_name.localeCompare(b.full_name);
+      })
+    : filteredMembers;
 
   const followUpQueues = leaders
     .map((leader) => {
@@ -616,7 +625,13 @@ const MembersTab = ({ data, actions: tabActions }) => {
   const matrixRows = (memberWeeklyMatrix || []).filter((member) =>
     filteredMemberIds.has(String(member.member_id))
   );
-  const visibleMatrixRows = matrixRows.slice(0, matrixLimit);
+  const orderedMatrixRows = groupByOwner
+    ? [...matrixRows].sort((a, b) => {
+        const groupOrder = ownershipGroupLabel(a).localeCompare(ownershipGroupLabel(b));
+        return groupOrder || a.full_name.localeCompare(b.full_name);
+      })
+    : matrixRows;
+  const visibleMatrixRows = orderedMatrixRows.slice(0, matrixLimit);
   const priorityCategoryIds = [
     'all',
     'leaving-risk',
@@ -655,6 +670,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
         memberRiskFilter === 'all' ? 'Risk: all levels' : `Risk: ${memberRiskFilter}`,
         memberSectionFilter ? `Section: ${memberSectionFilter}` : null,
         memberLeaderFilter ? `Leader: ${memberLeaderFilter}` : null,
+        groupByOwner ? 'Grouped by: section and follow-up leader' : null,
         memberSearch.trim() ? `Search: ${memberSearch.trim()}` : null,
         `Service: ${serviceLabel}`
       ]
@@ -703,7 +719,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
                 ...memberWeeklyMatrixWeeks.map((week) => weekToDate(week))
               ]
             ],
-            body: matrixRows.map((member) => [
+            body: orderedMatrixRows.map((member) => [
               member.full_name,
               member.section_name || '—',
               member.phone || '—',
@@ -741,7 +757,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
                 'Risk'
               ]
             ],
-            body: filteredMembers.map((member, index) => [
+            body: displayedMembers.map((member, index) => [
               index + 1,
               member.full_name,
               member.phone || '—',
@@ -808,13 +824,16 @@ const MembersTab = ({ data, actions: tabActions }) => {
   }, [
     activeCategory.id,
     activeCategory.label,
-    filteredMembers,
-    matrixRows,
+    displayedMembers,
+    filteredMembers.length,
+    orderedMatrixRows,
+    matrixRows.length,
     memberRiskFilter,
     memberSectionFilter,
     memberLeaderFilter,
     memberSearch,
     memberView,
+    groupByOwner,
     memberWeeklyMatrixWeeks,
     serviceLabel
   ]);
@@ -1232,6 +1251,19 @@ const MembersTab = ({ data, actions: tabActions }) => {
                 </>
               )}
             </button>
+            <button
+              type="button"
+              onClick={() => setGroupByOwner((grouped) => !grouped)}
+              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold transition-colors ${
+                groupByOwner
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-indigo-600 hover:bg-indigo-50 hover:text-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-900/20'
+              }`}
+              title="Organize members by their section and follow-up leader"
+            >
+              <Users className="h-3 w-3" />
+              {groupByOwner ? 'Grouped by leader' : 'Group by leader'}
+            </button>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {memberView === 'matrix' && (
@@ -1304,104 +1336,121 @@ const MembersTab = ({ data, actions: tabActions }) => {
                     </td>
                   </tr>
                 )}
-                {filteredMembers.map((m) => {
+                {displayedMembers.map((m, index) => {
                   const streak = Number(m.current_attendance_streak || 0);
                   const absences = Number(m.consecutive_absences || 0);
+                  const showGroupHeading =
+                    groupByOwner &&
+                    (index === 0 ||
+                      ownershipGroupLabel(m) !== ownershipGroupLabel(displayedMembers[index - 1]));
                   return (
-                    <tr
-                      key={m.id}
-                      className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_41px]"
-                      onClick={() => openMemberAttendanceDetails(m)}
-                    >
-                      <td className="py-2 px-3 text-right">
-                        <span
-                          className={`text-[10px] font-black w-5 h-5 inline-flex items-center justify-center rounded-full ${(m.current_rank || 1) === 1 ? 'bg-amber-100 text-amber-800' : (m.current_rank || 1) === 2 ? 'bg-slate-200 text-slate-700' : (m.current_rank || 1) === 3 ? 'bg-orange-100 text-orange-800' : 'text-slate-400'}`}
-                        >
-                          {m.current_rank || ''}
-                        </span>
-                      </td>
-                      <td className="py-2 px-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">
-                        {m.full_name}
-                      </td>
-                      <td className="py-2 px-3 text-slate-500">{m.section_name || '—'}</td>
-                      <td className="py-2 px-3">
-                        <div className="font-medium text-slate-700 dark:text-slate-200">
-                          {m.leader_name || m.head_leader_name || 'Unassigned'}
-                        </div>
-                        {m.leader_name &&
-                          m.head_leader_name &&
-                          m.leader_name !== m.head_leader_name && (
-                            <div className="text-[10px] text-slate-400">
-                              Section head: {m.head_leader_name}
-                            </div>
+                    <React.Fragment key={m.id}>
+                      {showGroupHeading && (
+                        <tr className="border-y border-indigo-100 bg-indigo-50/70 dark:border-indigo-900/50 dark:bg-indigo-950/30">
+                          <td
+                            colSpan="11"
+                            className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300"
+                          >
+                            {ownershipGroupLabel(m)}
+                          </td>
+                        </tr>
+                      )}
+                      <tr
+                        className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer [content-visibility:auto] [contain-intrinsic-size:auto_41px]"
+                        onClick={() => openMemberAttendanceDetails(m)}
+                      >
+                        <td className="py-2 px-3 text-right">
+                          <span
+                            className={`text-[10px] font-black w-5 h-5 inline-flex items-center justify-center rounded-full ${(m.current_rank || 1) === 1 ? 'bg-amber-100 text-amber-800' : (m.current_rank || 1) === 2 ? 'bg-slate-200 text-slate-700' : (m.current_rank || 1) === 3 ? 'bg-orange-100 text-orange-800' : 'text-slate-400'}`}
+                          >
+                            {m.current_rank || ''}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">
+                          {m.full_name}
+                        </td>
+                        <td className="py-2 px-3 text-slate-500">{m.section_name || '—'}</td>
+                        <td className="py-2 px-3">
+                          <div className="font-medium text-slate-700 dark:text-slate-200">
+                            {m.leader_name || m.head_leader_name || 'Unassigned'}
+                          </div>
+                          {m.leader_name &&
+                            m.head_leader_name &&
+                            m.leader_name !== m.head_leader_name && (
+                              <div className="text-[10px] text-slate-400">
+                                Section head: {m.head_leader_name}
+                              </div>
+                            )}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-emerald-600">
+                          {Number(m.present_count) || 0}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-rose-600">
+                          {Number(m.absent_count) || 0}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-amber-600">
+                          {Number(m.excused_count) || 0}
+                        </td>
+                        <td className="py-2 px-3 text-right font-semibold text-indigo-600">
+                          {m.attendance_rate || 0}%
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          {streak > 0 ? (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-300 px-1.5 py-0.5 rounded-full"
+                              title={`${streak} consecutive present`}
+                            >
+                              <Flame className="w-3 h-3" />
+                              {streak}
+                            </span>
+                          ) : absences > 0 ? (
+                            <span
+                              className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-300 px-1.5 py-0.5 rounded-full"
+                              title={`${absences} consecutive absences`}
+                            >
+                              <XCircle className="w-3 h-3" />
+                              {absences}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600">—</span>
                           )}
-                      </td>
-                      <td className="py-2 px-3 text-right font-bold text-emerald-600">
-                        {Number(m.present_count) || 0}
-                      </td>
-                      <td className="py-2 px-3 text-right font-bold text-rose-600">
-                        {Number(m.absent_count) || 0}
-                      </td>
-                      <td className="py-2 px-3 text-right font-bold text-amber-600">
-                        {Number(m.excused_count) || 0}
-                      </td>
-                      <td className="py-2 px-3 text-right font-semibold text-indigo-600">
-                        {m.attendance_rate || 0}%
-                      </td>
-                      <td className="py-2 px-3 text-center">
-                        {streak > 0 ? (
+                        </td>
+                        <td className="py-2 px-3 text-right whitespace-nowrap">
+                          {m.rank_movement > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold text-[10px]">
+                              <ArrowUp className="w-3 h-3" />
+                              {m.rank_movement}
+                            </span>
+                          )}
+                          {m.rank_movement < 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-rose-600 font-bold text-[10px]">
+                              <ArrowDown className="w-3 h-3" />
+                              {Math.abs(m.rank_movement)}
+                            </span>
+                          )}
+                          {(!m.rank_movement || m.rank_movement === 0) && (
+                            <span className="text-slate-300 dark:text-slate-600 text-[10px]">
+                              —
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 px-3 text-right">
                           <span
-                            className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-300 px-1.5 py-0.5 rounded-full"
-                            title={`${streak} consecutive present`}
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              m.risk_level === 'Critical'
+                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+                                : m.risk_level === 'High'
+                                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                  : m.risk_level === 'Medium'
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                            }`}
                           >
-                            <Flame className="w-3 h-3" />
-                            {streak}
+                            {m.risk_level || 'Low'}
                           </span>
-                        ) : absences > 0 ? (
-                          <span
-                            className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-300 px-1.5 py-0.5 rounded-full"
-                            title={`${absences} consecutive absences`}
-                          >
-                            <XCircle className="w-3 h-3" />
-                            {absences}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300 dark:text-slate-600">—</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-right whitespace-nowrap">
-                        {m.rank_movement > 0 && (
-                          <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold text-[10px]">
-                            <ArrowUp className="w-3 h-3" />
-                            {m.rank_movement}
-                          </span>
-                        )}
-                        {m.rank_movement < 0 && (
-                          <span className="inline-flex items-center gap-0.5 text-rose-600 font-bold text-[10px]">
-                            <ArrowDown className="w-3 h-3" />
-                            {Math.abs(m.rank_movement)}
-                          </span>
-                        )}
-                        {(!m.rank_movement || m.rank_movement === 0) && (
-                          <span className="text-slate-300 dark:text-slate-600 text-[10px]">—</span>
-                        )}
-                      </td>
-                      <td className="py-2 px-3 text-right">
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            m.risk_level === 'Critical'
-                              ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
-                              : m.risk_level === 'High'
-                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                : m.risk_level === 'Medium'
-                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                  : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
-                          }`}
-                        >
-                          {m.risk_level || 'Low'}
-                        </span>
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -1424,57 +1473,67 @@ const MembersTab = ({ data, actions: tabActions }) => {
                 ))}
               </div>
               {/* Data rows */}
-              {visibleMatrixRows.map((m) => (
-                <div
-                  key={m.member_id}
-                  className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30"
-                >
-                  <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-40 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">
-                    {m.full_name}
-                  </div>
-                  <div
-                    className="w-24 shrink-0 px-3 py-2.5 text-slate-500 truncate"
-                    title={m.section_name || ''}
-                  >
-                    {m.section_name || '—'}
-                  </div>
-                  <div
-                    className="w-36 shrink-0 px-3 py-2.5 text-slate-600 dark:text-slate-300 truncate"
-                    title={followUpOwner(m)}
-                  >
-                    {followUpOwner(m)}
-                  </div>
-                  {asArray(m.weekly).map((status, wi) => (
-                    <div key={wi} className="w-14 shrink-0 px-1 py-2 text-center">
-                      {status === 'present' && (
-                        <span
-                          className="inline-flex items-center justify-center w-6 h-6 rounded-md text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-200 text-[10px] font-bold"
-                          title="Present"
-                        >
-                          P
-                        </span>
-                      )}
-                      {status === 'absent' && (
-                        <span
-                          className="inline-flex items-center justify-center w-6 h-6 rounded-md text-rose-700 bg-rose-100 dark:bg-rose-900/40 dark:text-rose-200 text-[10px] font-bold"
-                          title="Absent"
-                        >
-                          A
-                        </span>
-                      )}
-                      {status === 'excused' && (
-                        <span
-                          className="inline-flex items-center justify-center w-6 h-6 rounded-md text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-200 text-[10px] font-bold"
-                          title="Excused"
-                        >
-                          E
-                        </span>
-                      )}
-                      {!status && <span className="text-slate-300 dark:text-slate-600">·</span>}
+              {visibleMatrixRows.map((m, index) => {
+                const showGroupHeading =
+                  groupByOwner &&
+                  (index === 0 ||
+                    ownershipGroupLabel(m) !== ownershipGroupLabel(visibleMatrixRows[index - 1]));
+                return (
+                  <React.Fragment key={m.member_id}>
+                    {showGroupHeading && (
+                      <div className="sticky left-0 z-10 border-y border-indigo-100 bg-indigo-50/80 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300">
+                        {ownershipGroupLabel(m)}
+                      </div>
+                    )}
+                    <div className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                      <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-40 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">
+                        {m.full_name}
+                      </div>
+                      <div
+                        className="w-24 shrink-0 px-3 py-2.5 text-slate-500 truncate"
+                        title={m.section_name || ''}
+                      >
+                        {m.section_name || '—'}
+                      </div>
+                      <div
+                        className="w-36 shrink-0 px-3 py-2.5 text-slate-600 dark:text-slate-300 truncate"
+                        title={followUpOwner(m)}
+                      >
+                        {followUpOwner(m)}
+                      </div>
+                      {asArray(m.weekly).map((status, wi) => (
+                        <div key={wi} className="w-14 shrink-0 px-1 py-2 text-center">
+                          {status === 'present' && (
+                            <span
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-md text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-200 text-[10px] font-bold"
+                              title="Present"
+                            >
+                              P
+                            </span>
+                          )}
+                          {status === 'absent' && (
+                            <span
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-md text-rose-700 bg-rose-100 dark:bg-rose-900/40 dark:text-rose-200 text-[10px] font-bold"
+                              title="Absent"
+                            >
+                              A
+                            </span>
+                          )}
+                          {status === 'excused' && (
+                            <span
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-md text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-200 text-[10px] font-bold"
+                              title="Excused"
+                            >
+                              E
+                            </span>
+                          )}
+                          {!status && <span className="text-slate-300 dark:text-slate-600">·</span>}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ))}
+                  </React.Fragment>
+                );
+              })}
               {matrixRows.length > matrixLimit && (
                 <button
                   type="button"
