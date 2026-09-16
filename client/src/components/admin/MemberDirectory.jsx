@@ -14,7 +14,7 @@ import {
   X,
   Check,
   Clock,
-  Award,
+  Award
 } from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
@@ -185,6 +185,16 @@ const MemberDirectory = ({
   const sectionFilter =
     externalSectionFilter !== undefined ? externalSectionFilter : localSectionFilter;
   const handleSectionFilterChange = (val) => {
+    // A leader belongs to a section. Avoid retaining a stale leader filter
+    // after an administrator switches sections from a shared report link.
+    if (
+      leaderFilter &&
+      val &&
+      !allMembers.some((m) => m.section_name === val && m.leader_name === leaderFilter)
+    ) {
+      if (onLeaderFilterChange) onLeaderFilterChange('');
+      else setLocalLeaderFilter('');
+    }
     if (onSectionFilterChange) onSectionFilterChange(val);
     else setLocalSectionFilter(val);
   };
@@ -447,9 +457,16 @@ const MemberDirectory = ({
   }, [sections]);
 
   const uniqueLeaders = useMemo(() => {
-    const names = [...new Set(allMembers.map((m) => m.leader_name).filter(Boolean))];
+    const names = [
+      ...new Set(
+        allMembers
+          .filter((m) => !sectionFilter || m.section_name === sectionFilter)
+          .map((m) => m.leader_name)
+          .filter(Boolean)
+      )
+    ];
     return names.sort();
-  }, [allMembers]);
+  }, [allMembers, sectionFilter]);
 
   const filteredMembers = useMemo(() => {
     let result = [...allMembers];
@@ -462,7 +479,9 @@ const MemberDirectory = ({
           m.phone?.toLowerCase().includes(term) ||
           m.secondary_phone?.toLowerCase().includes(term) ||
           m.email?.toLowerCase().includes(term) ||
-          m.education_level?.toLowerCase().includes(term)
+          m.education_level?.toLowerCase().includes(term) ||
+          m.section_name?.toLowerCase().includes(term) ||
+          m.leader_name?.toLowerCase().includes(term)
       );
     }
     if (sectionFilter) {
@@ -544,7 +563,8 @@ const MemberDirectory = ({
     }
   };
 
-  const hasActiveFilters = sectionFilter || leaderFilter;
+  const hasActiveFilters =
+    sectionFilter || leaderFilter || ageGroupFilter !== 'all' || genderFilter !== 'all';
 
   const exportPDF = async () => {
     const [{ default: jsPDF }, autoTableModule] = await Promise.all([
@@ -635,7 +655,12 @@ const MemberDirectory = ({
               {t('memberDirectory.title')}
             </h2>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-              {loading ? t('common.loading') : t('memberDirectory.description', { count: allMembers.length, sections: sections.length })}
+              {loading
+                ? t('common.loading')
+                : t('memberDirectory.description', {
+                    count: allMembers.length,
+                    sections: sections.length
+                  })}
             </p>
           </div>
         </div>
@@ -754,7 +779,7 @@ const MemberDirectory = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, ID, phone, or email..."
+              placeholder="Search member, leader, section, ID, phone, or email..."
               className="input pl-10 h-10 rounded-xl w-full"
             />
           </div>
@@ -931,9 +956,9 @@ const MemberDirectory = ({
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
             <span>
               Showing{' '}
-            <span className="font-semibold text-slate-700 dark:text-slate-200">
-              {filteredMembers.length}
-            </span>{' '}
+              <span className="font-semibold text-slate-700 dark:text-slate-200">
+                {filteredMembers.length}
+              </span>{' '}
               matching members
             </span>
             <span className="text-xs text-slate-400 dark:text-slate-500">
@@ -998,127 +1023,132 @@ const MemberDirectory = ({
                   const serialNumber = index + 1;
 
                   return (
-                      <tr
-                        key={member.id}
-                        onClick={() => setDetailsMember(member)}
-                        className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-700/30 cursor-pointer ${
-                          isSelected ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''
-                        }`}
-                      >
-                        {/* Checkbox */}
-                        <td className="w-10 px-4 py-3">
+                    <tr
+                      key={member.id}
+                      onClick={() => setDetailsMember(member)}
+                      className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-700/30 cursor-pointer ${
+                        isSelected ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''
+                      }`}
+                    >
+                      {/* Checkbox */}
+                      <td className="w-10 px-4 py-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleSelect(member.id);
+                          }}
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
+                            isSelected
+                              ? 'border-primary-500 bg-primary-500'
+                              : 'border-slate-300 dark:border-slate-600 hover:border-primary-400'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 text-white" />}
+                        </button>
+                      </td>
+                      {/* Serial Number */}
+                      <td className="px-4 py-3">
+                        <span className="inline-flex min-w-[2.25rem] items-center justify-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                          {serialNumber}
+                        </span>
+                      </td>
+                      {/* Member */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}
+                          >
+                            {member.profile_picture ? (
+                              <img
+                                src={member.profile_picture}
+                                alt={member.full_name}
+                                className="h-full w-full object-cover object-[center_20%]"
+                              />
+                            ) : (
+                              getInitials(member.full_name)
+                            )}
+                          </div>
+                          <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate max-w-[160px]">
+                            {member.full_name}
+                          </span>
+                        </div>
+                      </td>
+                      {/* Section */}
+                      <td className="px-4 py-3">
+                        <div
+                          className={`inline-flex max-w-[12rem] items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold shadow-sm ${sectionStyle.bg}`}
+                        >
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${sectionStyle.dot}`} />
+                          <span className="truncate leading-tight">
+                            {formatSectionLabel(member.section_name)}
+                          </span>
+                        </div>
+                        {member.leader_name && (
+                          <span className="mt-1 block max-w-[12rem] truncate text-[10px] text-slate-400 lg:hidden">
+                            Leader: {member.leader_name}
+                          </span>
+                        )}
+                      </td>
+                      {/* Leader */}
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <span className="text-sm text-slate-600 dark:text-slate-400 truncate block max-w-[140px]">
+                          {member.leader_name || '—'}
+                        </span>
+                      </td>
+                      {/* Contact */}
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                          {member.phone && (
+                            <span className="flex items-center gap-1 tabular-nums">
+                              <Phone className="w-3 h-3" />
+                              {member.phone}
+                            </span>
+                          )}
+                          {!member.phone && (
+                            <span className="text-slate-400 dark:text-slate-500 italic text-xs">
+                              —
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              toggleSelect(member.id);
+                              ensureModalMembersLoaded();
+                              setTitleAssignMember(member.id);
+                              setTitleForm({ title_id: '', appointment_date: '', notes: '' });
                             }}
-                            className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                              isSelected
-                                ? 'border-primary-500 bg-primary-500'
-                                : 'border-slate-300 dark:border-slate-600 hover:border-primary-400'
-                            }`}
+                            className="p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
+                            title="Assign Title"
                           >
-                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                            <Award className="w-5 h-5" />
                           </button>
-                        </td>
-                        {/* Serial Number */}
-                        <td className="px-4 py-3">
-                          <span className="inline-flex min-w-[2.25rem] items-center justify-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-600 dark:bg-slate-700 dark:text-slate-300">
-                            {serialNumber}
-                          </span>
-                        </td>
-                        {/* Member */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}
-                            >
-                              {member.profile_picture ? (
-                                <img
-                                  src={member.profile_picture}
-                                  alt={member.full_name}
-                                  className="h-full w-full object-cover object-[center_20%]"
-                                />
-                              ) : (
-                                getInitials(member.full_name)
-                              )}
-                            </div>
-                            <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate max-w-[160px]">
-                              {member.full_name}
-                            </span>
-                          </div>
-                        </td>
-                        {/* Section */}
-                        <td className="px-4 py-3">
-                          <div
-                            className={`inline-flex max-w-[12rem] items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold shadow-sm ${sectionStyle.bg}`}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit(member);
+                            }}
+                            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors active:scale-90"
+                            title="Edit"
                           >
-                            <span className={`h-2 w-2 shrink-0 rounded-full ${sectionStyle.dot}`} />
-                            <span className="truncate leading-tight">
-                              {formatSectionLabel(member.section_name)}
-                            </span>
-                          </div>
-                        </td>
-                        {/* Leader */}
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          <span className="text-sm text-slate-600 dark:text-slate-400 truncate block max-w-[140px]">
-                            {member.leader_name || '—'}
-                          </span>
-                        </td>
-                        {/* Contact */}
-                        <td className="px-4 py-3 hidden md:table-cell">
-                          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                            {member.phone && (
-                              <span className="flex items-center gap-1 tabular-nums">
-                                <Phone className="w-3 h-3" />
-                                {member.phone}
-                              </span>
-                            )}
-                            {!member.phone && (
-                              <span className="text-slate-400 dark:text-slate-500 italic text-xs">
-                                —
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        {/* Actions */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                ensureModalMembersLoaded();
-                                setTitleAssignMember(member.id);
-                                setTitleForm({ title_id: '', appointment_date: '', notes: '' });
-                              }}
-                              className="p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
-                              title="Assign Title"
-                            >
-                              <Award className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(member);
-                              }}
-                              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors active:scale-90"
-                              title="Edit"
-                            >
-                              <Pencil className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(member);
-                              }}
-                              className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors active:scale-90"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                            <Pencil className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(member);
+                            }}
+                            className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors active:scale-90"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>

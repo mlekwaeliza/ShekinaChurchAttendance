@@ -8,6 +8,7 @@ import {
   Award,
   BarChart3,
   Brain,
+  Building2,
   Calendar,
   CheckCircle2,
   Download,
@@ -18,6 +19,7 @@ import {
   Shield,
   Star,
   Target,
+  UserRound,
   UserCheck,
   UserX,
   Users,
@@ -34,6 +36,8 @@ const MembersTab = ({ data, actions: tabActions }) => {
     sectionRankings,
     memberCategory,
     memberRiskFilter,
+    memberSectionFilter,
+    memberLeaderFilter,
     memberSearch,
     memberView,
     memberWeeksCount,
@@ -49,6 +53,8 @@ const MembersTab = ({ data, actions: tabActions }) => {
     setMemberCategory,
     setMemberSearch,
     setMemberRiskFilter,
+    setMemberSectionFilter,
+    setMemberLeaderFilter,
     setMemberView,
     setMemberWeeksCount,
     loadMemberWeeklyMatrix,
@@ -311,7 +317,26 @@ const MembersTab = ({ data, actions: tabActions }) => {
     memberRiskFilter === 'all'
       ? activeCategory.members
       : activeCategory.members.filter((m) => m.risk_level === memberRiskFilter);
+  const followUpOwner = (member) => member.leader_name || member.head_leader_name || 'Unassigned';
+  const sections = [...new Set(members.map((m) => m.section_name).filter(Boolean))].sort();
+  // Keep ownership meaningful: an administrator who narrows to a section
+  // should only see the leaders responsible for members in that section.
+  // "Unassigned" is intentionally included so no critical member falls out
+  // of the follow-up workflow because their leader record is incomplete.
+  const leaders = [
+    ...new Set(
+      members
+        .filter((m) => !memberSectionFilter || m.section_name === memberSectionFilter)
+        .map(followUpOwner)
+    )
+  ].sort((a, b) => {
+    if (a === 'Unassigned') return 1;
+    if (b === 'Unassigned') return -1;
+    return a.localeCompare(b);
+  });
   const filteredMembers = byRisk.filter((m) => {
+    if (memberSectionFilter && m.section_name !== memberSectionFilter) return false;
+    if (memberLeaderFilter && followUpOwner(m) !== memberLeaderFilter) return false;
     if (!memberSearch) return true;
     const haystack = [
       m.full_name,
@@ -327,6 +352,23 @@ const MembersTab = ({ data, actions: tabActions }) => {
       .toLowerCase();
     return haystack.includes(memberSearch.toLowerCase());
   });
+
+  const followUpQueues = leaders
+    .map((leader) => {
+      const ownedMembers = members.filter((m) => followUpOwner(m) === leader);
+      const urgentMembers = ownedMembers.filter((m) => ['Critical', 'High'].includes(m.risk_level));
+      return {
+        leader,
+        sections: [...new Set(ownedMembers.map((m) => m.section_name).filter(Boolean))],
+        total: ownedMembers.length,
+        urgent: urgentMembers.length,
+        critical: urgentMembers.filter((m) => m.risk_level === 'Critical').length
+      };
+    })
+    .filter((queue) => queue.urgent > 0)
+    .sort(
+      (a, b) => b.critical - a.critical || b.urgent - a.urgent || a.leader.localeCompare(b.leader)
+    );
 
   const avg = (list) =>
     list.length
@@ -609,6 +651,8 @@ const MembersTab = ({ data, actions: tabActions }) => {
       const filters = [
         `Group: ${activeCategory.label}`,
         memberRiskFilter === 'all' ? 'Risk: all levels' : `Risk: ${memberRiskFilter}`,
+        memberSectionFilter ? `Section: ${memberSectionFilter}` : null,
+        memberLeaderFilter ? `Leader: ${memberLeaderFilter}` : null,
         memberSearch.trim() ? `Search: ${memberSearch.trim()}` : null,
         `Service: ${serviceLabel}`
       ]
@@ -634,11 +678,17 @@ const MembersTab = ({ data, actions: tabActions }) => {
       const tableOptions = includeMatrix
         ? {
             head: [
-              ['Member', 'Section', ...memberWeeklyMatrixWeeks.map((week) => weekToDate(week))]
+              [
+                'Member',
+                'Section',
+                'Follow-up owner',
+                ...memberWeeklyMatrixWeeks.map((week) => weekToDate(week))
+              ]
             ],
             body: matrixRows.map((member) => [
               member.full_name,
               member.section_name || '—',
+              followUpOwner(member),
               ...asArray(member.weekly).map((status) =>
                 status === 'present'
                   ? 'P'
@@ -651,15 +701,19 @@ const MembersTab = ({ data, actions: tabActions }) => {
             ]),
             columnStyles: {
               0: { cellWidth: 40 },
-              1: { cellWidth: 28 }
+              1: { cellWidth: 28 },
+              2: { cellWidth: 35 }
             }
           }
         : {
-            head: [['#', 'Member', 'Section', 'P', 'A', 'E', 'Rate', 'Streak', 'Risk']],
+            head: [
+              ['#', 'Member', 'Section', 'Follow-up owner', 'P', 'A', 'E', 'Rate', 'Streak', 'Risk']
+            ],
             body: filteredMembers.map((member, index) => [
               index + 1,
               member.full_name,
               member.section_name || '—',
+              member.leader_name || member.head_leader_name || 'Unassigned',
               member.present_count || 0,
               member.absent_count || 0,
               member.excused_count || 0,
@@ -708,6 +762,8 @@ const MembersTab = ({ data, actions: tabActions }) => {
     filteredMembers,
     matrixRows,
     memberRiskFilter,
+    memberSectionFilter,
+    memberLeaderFilter,
     memberSearch,
     memberView,
     memberWeeklyMatrixWeeks,
@@ -1014,7 +1070,100 @@ const MembersTab = ({ data, actions: tabActions }) => {
               </button>
             ))}
           </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            <label className="relative">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Section
+              </span>
+              <Building2 className="pointer-events-none absolute bottom-2 left-2.5 h-3.5 w-3.5 text-slate-400" />
+              <select
+                value={memberSectionFilter}
+                onChange={(e) => {
+                  const nextSection = e.target.value;
+                  setMemberSectionFilter(nextSection);
+                  if (
+                    memberLeaderFilter &&
+                    !members.some(
+                      (m) =>
+                        m.section_name === nextSection && followUpOwner(m) === memberLeaderFilter
+                    )
+                  ) {
+                    setMemberLeaderFilter('');
+                  }
+                }}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-3 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <option value="">All sections</option>
+                {sections.map((section) => (
+                  <option key={section} value={section}>
+                    {section}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="relative">
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Follow-up owner
+              </span>
+              <UserRound className="pointer-events-none absolute bottom-2 left-2.5 h-3.5 w-3.5 text-slate-400" />
+              <select
+                value={memberLeaderFilter}
+                onChange={(e) => setMemberLeaderFilter(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-3 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              >
+                <option value="">All leaders</option>
+                {leaders.map((leader) => (
+                  <option key={leader} value={leader}>
+                    {leader}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {(memberSectionFilter || memberLeaderFilter) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMemberSectionFilter('');
+                  setMemberLeaderFilter('');
+                }}
+                className="self-end rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
+              >
+                Clear ownership filters
+              </button>
+            )}
+          </div>
         </div>
+        {followUpQueues.length > 0 && (
+          <div className="border-b border-slate-100 bg-rose-50/50 px-4 py-3 dark:border-slate-700 dark:bg-rose-950/10">
+            <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">
+              <AlertTriangle className="h-3.5 w-3.5" /> Follow-up ownership queue
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {followUpQueues.slice(0, 8).map((queue) => (
+                <button
+                  key={queue.leader}
+                  type="button"
+                  onClick={() => {
+                    setMemberLeaderFilter(queue.leader);
+                    setMemberRiskFilter('all');
+                  }}
+                  className={`min-w-[175px] rounded-xl border px-3 py-2 text-left transition-colors ${memberLeaderFilter === queue.leader ? 'border-rose-400 bg-white shadow-sm dark:bg-slate-800' : 'border-rose-100 bg-white/70 hover:border-rose-300 dark:border-rose-900/60 dark:bg-slate-800/70'}`}
+                >
+                  <span className="block truncate text-xs font-bold text-slate-800 dark:text-slate-100">
+                    {queue.leader}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[10px] text-slate-500">
+                    {queue.sections.join(' · ') || 'No section assigned'}
+                  </span>
+                  <span className="mt-1 block text-[10px] font-bold text-rose-600 dark:text-rose-300">
+                    {queue.urgent} at risk{queue.critical ? ` · ${queue.critical} critical` : ''} ·{' '}
+                    {queue.total} members
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <h4 className="text-xs font-bold text-slate-900 dark:text-white">
@@ -1077,12 +1226,15 @@ const MembersTab = ({ data, actions: tabActions }) => {
         </div>
         {memberView === 'summary' ? (
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-            <table className="min-w-[800px] text-xs">
+            <table className="min-w-[940px] text-xs">
               <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
                 <tr className="border-b border-slate-200 dark:border-slate-700">
                   <th className="text-right py-2 px-3 font-semibold text-slate-500 w-12">#</th>
                   <th className="text-left py-2 px-3 font-semibold text-slate-500">Member</th>
                   <th className="text-left py-2 px-3 font-semibold text-slate-500">Section</th>
+                  <th className="text-left py-2 px-3 font-semibold text-slate-500">
+                    Follow-up owner
+                  </th>
                   <th className="text-right py-2 px-3 font-semibold text-emerald-600">Present</th>
                   <th className="text-right py-2 px-3 font-semibold text-rose-600">Absent</th>
                   <th className="text-right py-2 px-3 font-semibold text-amber-600">Excused</th>
@@ -1095,7 +1247,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
               <tbody>
                 {filteredMembers.length === 0 && (
                   <tr>
-                    <td colSpan="10" className="py-12 text-center text-slate-400 text-sm">
+                    <td colSpan="11" className="py-12 text-center text-slate-400 text-sm">
                       <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                       {rawMembers.length === 0
                         ? 'No member intelligence data available. Try changing the date range or service filter.'
@@ -1123,6 +1275,18 @@ const MembersTab = ({ data, actions: tabActions }) => {
                         {m.full_name}
                       </td>
                       <td className="py-2 px-3 text-slate-500">{m.section_name || '—'}</td>
+                      <td className="py-2 px-3">
+                        <div className="font-medium text-slate-700 dark:text-slate-200">
+                          {m.leader_name || m.head_leader_name || 'Unassigned'}
+                        </div>
+                        {m.leader_name &&
+                          m.head_leader_name &&
+                          m.leader_name !== m.head_leader_name && (
+                            <div className="text-[10px] text-slate-400">
+                              Section head: {m.head_leader_name}
+                            </div>
+                          )}
+                      </td>
                       <td className="py-2 px-3 text-right font-bold text-emerald-600">
                         {Number(m.present_count) || 0}
                       </td>
@@ -1176,16 +1340,16 @@ const MembersTab = ({ data, actions: tabActions }) => {
                       <td className="py-2 px-3 text-right">
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            m.risk_level === 'critical'
+                            m.risk_level === 'Critical'
                               ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
-                              : m.risk_level === 'high'
+                              : m.risk_level === 'High'
                                 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                : m.risk_level === 'medium'
+                                : m.risk_level === 'Medium'
                                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
                                   : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
                           }`}
                         >
-                          {m.risk_level || 'low'}
+                          {m.risk_level || 'Low'}
                         </span>
                       </td>
                     </tr>
@@ -1203,6 +1367,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
                   Member
                 </div>
                 <div className="w-24 shrink-0 px-3 py-2">Section</div>
+                <div className="w-36 shrink-0 px-3 py-2">Follow-up owner</div>
                 {memberWeeklyMatrixWeeks.map((w) => (
                   <div key={w} className="w-14 shrink-0 px-1 py-2 text-center" title={w}>
                     {weekToDate(w)}
@@ -1223,6 +1388,12 @@ const MembersTab = ({ data, actions: tabActions }) => {
                     title={m.section_name || ''}
                   >
                     {m.section_name || '—'}
+                  </div>
+                  <div
+                    className="w-36 shrink-0 px-3 py-2.5 text-slate-600 dark:text-slate-300 truncate"
+                    title={followUpOwner(m)}
+                  >
+                    {followUpOwner(m)}
                   </div>
                   {asArray(m.weekly).map((status, wi) => (
                     <div key={wi} className="w-14 shrink-0 px-1 py-2 text-center">

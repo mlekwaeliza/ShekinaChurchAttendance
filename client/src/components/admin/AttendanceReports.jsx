@@ -87,6 +87,8 @@ const AttendanceReports = ({
   const [memberSearch, setMemberSearch] = useState('');
   const [memberCategory, setMemberCategory] = useState('all');
   const [memberRiskFilter, setMemberRiskFilter] = useState('all');
+  const [memberSectionFilter, setMemberSectionFilter] = useState('');
+  const [memberLeaderFilter, setMemberLeaderFilter] = useState('');
   const [selectedMemberDetails, setSelectedMemberDetails] = useState(null);
   const [memberDetailsLoading, setMemberDetailsLoading] = useState(false);
   const [memberDetailsError, setMemberDetailsError] = useState(null);
@@ -660,6 +662,8 @@ const AttendanceReports = ({
         sectionRankings,
         memberCategory,
         memberRiskFilter,
+        memberSectionFilter,
+        memberLeaderFilter,
         memberSearch,
         memberView,
         memberWeeksCount,
@@ -675,6 +679,8 @@ const AttendanceReports = ({
         setMemberCategory,
         setMemberSearch,
         setMemberRiskFilter,
+        setMemberSectionFilter,
+        setMemberLeaderFilter,
         setMemberView,
         setMemberWeeksCount,
         loadMemberWeeklyMatrix,

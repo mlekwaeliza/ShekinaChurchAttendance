@@ -1,7 +1,23 @@
 const express = require('express');
-const { queries, get, all, getMultiPeriodOverall, getMultiPeriodSections, getMultiPeriodLeaders, getMultiPeriodDepartments, getMultiPeriodMembers, getAttendanceMovement } = require('../database');
+const {
+  queries,
+  get,
+  all,
+  getMultiPeriodOverall,
+  getMultiPeriodSections,
+  getMultiPeriodLeaders,
+  getMultiPeriodDepartments,
+  getMultiPeriodMembers,
+  getAttendanceMovement
+} = require('../database');
 const { isAuthenticated, requireRole, validateDateRange } = require('../middleware/auth');
-const { addDays, formatLocalDate, getISOWeekRange, getISOWeekString, parseDateInput } = require('../utils/date');
+const {
+  addDays,
+  formatLocalDate,
+  getISOWeekRange,
+  getISOWeekString,
+  parseDateInput
+} = require('../utils/date');
 const { withCache, withTimeout } = require('../utils/cache');
 const { yearOnly, yearMonth } = require('../utils/sqlDialect');
 
@@ -16,8 +32,13 @@ router.use(requireRole(['admin', 'pastor', 'accountant']));
 router.get('/predictions', async (req, res) => {
   try {
     const result = await queries.getAttendancePrediction();
-    const prediction = result[0] || { avg_rate: 0, avg_present: 0, avg_total: 0, weeks_analyzed: 0 };
-    
+    const prediction = result[0] || {
+      avg_rate: 0,
+      avg_present: 0,
+      avg_total: 0,
+      weeks_analyzed: 0
+    };
+
     // Calculate simple trend direction from recent data
     const { all } = require('../database');
     const recentWeeks = await all(`
@@ -43,7 +64,7 @@ router.get('/predictions', async (req, res) => {
         predicted_present: prediction.avg_present,
         predicted_total: prediction.avg_total,
         weeks_analyzed: prediction.weeks_analyzed,
-        trend,
+        trend
       },
       recent_weeks: recentWeeks.reverse()
     });
@@ -126,7 +147,7 @@ router.get('/leader-trends', validateDateRange('start_date', 'end_date'), async 
         first_half_rate: firstRate,
         second_half_rate: secondRate,
         trend_direction,
-        trend_diff: Math.round(diff * 10) / 10,
+        trend_diff: Math.round(diff * 10) / 10
       };
     });
 
@@ -155,10 +176,10 @@ router.get('/engagement-scores', async (req, res) => {
 router.get('/demographics', async (req, res) => {
   try {
     const raw = await queries.getDemographicBreakdown();
-    
+
     // Split into two arrays for easier frontend consumption
-    const gender = raw.filter(r => r.category_type === 'gender');
-    const ageGroup = raw.filter(r => r.category_type === 'age_group');
+    const gender = raw.filter((r) => r.category_type === 'gender');
+    const ageGroup = raw.filter((r) => r.category_type === 'age_group');
 
     res.json({ gender, age_group: ageGroup });
   } catch (error) {
@@ -172,12 +193,25 @@ router.get('/demographics', async (req, res) => {
 router.get('/year-over-year', async (req, res) => {
   try {
     const data = await queries.getYearOverYear();
-    
+
     // Map month numbers to names for display
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const enriched = data.map(row => ({
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    const enriched = data.map((row) => ({
       ...row,
-      month_name: monthNames[parseInt(row.month) - 1] || row.month,
+      month_name: monthNames[parseInt(row.month) - 1] || row.month
     }));
 
     res.json(enriched);
@@ -211,7 +245,6 @@ router.get('/retention', async (req, res) => {
   }
 });
 
-
 // GET /analytics/dashboard-metrics?service_id=...
 // Cached for 2 minutes per service_id — this endpoint is polled every 60s
 // and runs 6 parallel DB queries each time it is not cached.
@@ -219,19 +252,24 @@ const DASHBOARD_METRICS_TTL = 2 * 60 * 1000; // 2 minutes
 router.get('/dashboard-metrics', async (req, res) => {
   try {
     const rawServiceId = req.query.service_id;
-    const serviceId = rawServiceId === 'all' ? 'all' : (parseInt(rawServiceId) || 1);
+    const serviceId = rawServiceId === 'all' ? 'all' : parseInt(rawServiceId) || 1;
     const year = new Date().getFullYear();
 
     const cacheKey = `dashboard-metrics:${serviceId}`;
     const payload = await withCache(cacheKey, DASHBOARD_METRICS_TTL, async () => {
-      const [comparisons, needsAttention, sparkline, hallOfFame, settings, todayStats] = await withTimeout(Promise.all([
-        queries.getDashboardComparisons(),
-        queries.getNeedsAttention(serviceId),
-        queries.getAttendanceSparkline(serviceId),
-        queries.getHallOfFameSummary(year),
-        queries.getSettings(),
-        queries.getTodayAttendanceStats(serviceId),
-      ]), 20000, 'Dashboard metrics queries timed out');
+      const [comparisons, needsAttention, sparkline, hallOfFame, settings, todayStats] =
+        await withTimeout(
+          Promise.all([
+            queries.getDashboardComparisons(),
+            queries.getNeedsAttention(serviceId),
+            queries.getAttendanceSparkline(serviceId),
+            queries.getHallOfFameSummary(year),
+            queries.getSettings(),
+            queries.getTodayAttendanceStats(serviceId)
+          ]),
+          20000,
+          'Dashboard metrics queries timed out'
+        );
 
       // Fetch last session for this service/filter and use it as the dashboard
       // attendance display when today has no records.
@@ -249,26 +287,19 @@ router.get('/dashboard-metrics', async (req, res) => {
         ORDER BY date DESC
         LIMIT 1
       `;
-      const latestSessions = await allDb(
-        latestSessionSql,
-        serviceId === 'all' ? [] : [serviceId]
-      );
+      const latestSessions = await allDb(latestSessionSql, serviceId === 'all' ? [] : [serviceId]);
       const lastSession = latestSessions.length > 0 ? latestSessions[0] : null;
 
       const normalizeStats = (stats = {}) => ({
         present: Number(stats.present || 0),
         absent: Number(stats.absent || 0),
-        excused: Number(stats.excused || 0),
+        excused: Number(stats.excused || 0)
       });
       const todayStatsNormalized = normalizeStats(todayStats);
       const todayTotal =
-        todayStatsNormalized.present +
-        todayStatsNormalized.absent +
-        todayStatsNormalized.excused;
+        todayStatsNormalized.present + todayStatsNormalized.absent + todayStatsNormalized.excused;
       const displayStats =
-        todayTotal > 0 || !lastSession
-          ? todayStatsNormalized
-          : normalizeStats(lastSession);
+        todayTotal > 0 || !lastSession ? todayStatsNormalized : normalizeStats(lastSession);
       const attendanceContext =
         todayTotal > 0 || !lastSession
           ? { mode: 'today', date: formatLocalDate(), isLatestFallback: false }
@@ -279,14 +310,14 @@ router.get('/dashboard-metrics', async (req, res) => {
         needsAttention: {
           birthdays: needsAttention.filter((i) => i.reason === 'birthday'),
           absentees: needsAttention.filter((i) => i.reason === 'absentee'),
-          visitors: needsAttention.filter((i) => i.reason === 'visitor'),
+          visitors: needsAttention.filter((i) => i.reason === 'visitor')
         },
         sparkline,
         hallOfFame,
         settings: settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {}),
         lastSession,
         attendanceContext,
-        todayStats: displayStats,
+        todayStats: displayStats
       };
     });
 
@@ -358,9 +389,13 @@ router.get('/monthly-trends', async (req, res) => {
     const [attendanceTrends, contributionTrends, sectionTrends] = await Promise.all([
       queries.getMonthlyAttendanceContribTrends(months),
       queries.getMonthlyContributionTrends(months),
-      queries.getMonthlySectionTrends(months),
+      queries.getMonthlySectionTrends(months)
     ]);
-    res.json({ attendance: attendanceTrends, contributions: contributionTrends, sections: sectionTrends });
+    res.json({
+      attendance: attendanceTrends,
+      contributions: contributionTrends,
+      sections: sectionTrends
+    });
   } catch (error) {
     console.error('Monthly trends error:', error);
     res.status(500).json({ error: 'Failed to fetch monthly trends' });
@@ -396,14 +431,14 @@ router.get('/executive-dashboard', async (req, res) => {
   try {
     const [dashboard, growth] = await Promise.all([
       queries.getExecutiveDashboard(),
-      queries.getGrowthPercentages(),
+      queries.getGrowthPercentages()
     ]);
     const present = dashboard?.present_today || 0;
     const total = dashboard?.total_today || 1;
     res.json({
       ...dashboard,
       ...growth,
-      attendance_rate: Math.round((present / total) * 100),
+      attendance_rate: Math.round((present / total) * 100)
     });
   } catch (error) {
     console.error('Executive dashboard error:', error);
@@ -418,11 +453,20 @@ router.get('/comparison', async (req, res) => {
     if (!period1Start || !period1End || !period2Start || !period2End) {
       return res.status(400).json({ error: 'All four date parameters required' });
     }
-    const data = await queries.getComparisonAnalytics(period1Start, period1End, period2Start, period2End);
+    const data = await queries.getComparisonAnalytics(
+      period1Start,
+      period1End,
+      period2Start,
+      period2End
+    );
     const p1Rate = data?.p1_rate || 0;
     const p2Rate = data?.p2_rate || 0;
     const diff = p1Rate - p2Rate;
-    res.json({ ...data, rate_diff: Math.round(diff * 10) / 10, trend: diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable' });
+    res.json({
+      ...data,
+      rate_diff: Math.round(diff * 10) / 10,
+      trend: diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable'
+    });
   } catch (error) {
     console.error('Comparison error:', error);
     res.status(500).json({ error: 'Failed to fetch comparison analytics' });
@@ -437,7 +481,7 @@ router.get('/historical', async (req, res) => {
     const end = endDate || formatLocalDate();
     const [stats, daily] = await Promise.all([
       queries.getHistoricalStats(start, end),
-      queries.getHistoricalDaily(start, end),
+      queries.getHistoricalDaily(start, end)
     ]);
     res.json({ stats, daily });
   } catch (error) {
@@ -451,10 +495,16 @@ router.get('/section-rankings', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
     const { startDate, endDate, prevStartDate, prevEndDate } = req.query;
-    const sections = await queries.getSectionRankings(days, startDate || null, endDate || null, prevStartDate || null, prevEndDate || null);
-    
+    const sections = await queries.getSectionRankings(
+      days,
+      startDate || null,
+      endDate || null,
+      prevStartDate || null,
+      prevEndDate || null
+    );
+
     const sortedByPrev = [...sections]
-      .map(s => ({ id: s.id, prev_rate: s.prev_rate || 0 }))
+      .map((s) => ({ id: s.id, prev_rate: s.prev_rate || 0 }))
       .sort((a, b) => b.prev_rate - a.prev_rate);
 
     const prevRankMap = {};
@@ -463,13 +513,16 @@ router.get('/section-rankings', async (req, res) => {
     });
 
     const ranked = sections.map((s, i) => {
-      const consistency_score = s.worst_day_rate != null && s.best_day_rate != null
-        ? Math.round((1 - (s.best_day_rate - s.worst_day_rate)) * 100)
-        : 75;
+      const consistency_score =
+        s.worst_day_rate != null && s.best_day_rate != null
+          ? Math.round((1 - (s.best_day_rate - s.worst_day_rate)) * 100)
+          : 75;
       const rate = s.attendance_rate || 0;
       const retention = s.retention_rate || 0;
-      const performance_score = Math.round(rate * 0.5 + consistency_score * 0.25 + retention * 0.25);
-      
+      const performance_score = Math.round(
+        rate * 0.5 + consistency_score * 0.25 + retention * 0.25
+      );
+
       const currentRank = i + 1;
       const prevRank = prevRankMap[s.id] || currentRank;
       const rank_change = prevRank - currentRank;
@@ -481,7 +534,7 @@ router.get('/section-rankings', async (req, res) => {
         is_best: i === 0,
         is_lowest: i === sections.length - 1 && sections.length > 1,
         consistency_score,
-        performance_score,
+        performance_score
       };
     });
     res.json(ranked);
@@ -497,17 +550,20 @@ router.get('/head-leader-analytics', async (req, res) => {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
     const { startDate, endDate } = req.query;
     const leaders = await queries.getHeadLeaderAnalytics(days, startDate || null, endDate || null);
-    const enriched = leaders.map(l => {
+    const enriched = leaders.map((l) => {
       const totalServices = l.total_services || Math.max(Math.round(days / 7) * 2, 1);
-      const submissionRate = Math.min(100, Math.round(((l.submissions_made || 0) / Math.max(1, totalServices)) * 100));
-      const leadership_score = Math.min(100, Math.round(
-        (Number(l.overall_attendance) || 0) * 0.6 +
-        submissionRate * 0.4
-      ));
+      const submissionRate = Math.min(
+        100,
+        Math.round(((l.submissions_made || 0) / Math.max(1, totalServices)) * 100)
+      );
+      const leadership_score = Math.min(
+        100,
+        Math.round((Number(l.overall_attendance) || 0) * 0.6 + submissionRate * 0.4)
+      );
       return {
         ...l,
         submission_rate: submissionRate,
-        performance_score: leadership_score,
+        performance_score: leadership_score
       };
     });
     res.json(enriched);
@@ -534,18 +590,31 @@ router.get('/leader-rankings', async (req, res) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 90, 365);
     const { startDate, endDate, prevStartDate, prevEndDate } = req.query;
-    const leaders = await queries.getLeaderRankings(days, startDate || null, endDate || null, prevStartDate || null, prevEndDate || null);
+    const leaders = await queries.getLeaderRankings(
+      days,
+      startDate || null,
+      endDate || null,
+      prevStartDate || null,
+      prevEndDate || null
+    );
     const ranked = leaders.map((l, i) => ({
       ...l,
       rank: i + 1,
-      efficiency_score: Math.min(100, Math.round(
-        (Number(l.attendance_rate) || 0) * 0.4 +
-        Math.min(100, Number(l.leader_submission_rate) || 0) * 0.2 +
-        Math.min(100, Number(l.retention_rate) || 0) * 0.2 +
-        Math.min(100, Number(l.follow_up_completion) || 0) * 0.1 +
-        Math.min(100, ((l.assigned_members > 0 ? l.unique_attendees / l.assigned_members : 0) * 100)) * 0.1 +
-        Math.min(100, ((l.new_members || 0) / Math.max(1, l.assigned_members)) * 100) * 0.15
-      )),
+      efficiency_score: Math.min(
+        100,
+        Math.round(
+          (Number(l.attendance_rate) || 0) * 0.4 +
+            Math.min(100, Number(l.leader_submission_rate) || 0) * 0.2 +
+            Math.min(100, Number(l.retention_rate) || 0) * 0.2 +
+            Math.min(100, Number(l.follow_up_completion) || 0) * 0.1 +
+            Math.min(
+              100,
+              (l.assigned_members > 0 ? l.unique_attendees / l.assigned_members : 0) * 100
+            ) *
+              0.1 +
+            Math.min(100, ((l.new_members || 0) / Math.max(1, l.assigned_members)) * 100) * 0.15
+        )
+      )
     }));
     res.json(ranked);
   } catch (error) {
@@ -563,7 +632,12 @@ router.get('/departments', async (req, res) => {
     const ranked = depts.map((d, i) => ({
       ...d,
       rank: i + 1,
-      growth_indicator: Number(d.attendance_rate) >= 75 ? 'strong' : Number(d.attendance_rate) >= 50 ? 'average' : 'needs_attention',
+      growth_indicator:
+        Number(d.attendance_rate) >= 75
+          ? 'strong'
+          : Number(d.attendance_rate) >= 50
+            ? 'average'
+            : 'needs_attention'
     }));
     res.json(ranked);
   } catch (error) {
@@ -577,7 +651,8 @@ router.get('/member-weekly-matrix', async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
     const serviceIdParam = req.query.service_id;
-    const serviceId = serviceIdParam === 'all' || serviceIdParam === undefined ? null : parseInt(serviceIdParam);
+    const serviceId =
+      serviceIdParam === 'all' || serviceIdParam === undefined ? null : parseInt(serviceIdParam);
 
     let weeks;
     if (startDate && endDate) {
@@ -608,8 +683,8 @@ router.get('/member-weekly-matrix', async (req, res) => {
     }
 
     const sectionIdParam = req.query.section_id;
-    const leaderIdParam  = req.query.leader_id;
-    const memberIdParam  = req.query.member_id;
+    const leaderIdParam = req.query.leader_id;
+    const memberIdParam = req.query.member_id;
 
     let memberWhere = 'm.is_active = 1';
     const memberParams = [];
@@ -622,29 +697,47 @@ router.get('/member-weekly-matrix', async (req, res) => {
       memberParams.push(parseInt(sectionIdParam));
     } else if (leaderIdParam) {
       const lid = parseInt(leaderIdParam);
-      memberWhere += ' AND (m.leader_id = ? OR (m.section_id = (SELECT section_id FROM leaders WHERE id = ? AND is_head = 1)))';
+      memberWhere +=
+        ' AND (m.leader_id = ? OR (m.section_id = (SELECT section_id FROM leaders WHERE id = ? AND is_head = 1)))';
       memberParams.push(lid, lid);
     }
 
-    const members = await all(`
-      SELECT m.id, m.full_name, m.membership_id, s.name AS section_name
+    const members = await all(
+      `
+      SELECT
+        m.id,
+        m.full_name,
+        m.membership_id,
+        s.name AS section_name,
+        leader_u.full_name AS leader_name,
+        head_u.full_name AS head_leader_name
       FROM members m
       LEFT JOIN sections s ON m.section_id = s.id
+      LEFT JOIN leaders leader_l ON m.leader_id = leader_l.id
+      LEFT JOIN users leader_u ON leader_l.user_id = leader_u.id
+      LEFT JOIN leaders head_l ON head_l.section_id = m.section_id
+        AND head_l.is_head = 1 AND head_l.is_active = 1
+      LEFT JOIN users head_u ON head_l.user_id = head_u.id
       WHERE ${memberWhere}
       ORDER BY m.full_name
-    `, memberParams);
+    `,
+      memberParams
+    );
 
     const serviceCondition = serviceId ? 'AND a.service_type_id = ?' : '';
     const serviceParams = serviceId ? [serviceId] : [];
     const dateStart = weeks[0].start;
     const dateEnd = weeks[weeks.length - 1].end;
-    const attendanceRows = await all(`
+    const attendanceRows = await all(
+      `
       SELECT a.member_id, a.date, a.status
       FROM attendance a
       JOIN members m ON a.member_id = m.id
       WHERE ${memberWhere} AND a.date BETWEEN ? AND ? ${serviceCondition}
       ORDER BY a.member_id, a.date
-    `, [...memberParams, dateStart, dateEnd, ...serviceParams]);
+    `,
+      [...memberParams, dateStart, dateEnd, ...serviceParams]
+    );
 
     // Normalize dates to YYYY-MM-DD strings (PostgreSQL returns Date objects, SQLite returns strings)
     const normalizeDate = (d) => {
@@ -665,8 +758,8 @@ router.get('/member-weekly-matrix', async (req, res) => {
       byMember[row.member_id][dateKey] = row.status;
     }
 
-    const matrix = members.map(m => {
-      const weekly = weeks.map(w => {
+    const matrix = members.map((m) => {
+      const weekly = weeks.map((w) => {
         const statuses = [];
         let dateStr = w.start;
         while (dateStr <= w.end) {
@@ -675,7 +768,9 @@ router.get('/member-weekly-matrix', async (req, res) => {
         }
         if (statuses.length === 0) return null;
         const counts = { present: 0, absent: 0, excused: 0 };
-        statuses.forEach(s => { if (counts[s] !== undefined) counts[s]++; });
+        statuses.forEach((s) => {
+          if (counts[s] !== undefined) counts[s]++;
+        });
         const max = Math.max(counts.present, counts.absent, counts.excused);
         if (max === 0) return null;
         if (counts.present === max) return 'present';
@@ -687,11 +782,13 @@ router.get('/member-weekly-matrix', async (req, res) => {
         full_name: m.full_name,
         membership_id: m.membership_id,
         section_name: m.section_name,
-        weekly,
+        leader_name: m.leader_name,
+        head_leader_name: m.head_leader_name,
+        weekly
       };
     });
 
-    res.json({ weeks: weeks.map(w => w.label), matrix });
+    res.json({ weeks: weeks.map((w) => w.label), matrix });
   } catch (error) {
     console.error('Member weekly matrix error:', error);
     res.status(500).json({ error: 'Failed to load member weekly matrix' });
@@ -748,7 +845,12 @@ router.get('/member-intelligence', async (req, res) => {
       }
     }
 
-    const members = await queries.getMemberIntelligence(days, startDate || null, endDate || null, service_id);
+    const members = await queries.getMemberIntelligence(
+      days,
+      startDate || null,
+      endDate || null,
+      service_id
+    );
     res.json(members);
   } catch (error) {
     console.error('Member intelligence error:', error);
@@ -771,7 +873,8 @@ router.get('/member-intelligence/:id/attendance', async (req, res) => {
     const serviceCondition = service_id === 'all' ? '' : ' AND a.service_type_id = ?';
     const serviceParams = service_id === 'all' ? [] : [service_id];
 
-    const member = await get(`
+    const member = await get(
+      `
       SELECT
         m.id,
         m.full_name,
@@ -789,13 +892,16 @@ router.get('/member-intelligence/:id/attendance', async (req, res) => {
       LEFT JOIN leaders head_l ON head_l.section_id = m.section_id AND head_l.is_head = 1 AND head_l.is_active = 1
       LEFT JOIN users head_u ON head_l.user_id = head_u.id
       WHERE m.id = ? AND m.soft_deleted_at IS NULL
-    `, [memberId]);
+    `,
+      [memberId]
+    );
 
     if (!member) {
       return res.status(404).json({ error: 'Member not found' });
     }
 
-    const records = await all(`
+    const records = await all(
+      `
       SELECT
         a.id,
         a.date,
@@ -812,16 +918,23 @@ router.get('/member-intelligence/:id/attendance', async (req, res) => {
         ${serviceCondition}
       ORDER BY a.date DESC, a.submitted_at DESC
       LIMIT 200
-    `, [memberId, startDate, endDate, ...serviceParams]);
+    `,
+      [memberId, startDate, endDate, ...serviceParams]
+    );
 
-    const stats = records.reduce((acc, record) => {
-      const status = String(record.status || '').trim().toLowerCase();
-      if (status === 'present') acc.present += 1;
-      if (status === 'absent') acc.absent += 1;
-      if (status === 'excused') acc.excused += 1;
-      acc.total += 1;
-      return acc;
-    }, { present: 0, absent: 0, excused: 0, total: 0 });
+    const stats = records.reduce(
+      (acc, record) => {
+        const status = String(record.status || '')
+          .trim()
+          .toLowerCase();
+        if (status === 'present') acc.present += 1;
+        if (status === 'absent') acc.absent += 1;
+        if (status === 'excused') acc.excused += 1;
+        acc.total += 1;
+        return acc;
+      },
+      { present: 0, absent: 0, excused: 0, total: 0 }
+    );
 
     stats.attendance_rate = stats.total ? Math.round((stats.present / stats.total) * 100) : 0;
 
@@ -844,7 +957,7 @@ router.get('/heatmap', async (req, res) => {
     const months = Math.min(parseInt(req.query.months) || 6, 24);
     const [daily, sections] = await Promise.all([
       queries.getAttendanceHeatMap(months),
-      queries.getSectionHeatMap(months),
+      queries.getSectionHeatMap(months)
     ]);
     res.json({ daily, sections });
   } catch (error) {
@@ -871,16 +984,21 @@ router.get('/risk-analysis', async (req, res) => {
     const [members, atRisk, consecutiveAbsentees] = await Promise.all([
       queries.getAttendanceRiskAnalysis(),
       queries.getAtRiskMembers(),
-      queries.getConsecutiveAbsentees(),
+      queries.getConsecutiveAbsentees()
     ]);
     const summary = {
-      highly_active: members.filter(m => m.risk_level === 'Highly Active').length,
-      active: members.filter(m => m.risk_level === 'Active').length,
-      moderately_active: members.filter(m => m.risk_level === 'Moderately Active').length,
-      at_risk: members.filter(m => m.risk_level === 'At Risk').length,
-      critical: members.filter(m => m.risk_level === 'Critical Follow-up Required').length,
+      highly_active: members.filter((m) => m.risk_level === 'Highly Active').length,
+      active: members.filter((m) => m.risk_level === 'Active').length,
+      moderately_active: members.filter((m) => m.risk_level === 'Moderately Active').length,
+      at_risk: members.filter((m) => m.risk_level === 'At Risk').length,
+      critical: members.filter((m) => m.risk_level === 'Critical Follow-up Required').length
     };
-    res.json({ members, summary, at_risk_members: atRisk, consecutive_absentees: consecutiveAbsentees });
+    res.json({
+      members,
+      summary,
+      at_risk_members: atRisk,
+      consecutive_absentees: consecutiveAbsentees
+    });
   } catch (error) {
     console.error('Risk analysis error:', error);
     res.status(500).json({ error: 'Failed to fetch risk analysis' });
@@ -915,17 +1033,23 @@ router.get('/correlations', async (req, res) => {
 router.get('/church-growth-index', async (req, res) => {
   try {
     const data = await queries.getChurchGrowthIndex();
-    const activeGrowth = data.total_members > 0 ? ((data.current_active / data.total_members) * 100) : 0;
-    const retentionScore = data.previous_active > 0 ? ((data.current_active / data.previous_active) * 100) : 50;
-    const leaderScore = data.total_leaders > 0 ? ((data.active_leaders / data.total_leaders) * 100) : 0;
+    const activeGrowth =
+      data.total_members > 0 ? (data.current_active / data.total_members) * 100 : 0;
+    const retentionScore =
+      data.previous_active > 0 ? (data.current_active / data.previous_active) * 100 : 50;
+    const leaderScore =
+      data.total_leaders > 0 ? (data.active_leaders / data.total_leaders) * 100 : 0;
     const rateChange = (data.current_rate || 0) - (data.previous_rate || 0);
-    const growthIndex = Math.min(100, Math.round(
-      Math.min(100, activeGrowth) * 0.25 +
-      Math.min(100, retentionScore) * 0.25 +
-      Math.min(100, leaderScore) * 0.20 +
-      Math.min(100, (data.current_rate || 0)) * 0.15 +
-      Math.min(100, Math.max(0, 50 + rateChange * 2)) * 0.15
-    ));
+    const growthIndex = Math.min(
+      100,
+      Math.round(
+        Math.min(100, activeGrowth) * 0.25 +
+          Math.min(100, retentionScore) * 0.25 +
+          Math.min(100, leaderScore) * 0.2 +
+          Math.min(100, data.current_rate || 0) * 0.15 +
+          Math.min(100, Math.max(0, 50 + rateChange * 2)) * 0.15
+      )
+    );
     res.json({ ...data, growth_index: growthIndex, rate_change: Math.round(rateChange * 10) / 10 });
   } catch (error) {
     console.error('Church growth index error:', error);
@@ -938,71 +1062,116 @@ router.get('/church-growth-index', async (req, res) => {
 router.get('/ai-insights', async (req, res) => {
   try {
     const result = await withCache('ai-insights', 5 * 60 * 1000, async () => {
-    const [sectionData, riskData, consecutiveData, growthData] = await Promise.all([
-      queries.getSectionRankings(90),
-      queries.getAtRiskMembers(),
-      queries.getConsecutiveAbsentees(),
-      queries.getChurchGrowthIndex(),
-    ]);
+      const [sectionData, riskData, consecutiveData, growthData] = await Promise.all([
+        queries.getSectionRankings(90),
+        queries.getAtRiskMembers(),
+        queries.getConsecutiveAbsentees(),
+        queries.getChurchGrowthIndex()
+      ]);
 
-    const insights = [];
+      const insights = [];
 
-    if (sectionData.length > 0) {
-      const best = sectionData[0];
+      if (sectionData.length > 0) {
+        const best = sectionData[0];
+        insights.push({
+          type: 'success',
+          text: `${best.name} has the highest attendance rate at ${best.attendance_rate}% over the last 90 days.`,
+          category: 'section_performance'
+        });
+      }
+
+      if (growthData.current_rate && growthData.previous_rate) {
+        const diff = growthData.current_rate - growthData.previous_rate;
+        if (diff > 0) {
+          insights.push({
+            type: 'success',
+            text: `Overall attendance improved by ${diff.toFixed(1)}% compared to the previous period.`,
+            category: 'attendance_trend'
+          });
+        } else if (diff < 0) {
+          insights.push({
+            type: 'warning',
+            text: `Overall attendance declined by ${Math.abs(diff).toFixed(1)}% compared to the previous period.`,
+            category: 'attendance_trend'
+          });
+        }
+      }
+
+      if (consecutiveData.length > 0) {
+        insights.push({
+          type: 'danger',
+          text: `${consecutiveData.length} member(s) have missed 3+ consecutive services and require follow-up.`,
+          category: 'followup'
+        });
+      }
+
+      if (riskData.length > 0) {
+        insights.push({
+          type: 'warning',
+          text: `${riskData.length} member(s) are at risk with less than 20% attendance.`,
+          category: 'risk'
+        });
+      }
+
+      if (growthData.souls_won_90d > 0) {
+        insights.push({
+          type: 'success',
+          text: `${growthData.souls_won_90d} souls have been won through evangelism in the last 90 days.`,
+          category: 'evangelism'
+        });
+      }
+
+      if (growthData.new_visitors_90d > 0) {
+        insights.push({
+          type: 'info',
+          text: `${growthData.new_visitors_90d} new visitors have attended in the last 90 days.`,
+          category: 'visitors'
+        });
+      }
+
+      const activeLeaders = growthData.active_leaders || 0;
+      const totalLeaders = growthData.total_leaders || 1;
+      if (activeLeaders < totalLeaders * 0.8) {
+        insights.push({
+          type: 'warning',
+          text: `Only ${activeLeaders} of ${totalLeaders} leaders have submitted attendance in the last 30 days.`,
+          category: 'submissions'
+        });
+      }
+
+      if (sectionData.length >= 2) {
+        const diff =
+          sectionData[0].attendance_rate - sectionData[sectionData.length - 1].attendance_rate;
+        if (diff > 20) {
+          insights.push({
+            type: 'warning',
+            text: `There is a ${diff.toFixed(1)}% gap between the best and lowest performing sections.`,
+            category: 'section_gap'
+          });
+        }
+      }
+
+      if (growthData.current_rate >= 80) {
+        insights.push({
+          type: 'success',
+          text: `Church attendance is healthy at ${growthData.current_rate}% average rate.`,
+          category: 'health'
+        });
+      } else if (growthData.current_rate < 50) {
+        insights.push({
+          type: 'danger',
+          text: `Church attendance is critically low at ${growthData.current_rate}% average rate. Immediate action needed.`,
+          category: 'health'
+        });
+      }
+
       insights.push({
-        type: 'success',
-        text: `${best.name} has the highest attendance rate at ${best.attendance_rate}% over the last 90 days.`,
-        category: 'section_performance',
+        type: 'info',
+        text: `${growthData.total_members} active members across ${growthData.total_departments} departments.`,
+        category: 'overview'
       });
-    }
 
-    if (growthData.current_rate && growthData.previous_rate) {
-      const diff = growthData.current_rate - growthData.previous_rate;
-      if (diff > 0) {
-        insights.push({ type: 'success', text: `Overall attendance improved by ${diff.toFixed(1)}% compared to the previous period.`, category: 'attendance_trend' });
-      } else if (diff < 0) {
-        insights.push({ type: 'warning', text: `Overall attendance declined by ${Math.abs(diff).toFixed(1)}% compared to the previous period.`, category: 'attendance_trend' });
-      }
-    }
-
-    if (consecutiveData.length > 0) {
-      insights.push({ type: 'danger', text: `${consecutiveData.length} member(s) have missed 3+ consecutive services and require follow-up.`, category: 'followup' });
-    }
-
-    if (riskData.length > 0) {
-      insights.push({ type: 'warning', text: `${riskData.length} member(s) are at risk with less than 20% attendance.`, category: 'risk' });
-    }
-
-    if (growthData.souls_won_90d > 0) {
-      insights.push({ type: 'success', text: `${growthData.souls_won_90d} souls have been won through evangelism in the last 90 days.`, category: 'evangelism' });
-    }
-
-    if (growthData.new_visitors_90d > 0) {
-      insights.push({ type: 'info', text: `${growthData.new_visitors_90d} new visitors have attended in the last 90 days.`, category: 'visitors' });
-    }
-
-    const activeLeaders = growthData.active_leaders || 0;
-    const totalLeaders = growthData.total_leaders || 1;
-    if (activeLeaders < totalLeaders * 0.8) {
-      insights.push({ type: 'warning', text: `Only ${activeLeaders} of ${totalLeaders} leaders have submitted attendance in the last 30 days.`, category: 'submissions' });
-    }
-
-    if (sectionData.length >= 2) {
-      const diff = sectionData[0].attendance_rate - sectionData[sectionData.length - 1].attendance_rate;
-      if (diff > 20) {
-        insights.push({ type: 'warning', text: `There is a ${diff.toFixed(1)}% gap between the best and lowest performing sections.`, category: 'section_gap' });
-      }
-    }
-
-    if (growthData.current_rate >= 80) {
-      insights.push({ type: 'success', text: `Church attendance is healthy at ${growthData.current_rate}% average rate.`, category: 'health' });
-    } else if (growthData.current_rate < 50) {
-      insights.push({ type: 'danger', text: `Church attendance is critically low at ${growthData.current_rate}% average rate. Immediate action needed.`, category: 'health' });
-    }
-
-    insights.push({ type: 'info', text: `${growthData.total_members} active members across ${growthData.total_departments} departments.`, category: 'overview' });
-
-    return insights.slice(0, 15);
+      return insights.slice(0, 15);
     });
     res.json(result);
   } catch (error) {
@@ -1011,7 +1180,6 @@ router.get('/ai-insights', async (req, res) => {
   }
 });
 
-
 // ── GET /analytics/finance-analytics ─────────────────────────────────────────
 // Finance summary, monthly income trend, and expense breakdown for a given year
 router.get('/finance-analytics', async (req, res) => {
@@ -1019,7 +1187,8 @@ router.get('/finance-analytics', async (req, res) => {
     const year = String(Number(req.query.year) || new Date().getFullYear());
 
     // Summary: aggregate all approved/submitted records for the year
-    const summary = await get(`
+    const summary = await get(
+      `
       SELECT
         COALESCE(SUM(total_income), 0)          as total_income,
         COALESCE(SUM(total_tithes), 0)          as total_tithes,
@@ -1037,10 +1206,13 @@ router.get('/finance-analytics', async (req, res) => {
       FROM finance_daily_records
       WHERE ${yearOnly('record_date')} = ?
         AND status IN ('submitted', 'approved')
-    `, [year, year]);
+    `,
+      [year, year]
+    );
 
     // Monthly income trend grouped by month
-    const monthly = await all(`
+    const monthly = await all(
+      `
       SELECT
         ${yearMonth('record_date')}            as month,
         COUNT(*)                               as day_count,
@@ -1057,10 +1229,13 @@ router.get('/finance-analytics', async (req, res) => {
         AND status IN ('submitted', 'approved')
       GROUP BY ${yearMonth('record_date')}
       ORDER BY month ASC
-    `, [year, year]);
+    `,
+      [year, year]
+    );
 
     // Expense category breakdown
-    const expenses = await all(`
+    const expenses = await all(
+      `
       SELECT fe.category, COALESCE(SUM(fe.amount), 0) as total
       FROM finance_expenses fe
       JOIN finance_daily_records fd ON fe.record_id = fd.id
@@ -1068,15 +1243,20 @@ router.get('/finance-analytics', async (req, res) => {
         AND fd.status IN ('submitted', 'approved')
       GROUP BY fe.category
       ORDER BY total DESC
-    `, [year]);
+    `,
+      [year]
+    );
 
     // Record status breakdown (draft / submitted / approved / rejected)
-    const statusBreakdown = await all(`
+    const statusBreakdown = await all(
+      `
       SELECT status, COUNT(*) as count
       FROM finance_daily_records
       WHERE ${yearOnly('record_date')} = ?
       GROUP BY status
-    `, [year, year]);
+    `,
+      [year, year]
+    );
 
     res.json({ summary: summary || {}, monthly, expenses, statusBreakdown, year });
   } catch (error) {
@@ -1103,25 +1283,37 @@ router.post('/executive-comparison', async (req, res) => {
 
     const result = await withCache(cacheKey, EXEC_COMPARISON_TTL, async () => {
       // Parallelize all periods AND all 7 calls within each period
-      const periodResults = await Promise.all(periods.map(async (p) => {
-        const { id, label, start, end } = p;
-        if (!start || !end) return null;
+      const periodResults = await Promise.all(
+        periods.map(async (p) => {
+          const { id, label, start, end } = p;
+          if (!start || !end) return null;
 
-        const [overall, sections, leaders, departments, memberEngagement, daily, movement] = await Promise.all([
-          getMultiPeriodOverall(start, end),
-          getMultiPeriodSections(start, end),
-          getMultiPeriodLeaders(start, end),
-          getMultiPeriodDepartments(start, end),
-          getMultiPeriodMembers(start, end),
-          queries.getHistoricalDaily(start, end),
-          getAttendanceMovement(start, end),
-        ]);
+          const [overall, sections, leaders, departments, memberEngagement, daily, movement] =
+            await Promise.all([
+              getMultiPeriodOverall(start, end),
+              getMultiPeriodSections(start, end),
+              getMultiPeriodLeaders(start, end),
+              getMultiPeriodDepartments(start, end),
+              getMultiPeriodMembers(start, end),
+              queries.getHistoricalDaily(start, end),
+              getAttendanceMovement(start, end)
+            ]);
 
-        return {
-          id, label, start, end,
-          overall, sections, leaders, departments, memberEngagement, daily, movement
-        };
-      }));
+          return {
+            id,
+            label,
+            start,
+            end,
+            overall,
+            sections,
+            leaders,
+            departments,
+            memberEngagement,
+            daily,
+            movement
+          };
+        })
+      );
 
       // Filter out nulls from skipped periods
       const validResults = periodResults.filter(Boolean);
@@ -1160,11 +1352,11 @@ function computeExecutiveKPIs(periodResults) {
   const total = periodResults.length;
   if (total === 0) return {};
 
-  const rates = periodResults.map(p => p.overall?.attendance_rate || 0);
-  const members = periodResults.map(p => p.overall?.total_members || 0);
-  const growth = periodResults.map(p => p.overall?.net_growth || 0);
-  const sections = periodResults.map(p => p.overall?.active_sections || 0);
-  const leaders = periodResults.map(p => p.overall?.leaders_submitted || 0);
+  const rates = periodResults.map((p) => p.overall?.attendance_rate || 0);
+  const members = periodResults.map((p) => p.overall?.total_members || 0);
+  const growth = periodResults.map((p) => p.overall?.net_growth || 0);
+  const sections = periodResults.map((p) => p.overall?.active_sections || 0);
+  const leaders = periodResults.map((p) => p.overall?.leaders_submitted || 0);
   const totalLeaders = periodResults[0]?.overall?.total_leaders || 1;
 
   const latest = periodResults[total - 1];
@@ -1175,17 +1367,27 @@ function computeExecutiveKPIs(periodResults) {
 
   // Church Health Score (composite)
   const healthScore = Math.round(
-    (avgRate * 0.35) +
-    (members.length > 0 ? (members[members.length - 1] / Math.max(...members) * 100) * 0.2 : 20) +
-    (leaders.length > 0 ? (leaders[leaders.length - 1] / totalLeaders * 100) * 0.2 : 20) +
-    (sections.length > 0 ? (sections[sections.length - 1] / (sections.reduce((a,b)=>a+b,0)/sections.length) * 100) * 0.15 : 15) +
-    (growth.length > 0 ? (growth[growth.length - 1] + 100) * 0.1 : 10)
+    avgRate * 0.35 +
+      (members.length > 0 ? (members[members.length - 1] / Math.max(...members)) * 100 * 0.2 : 20) +
+      (leaders.length > 0 ? (leaders[leaders.length - 1] / totalLeaders) * 100 * 0.2 : 20) +
+      (sections.length > 0
+        ? (sections[sections.length - 1] /
+            (sections.reduce((a, b) => a + b, 0) / sections.length)) *
+          100 *
+          0.15
+        : 15) +
+      (growth.length > 0 ? (growth[growth.length - 1] + 100) * 0.1 : 10)
   );
 
   // Attendance Growth Index
-  const growthIndex = prev && prev.overall?.attendance_rate
-    ? Math.round(((latest.overall?.attendance_rate || 0) - prev.overall?.attendance_rate) / prev.overall?.attendance_rate * 100)
-    : 0;
+  const growthIndex =
+    prev && prev.overall?.attendance_rate
+      ? Math.round(
+          (((latest.overall?.attendance_rate || 0) - prev.overall?.attendance_rate) /
+            prev.overall?.attendance_rate) *
+            100
+        )
+      : 0;
 
   // Stability Index (lower variance = more stable)
   const mean = rates.reduce((a, b) => a + b, 0) / rates.length;
@@ -1199,14 +1401,16 @@ function computeExecutiveKPIs(periodResults) {
   const engagementScore = latest?.overall?.engagement_score || 0;
 
   // Leader Performance Index
-  const leaderPerfIndex = totalLeaders > 0
-    ? Math.round((leaders[leaders.length - 1] || 0) / totalLeaders * 100)
-    : 0;
+  const leaderPerfIndex =
+    totalLeaders > 0 ? Math.round(((leaders[leaders.length - 1] || 0) / totalLeaders) * 100) : 0;
 
   // Forecast (simple linear projection)
-  const forecast = rates.length >= 3
-    ? Math.round(rates[rates.length - 1] + (rates[rates.length - 1] - rates[rates.length - 3]) / 2)
-    : rates[rates.length - 1] || 0;
+  const forecast =
+    rates.length >= 3
+      ? Math.round(
+          rates[rates.length - 1] + (rates[rates.length - 1] - rates[rates.length - 3]) / 2
+        )
+      : rates[rates.length - 1] || 0;
 
   return {
     church_health_score: healthScore,
@@ -1231,7 +1435,7 @@ function computeExecutiveKPIs(periodResults) {
 function analyzeTrends(periodResults) {
   if (periodResults.length < 2) return { trend: 'insufficient_data', classification: 'neutral' };
 
-  const rates = periodResults.map(p => p.overall?.attendance_rate || 0);
+  const rates = periodResults.map((p) => p.overall?.attendance_rate || 0);
   const first = rates[0];
   const last = rates[rates.length - 1];
   const direction = last - first;
@@ -1278,9 +1482,8 @@ function analyzeTrends(periodResults) {
   });
 
   // Momentum (rate of change between last 3 periods)
-  const recentChange = rates.length >= 3
-    ? rates[rates.length - 1] - rates[rates.length - 3]
-    : direction;
+  const recentChange =
+    rates.length >= 3 ? rates[rates.length - 1] - rates[rates.length - 3] : direction;
 
   return {
     classification,
@@ -1311,7 +1514,8 @@ function detectSeasonality(rates) {
 }
 
 function analyzeRootCauses(periodResults) {
-  if (periodResults.length < 2) return { factors: [], summary: 'Insufficient periods for analysis' };
+  if (periodResults.length < 2)
+    return { factors: [], summary: 'Insufficient periods for analysis' };
 
   const latest = periodResults[periodResults.length - 1];
   const prev = periodResults[periodResults.length - 2];
@@ -1321,8 +1525,8 @@ function analyzeRootCauses(periodResults) {
   // Analyze sections
   if (latest.sections?.length && prev.sections?.length) {
     const secMap = {};
-    latest.sections.forEach(s => secMap[s.name] = s);
-    prev.sections.forEach(s => {
+    latest.sections.forEach((s) => (secMap[s.name] = s));
+    prev.sections.forEach((s) => {
       const curr = secMap[s.name];
       if (curr) {
         const secDiff = (curr.attendance_rate || 0) - (s.attendance_rate || 0);
@@ -1342,8 +1546,8 @@ function analyzeRootCauses(periodResults) {
   // Analyze leaders
   if (latest.leaders?.length && prev.leaders?.length) {
     const leadMap = {};
-    latest.leaders.forEach(l => leadMap[l.id] = l);
-    prev.leaders.forEach(l => {
+    latest.leaders.forEach((l) => (leadMap[l.id] = l));
+    prev.leaders.forEach((l) => {
       const curr = leadMap[l.id];
       if (curr) {
         const leadDiff = (curr.attendance_rate || 0) - (l.attendance_rate || 0);
@@ -1362,14 +1566,24 @@ function analyzeRootCauses(periodResults) {
 
   factors.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
 
-  const positive = factors.filter(f => f.direction === 'positive');
-  const negative = factors.filter(f => f.direction === 'negative');
+  const positive = factors.filter((f) => f.direction === 'positive');
+  const negative = factors.filter((f) => f.direction === 'negative');
 
   let summary;
   if (rateDiff > 0) {
-    summary = `Attendance increased by ${Math.abs(rateDiff).toFixed(1)}%. Top contributors: ${positive.slice(0, 3).map(f => f.name).join(', ') || 'broad-based improvement'}.`;
+    summary = `Attendance increased by ${Math.abs(rateDiff).toFixed(1)}%. Top contributors: ${
+      positive
+        .slice(0, 3)
+        .map((f) => f.name)
+        .join(', ') || 'broad-based improvement'
+    }.`;
   } else if (rateDiff < 0) {
-    summary = `Attendance declined by ${Math.abs(rateDiff).toFixed(1)}%. Main factors: ${negative.slice(0, 3).map(f => f.name).join(', ') || 'broad-based decline'}.`;
+    summary = `Attendance declined by ${Math.abs(rateDiff).toFixed(1)}%. Main factors: ${
+      negative
+        .slice(0, 3)
+        .map((f) => f.name)
+        .join(', ') || 'broad-based decline'
+    }.`;
   } else {
     summary = 'Attendance remained stable across periods.';
   }
@@ -1385,8 +1599,8 @@ function generateActions(periodResults, trends) {
   // Check for declining sections
   if (latest?.sections && prev?.sections) {
     const secMap = {};
-    latest.sections.forEach(s => secMap[s.name] = s);
-    prev.sections.forEach(s => {
+    latest.sections.forEach((s) => (secMap[s.name] = s));
+    prev.sections.forEach((s) => {
       const curr = secMap[s.name];
       if (curr) {
         const diff = (curr.attendance_rate || 0) - (s.attendance_rate || 0);
@@ -1429,8 +1643,8 @@ function generateActions(periodResults, trends) {
   // Check for leader performance issues
   if (latest?.leaders && prev?.leaders) {
     const leadMap = {};
-    latest.leaders.forEach(l => leadMap[l.id] = l);
-    prev.leaders.forEach(l => {
+    latest.leaders.forEach((l) => (leadMap[l.id] = l));
+    prev.leaders.forEach((l) => {
       const curr = leadMap[l.id];
       if (curr) {
         if ((curr.submission_rate || 0) < 50) {
@@ -1465,7 +1679,8 @@ function generateActions(periodResults, trends) {
       priority: 'high',
       category: 'attendance_decline',
       title: 'Overall attendance is declining',
-      description: 'Immediate attention required. Review all sections, increase visitation, and consider special events.',
+      description:
+        'Immediate attention required. Review all sections, increase visitation, and consider special events.',
       affected: ['All sections'],
       expected_impact: 'Reverse attendance decline trajectory',
       type: 'intervention'
@@ -1477,7 +1692,8 @@ function generateActions(periodResults, trends) {
       priority: 'low',
       category: 'growth_sustainability',
       title: 'Positive attendance growth trend',
-      description: 'Sustain momentum with continued engagement and new member integration programs.',
+      description:
+        'Sustain momentum with continued engagement and new member integration programs.',
       affected: ['All sections'],
       expected_impact: 'Maintain growth trajectory',
       type: 'sustain'
@@ -1486,14 +1702,19 @@ function generateActions(periodResults, trends) {
 
   // Member engagement
   if (latest?.memberEngagement?.length) {
-    const atRisk = latest.memberEngagement.filter(m => (m.risk_level || 'low') === 'high' || (m.risk_level || 'low') === 'critical');
+    const atRisk = latest.memberEngagement.filter(
+      (m) => (m.risk_level || 'low') === 'high' || (m.risk_level || 'low') === 'critical'
+    );
     if (atRisk.length > 0) {
       actions.push({
         priority: 'high',
         category: 'at_risk_members',
         title: `${atRisk.length} member(s) at risk of disengagement`,
-        description: `Assign visitation and counseling. Priority members: ${atRisk.slice(0, 3).map(m => m.full_name).join(', ')}`,
-        affected: atRisk.slice(0, 5).map(m => m.full_name),
+        description: `Assign visitation and counseling. Priority members: ${atRisk
+          .slice(0, 3)
+          .map((m) => m.full_name)
+          .join(', ')}`,
+        affected: atRisk.slice(0, 5).map((m) => m.full_name),
         expected_impact: 'Retention of at-risk members',
         type: 'intervention'
       });
@@ -1536,407 +1757,728 @@ router.get('/executive-summary', async (req, res) => {
     const cacheKey = `executive-summary:${days}`;
 
     const payload = await withCache(cacheKey, EXECUTIVE_SUMMARY_TTL, async () => {
-    const now = new Date();
-    const today = formatLocalDate(now);
+      const now = new Date();
+      const today = formatLocalDate(now);
 
-    // Period boundaries — each for computing a comparison value
-    const P = {
-      cur:  { s: formatLocalDate(addDays(now, -days)), e: today },
-      prev: { s: formatLocalDate(addDays(now, -days * 2)), e: formatLocalDate(addDays(now, -days - 1)) },
-      yd:   { s: formatLocalDate(addDays(now, -1)), e: formatLocalDate(addDays(now, -1)) },
-      wk:   { s: formatLocalDate(addDays(now, -7)), e: today },
-      mo:   { s: formatLocalDate(addDays(now, -30)), e: today },
-      qr:   { s: formatLocalDate(addDays(now, -90)), e: today },
-      yr:   { s: formatLocalDate(addDays(now, -365)), e: today },
-      all:  { s: formatLocalDate(addDays(now, -730)), e: today }, // capped to 2 years (was 1970)
-    };
+      // Period boundaries — each for computing a comparison value
+      const P = {
+        cur: { s: formatLocalDate(addDays(now, -days)), e: today },
+        prev: {
+          s: formatLocalDate(addDays(now, -days * 2)),
+          e: formatLocalDate(addDays(now, -days - 1))
+        },
+        yd: { s: formatLocalDate(addDays(now, -1)), e: formatLocalDate(addDays(now, -1)) },
+        wk: { s: formatLocalDate(addDays(now, -7)), e: today },
+        mo: { s: formatLocalDate(addDays(now, -30)), e: today },
+        qr: { s: formatLocalDate(addDays(now, -90)), e: today },
+        yr: { s: formatLocalDate(addDays(now, -365)), e: today },
+        all: { s: formatLocalDate(addDays(now, -730)), e: today } // capped to 2 years (was 1970)
+      };
 
-    // All DB fetches in parallel
-    const [cur, prevP, yd, wk, mo, qr, yr, allT, curMv, prevMv, curSec, curLdr, curMem] = await Promise.all([
-      getMultiPeriodOverall(P.cur.s, P.cur.e),
-      getMultiPeriodOverall(P.prev.s, P.prev.e),
-      getMultiPeriodOverall(P.yd.s, P.yd.e),
-      getMultiPeriodOverall(P.wk.s, P.wk.e),
-      getMultiPeriodOverall(P.mo.s, P.mo.e),
-      getMultiPeriodOverall(P.qr.s, P.qr.e),
-      getMultiPeriodOverall(P.yr.s, P.yr.e),
-      getMultiPeriodOverall(P.all.s, P.all.e),
-      getAttendanceMovement(P.cur.s, P.cur.e),
-      getAttendanceMovement(P.prev.s, P.prev.e),
-      getMultiPeriodSections(P.cur.s, P.cur.e),
-      getMultiPeriodLeaders(P.cur.s, P.cur.e),
-      getMultiPeriodMembers(P.cur.s, P.cur.e),
-    ]);
+      // All DB fetches in parallel
+      const [cur, prevP, yd, wk, mo, qr, yr, allT, curMv, prevMv, curSec, curLdr, curMem] =
+        await Promise.all([
+          getMultiPeriodOverall(P.cur.s, P.cur.e),
+          getMultiPeriodOverall(P.prev.s, P.prev.e),
+          getMultiPeriodOverall(P.yd.s, P.yd.e),
+          getMultiPeriodOverall(P.wk.s, P.wk.e),
+          getMultiPeriodOverall(P.mo.s, P.mo.e),
+          getMultiPeriodOverall(P.qr.s, P.qr.e),
+          getMultiPeriodOverall(P.yr.s, P.yr.e),
+          getMultiPeriodOverall(P.all.s, P.all.e),
+          getAttendanceMovement(P.cur.s, P.cur.e),
+          getAttendanceMovement(P.prev.s, P.prev.e),
+          getMultiPeriodSections(P.cur.s, P.cur.e),
+          getMultiPeriodLeaders(P.cur.s, P.cur.e),
+          getMultiPeriodMembers(P.cur.s, P.cur.e)
+        ]);
 
-    // ── Helper: build a standard KPI object ──────────────────────────────
-    function kpi(label, current, previous, target, historicalAvg, best, higherIsBetter = true) {
-      const c = Number(current) || 0;
-      const p = Number(previous) || 0;
-      const diff = c - p;
-      const pctChange = p !== 0 ? Math.round((diff / Math.abs(p)) * 1000) / 10 : (c !== 0 ? 100 : 0);
-      const ha = Number(historicalAvg) || 0;
-      const b = Number(best) || 0;
-      const t = Number(target) || 0;
+      // ── Helper: build a standard KPI object ──────────────────────────────
+      function kpi(label, current, previous, target, historicalAvg, best, higherIsBetter = true) {
+        const c = Number(current) || 0;
+        const p = Number(previous) || 0;
+        const diff = c - p;
+        const pctChange =
+          p !== 0 ? Math.round((diff / Math.abs(p)) * 1000) / 10 : c !== 0 ? 100 : 0;
+        const ha = Number(historicalAvg) || 0;
+        const b = Number(best) || 0;
+        const t = Number(target) || 0;
 
-      let status = 'neutral';
-      if (t > 0) {
-        const ratio = c / t;
-        status = ratio >= 1 ? 'success' : ratio >= 0.75 ? 'warning' : 'danger';
-      } else if (higherIsBetter) {
-        status = diff > 0 ? 'success' : diff < 0 ? 'danger' : 'neutral';
-      } else {
-        status = diff < 0 ? 'success' : diff > 0 ? 'danger' : 'neutral';
+        let status = 'neutral';
+        if (t > 0) {
+          const ratio = c / t;
+          status = ratio >= 1 ? 'success' : ratio >= 0.75 ? 'warning' : 'danger';
+        } else if (higherIsBetter) {
+          status = diff > 0 ? 'success' : diff < 0 ? 'danger' : 'neutral';
+        } else {
+          status = diff < 0 ? 'success' : diff > 0 ? 'danger' : 'neutral';
+        }
+
+        const absDiff = Math.abs(diff);
+        let priority = 'low';
+        if (t > 0 && c < t * 0.5) priority = 'high';
+        else if (t > 0 && c < t * 0.75) priority = 'medium';
+        else if (!t && higherIsBetter && diff < 0 && absDiff > 10) priority = 'high';
+        else if (!t && higherIsBetter && diff < 0 && absDiff > 5) priority = 'medium';
+
+        return {
+          label,
+          current: c,
+          previous: p,
+          diff: Math.round(diff * 100) / 100,
+          pctChange,
+          historicalAvg: ha,
+          best: b,
+          target: t,
+          status,
+          priority
+        };
       }
 
-      const absDiff = Math.abs(diff);
-      let priority = 'low';
-      if (t > 0 && c < t * 0.5) priority = 'high';
-      else if (t > 0 && c < t * 0.75) priority = 'medium';
-      else if (!t && higherIsBetter && diff < 0 && absDiff > 10) priority = 'high';
-      else if (!t && higherIsBetter && diff < 0 && absDiff > 5) priority = 'medium';
+      // ── Safe numeric helpers ─────────────────────────────────────────────
+      const n = (v) => Number(v) || 0;
+      const safeDiv = (a, b) => (b !== 0 ? a / b : 0);
 
-      return { label, current: c, previous: p, diff: Math.round(diff * 100) / 100, pctChange, historicalAvg: ha, best: b, target: t, status, priority };
-    }
+      // ── Compute every KPI ────────────────────────────────────────────────
+      const totalMembers = n(cur.total_members);
+      const present = n(cur.present);
+      const absent = n(cur.absent);
+      const excused = n(cur.excused);
 
-    // ── Safe numeric helpers ─────────────────────────────────────────────
-    const n = v => Number(v) || 0;
-    const safeDiv = (a, b) => (b !== 0 ? a / b : 0);
+      // Validate: Present + Absent + Excused should equal total eligible (for this period)
+      const sumPAE = present + absent + excused;
+      const totalEligible = Math.max(totalMembers, sumPAE);
 
-    // ── Compute every KPI ────────────────────────────────────────────────
-    const totalMembers = n(cur.total_members);
-    const present = n(cur.present);
-    const absent = n(cur.absent);
-    const excused = n(cur.excused);
+      const attendanceRate = safeDiv(present, totalEligible) * 100;
+      const prevAttendanceRate =
+        safeDiv(
+          n(prevP.present),
+          Math.max(n(prevP.total_members), n(prevP.present) + n(prevP.absent) + n(prevP.excused))
+        ) * 100;
+      const wkAttendanceRate =
+        safeDiv(
+          n(wk.present),
+          Math.max(n(wk.total_members), n(wk.present) + n(wk.absent) + n(wk.excused))
+        ) * 100;
+      const moAttendanceRate =
+        safeDiv(
+          n(mo.present),
+          Math.max(n(mo.total_members), n(mo.present) + n(mo.absent) + n(mo.excused))
+        ) * 100;
+      const qrAttendanceRate =
+        safeDiv(
+          n(qr.present),
+          Math.max(n(qr.total_members), n(qr.present) + n(qr.absent) + n(qr.excused))
+        ) * 100;
+      const yrAttendanceRate =
+        safeDiv(
+          n(yr.present),
+          Math.max(n(yr.total_members), n(yr.present) + n(yr.absent) + n(yr.excused))
+        ) * 100;
+      const allTimeAttendanceRate =
+        safeDiv(
+          n(allT.present),
+          Math.max(n(allT.total_members), n(allT.present) + n(allT.absent) + n(allT.excused))
+        ) * 100;
 
-    // Validate: Present + Absent + Excused should equal total eligible (for this period)
-    const sumPAE = present + absent + excused;
-    const totalEligible = Math.max(totalMembers, sumPAE);
+      // Weekly / monthly / quarterly / yearly growth (from attendance rate change)
+      const weeklyGrowth =
+        n(cur.weekly_growth) !== undefined
+          ? n(cur.weekly_growth)
+          : attendanceRate - wkAttendanceRate;
+      const monthlyGrowth =
+        n(cur.monthly_growth) !== undefined
+          ? n(cur.monthly_growth)
+          : attendanceRate - moAttendanceRate;
+      const quarterlyGrowth = attendanceRate - qrAttendanceRate;
+      const yearlyGrowth = attendanceRate - yrAttendanceRate;
 
-    const attendanceRate = safeDiv(present, totalEligible) * 100;
-    const prevAttendanceRate = safeDiv(n(prevP.present), Math.max(n(prevP.total_members), n(prevP.present) + n(prevP.absent) + n(prevP.excused))) * 100;
-    const wkAttendanceRate = safeDiv(n(wk.present), Math.max(n(wk.total_members), n(wk.present) + n(wk.absent) + n(wk.excused))) * 100;
-    const moAttendanceRate = safeDiv(n(mo.present), Math.max(n(mo.total_members), n(mo.present) + n(mo.absent) + n(mo.excused))) * 100;
-    const qrAttendanceRate = safeDiv(n(qr.present), Math.max(n(qr.total_members), n(qr.present) + n(qr.absent) + n(qr.excused))) * 100;
-    const yrAttendanceRate = safeDiv(n(yr.present), Math.max(n(yr.total_members), n(yr.present) + n(yr.absent) + n(yr.excused))) * 100;
-    const allTimeAttendanceRate = safeDiv(n(allT.present), Math.max(n(allT.total_members), n(allT.present) + n(allT.absent) + n(allT.excused))) * 100;
+      // Retention rate
+      const currentRetention = n(cur.retention_rate);
+      const prevRetention = n(prevP.retention_rate);
+      const allTimeRetention = n(allT.retention_rate);
 
-    // Weekly / monthly / quarterly / yearly growth (from attendance rate change)
-    const weeklyGrowth = n(cur.weekly_growth) !== undefined ? n(cur.weekly_growth) : (attendanceRate - wkAttendanceRate);
-    const monthlyGrowth = n(cur.monthly_growth) !== undefined ? n(cur.monthly_growth) : (attendanceRate - moAttendanceRate);
-    const quarterlyGrowth = attendanceRate - qrAttendanceRate;
-    const yearlyGrowth = attendanceRate - yrAttendanceRate;
+      // Engagement score
+      const engagementScore = n(cur.engagement_score);
+      const prevEngagement = n(prevP.engagement_score);
+      const allTimeEngagement = n(allT.engagement_score);
 
-    // Retention rate
-    const currentRetention = n(cur.retention_rate);
-    const prevRetention = n(prevP.retention_rate);
-    const allTimeRetention = n(allT.retention_rate);
+      // Movement data
+      const newMembers = n(curMv.new_members);
+      const prevNewMembers = n(prevMv.new_members);
+      const returningMembers = n(curMv.returning_members);
+      const prevReturningMembers = n(prevMv.returning_members);
+      const membersLost = n(curMv.members_lost);
+      const visitorsConverted = n(curMv.visitors_converted);
+      const prevVisitorsConverted = n(prevMv.visitors_converted);
+      const netGrowth = n(curMv.net_membership_growth);
 
-    // Engagement score
-    const engagementScore = n(cur.engagement_score);
-    const prevEngagement = n(prevP.engagement_score);
-    const allTimeEngagement = n(allT.engagement_score);
+      // Visitor conversion rate
+      const visitors = n(cur.visitors) || 1;
+      const visitorConversionRate = safeDiv(visitorsConverted, visitors) * 100;
+      const prevVisitorConversionRate =
+        safeDiv(prevVisitorsConverted, n(prevP.visitors) || 1) * 100;
 
-    // Movement data
-    const newMembers = n(curMv.new_members);
-    const prevNewMembers = n(prevMv.new_members);
-    const returningMembers = n(curMv.returning_members);
-    const prevReturningMembers = n(prevMv.returning_members);
-    const membersLost = n(curMv.members_lost);
-    const visitorsConverted = n(curMv.visitors_converted);
-    const prevVisitorsConverted = n(prevMv.visitors_converted);
-    const netGrowth = n(curMv.net_membership_growth);
+      // Follow-up completion rate
+      const followUpsCompleted = n(cur.follow_ups_completed) || 0;
+      const followUpsTotal = totalMembers > 0 ? totalMembers : 1; // proxy: 1 follow-up per member per period
+      const followUpRate = safeDiv(followUpsCompleted, followUpsTotal) * 100;
+      const prevFollowUpsCompleted = n(prevP.follow_ups_completed) || 0;
+      const prevFollowUpRate = safeDiv(prevFollowUpsCompleted, n(prevP.total_members) || 1) * 100;
 
-    // Visitor conversion rate
-    const visitors = n(cur.visitors) || 1;
-    const visitorConversionRate = safeDiv(visitorsConverted, visitors) * 100;
-    const prevVisitorConversionRate = safeDiv(prevVisitorsConverted, (n(prevP.visitors) || 1)) * 100;
+      // Leader performance index (avg of attendance rates across leaders)
+      const leaderRates = (curLdr || []).map((l) => n(l.attendance_rate));
+      const leaderPerfIndex =
+        leaderRates.length > 0 ? leaderRates.reduce((a, b) => a + b, 0) / leaderRates.length : 0;
 
-    // Follow-up completion rate
-    const followUpsCompleted = n(cur.follow_ups_completed) || 0;
-    const followUpsTotal = totalMembers > 0 ? totalMembers : 1; // proxy: 1 follow-up per member per period
-    const followUpRate = safeDiv(followUpsCompleted, followUpsTotal) * 100;
-    const prevFollowUpsCompleted = n(prevP.follow_ups_completed) || 0;
-    const prevFollowUpRate = safeDiv(prevFollowUpsCompleted, (n(prevP.total_members) || 1)) * 100;
+      // Section performance index
+      const sectionRates = (curSec || []).map((s) => n(s.attendance_rate));
+      const sectionPerfIndex =
+        sectionRates.length > 0 ? sectionRates.reduce((a, b) => a + b, 0) / sectionRates.length : 0;
 
-    // Leader performance index (avg of attendance rates across leaders)
-    const leaderRates = (curLdr || []).map(l => n(l.attendance_rate));
-    const leaderPerfIndex = leaderRates.length > 0 ? leaderRates.reduce((a, b) => a + b, 0) / leaderRates.length : 0;
+      // Member health breakdown
+      const memberRiskLevels = (curMem || []).map((m) => m.risk_level);
+      const healthyMembers = memberRiskLevels.filter((r) => r === 'low').length;
+      const atRiskMembers = memberRiskLevels.filter((r) => r === 'high' || r === 'critical').length;
 
-    // Section performance index
-    const sectionRates = (curSec || []).map(s => n(s.attendance_rate));
-    const sectionPerfIndex = sectionRates.length > 0 ? sectionRates.reduce((a, b) => a + b, 0) / sectionRates.length : 0;
+      // Attendance momentum (rate of rate change — 2nd derivative)
+      const momentum = quarterlyGrowth - (quarterlyGrowth - weeklyGrowth);
 
-    // Member health breakdown
-    const memberRiskLevels = (curMem || []).map(m => m.risk_level);
-    const healthyMembers = memberRiskLevels.filter(r => r === 'low').length;
-    const atRiskMembers = memberRiskLevels.filter(r => r === 'high' || r === 'critical').length;
+      // Ministry health (composite of engagement, retention, and attendance)
+      const ministryHealth =
+        Math.round(
+          (engagementScore * 0.3 + (currentRetention || 0) * 0.3 + attendanceRate * 0.4) * 10
+        ) / 10;
 
-    // Attendance momentum (rate of rate change — 2nd derivative)
-    const momentum = quarterlyGrowth - (quarterlyGrowth - weeklyGrowth);
+      // Attendance goal achievement (target = 75% by default)
+      const goalTarget = 75;
+      const goalAchievement = safeDiv(attendanceRate, goalTarget) * 100;
 
-    // Ministry health (composite of engagement, retention, and attendance)
-    const ministryHealth = Math.round((engagementScore * 0.3 + (currentRetention || 0) * 0.3 + attendanceRate * 0.4) * 10) / 10;
+      // Overall Church Performance Score — weighted composite
+      const churchHealthScore = Math.round(
+        Math.min(
+          100,
+          attendanceRate * 0.25 +
+            (currentRetention || 0) * 0.15 +
+            engagementScore * 0.15 +
+            Math.max(0, weeklyGrowth) * 0.05 +
+            Math.max(0, monthlyGrowth) * 0.05 +
+            visitorConversionRate * 0.1 +
+            leaderPerfIndex * 0.1 +
+            sectionPerfIndex * 0.1 +
+            safeDiv(healthyMembers, Math.max(1, memberRiskLevels.length)) * 100 * 0.05
+        )
+      );
 
-    // Attendance goal achievement (target = 75% by default)
-    const goalTarget = 75;
-    const goalAchievement = safeDiv(attendanceRate, goalTarget) * 100;
+      const overallPerfScore = Math.round(
+        Math.min(
+          100,
+          attendanceRate * 0.3 +
+            (currentRetention || 0) * 0.2 +
+            engagementScore * 0.2 +
+            leaderPerfIndex * 0.15 +
+            sectionPerfIndex * 0.15
+        )
+      );
 
-    // Overall Church Performance Score — weighted composite
-    const churchHealthScore = Math.round(Math.min(100,
-      attendanceRate * 0.25 +
-      (currentRetention || 0) * 0.15 +
-      engagementScore * 0.15 +
-      Math.max(0, weeklyGrowth) * 0.05 +
-      Math.max(0, monthlyGrowth) * 0.05 +
-      visitorConversionRate * 0.10 +
-      leaderPerfIndex * 0.10 +
-      sectionPerfIndex * 0.10 +
-      (safeDiv(healthyMembers, Math.max(1, memberRiskLevels.length)) * 100) * 0.05
-    ));
+      // ── Build KPI dictionary ─────────────────────────────────────────────
+      const kpis = {
+        churchHealthScore: kpi(
+          'Church Health Score',
+          churchHealthScore,
+          Math.round(safeDiv(n(allT.present), Math.max(n(allT.total_members), 1)) * 100),
+          80,
+          allTimeAttendanceRate,
+          100
+        ),
+        attendanceRate: kpi(
+          'Attendance Rate',
+          Math.round(attendanceRate * 10) / 10,
+          Math.round(prevAttendanceRate * 10) / 10,
+          goalTarget,
+          Math.round(allTimeAttendanceRate * 10) / 10,
+          100
+        ),
+        weeklyGrowth: kpi('Weekly Growth', Math.round(weeklyGrowth * 10) / 10, 0, 5, 0, 100),
+        monthlyGrowth: kpi('Monthly Growth', Math.round(monthlyGrowth * 10) / 10, 0, 10, 0, 100),
+        quarterlyGrowth: kpi(
+          'Quarterly Growth',
+          Math.round(quarterlyGrowth * 10) / 10,
+          0,
+          15,
+          0,
+          100
+        ),
+        yearlyGrowth: kpi('Yearly Growth', Math.round(yearlyGrowth * 10) / 10, 0, 20, 0, 100),
+        attendanceMomentum: kpi(
+          'Attendance Momentum',
+          Math.round(momentum * 10) / 10,
+          Math.round((quarterlyGrowth - weeklyGrowth) * 10) / 10,
+          0,
+          0,
+          100
+        ),
+        memberHealth: kpi(
+          'Member Health',
+          Math.round(safeDiv(healthyMembers, Math.max(1, memberRiskLevels.length)) * 100),
+          0,
+          80,
+          0,
+          100
+        ),
+        retentionRate: kpi(
+          'Retention Rate',
+          Math.round((currentRetention || 0) * 10) / 10,
+          Math.round((prevRetention || 0) * 10) / 10,
+          80,
+          Math.round((allTimeRetention || 0) * 10) / 10,
+          100
+        ),
+        engagementScore: kpi(
+          'Engagement Score',
+          Math.round(engagementScore * 100) / 100,
+          Math.round(prevEngagement * 100) / 100,
+          0.75,
+          Math.round(allTimeEngagement * 100) / 100,
+          1
+        ),
+        visitorConversion: kpi(
+          'Visitor Conversion',
+          Math.round(visitorConversionRate * 10) / 10,
+          Math.round(prevVisitorConversionRate * 10) / 10,
+          30,
+          0,
+          100
+        ),
+        newMembers: kpi('New Members', newMembers, prevNewMembers, 10, 0, 100, true),
+        returningMembers: kpi(
+          'Returning Members',
+          returningMembers,
+          prevReturningMembers,
+          15,
+          0,
+          100,
+          true
+        ),
+        followUpCompletion: kpi(
+          'Follow-up Completion',
+          Math.round(followUpRate * 10) / 10,
+          Math.round(prevFollowUpRate * 10) / 10,
+          90,
+          0,
+          100
+        ),
+        leaderPerfIndex: kpi(
+          'Leader Performance',
+          Math.round(leaderPerfIndex * 10) / 10,
+          0,
+          80,
+          0,
+          100
+        ),
+        sectionPerfIndex: kpi(
+          'Section Performance',
+          Math.round(sectionPerfIndex * 10) / 10,
+          0,
+          80,
+          0,
+          100
+        ),
+        ministryHealth: kpi('Ministry Health', ministryHealth, 0, 80, 0, 100),
+        goalAchievement: kpi(
+          'Goal Achievement',
+          Math.round(goalAchievement * 10) / 10,
+          0,
+          100,
+          0,
+          100
+        ),
+        overallPerfScore: kpi('Overall Performance', overallPerfScore, 0, 80, 0, 100)
+      };
 
-    const overallPerfScore = Math.round(Math.min(100,
-      attendanceRate * 0.30 +
-      (currentRetention || 0) * 0.20 +
-      engagementScore * 0.20 +
-      leaderPerfIndex * 0.15 +
-      sectionPerfIndex * 0.15
-    ));
+      // ── Church Snapshot ───────────────────────────────────────────────────
+      const activeSections = (curSec || []).length;
+      const activeLeaders = (curLdr || []).length;
+      const activeMembersInData = (curMem || []).length;
+      const serviceDays = n(cur.service_days);
+      const totalRecords = n(cur.total_records);
 
-    // ── Build KPI dictionary ─────────────────────────────────────────────
-    const kpis = {
-      churchHealthScore:     kpi('Church Health Score', churchHealthScore, Math.round(safeDiv(n(allT.present), Math.max(n(allT.total_members), 1)) * 100), 80, allTimeAttendanceRate, 100),
-      attendanceRate:        kpi('Attendance Rate', Math.round(attendanceRate * 10) / 10, Math.round(prevAttendanceRate * 10) / 10, goalTarget, Math.round(allTimeAttendanceRate * 10) / 10, 100),
-      weeklyGrowth:          kpi('Weekly Growth', Math.round(weeklyGrowth * 10) / 10, 0, 5, 0, 100),
-      monthlyGrowth:         kpi('Monthly Growth', Math.round(monthlyGrowth * 10) / 10, 0, 10, 0, 100),
-      quarterlyGrowth:       kpi('Quarterly Growth', Math.round(quarterlyGrowth * 10) / 10, 0, 15, 0, 100),
-      yearlyGrowth:          kpi('Yearly Growth', Math.round(yearlyGrowth * 10) / 10, 0, 20, 0, 100),
-      attendanceMomentum:    kpi('Attendance Momentum', Math.round(momentum * 10) / 10, Math.round((quarterlyGrowth - weeklyGrowth) * 10) / 10, 0, 0, 100),
-      memberHealth:          kpi('Member Health', Math.round(safeDiv(healthyMembers, Math.max(1, memberRiskLevels.length)) * 100), 0, 80, 0, 100),
-      retentionRate:         kpi('Retention Rate', Math.round((currentRetention || 0) * 10) / 10, Math.round((prevRetention || 0) * 10) / 10, 80, Math.round((allTimeRetention || 0) * 10) / 10, 100),
-      engagementScore:       kpi('Engagement Score', Math.round(engagementScore * 100) / 100, Math.round(prevEngagement * 100) / 100, 0.75, Math.round(allTimeEngagement * 100) / 100, 1),
-      visitorConversion:     kpi('Visitor Conversion', Math.round(visitorConversionRate * 10) / 10, Math.round(prevVisitorConversionRate * 10) / 10, 30, 0, 100),
-      newMembers:            kpi('New Members', newMembers, prevNewMembers, 10, 0, 100, true),
-      returningMembers:      kpi('Returning Members', returningMembers, prevReturningMembers, 15, 0, 100, true),
-      followUpCompletion:    kpi('Follow-up Completion', Math.round(followUpRate * 10) / 10, Math.round(prevFollowUpRate * 10) / 10, 90, 0, 100),
-      leaderPerfIndex:       kpi('Leader Performance', Math.round(leaderPerfIndex * 10) / 10, 0, 80, 0, 100),
-      sectionPerfIndex:      kpi('Section Performance', Math.round(sectionPerfIndex * 10) / 10, 0, 80, 0, 100),
-      ministryHealth:        kpi('Ministry Health', ministryHealth, 0, 80, 0, 100),
-      goalAchievement:       kpi('Goal Achievement', Math.round(goalAchievement * 10) / 10, 0, 100, 0, 100),
-      overallPerfScore:      kpi('Overall Performance', overallPerfScore, 0, 80, 0, 100),
-    };
+      const snapshot = {
+        church: {
+          totalMembers: n(allT.total_members),
+          activeMembers: activeMembersInData,
+          activeSections,
+          activeLeaders,
+          newMembers,
+          membersLost,
+          netGrowth,
+          visitors,
+          visitorsConverted,
+          membersContacted: n(cur.members_contacted)
+        },
+        attendance: {
+          present,
+          absent,
+          excused,
+          totalEligible,
+          serviceDays,
+          totalRecords,
+          attendanceRate: Math.round(attendanceRate * 10) / 10,
+          avgPerService: serviceDays > 0 ? Math.round(present / serviceDays) : 0,
+          leadersSubmitted: n(cur.leaders_submitted),
+          totalLeaders: n(cur.total_leaders)
+        },
+        period: {
+          start: P.cur.s,
+          end: P.cur.e,
+          days,
+          label: `Last ${days} days`
+        }
+      };
 
-    // ── Church Snapshot ───────────────────────────────────────────────────
-    const activeSections = (curSec || []).length;
-    const activeLeaders = (curLdr || []).length;
-    const activeMembersInData = (curMem || []).length;
-    const serviceDays = n(cur.service_days);
-    const totalRecords = n(cur.total_records);
+      // ── Section Rankings ──────────────────────────────────────────────────
+      const sectionRankings = (curSec || [])
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          members: n(s.member_count),
+          present: n(s.total_present),
+          absent: n(s.total_absent),
+          attendanceRate: Math.round(n(s.attendance_rate) * 10) / 10,
+          newMembers: n(s.new_members),
+          status:
+            n(s.attendance_rate) >= 75 ? 'strong' : n(s.attendance_rate) >= 50 ? 'average' : 'weak'
+        }))
+        .sort((a, b) => b.attendanceRate - a.attendanceRate);
 
-    const snapshot = {
-      church: {
-        totalMembers: n(allT.total_members),
-        activeMembers: activeMembersInData,
-        activeSections,
-        activeLeaders,
-        newMembers,
-        membersLost,
-        netGrowth,
-        visitors,
-        visitorsConverted,
-        membersContacted: n(cur.members_contacted),
-      },
-      attendance: {
-        present,
-        absent,
-        excused,
-        totalEligible,
-        serviceDays,
-        totalRecords,
-        attendanceRate: Math.round(attendanceRate * 10) / 10,
-        avgPerService: serviceDays > 0 ? Math.round(present / serviceDays) : 0,
-        leadersSubmitted: n(cur.leaders_submitted),
-        totalLeaders: n(cur.total_leaders),
-      },
-      period: {
-        start: P.cur.s,
-        end: P.cur.e,
-        days,
-        label: `Last ${days} days`,
-      },
-    };
+      // ── Leader Rankings ───────────────────────────────────────────────────
+      const leaderRankings = (curLdr || [])
+        .map((l) => ({
+          id: l.id || l.leader_id,
+          name: l.leader_name || l.name,
+          section: l.section_name || l.section,
+          members: n(l.assigned_members),
+          present: n(l.members_present),
+          attendanceRate: Math.round(n(l.attendance_rate) * 10) / 10,
+          submissions: n(l.submission_count),
+          submissionRate: Math.round(n(l.submission_rate) * 10) / 10,
+          followUps: n(l.follow_ups_completed)
+        }))
+        .sort((a, b) => b.attendanceRate - a.attendanceRate);
 
-    // ── Section Rankings ──────────────────────────────────────────────────
-    const sectionRankings = (curSec || [])
-      .map(s => ({
-        id: s.id,
-        name: s.name,
-        members: n(s.member_count),
-        present: n(s.total_present),
-        absent: n(s.total_absent),
-        attendanceRate: Math.round(n(s.attendance_rate) * 10) / 10,
-        newMembers: n(s.new_members),
-        status: n(s.attendance_rate) >= 75 ? 'strong' : n(s.attendance_rate) >= 50 ? 'average' : 'weak',
-      }))
-      .sort((a, b) => b.attendanceRate - a.attendanceRate);
+      // ── Member Health Breakdown ───────────────────────────────────────────
+      const healthBreakdown = (function () {
+        const levels = ['low', 'medium', 'high', 'critical'];
+        const counts = {};
+        levels.forEach((l) => {
+          counts[l] = 0;
+        });
+        (curMem || []).forEach((m) => {
+          const r = m.risk_level || 'low';
+          counts[r] = (counts[r] || 0) + 1;
+        });
+        const total = (curMem || []).length || 1;
+        return levels.map((l) => ({
+          label:
+            l === 'low'
+              ? 'Healthy'
+              : l === 'medium'
+                ? 'Moderate'
+                : l === 'high'
+                  ? 'At Risk'
+                  : 'Critical',
+          key: l,
+          count: counts[l] || 0,
+          pct: Math.round(((counts[l] || 0) / total) * 100)
+        }));
+      })();
 
-    // ── Leader Rankings ───────────────────────────────────────────────────
-    const leaderRankings = (curLdr || [])
-      .map(l => ({
-        id: l.id || l.leader_id,
-        name: l.leader_name || l.name,
-        section: l.section_name || l.section,
-        members: n(l.assigned_members),
-        present: n(l.members_present),
-        attendanceRate: Math.round(n(l.attendance_rate) * 10) / 10,
-        submissions: n(l.submission_count),
-        submissionRate: Math.round(n(l.submission_rate) * 10) / 10,
-        followUps: n(l.follow_ups_completed),
-      }))
-      .sort((a, b) => b.attendanceRate - a.attendanceRate);
+      // ── Executive Alerts ──────────────────────────────────────────────────
+      const alerts = [];
 
-    // ── Member Health Breakdown ───────────────────────────────────────────
-    const healthBreakdown = (function() {
-      const levels = ['low', 'medium', 'high', 'critical'];
-      const counts = {};
-      levels.forEach(l => { counts[l] = 0; });
-      (curMem || []).forEach(m => {
-        const r = m.risk_level || 'low';
-        counts[r] = (counts[r] || 0) + 1;
-      });
-      const total = (curMem || []).length || 1;
-      return levels.map(l => ({
-        label: l === 'low' ? 'Healthy' : l === 'medium' ? 'Moderate' : l === 'high' ? 'At Risk' : 'Critical',
-        key: l,
-        count: counts[l] || 0,
-        pct: Math.round((counts[l] || 0) / total * 100),
-      }));
-    })();
-
-    // ── Executive Alerts ──────────────────────────────────────────────────
-    const alerts = [];
-
-    // Declining attendance
-    if (attendanceRate < 50) {
-      alerts.push({ type: 'danger', category: 'attendance', title: 'Critical Attendance Decline', message: `Attendance rate is ${Math.round(attendanceRate)}% — below 50% threshold. Immediate intervention required.`, priority: 'high', metric: 'attendanceRate', value: Math.round(attendanceRate) });
-    } else if (attendanceRate < 65) {
-      alerts.push({ type: 'warning', category: 'attendance', title: 'Attendance Below Target', message: `Attendance rate at ${Math.round(attendanceRate)}% is below the ${goalTarget}% target.`, priority: 'medium', metric: 'attendanceRate', value: Math.round(attendanceRate) });
-    }
-
-    // Struggling sections
-    const weakSections = sectionRankings.filter(s => s.status === 'weak');
-    if (weakSections.length > 0) {
-      alerts.push({ type: 'danger', category: 'sections', title: `${weakSections.length} Section${weakSections.length > 1 ? 's' : ''} Need Attention`, message: `${weakSections.map(s => s.name).join(', ')} ${weakSections.length > 1 ? 'have' : 'has'} attendance rates below 50%.`, priority: 'high', metric: 'sections', value: weakSections.length, details: weakSections });
-    }
-
-    // Inactive members
-    if (atRiskMembers > 0) {
-      const pctAtRisk = Math.round(atRiskMembers / Math.max(1, memberRiskLevels.length) * 100);
-      alerts.push({ type: 'danger', category: 'members', title: `${atRiskMembers} Member${atRiskMembers > 1 ? 's' : ''} at Risk`, message: `${pctAtRisk}% of members (${atRiskMembers}) show critically low attendance.`, priority: 'high', metric: 'atRiskMembers', value: atRiskMembers });
-    }
-
-    // Leaders requiring intervention
-    const weakLeaders = leaderRankings.filter(l => l.attendanceRate < 50);
-    if (weakLeaders.length > 0) {
-      alerts.push({ type: 'warning', category: 'leaders', title: `${weakLeaders.length} Leader${weakLeaders.length > 1 ? 's' : ''} Below Threshold`, message: `${weakLeaders.map(l => l.name).join(', ')} ${weakLeaders.length > 1 ? 'have' : 'has'} attendance rates under 50%.`, priority: 'medium', metric: 'leaders', value: weakLeaders.length, details: weakLeaders });
-    }
-
-    // Visitor follow-up
-    if (visitors > 0 && visitorConversionRate < 20) {
-      alerts.push({ type: 'warning', category: 'visitors', title: 'Low Visitor Conversion', message: `Only ${Math.round(visitorConversionRate)}% of visitors converted. ${visitors} visitor${visitors > 1 ? 's' : ''} need follow-up.`, priority: 'medium', metric: 'visitorConversion', value: Math.round(visitorConversionRate) });
-    }
-
-    // Attendance milestones
-    const milestoneStep = 500;
-    if (present > 0 && present % milestoneStep === 0) {
-      alerts.push({ type: 'success', category: 'milestone', title: `Attendance Milestone`, message: `Reached ${present.toLocaleString()} present members!`, priority: 'low', metric: 'present', value: present });
-    }
-
-    // Exceptional performance
-    if (attendanceRate >= 85) {
-      alerts.push({ type: 'success', category: 'performance', title: 'Exceptional Attendance', message: `Attendance rate of ${Math.round(attendanceRate)}% exceeds expectations.`, priority: 'low', metric: 'attendanceRate', value: Math.round(attendanceRate) });
-    }
-
-    // Follow-up completion alert
-    if (followUpRate < 50 && followUpsTotal > 0) {
-      alerts.push({ type: 'warning', category: 'followups', title: 'Low Follow-up Completion', message: `Only ${Math.round(followUpRate)}% of follow-ups completed. Leadership needs to prioritize member care.`, priority: 'medium', metric: 'followUpRate', value: Math.round(followUpRate) });
-    }
-
-    // Section performance disparity
-    if (sectionRankings.length >= 2) {
-      const topSection = sectionRankings[0];
-      const bottomSection = sectionRankings[sectionRankings.length - 1];
-      const gap = topSection.attendanceRate - bottomSection.attendanceRate;
-      if (gap > 40) {
-        alerts.push({ type: 'warning', category: 'disparity', title: 'Large Section Performance Gap', message: `${gap}% gap between top (${topSection.name}: ${topSection.attendanceRate}%) and bottom (${bottomSection.name}: ${bottomSection.attendanceRate}%) sections.`, priority: 'medium', metric: 'sectionGap', value: Math.round(gap) });
+      // Declining attendance
+      if (attendanceRate < 50) {
+        alerts.push({
+          type: 'danger',
+          category: 'attendance',
+          title: 'Critical Attendance Decline',
+          message: `Attendance rate is ${Math.round(attendanceRate)}% — below 50% threshold. Immediate intervention required.`,
+          priority: 'high',
+          metric: 'attendanceRate',
+          value: Math.round(attendanceRate)
+        });
+      } else if (attendanceRate < 65) {
+        alerts.push({
+          type: 'warning',
+          category: 'attendance',
+          title: 'Attendance Below Target',
+          message: `Attendance rate at ${Math.round(attendanceRate)}% is below the ${goalTarget}% target.`,
+          priority: 'medium',
+          metric: 'attendanceRate',
+          value: Math.round(attendanceRate)
+        });
       }
-    }
 
-    // ── Attendance Momentum ────────────────────────────────────────────────
-    const momentumData = [
-      { period: 'Yesterday', rate: Math.round(safeDiv(n(yd.present), Math.max(n(yd.total_members), 1)) * 100) || 0 },
-      { period: 'Last 7 Days', rate: Math.round(wkAttendanceRate * 10) / 10 },
-      { period: 'Last 30 Days', rate: Math.round(moAttendanceRate * 10) / 10 },
-      { period: 'Last 90 Days', rate: Math.round(qrAttendanceRate * 10) / 10 },
-      { period: 'Last Year', rate: Math.round(yrAttendanceRate * 10) / 10 },
-      { period: 'All Time', rate: Math.round(allTimeAttendanceRate * 10) / 10 },
-    ];
+      // Struggling sections
+      const weakSections = sectionRankings.filter((s) => s.status === 'weak');
+      if (weakSections.length > 0) {
+        alerts.push({
+          type: 'danger',
+          category: 'sections',
+          title: `${weakSections.length} Section${weakSections.length > 1 ? 's' : ''} Need Attention`,
+          message: `${weakSections.map((s) => s.name).join(', ')} ${weakSections.length > 1 ? 'have' : 'has'} attendance rates below 50%.`,
+          priority: 'high',
+          metric: 'sections',
+          value: weakSections.length,
+          details: weakSections
+        });
+      }
 
-    // ── Benchmark Comparison ──────────────────────────────────────────────
-    const benchmarkComparison = [
-      { metric: 'Attendance Rate', current: Math.round(attendanceRate * 10) / 10, average: Math.round(allTimeAttendanceRate * 10) / 10, best: 100, target: goalTarget, unit: '%' },
-      { metric: 'Retention Rate', current: Math.round((currentRetention || 0) * 10) / 10, average: Math.round((allTimeRetention || 0) * 10) / 10, best: 100, target: 80, unit: '%' },
-      { metric: 'Engagement Score', current: Math.round(engagementScore * 100) / 100, average: Math.round(allTimeEngagement * 100) / 100, best: 1, target: 0.75, unit: '' },
-      { metric: 'Visitor Conversion', current: Math.round(visitorConversionRate * 10) / 10, average: 0, best: 100, target: 30, unit: '%' },
-      { metric: 'New Members', current: newMembers, average: prevNewMembers, best: 100, target: 10, unit: '' },
-    ];
+      // Inactive members
+      if (atRiskMembers > 0) {
+        const pctAtRisk = Math.round((atRiskMembers / Math.max(1, memberRiskLevels.length)) * 100);
+        alerts.push({
+          type: 'danger',
+          category: 'members',
+          title: `${atRiskMembers} Member${atRiskMembers > 1 ? 's' : ''} at Risk`,
+          message: `${pctAtRisk}% of members (${atRiskMembers}) show critically low attendance.`,
+          priority: 'high',
+          metric: 'atRiskMembers',
+          value: atRiskMembers
+        });
+      }
 
-    // ── Immediate Action List ──────────────────────────────────────────────
-    const actions = alerts
-      .filter(a => a.priority === 'high' || a.priority === 'medium')
-      .map(a => ({
-        action: a.title,
-        priority: a.priority,
-        category: a.category,
-        impact: a.priority === 'high' ? 'critical' : 'significant',
-      }));
+      // Leaders requiring intervention
+      const weakLeaders = leaderRankings.filter((l) => l.attendanceRate < 50);
+      if (weakLeaders.length > 0) {
+        alerts.push({
+          type: 'warning',
+          category: 'leaders',
+          title: `${weakLeaders.length} Leader${weakLeaders.length > 1 ? 's' : ''} Below Threshold`,
+          message: `${weakLeaders.map((l) => l.name).join(', ')} ${weakLeaders.length > 1 ? 'have' : 'has'} attendance rates under 50%.`,
+          priority: 'medium',
+          metric: 'leaders',
+          value: weakLeaders.length,
+          details: weakLeaders
+        });
+      }
 
-    // ── Executive Recommendations ─────────────────────────────────────────
-    const recommendations = [];
-    if (attendanceRate < 65) {
-      recommendations.push({ category: 'attendance', recommendation: 'Launch an attendance revival campaign targeting inactive members through personal visitations.', priority: 'high', expectedImpact: '15-20% improvement in 30 days' });
-    }
-    if (weakSections.length > 0) {
-      recommendations.push({ category: 'sections', recommendation: `Assign head leaders to mentor ${weakSections.length} struggling section${weakSections.length > 1 ? 's' : ''}. Review section leadership structure.`, priority: 'high', expectedImpact: 'Strengthen section health' });
-    }
-    if (atRiskMembers > 10) {
-      recommendations.push({ category: 'members', recommendation: 'Deploy pastoral care teams to visit at-risk members. Schedule re-engagement events for inactive members.', priority: 'high', expectedImpact: 'Reduce member attrition by 30%' });
-    }
-    if (visitorConversionRate < 20 && visitors > 0) {
-      recommendations.push({ category: 'visitors', recommendation: 'Implement a 7-day visitor follow-up protocol. Assign welcome team members to personally contact each visitor.', priority: 'medium', expectedImpact: 'Increase conversion rate to 30%+' });
-    }
-    if (followUpRate < 50) {
-      recommendations.push({ category: 'followups', recommendation: 'Equip leaders with a structured follow-up tracking system. Set weekly follow-up targets for each leader.', priority: 'medium', expectedImpact: 'Improve member engagement' });
-    }
-    if (momentum < 0) {
-      recommendations.push({ category: 'momentum', recommendation: 'Attendance momentum is negative. Review recent service quality, outreach efforts, and member satisfaction.', priority: 'high', expectedImpact: 'Reverse declining trend' });
-    }
-    if (engagementScore < 0.5) {
-      recommendations.push({ category: 'engagement', recommendation: 'Low engagement score detected. Create small group activities and ministry involvement opportunities.', priority: 'medium', expectedImpact: 'Boost engagement by 25%' });
-    }
+      // Visitor follow-up
+      if (visitors > 0 && visitorConversionRate < 20) {
+        alerts.push({
+          type: 'warning',
+          category: 'visitors',
+          title: 'Low Visitor Conversion',
+          message: `Only ${Math.round(visitorConversionRate)}% of visitors converted. ${visitors} visitor${visitors > 1 ? 's' : ''} need follow-up.`,
+          priority: 'medium',
+          metric: 'visitorConversion',
+          value: Math.round(visitorConversionRate)
+        });
+      }
 
-    // ── Response payload ───────────────────────────────────────────────────
-    return {
-      snapshot,
-      kpis,
-      alerts,
-      sectionRankings,
-      leaderRankings,
-      healthBreakdown,
-      actions,
-      momentumData,
-      benchmarkComparison,
-      recommendations,
-    };
+      // Attendance milestones
+      const milestoneStep = 500;
+      if (present > 0 && present % milestoneStep === 0) {
+        alerts.push({
+          type: 'success',
+          category: 'milestone',
+          title: `Attendance Milestone`,
+          message: `Reached ${present.toLocaleString()} present members!`,
+          priority: 'low',
+          metric: 'present',
+          value: present
+        });
+      }
+
+      // Exceptional performance
+      if (attendanceRate >= 85) {
+        alerts.push({
+          type: 'success',
+          category: 'performance',
+          title: 'Exceptional Attendance',
+          message: `Attendance rate of ${Math.round(attendanceRate)}% exceeds expectations.`,
+          priority: 'low',
+          metric: 'attendanceRate',
+          value: Math.round(attendanceRate)
+        });
+      }
+
+      // Follow-up completion alert
+      if (followUpRate < 50 && followUpsTotal > 0) {
+        alerts.push({
+          type: 'warning',
+          category: 'followups',
+          title: 'Low Follow-up Completion',
+          message: `Only ${Math.round(followUpRate)}% of follow-ups completed. Leadership needs to prioritize member care.`,
+          priority: 'medium',
+          metric: 'followUpRate',
+          value: Math.round(followUpRate)
+        });
+      }
+
+      // Section performance disparity
+      if (sectionRankings.length >= 2) {
+        const topSection = sectionRankings[0];
+        const bottomSection = sectionRankings[sectionRankings.length - 1];
+        const gap = topSection.attendanceRate - bottomSection.attendanceRate;
+        if (gap > 40) {
+          alerts.push({
+            type: 'warning',
+            category: 'disparity',
+            title: 'Large Section Performance Gap',
+            message: `${gap}% gap between top (${topSection.name}: ${topSection.attendanceRate}%) and bottom (${bottomSection.name}: ${bottomSection.attendanceRate}%) sections.`,
+            priority: 'medium',
+            metric: 'sectionGap',
+            value: Math.round(gap)
+          });
+        }
+      }
+
+      // ── Attendance Momentum ────────────────────────────────────────────────
+      const momentumData = [
+        {
+          period: 'Yesterday',
+          rate: Math.round(safeDiv(n(yd.present), Math.max(n(yd.total_members), 1)) * 100) || 0
+        },
+        { period: 'Last 7 Days', rate: Math.round(wkAttendanceRate * 10) / 10 },
+        { period: 'Last 30 Days', rate: Math.round(moAttendanceRate * 10) / 10 },
+        { period: 'Last 90 Days', rate: Math.round(qrAttendanceRate * 10) / 10 },
+        { period: 'Last Year', rate: Math.round(yrAttendanceRate * 10) / 10 },
+        { period: 'All Time', rate: Math.round(allTimeAttendanceRate * 10) / 10 }
+      ];
+
+      // ── Benchmark Comparison ──────────────────────────────────────────────
+      const benchmarkComparison = [
+        {
+          metric: 'Attendance Rate',
+          current: Math.round(attendanceRate * 10) / 10,
+          average: Math.round(allTimeAttendanceRate * 10) / 10,
+          best: 100,
+          target: goalTarget,
+          unit: '%'
+        },
+        {
+          metric: 'Retention Rate',
+          current: Math.round((currentRetention || 0) * 10) / 10,
+          average: Math.round((allTimeRetention || 0) * 10) / 10,
+          best: 100,
+          target: 80,
+          unit: '%'
+        },
+        {
+          metric: 'Engagement Score',
+          current: Math.round(engagementScore * 100) / 100,
+          average: Math.round(allTimeEngagement * 100) / 100,
+          best: 1,
+          target: 0.75,
+          unit: ''
+        },
+        {
+          metric: 'Visitor Conversion',
+          current: Math.round(visitorConversionRate * 10) / 10,
+          average: 0,
+          best: 100,
+          target: 30,
+          unit: '%'
+        },
+        {
+          metric: 'New Members',
+          current: newMembers,
+          average: prevNewMembers,
+          best: 100,
+          target: 10,
+          unit: ''
+        }
+      ];
+
+      // ── Immediate Action List ──────────────────────────────────────────────
+      const actions = alerts
+        .filter((a) => a.priority === 'high' || a.priority === 'medium')
+        .map((a) => ({
+          action: a.title,
+          priority: a.priority,
+          category: a.category,
+          impact: a.priority === 'high' ? 'critical' : 'significant'
+        }));
+
+      // ── Executive Recommendations ─────────────────────────────────────────
+      const recommendations = [];
+      if (attendanceRate < 65) {
+        recommendations.push({
+          category: 'attendance',
+          recommendation:
+            'Launch an attendance revival campaign targeting inactive members through personal visitations.',
+          priority: 'high',
+          expectedImpact: '15-20% improvement in 30 days'
+        });
+      }
+      if (weakSections.length > 0) {
+        recommendations.push({
+          category: 'sections',
+          recommendation: `Assign head leaders to mentor ${weakSections.length} struggling section${weakSections.length > 1 ? 's' : ''}. Review section leadership structure.`,
+          priority: 'high',
+          expectedImpact: 'Strengthen section health'
+        });
+      }
+      if (atRiskMembers > 10) {
+        recommendations.push({
+          category: 'members',
+          recommendation:
+            'Deploy pastoral care teams to visit at-risk members. Schedule re-engagement events for inactive members.',
+          priority: 'high',
+          expectedImpact: 'Reduce member attrition by 30%'
+        });
+      }
+      if (visitorConversionRate < 20 && visitors > 0) {
+        recommendations.push({
+          category: 'visitors',
+          recommendation:
+            'Implement a 7-day visitor follow-up protocol. Assign welcome team members to personally contact each visitor.',
+          priority: 'medium',
+          expectedImpact: 'Increase conversion rate to 30%+'
+        });
+      }
+      if (followUpRate < 50) {
+        recommendations.push({
+          category: 'followups',
+          recommendation:
+            'Equip leaders with a structured follow-up tracking system. Set weekly follow-up targets for each leader.',
+          priority: 'medium',
+          expectedImpact: 'Improve member engagement'
+        });
+      }
+      if (momentum < 0) {
+        recommendations.push({
+          category: 'momentum',
+          recommendation:
+            'Attendance momentum is negative. Review recent service quality, outreach efforts, and member satisfaction.',
+          priority: 'high',
+          expectedImpact: 'Reverse declining trend'
+        });
+      }
+      if (engagementScore < 0.5) {
+        recommendations.push({
+          category: 'engagement',
+          recommendation:
+            'Low engagement score detected. Create small group activities and ministry involvement opportunities.',
+          priority: 'medium',
+          expectedImpact: 'Boost engagement by 25%'
+        });
+      }
+
+      // ── Response payload ───────────────────────────────────────────────────
+      return {
+        snapshot,
+        kpis,
+        alerts,
+        sectionRankings,
+        leaderRankings,
+        healthBreakdown,
+        actions,
+        momentumData,
+        benchmarkComparison,
+        recommendations
+      };
     }); // end withCache
 
     res.json(payload);
