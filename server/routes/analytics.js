@@ -708,6 +708,7 @@ router.get('/member-weekly-matrix', async (req, res) => {
         m.id,
         m.full_name,
         m.membership_id,
+        m.phone,
         s.name AS section_name,
         leader_u.full_name AS leader_name,
         head_u.full_name AS head_leader_name
@@ -781,6 +782,7 @@ router.get('/member-weekly-matrix', async (req, res) => {
         member_id: m.id,
         full_name: m.full_name,
         membership_id: m.membership_id,
+        phone: m.phone,
         section_name: m.section_name,
         leader_name: m.leader_name,
         head_leader_name: m.head_leader_name,

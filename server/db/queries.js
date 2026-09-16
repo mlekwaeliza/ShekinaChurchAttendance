@@ -2085,6 +2085,7 @@ function createQueries({ run, get, all, usePostgres }) {
       m.id,
       m.full_name,
       m.membership_id,
+      m.phone,
       m.gender,
       m.age_group,
       m.created_at as registered_date,

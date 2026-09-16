@@ -644,7 +644,9 @@ const MembersTab = ({ data, actions: tabActions }) => {
         import('jspdf-autotable')
       ]);
       const includeMatrix = memberView === 'matrix' && matrixRows.length > 0;
-      const doc = new jsPDF({ orientation: includeMatrix ? 'landscape' : 'portrait' });
+      // Phone numbers and ownership details make this a working follow-up
+      // report, so use landscape orientation to keep every field readable.
+      const doc = new jsPDF({ orientation: 'landscape' });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 14;
@@ -668,6 +670,21 @@ const MembersTab = ({ data, actions: tabActions }) => {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.text('Filtered member attendance and pastoral intelligence', margin, 22);
+      if (includeMatrix) {
+        const legend = [
+          { label: 'P Present', color: [34, 197, 94] },
+          { label: 'A Absent', color: [239, 68, 68] },
+          { label: 'E Excused', color: [245, 158, 11] }
+        ];
+        let legendX = pageWidth - 116;
+        legend.forEach(({ label, color }) => {
+          doc.setFillColor(...color);
+          doc.roundedRect(legendX, 18, 4, 4, 0.6, 0.6, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.text(label, legendX + 6, 21.5);
+          legendX += 36;
+        });
+      }
 
       doc.setTextColor(71, 85, 105);
       doc.setFontSize(8);
@@ -681,6 +698,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
               [
                 'Member',
                 'Section',
+                'Phone',
                 'Follow-up owner',
                 ...memberWeeklyMatrixWeeks.map((week) => weekToDate(week))
               ]
@@ -688,6 +706,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
             body: matrixRows.map((member) => [
               member.full_name,
               member.section_name || '—',
+              member.phone || '—',
               followUpOwner(member),
               ...asArray(member.weekly).map((status) =>
                 status === 'present'
@@ -702,16 +721,30 @@ const MembersTab = ({ data, actions: tabActions }) => {
             columnStyles: {
               0: { cellWidth: 40 },
               1: { cellWidth: 28 },
-              2: { cellWidth: 35 }
+              2: { cellWidth: 30 },
+              3: { cellWidth: 35 }
             }
           }
         : {
             head: [
-              ['#', 'Member', 'Section', 'Follow-up owner', 'P', 'A', 'E', 'Rate', 'Streak', 'Risk']
+              [
+                '#',
+                'Member',
+                'Phone',
+                'Section',
+                'Follow-up owner',
+                'P',
+                'A',
+                'E',
+                'Rate',
+                'Streak',
+                'Risk'
+              ]
             ],
             body: filteredMembers.map((member, index) => [
               index + 1,
               member.full_name,
+              member.phone || '—',
               member.section_name || '—',
               member.leader_name || member.head_leader_name || 'Unassigned',
               member.present_count || 0,
@@ -733,7 +766,23 @@ const MembersTab = ({ data, actions: tabActions }) => {
           cellPadding: includeMatrix ? 1.5 : 2
         },
         headStyles: { fillColor: [30, 64, 175], textColor: 255, fontStyle: 'bold' },
-        alternateRowStyles: { fillColor: [248, 250, 252] }
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        didParseCell: (cell) => {
+          // Weekly status columns begin after member, section, phone, and
+          // follow-up owner. Their colour mirrors the on-screen legend.
+          if (!includeMatrix || cell.section !== 'body' || cell.column.index < 4) return;
+          const status = String(cell.cell.raw || '');
+          if (status === 'P') {
+            cell.cell.styles.fillColor = [220, 252, 231];
+            cell.cell.styles.textColor = [21, 128, 61];
+          } else if (status === 'A') {
+            cell.cell.styles.fillColor = [254, 226, 226];
+            cell.cell.styles.textColor = [185, 28, 28];
+          } else if (status === 'E') {
+            cell.cell.styles.fillColor = [254, 243, 199];
+            cell.cell.styles.textColor = [180, 83, 9];
+          }
+        }
       });
 
       const pages = doc.internal.getNumberOfPages();
