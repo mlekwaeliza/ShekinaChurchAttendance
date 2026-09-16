@@ -1307,11 +1307,12 @@ const MembersTab = ({ data, actions: tabActions }) => {
         </div>
         {memberView === 'summary' ? (
           <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-            <table className="min-w-[940px] text-xs">
+            <table className="min-w-[1040px] text-xs">
               <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
                 <tr className="border-b border-slate-200 dark:border-slate-700">
                   <th className="text-right py-2 px-3 font-semibold text-slate-500 w-12">#</th>
                   <th className="text-left py-2 px-3 font-semibold text-slate-500">Member</th>
+                  <th className="text-left py-2 px-3 font-semibold text-slate-500">Phone</th>
                   <th className="text-left py-2 px-3 font-semibold text-slate-500">Section</th>
                   <th className="text-left py-2 px-3 font-semibold text-slate-500">
                     Follow-up owner
@@ -1328,7 +1329,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
               <tbody>
                 {filteredMembers.length === 0 && (
                   <tr>
-                    <td colSpan="11" className="py-12 text-center text-slate-400 text-sm">
+                    <td colSpan="12" className="py-12 text-center text-slate-400 text-sm">
                       <Users className="w-8 h-8 mx-auto mb-2 text-slate-300" />
                       {rawMembers.length === 0
                         ? 'No member intelligence data available. Try changing the date range or service filter.'
@@ -1348,7 +1349,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
                       {showGroupHeading && (
                         <tr className="border-y border-indigo-100 bg-indigo-50/70 dark:border-indigo-900/50 dark:bg-indigo-950/30">
                           <td
-                            colSpan="11"
+                            colSpan="12"
                             className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300"
                           >
                             {ownershipGroupLabel(m)}
@@ -1368,6 +1369,20 @@ const MembersTab = ({ data, actions: tabActions }) => {
                         </td>
                         <td className="py-2 px-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">
                           {m.full_name}
+                        </td>
+                        <td className="py-2 px-3 whitespace-nowrap">
+                          {m.phone ? (
+                            <a
+                              href={`tel:${m.phone}`}
+                              onClick={(event) => event.stopPropagation()}
+                              className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline dark:text-indigo-300 dark:hover:text-indigo-200"
+                              title={`Call ${m.full_name}`}
+                            >
+                              {m.phone}
+                            </a>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="py-2 px-3 text-slate-500">{m.section_name || '—'}</td>
                         <td className="py-2 px-3">
@@ -1464,6 +1479,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
                 <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900/40 w-40 shrink-0 px-3 py-2">
                   Member
                 </div>
+                <div className="w-28 shrink-0 px-3 py-2">Phone</div>
                 <div className="w-24 shrink-0 px-3 py-2">Section</div>
                 <div className="w-36 shrink-0 px-3 py-2">Follow-up owner</div>
                 {memberWeeklyMatrixWeeks.map((w) => (
@@ -1488,6 +1504,19 @@ const MembersTab = ({ data, actions: tabActions }) => {
                     <div className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
                       <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-40 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">
                         {m.full_name}
+                      </div>
+                      <div className="w-28 shrink-0 px-3 py-2.5 truncate">
+                        {m.phone ? (
+                          <a
+                            href={`tel:${m.phone}`}
+                            className="font-medium text-indigo-600 hover:underline dark:text-indigo-300"
+                            title={`Call ${m.full_name}`}
+                          >
+                            {m.phone}
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </div>
                       <div
                         className="w-24 shrink-0 px-3 py-2.5 text-slate-500 truncate"
