@@ -361,6 +361,22 @@ const MembersTab = ({ data, actions: tabActions }) => {
         return groupOrder || a.full_name.localeCompare(b.full_name);
       })
     : filteredMembers;
+  const countMembersBy = (list, labelFor) =>
+    [...list.reduce((counts, member) => {
+      const label = labelFor(member);
+      counts.set(label, (counts.get(label) || 0) + 1);
+      return counts;
+    }, new Map()).entries()].sort(([firstLabel], [secondLabel]) =>
+      firstLabel.localeCompare(secondLabel)
+    );
+  const sectionMemberCounts = countMembersBy(
+    filteredMembers,
+    (member) => member.section_name || 'Unassigned section'
+  );
+  const leaderMemberCounts = countMembersBy(filteredMembers, followUpOwner);
+  const displayedGroupCounts = new Map(
+    countMembersBy(displayedMembers, ownershipGroupLabel)
+  );
 
   const followUpQueues = leaders
     .map((leader) => {
@@ -631,6 +647,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
         return groupOrder || a.full_name.localeCompare(b.full_name);
       })
     : matrixRows;
+  const matrixGroupCounts = new Map(countMembersBy(orderedMatrixRows, ownershipGroupLabel));
   const visibleMatrixRows = orderedMatrixRows.slice(0, matrixLimit);
   const priorityCategoryIds = [
     'all',
@@ -1200,6 +1217,61 @@ const MembersTab = ({ data, actions: tabActions }) => {
               </button>
             )}
           </div>
+          <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                  Attendance overview counts
+                </p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                  Based on the current member category and filters.
+                </p>
+              </div>
+              <span className="rounded-full bg-indigo-600 px-3 py-1 text-xs font-black text-white">
+                Total: {filteredMembers.length}
+              </span>
+            </div>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <div>
+                <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  By section
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {sectionMemberCounts.length ? (
+                    sectionMemberCounts.map(([section, count]) => (
+                      <span
+                        key={section}
+                        className="rounded-full border border-indigo-100 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 dark:border-indigo-900/50 dark:bg-slate-900 dark:text-slate-300"
+                      >
+                        {section}: <strong className="text-indigo-700 dark:text-indigo-300">{count}</strong>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[10px] text-slate-400">No members</span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1.5 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  By leader
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {leaderMemberCounts.length ? (
+                    leaderMemberCounts.map(([leader, count]) => (
+                      <span
+                        key={leader}
+                        className="rounded-full border border-indigo-100 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 dark:border-indigo-900/50 dark:bg-slate-900 dark:text-slate-300"
+                      >
+                        {leader}: <strong className="text-indigo-700 dark:text-indigo-300">{count}</strong>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[10px] text-slate-400">No members</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         {followUpQueues.length > 0 && (
           <div className="border-b border-slate-100 bg-rose-50/50 px-4 py-3 dark:border-slate-700 dark:bg-rose-950/10">
@@ -1352,7 +1424,8 @@ const MembersTab = ({ data, actions: tabActions }) => {
                             colSpan="12"
                             className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300"
                           >
-                            {ownershipGroupLabel(m)}
+                            {ownershipGroupLabel(m)} · {displayedGroupCounts.get(ownershipGroupLabel(m)) || 0}{' '}
+                            member(s)
                           </td>
                         </tr>
                       )}
@@ -1362,9 +1435,9 @@ const MembersTab = ({ data, actions: tabActions }) => {
                       >
                         <td className="py-2 px-3 text-right">
                           <span
-                            className={`text-[10px] font-black w-5 h-5 inline-flex items-center justify-center rounded-full ${(m.current_rank || 1) === 1 ? 'bg-amber-100 text-amber-800' : (m.current_rank || 1) === 2 ? 'bg-slate-200 text-slate-700' : (m.current_rank || 1) === 3 ? 'bg-orange-100 text-orange-800' : 'text-slate-400'}`}
+                            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black text-slate-500"
                           >
-                            {m.current_rank || ''}
+                            {index + 1}
                           </span>
                         </td>
                         <td className="py-2 px-3 font-medium text-slate-900 dark:text-white whitespace-nowrap">
@@ -1476,7 +1549,10 @@ const MembersTab = ({ data, actions: tabActions }) => {
             <div className="min-w-max">
               {/* Header row */}
               <div className="flex bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase text-slate-500 sticky top-0 z-20">
-                <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900/40 w-40 shrink-0 px-3 py-2">
+                <div className="sticky left-0 z-10 w-12 shrink-0 bg-slate-50 px-3 py-2 text-right dark:bg-slate-900/40">
+                  #
+                </div>
+                <div className="sticky left-12 z-10 bg-slate-50 dark:bg-slate-900/40 w-40 shrink-0 px-3 py-2">
                   Member
                 </div>
                 <div className="w-28 shrink-0 px-3 py-2">Phone</div>
@@ -1498,11 +1574,15 @@ const MembersTab = ({ data, actions: tabActions }) => {
                   <React.Fragment key={m.member_id}>
                     {showGroupHeading && (
                       <div className="sticky left-0 z-10 border-y border-indigo-100 bg-indigo-50/80 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300">
-                        {ownershipGroupLabel(m)}
+                        {ownershipGroupLabel(m)} · {matrixGroupCounts.get(ownershipGroupLabel(m)) || 0}{' '}
+                        member(s)
                       </div>
                     )}
                     <div className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                      <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-40 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">
+                      <div className="sticky left-0 z-10 w-12 shrink-0 bg-white px-3 py-2.5 text-right font-bold text-slate-400 dark:bg-slate-800">
+                        {index + 1}
+                      </div>
+                      <div className="sticky left-12 z-10 bg-white dark:bg-slate-800 w-40 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">
                         {m.full_name}
                       </div>
                       <div className="w-28 shrink-0 px-3 py-2.5 truncate">
