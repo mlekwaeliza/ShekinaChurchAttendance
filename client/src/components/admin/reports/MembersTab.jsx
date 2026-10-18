@@ -362,20 +362,23 @@ const MembersTab = ({ data, actions: tabActions }) => {
       })
     : filteredMembers;
   const countMembersBy = (list, labelFor) =>
-    [...list.reduce((counts, member) => {
-      const label = labelFor(member);
-      counts.set(label, (counts.get(label) || 0) + 1);
-      return counts;
-    }, new Map()).entries()].sort(([firstLabel], [secondLabel]) =>
-      firstLabel.localeCompare(secondLabel)
-    );
+    [
+      ...list
+        .reduce((counts, member) => {
+          const label = labelFor(member);
+          counts.set(label, (counts.get(label) || 0) + 1);
+          return counts;
+        }, new Map())
+        .entries()
+    ].sort(([firstLabel], [secondLabel]) => firstLabel.localeCompare(secondLabel));
   const sectionMemberCounts = countMembersBy(
     filteredMembers,
     (member) => member.section_name || 'Unassigned section'
   );
   const leaderMemberCounts = countMembersBy(filteredMembers, followUpOwner);
-  const displayedGroupCounts = new Map(
-    countMembersBy(displayedMembers, ownershipGroupLabel)
+  const displayedGroupCounts = new Map(countMembersBy(displayedMembers, ownershipGroupLabel));
+  const displayedGroupIndexes = new Map(
+    [...displayedGroupCounts.keys()].map((groupLabel, index) => [groupLabel, index + 1])
   );
 
   const followUpQueues = leaders
@@ -648,6 +651,9 @@ const MembersTab = ({ data, actions: tabActions }) => {
       })
     : matrixRows;
   const matrixGroupCounts = new Map(countMembersBy(orderedMatrixRows, ownershipGroupLabel));
+  const matrixGroupIndexes = new Map(
+    [...matrixGroupCounts.keys()].map((groupLabel, index) => [groupLabel, index + 1])
+  );
   const visibleMatrixRows = orderedMatrixRows.slice(0, matrixLimit);
   const priorityCategoryIds = [
     'all',
@@ -1243,7 +1249,8 @@ const MembersTab = ({ data, actions: tabActions }) => {
                         key={section}
                         className="rounded-full border border-indigo-100 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 dark:border-indigo-900/50 dark:bg-slate-900 dark:text-slate-300"
                       >
-                        {section}: <strong className="text-indigo-700 dark:text-indigo-300">{count}</strong>
+                        {section}:{' '}
+                        <strong className="text-indigo-700 dark:text-indigo-300">{count}</strong>
                       </span>
                     ))
                   ) : (
@@ -1262,7 +1269,8 @@ const MembersTab = ({ data, actions: tabActions }) => {
                         key={leader}
                         className="rounded-full border border-indigo-100 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 dark:border-indigo-900/50 dark:bg-slate-900 dark:text-slate-300"
                       >
-                        {leader}: <strong className="text-indigo-700 dark:text-indigo-300">{count}</strong>
+                        {leader}:{' '}
+                        <strong className="text-indigo-700 dark:text-indigo-300">{count}</strong>
                       </span>
                     ))
                   ) : (
@@ -1424,8 +1432,9 @@ const MembersTab = ({ data, actions: tabActions }) => {
                             colSpan="12"
                             className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300"
                           >
-                            {ownershipGroupLabel(m)} · {displayedGroupCounts.get(ownershipGroupLabel(m)) || 0}{' '}
-                            member(s)
+                            Group {displayedGroupIndexes.get(ownershipGroupLabel(m))}:{' '}
+                            {ownershipGroupLabel(m)} ·{' '}
+                            {displayedGroupCounts.get(ownershipGroupLabel(m)) || 0} member(s)
                           </td>
                         </tr>
                       )}
@@ -1434,9 +1443,7 @@ const MembersTab = ({ data, actions: tabActions }) => {
                         onClick={() => openMemberAttendanceDetails(m)}
                       >
                         <td className="py-2 px-3 text-right">
-                          <span
-                            className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black text-slate-500"
-                          >
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black text-slate-500">
                             {index + 1}
                           </span>
                         </td>
@@ -1574,8 +1581,9 @@ const MembersTab = ({ data, actions: tabActions }) => {
                   <React.Fragment key={m.member_id}>
                     {showGroupHeading && (
                       <div className="sticky left-0 z-10 border-y border-indigo-100 bg-indigo-50/80 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:border-indigo-900/50 dark:bg-indigo-950/40 dark:text-indigo-300">
-                        {ownershipGroupLabel(m)} · {matrixGroupCounts.get(ownershipGroupLabel(m)) || 0}{' '}
-                        member(s)
+                        Group {matrixGroupIndexes.get(ownershipGroupLabel(m))}:{' '}
+                        {ownershipGroupLabel(m)} ·{' '}
+                        {matrixGroupCounts.get(ownershipGroupLabel(m)) || 0} member(s)
                       </div>
                     )}
                     <div className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
