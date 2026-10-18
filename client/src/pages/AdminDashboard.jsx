@@ -316,6 +316,7 @@ const AdminDashboard = () => {
             onServiceChange={data.setSelectedServiceId}
             loadHistory={data.loadHistory}
             leaders={data.leaders}
+            sections={data.sections}
           />
         );
 

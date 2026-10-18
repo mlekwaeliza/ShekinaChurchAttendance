@@ -99,50 +99,75 @@ const PendingRow = ({ leader }) => (
   </div>
 );
 
-const DateSubmissionDetails = ({ logs, allLeaders }) => {
+const UNASSIGNED_SECTION = 'Unassigned Section';
+
+const normalizeSectionName = (value) => {
+  const name = (value || '').trim();
+  if (!name || name === 'Unassigned') return UNASSIGNED_SECTION;
+  return name;
+};
+
+const DateSubmissionDetails = ({ logs, allLeaders, allSections }) => {
   const [activeTab, setActiveTab] = useState('submitted'); // 'submitted' or 'pending'
 
-  // Group logs by section first, then by service within each section.
+  // Every service that received at least one submission on this date.
+  const dayServices = useMemo(() => {
+    const services = new Set(logs.map((log) => log.service_name || 'Selected Service'));
+    return [...services].sort((a, b) =>
+      a === 'Main Service' ? -1 : b === 'Main Service' ? 1 : a.localeCompare(b)
+    );
+  }, [logs]);
+
+  // Always show every section — the ones that submitted, the church's full
+  // section list, and any section that only shows up through the leader
+  // roster — so pending leaders in silent sections stay visible too.
   const sectionDetails = useMemo(() => {
-    const map = {};
+    const logsBySection = {};
     logs.forEach((log) => {
-      const sectionName = log.section_name || 'Unassigned Section';
-      if (!map[sectionName]) map[sectionName] = [];
-      map[sectionName].push(log);
+      const sectionName = normalizeSectionName(log.section_name);
+      if (!logsBySection[sectionName]) logsBySection[sectionName] = [];
+      logsBySection[sectionName].push(log);
     });
 
-    return Object.entries(map)
-      .sort(([sectionA], [sectionB]) => sectionA.localeCompare(sectionB))
-      .map(([sectionName, sectionLogs]) => {
-        const services = {};
-        sectionLogs.forEach((log) => {
-          const serviceName = log.service_name || 'Selected Service';
-          if (!services[serviceName]) services[serviceName] = [];
-          services[serviceName].push(log);
-        });
+    const knownSections = (allSections || []).map((section) => normalizeSectionName(section.name));
+    const rosterSections = (allLeaders || []).map((leader) =>
+      normalizeSectionName(leader.section_name)
+    );
+    const sectionNames = [
+      ...new Set([...Object.keys(logsBySection), ...knownSections, ...rosterSections])
+    ].sort((a, b) => a.localeCompare(b));
 
-        const sectionLeaders = (allLeaders || []).filter(
-          (leader) => (leader.section_name || 'Unassigned Section') === sectionName
+    return sectionNames.map((sectionName) => {
+      const sectionLogs = logsBySection[sectionName] || [];
+      const sectionLeaders = (allLeaders || []).filter(
+        (leader) => normalizeSectionName(leader.section_name) === sectionName
+      );
+      const headLeaders = sectionLeaders
+        .filter((leader) => Number(leader.is_head) === 1)
+        .map((leader) => leader.full_name)
+        .filter(Boolean);
+
+      const services = dayServices.map((serviceName) => {
+        const submitted = sectionLogs.filter(
+          (log) => (log.service_name || 'Selected Service') === serviceName
         );
-        const headLeaders = sectionLeaders
-          .filter((leader) => Number(leader.is_head) === 1)
-          .map((leader) => leader.full_name)
-          .filter(Boolean);
-
+        const submittedNames = new Set(submitted.map((log) => log.leader_name));
         return {
-          sectionName,
-          headLeaders,
-          services: Object.entries(services).map(([serviceName, submitted]) => {
-            const submittedNames = new Set(submitted.map((log) => log.leader_name));
-            return {
-              serviceName,
-              submitted,
-              pending: sectionLeaders.filter((leader) => !submittedNames.has(leader.full_name))
-            };
-          })
+          serviceName,
+          submitted,
+          pending: sectionLeaders.filter((leader) => !submittedNames.has(leader.full_name))
         };
       });
-  }, [logs, allLeaders]);
+
+      return {
+        sectionName,
+        headLeaders,
+        services,
+        hasSubmissions: sectionLogs.length > 0,
+        leaderCount: sectionLeaders.length
+      };
+    });
+  }, [logs, allLeaders, allSections, dayServices]);
 
   const totalSubmitted = logs.length;
   const totalPending = sectionDetails.reduce(
@@ -187,29 +212,54 @@ const DateSubmissionDetails = ({ logs, allLeaders }) => {
               {section.headLeaders.length > 0 && ` (${section.headLeaders.join(', ')})`}
             </h4>
 
-            {section.services.map((service) => (
-              <div key={service.serviceName} className="space-y-2">
-                {section.services.length > 1 && (
-                  <h5 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
-                    {service.serviceName}
-                  </h5>
-                )}
-
-                {activeTab === 'submitted' ? (
-                  service.submitted.map((log, idx) => <SubmittedRow key={idx} log={log} />)
-                ) : service.pending.length > 0 ? (
-                  <div className="grid gap-2">
-                    {service.pending.map((leader, idx) => (
-                      <PendingRow key={idx} leader={leader} />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs text-slate-400 italic py-2">
-                    All leaders in this section have submitted for this service!
-                  </div>
-                )}
+            {activeTab === 'submitted' ? (
+              section.hasSubmissions ? (
+                section.services
+                  .filter((service) => service.submitted.length > 0)
+                  .map((service) => (
+                    <div key={service.serviceName} className="space-y-2">
+                      {dayServices.length > 1 && (
+                        <h5 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                          {service.serviceName}
+                        </h5>
+                      )}
+                      {service.submitted.map((log, idx) => (
+                        <SubmittedRow key={idx} log={log} />
+                      ))}
+                    </div>
+                  ))
+              ) : (
+                <div className="text-xs text-slate-400 italic py-1">
+                  No submissions from this section
+                </div>
+              )
+            ) : section.leaderCount === 0 ? (
+              <div className="text-xs text-slate-400 italic py-1">
+                No leaders assigned to this section
               </div>
-            ))}
+            ) : (
+              section.services.map((service) => (
+                <div key={service.serviceName} className="space-y-2">
+                  {dayServices.length > 1 && (
+                    <h5 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                      {service.serviceName}
+                    </h5>
+                  )}
+
+                  {service.pending.length > 0 ? (
+                    <div className="grid gap-2">
+                      {service.pending.map((leader, idx) => (
+                        <PendingRow key={idx} leader={leader} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-400 italic py-2">
+                      All leaders in this section have submitted for this service!
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
           </section>
         ))}
       </div>
@@ -224,7 +274,8 @@ const SubmissionHistory = ({
   selectedServiceId,
   onServiceChange,
   loadHistory,
-  leaders = []
+  leaders = [],
+  sections = []
 }) => {
   const initializedServiceRef = useRef(false);
 
@@ -301,7 +352,10 @@ const SubmissionHistory = ({
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+    }
     return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
   };
 
@@ -424,7 +478,9 @@ const SubmissionHistory = ({
                 </button>
 
                 {/* Submissions List & Pending Details */}
-                {isExpanded && <DateSubmissionDetails logs={logs} allLeaders={leaders} />}
+                {isExpanded && (
+                  <DateSubmissionDetails logs={logs} allLeaders={leaders} allSections={sections} />
+                )}
               </div>
             );
           })}
