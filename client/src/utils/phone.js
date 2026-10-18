@@ -105,6 +105,35 @@ export function handleNamePaste(e, setter, fieldName) {
   e.preventDefault();
   const pasted = (e.clipboardData || window.clipboardData).getData('text');
   const capitalized = capitalizeName(pasted);
-  setter(prev => ({ ...prev, [fieldName]: capitalized }));
+  setter((prev) => ({ ...prev, [fieldName]: capitalized }));
 }
 
+/**
+ * Convert a stored phone number into wa.me format: digits only, starting with
+ * the country code (like formatPhone above, this assumes +255 for Tanzania).
+ * Handles local numbers (0XXXXXXXXX), numbers missing the code (9 digits),
+ * and international numbers (+255 XXX XXX XXX). Returns '' when the value is
+ * too short to be a real number, so callers can hide the WhatsApp action.
+ */
+export function toWhatsAppNumber(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('0')) {
+    return digits.length >= 10 ? `255${digits.slice(1)}` : '';
+  }
+  if (digits.length === 9) return `255${digits}`;
+  return digits.length >= 10 ? digits : '';
+}
+
+/**
+ * Open a WhatsApp chat (wa.me deep link) with the given phone number.
+ * The message is prefilled in the composer — the user still has to press
+ * send. Returns false when the number is missing or too short to be valid.
+ */
+export function openWhatsAppChat(phone, message) {
+  const number = toWhatsAppNumber(phone);
+  if (!number) return false;
+  const query = message ? `?text=${encodeURIComponent(message)}` : '';
+  window.open(`https://wa.me/${number}${query}`, '_blank', 'noopener');
+  return true;
+}

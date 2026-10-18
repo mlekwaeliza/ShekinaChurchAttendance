@@ -3569,6 +3569,31 @@ function createQueries({ run, get, all, usePostgres }) {
         [newMemberId, weekStart, attended, notes || null, recordedBy || null]
       ),
 
+    // Attendance reminders — tracks chase-up messages sent to leaders who have
+    // not submitted a service's attendance yet.
+    getAttendanceRemindersForDate: (date) =>
+      all('SELECT * FROM attendance_reminders WHERE date = ? ORDER BY created_at ASC', [date]),
+
+    upsertAttendanceReminder: (leaderId, date, serviceId, channel, remindedBy) =>
+      run(
+        usePostgres
+          ? `
+    INSERT INTO attendance_reminders (leader_id, date, service_id, channel, reminded_by)
+    VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT (leader_id, date, service_id, channel) DO UPDATE SET
+      reminded_by = EXCLUDED.reminded_by,
+      created_at = CURRENT_TIMESTAMP
+  `
+          : `
+    INSERT INTO attendance_reminders (leader_id, date, service_id, channel, reminded_by)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(leader_id, date, service_id, channel) DO UPDATE SET
+      reminded_by = excluded.reminded_by,
+      created_at = CURRENT_TIMESTAMP
+  `,
+        [leaderId, date, serviceId || null, channel, remindedBy || null]
+      ),
+
     // Reports
     getNewMembersReport: (startDate, endDate) =>
       all(

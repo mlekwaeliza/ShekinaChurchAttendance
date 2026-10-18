@@ -218,6 +218,56 @@ router.get('/history', async (req, res) => {
   }
 });
 
+// GET reminder log for a date (who was already reminded about pending submissions)
+router.get('/history/reminders', validateDate('date'), async (req, res) => {
+  try {
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ error: 'date is required (YYYY-MM-DD)' });
+    }
+    const reminders = await queries.getAttendanceRemindersForDate(date);
+    res.json(reminders);
+  } catch (error) {
+    console.error('Failed to fetch attendance reminders:', error);
+    res.status(500).json({ error: 'Failed to fetch attendance reminders' });
+  }
+});
+
+// POST log a reminder sent to a leader about a service's missing attendance
+router.post('/history/reminders', async (req, res) => {
+  try {
+    const leaderId = Number(req.body?.leader_id);
+    const rawServiceId = req.body?.service_id;
+    const serviceId = rawServiceId == null ? null : Number(rawServiceId);
+    const date = typeof req.body?.date === 'string' ? req.body.date.trim() : '';
+    const channel = req.body?.channel === 'call' ? 'call' : 'whatsapp';
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'date is required (YYYY-MM-DD)' });
+    }
+    if (!Number.isInteger(leaderId) || leaderId <= 0) {
+      return res.status(400).json({ error: 'leader_id must be a positive integer' });
+    }
+    if (serviceId !== null && (!Number.isInteger(serviceId) || serviceId <= 0)) {
+      return res.status(400).json({ error: 'service_id must be a positive integer' });
+    }
+
+    await queries.upsertAttendanceReminder(
+      leaderId,
+      date,
+      serviceId,
+      channel,
+      req.session.userId
+    );
+
+    const reminders = await queries.getAttendanceRemindersForDate(date);
+    res.json(reminders);
+  } catch (error) {
+    console.error('Failed to log attendance reminder:', error);
+    res.status(500).json({ error: 'Failed to log attendance reminder' });
+  }
+});
+
 // GET global attendance trends
 router.get('/attendance-trends', async (req, res) => {
   try {

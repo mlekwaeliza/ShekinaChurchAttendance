@@ -21,10 +21,7 @@ function getCookie(name) {
 api.interceptors.request.use(
   async (config) => {
     const method = String(config.method || 'get').toUpperCase();
-    if (
-      ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) &&
-      typeof document !== 'undefined'
-    ) {
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) && typeof document !== 'undefined') {
       let csrfToken = getCookie('csrfToken');
       if (!csrfToken && !config._csrfBootstrap) {
         await axios.get('/api/auth/csrf', {
@@ -161,6 +158,8 @@ export const adminAPI = {
   emptyTrash: () => api.post('/admin/members/empty-trash'),
   restoreFromTrash: (id) => api.post(`/admin/members/${id}/restore`),
   getHistory: (serviceId) => api.get('/admin/history', { params: { service_id: serviceId } }),
+  getHistoryReminders: (date) => api.get('/admin/history/reminders', { params: { date } }),
+  logHistoryReminder: (data) => api.post('/admin/history/reminders', data),
   getSettingsConfig: () => api.get('/admin/settings/config'),
   updateSettingsConfig: (config) => api.put('/admin/settings/config', { config }),
   getAggregatedOverview: (filterType, filterValue, serviceId) =>

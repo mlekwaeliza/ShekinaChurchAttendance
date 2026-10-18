@@ -1,5 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Clock, CalendarDays, Search, ChevronDown, ChevronUp, Phone } from 'lucide-react';
+import {
+  Clock,
+  CalendarDays,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Phone,
+  MessageCircle,
+  Check
+} from 'lucide-react';
 import {
   addDays,
   formatDisplayDate,
@@ -7,6 +16,33 @@ import {
   parseLocalDate,
   fdatetime
 } from '../../utils/date';
+import { openWhatsAppChat, toWhatsAppNumber } from '../../utils/phone';
+import { adminAPI } from '../../services/api';
+
+const reminderKey = (leaderId, serviceId) => `${leaderId}:${serviceId ?? 'all'}`;
+
+const buildReminderMessage = ({ leaderName, sectionName, serviceName, date }) => {
+  const firstName = String(leaderName || '')
+    .trim()
+    .split(/\s+/)[0];
+  const swahiliDate = parseLocalDate(date).toLocaleDateString('sw', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  return `Habari${firstName ? ` ${firstName}` : ''}! Tunakukumbusha kuwasilisha attendance ya ${sectionName} kwa ${serviceName} ya ${swahiliDate}. Tafadhali wasilisha kwenye mfumo. Asante! — Shekina Church`;
+};
+
+const openWhatsAppReminder = ({ leader, sectionName, serviceName, date }) => {
+  const message = buildReminderMessage({
+    leaderName: leader.full_name,
+    sectionName,
+    serviceName,
+    date
+  });
+  return openWhatsAppChat(leader.phone, message);
+};
 
 const SubmittedRow = ({ log }) => (
   <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-sm transition-all">
@@ -58,46 +94,78 @@ const SubmittedRow = ({ log }) => (
   </div>
 );
 
-const PendingRow = ({ leader }) => (
-  <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-sm transition-all">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        {/* Avatar */}
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-550 to-amber-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
-          {leader.full_name?.charAt(0)}
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">
-              {leader.full_name}
-            </p>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400">
-              Pending
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500">{leader.section_name}</p>
-        </div>
-      </div>
+const PendingRow = ({ leader, reminder, onWhatsApp }) => {
+  const whatsappNumber = toWhatsAppNumber(leader.phone);
+  const remindedTitle = reminder
+    ? reminder.created_at
+      ? `Reminded ${fdatetime(reminder.created_at)}`
+      : 'Reminded'
+    : '';
 
-      <div className="flex items-center gap-3">
-        {/* Phone Action */}
-        {leader.phone ? (
-          <a
-            href={`tel:${leader.phone}`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-900/30 text-amber-750 dark:text-amber-400 transition-all font-semibold text-xs"
-          >
-            <Phone className="w-3.5 h-3.5" />
-            Call: {leader.phone}
-          </a>
-        ) : (
-          <span className="text-xs text-slate-400 dark:text-slate-500 italic">
-            No phone on file
-          </span>
-        )}
+  return (
+    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-sm transition-all">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-550 to-amber-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
+            {leader.full_name?.charAt(0)}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+                {leader.full_name}
+              </p>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400">
+                Pending
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500">{leader.section_name}</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {/* Reminded badge */}
+          {reminder && (
+            <span
+              title={remindedTitle}
+              className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider"
+            >
+              <Check className="w-3 h-3" />
+              Reminded
+            </span>
+          )}
+
+          {/* Phone Actions */}
+          {leader.phone ? (
+            <>
+              <a
+                href={`tel:${leader.phone}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-900/30 text-amber-750 dark:text-amber-400 transition-all font-semibold text-xs"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                Call: {leader.phone}
+              </a>
+              {whatsappNumber && (
+                <button
+                  type="button"
+                  onClick={onWhatsApp}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 transition-all font-semibold text-xs"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  WhatsApp
+                </button>
+              )}
+            </>
+          ) : (
+            <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+              No phone on file
+            </span>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const UNASSIGNED_SECTION = 'Unassigned Section';
 
@@ -109,13 +177,72 @@ const normalizeSectionName = (value) => {
 
 const DateSubmissionDetails = ({ logs, allLeaders, allSections }) => {
   const [activeTab, setActiveTab] = useState('submitted'); // 'submitted' or 'pending'
+  const [reminderMap, setReminderMap] = useState({});
+  const date = logs[0]?.date;
+
+  // Which pending leaders were already reminded on this date.
+  useEffect(() => {
+    let cancelled = false;
+    if (!date) return undefined;
+    adminAPI
+      .getHistoryReminders(date)
+      .then((res) => {
+        if (cancelled) return;
+        const map = {};
+        (res.data || []).forEach((reminder) => {
+          map[reminderKey(reminder.leader_id, reminder.service_id)] = reminder;
+        });
+        setReminderMap(map);
+      })
+      .catch(() => {
+        // Reminder status is best-effort; the pending list still works without it.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [date]);
+
+  const handleWhatsAppReminder = (sectionName, { leader, service }) => {
+    if (!openWhatsAppReminder({ leader, sectionName, serviceName: service.serviceName, date })) {
+      return;
+    }
+    const key = reminderKey(leader.id, service.serviceId);
+    setReminderMap((prev) => ({
+      ...prev,
+      [key]: prev[key] || { leader_id: leader.id, service_id: service.serviceId ?? null }
+    }));
+    adminAPI
+      .logHistoryReminder({ leader_id: leader.id, date, service_id: service.serviceId ?? null })
+      .then((res) => {
+        setReminderMap((prev) => {
+          const next = { ...prev };
+          (res.data || []).forEach((reminder) => {
+            next[reminderKey(reminder.leader_id, reminder.service_id)] = reminder;
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        // Keep the optimistic badge; the WhatsApp message was already opened.
+      });
+  };
 
   // Every service that received at least one submission on this date.
   const dayServices = useMemo(() => {
-    const services = new Set(logs.map((log) => log.service_name || 'Selected Service'));
-    return [...services].sort((a, b) =>
-      a === 'Main Service' ? -1 : b === 'Main Service' ? 1 : a.localeCompare(b)
-    );
+    const services = new Map();
+    logs.forEach((log) => {
+      const name = log.service_name || 'Selected Service';
+      if (!services.has(name)) services.set(name, log.service_id ?? null);
+    });
+    return [...services.entries()]
+      .map(([serviceName, serviceId]) => ({ serviceName, serviceId }))
+      .sort((a, b) =>
+        a.serviceName === 'Main Service'
+          ? -1
+          : b.serviceName === 'Main Service'
+            ? 1
+            : a.serviceName.localeCompare(b.serviceName)
+      );
   }, [logs]);
 
   // Always show every section — the ones that submitted, the church's full
@@ -147,13 +274,14 @@ const DateSubmissionDetails = ({ logs, allLeaders, allSections }) => {
         .map((leader) => leader.full_name)
         .filter(Boolean);
 
-      const services = dayServices.map((serviceName) => {
+      const services = dayServices.map(({ serviceName, serviceId }) => {
         const submitted = sectionLogs.filter(
           (log) => (log.service_name || 'Selected Service') === serviceName
         );
         const submittedNames = new Set(submitted.map((log) => log.leader_name));
         return {
           serviceName,
+          serviceId,
           submitted,
           pending: sectionLeaders.filter((leader) => !submittedNames.has(leader.full_name))
         };
@@ -205,63 +333,95 @@ const DateSubmissionDetails = ({ logs, allLeaders, allSections }) => {
 
       {/* Render based on selected inner tab */}
       <div className="space-y-5">
-        {sectionDetails.map((section) => (
-          <section key={section.sectionName} className="space-y-3">
-            <h4 className="text-xs font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">
-              {section.sectionName}
-              {section.headLeaders.length > 0 && ` (${section.headLeaders.join(', ')})`}
-            </h4>
+        {sectionDetails.map((section) => {
+          const unreminded = section.services
+            .flatMap((service) =>
+              service.pending
+                .filter((leader) => toWhatsAppNumber(leader.phone))
+                .map((leader) => ({ leader, service }))
+            )
+            .filter(
+              ({ leader, service }) => !reminderMap[reminderKey(leader.id, service.serviceId)]
+            );
 
-            {activeTab === 'submitted' ? (
-              section.hasSubmissions ? (
-                section.services
-                  .filter((service) => service.submitted.length > 0)
-                  .map((service) => (
-                    <div key={service.serviceName} className="space-y-2">
-                      {dayServices.length > 1 && (
-                        <h5 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
-                          {service.serviceName}
-                        </h5>
-                      )}
-                      {service.submitted.map((log, idx) => (
-                        <SubmittedRow key={idx} log={log} />
-                      ))}
-                    </div>
-                  ))
-              ) : (
-                <div className="text-xs text-slate-400 italic py-1">
-                  No submissions from this section
-                </div>
-              )
-            ) : section.leaderCount === 0 ? (
-              <div className="text-xs text-slate-400 italic py-1">
-                No leaders assigned to this section
+          return (
+            <section key={section.sectionName} className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-xs font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">
+                  {section.sectionName}
+                  {section.headLeaders.length > 0 && ` (${section.headLeaders.join(', ')})`}
+                </h4>
+
+                {activeTab === 'pending' && unreminded.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleWhatsAppReminder(section.sectionName, unreminded[0])}
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-white shadow-sm transition-all hover:bg-emerald-600"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    Remind all ({unreminded.length})
+                  </button>
+                )}
               </div>
-            ) : (
-              section.services.map((service) => (
-                <div key={service.serviceName} className="space-y-2">
-                  {dayServices.length > 1 && (
-                    <h5 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
-                      {service.serviceName}
-                    </h5>
-                  )}
 
-                  {service.pending.length > 0 ? (
-                    <div className="grid gap-2">
-                      {service.pending.map((leader, idx) => (
-                        <PendingRow key={idx} leader={leader} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-slate-400 italic py-2">
-                      All leaders in this section have submitted for this service!
-                    </div>
-                  )}
+              {activeTab === 'submitted' ? (
+                section.hasSubmissions ? (
+                  section.services
+                    .filter((service) => service.submitted.length > 0)
+                    .map((service) => (
+                      <div key={service.serviceName} className="space-y-2">
+                        {dayServices.length > 1 && (
+                          <h5 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                            {service.serviceName}
+                          </h5>
+                        )}
+                        {service.submitted.map((log, idx) => (
+                          <SubmittedRow key={idx} log={log} />
+                        ))}
+                      </div>
+                    ))
+                ) : (
+                  <div className="text-xs text-slate-400 italic py-1">
+                    No submissions from this section
+                  </div>
+                )
+              ) : section.leaderCount === 0 ? (
+                <div className="text-xs text-slate-400 italic py-1">
+                  No leaders assigned to this section
                 </div>
-              ))
-            )}
-          </section>
-        ))}
+              ) : (
+                section.services.map((service) => (
+                  <div key={service.serviceName} className="space-y-2">
+                    {dayServices.length > 1 && (
+                      <h5 className="text-xs font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+                        {service.serviceName}
+                      </h5>
+                    )}
+
+                    {service.pending.length > 0 ? (
+                      <div className="grid gap-2">
+                        {service.pending.map((leader, idx) => (
+                          <PendingRow
+                            key={idx}
+                            leader={leader}
+                            reminder={reminderMap[reminderKey(leader.id, service.serviceId)]}
+                            onWhatsApp={() =>
+                              handleWhatsAppReminder(section.sectionName, { leader, service })
+                            }
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-400 italic py-2">
+                        All leaders in this section have submitted for this service!
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </section>
+          );
+        })}
       </div>
     </div>
   );

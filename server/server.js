@@ -82,6 +82,7 @@ const {
   get,
   ensureHomeCellSchema,
   ensureEvangelismSchema,
+  ensureAttendanceRemindersSchema,
   createChildrensMinistryTables,
   migrateUsersRoleConstraint,
   linkUsersToMembers
@@ -1218,6 +1219,7 @@ async function startServer() {
 
     await ensureHomeCellSchema();
     await ensureEvangelismSchema();
+    await ensureAttendanceRemindersSchema();
     await createChildrensMinistryTables();
     await migrateUsersRoleConstraint();
     await linkUsersToMembers();

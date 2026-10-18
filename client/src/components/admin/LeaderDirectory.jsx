@@ -1,28 +1,116 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserCog, Phone, AtSign, Eye, Plus, Pencil, Trash2, Search, Shield, Users, ChevronDown, ChevronUp, Layers } from 'lucide-react';
+import {
+  UserCog,
+  Phone,
+  AtSign,
+  Eye,
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  Shield,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+  MessageCircle
+} from 'lucide-react';
+import { openWhatsAppChat, toWhatsAppNumber } from '../../utils/phone';
 
-const sectionStyles = [
-  { gradient: 'from-violet-500 to-purple-600', bg: 'bg-violet-50 dark:bg-violet-900/20', border: 'border-violet-200 dark:border-violet-700/50', text: 'text-violet-700 dark:text-violet-300', dot: 'bg-violet-500', shadow: 'shadow-violet-500/10', bar: 'from-violet-500 to-purple-600' },
-  { gradient: 'from-sky-500 to-blue-600', bg: 'bg-sky-50 dark:bg-sky-900/20', border: 'border-sky-200 dark:border-sky-700/50', text: 'text-sky-700 dark:text-sky-300', dot: 'bg-sky-500', shadow: 'shadow-sky-500/10', bar: 'from-sky-500 to-blue-600' },
-  { gradient: 'from-emerald-500 to-teal-600', bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-700/50', text: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500', shadow: 'shadow-emerald-500/10', bar: 'from-emerald-500 to-teal-600' },
-  { gradient: 'from-amber-500 to-orange-600', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-200 dark:border-amber-700/50', text: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500', shadow: 'shadow-amber-500/10', bar: 'from-amber-500 to-orange-600' },
-  { gradient: 'from-rose-500 to-pink-600', bg: 'bg-rose-50 dark:bg-rose-900/20', border: 'border-rose-200 dark:border-rose-700/50', text: 'text-rose-700 dark:text-rose-300', dot: 'bg-rose-500', shadow: 'shadow-rose-500/10', bar: 'from-rose-500 to-pink-600' },
-  { gradient: 'from-indigo-500 to-blue-600', bg: 'bg-indigo-50 dark:bg-indigo-900/20', border: 'border-indigo-200 dark:border-indigo-700/50', text: 'text-indigo-700 dark:text-indigo-300', dot: 'bg-indigo-500', shadow: 'shadow-indigo-500/10', bar: 'from-indigo-500 to-blue-600' },
-  { gradient: 'from-cyan-500 to-teal-600', bg: 'bg-cyan-50 dark:bg-cyan-900/20', border: 'border-cyan-200 dark:border-cyan-700/50', text: 'text-cyan-700 dark:text-cyan-300', dot: 'bg-cyan-500', shadow: 'shadow-cyan-500/10', bar: 'from-cyan-500 to-teal-600' },
-  { gradient: 'from-fuchsia-500 to-pink-600', bg: 'bg-fuchsia-50 dark:bg-fuchsia-900/20', border: 'border-fuchsia-200 dark:border-fuchsia-700/50', text: 'text-fuchsia-700 dark:text-fuchsia-300', dot: 'bg-fuchsia-500', shadow: 'shadow-fuchsia-500/10', bar: 'from-fuchsia-500 to-pink-600' },
-];
-
-const fallbackStyle = { 
-  gradient: 'from-slate-400 to-slate-500', 
-  bg: 'bg-slate-50 dark:bg-slate-900/20', 
-  border: 'border-slate-200 dark:border-slate-700/50', 
-  text: 'text-slate-600 dark:text-slate-400', 
-  dot: 'bg-slate-400', 
-  shadow: 'shadow-slate-500/10', 
-  bar: 'from-slate-400 to-slate-500' 
+// Opens WhatsApp with a short greeting — the admin edits it before sending.
+const buildWhatsAppGreeting = (fullName) => {
+  const firstName =
+    String(fullName || '')
+      .trim()
+      .split(/\s+/)[0] || '';
+  return `Habari${firstName ? ` ${firstName}` : ''}!`;
 };
 
+const sectionStyles = [
+  {
+    gradient: 'from-violet-500 to-purple-600',
+    bg: 'bg-violet-50 dark:bg-violet-900/20',
+    border: 'border-violet-200 dark:border-violet-700/50',
+    text: 'text-violet-700 dark:text-violet-300',
+    dot: 'bg-violet-500',
+    shadow: 'shadow-violet-500/10',
+    bar: 'from-violet-500 to-purple-600'
+  },
+  {
+    gradient: 'from-sky-500 to-blue-600',
+    bg: 'bg-sky-50 dark:bg-sky-900/20',
+    border: 'border-sky-200 dark:border-sky-700/50',
+    text: 'text-sky-700 dark:text-sky-300',
+    dot: 'bg-sky-500',
+    shadow: 'shadow-sky-500/10',
+    bar: 'from-sky-500 to-blue-600'
+  },
+  {
+    gradient: 'from-emerald-500 to-teal-600',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    border: 'border-emerald-200 dark:border-emerald-700/50',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    dot: 'bg-emerald-500',
+    shadow: 'shadow-emerald-500/10',
+    bar: 'from-emerald-500 to-teal-600'
+  },
+  {
+    gradient: 'from-amber-500 to-orange-600',
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    border: 'border-amber-200 dark:border-amber-700/50',
+    text: 'text-amber-700 dark:text-amber-300',
+    dot: 'bg-amber-500',
+    shadow: 'shadow-amber-500/10',
+    bar: 'from-amber-500 to-orange-600'
+  },
+  {
+    gradient: 'from-rose-500 to-pink-600',
+    bg: 'bg-rose-50 dark:bg-rose-900/20',
+    border: 'border-rose-200 dark:border-rose-700/50',
+    text: 'text-rose-700 dark:text-rose-300',
+    dot: 'bg-rose-500',
+    shadow: 'shadow-rose-500/10',
+    bar: 'from-rose-500 to-pink-600'
+  },
+  {
+    gradient: 'from-indigo-500 to-blue-600',
+    bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+    border: 'border-indigo-200 dark:border-indigo-700/50',
+    text: 'text-indigo-700 dark:text-indigo-300',
+    dot: 'bg-indigo-500',
+    shadow: 'shadow-indigo-500/10',
+    bar: 'from-indigo-500 to-blue-600'
+  },
+  {
+    gradient: 'from-cyan-500 to-teal-600',
+    bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+    border: 'border-cyan-200 dark:border-cyan-700/50',
+    text: 'text-cyan-700 dark:text-cyan-300',
+    dot: 'bg-cyan-500',
+    shadow: 'shadow-cyan-500/10',
+    bar: 'from-cyan-500 to-teal-600'
+  },
+  {
+    gradient: 'from-fuchsia-500 to-pink-600',
+    bg: 'bg-fuchsia-50 dark:bg-fuchsia-900/20',
+    border: 'border-fuchsia-200 dark:border-fuchsia-700/50',
+    text: 'text-fuchsia-700 dark:text-fuchsia-300',
+    dot: 'bg-fuchsia-500',
+    shadow: 'shadow-fuchsia-500/10',
+    bar: 'from-fuchsia-500 to-pink-600'
+  }
+];
+
+const fallbackStyle = {
+  gradient: 'from-slate-400 to-slate-500',
+  bg: 'bg-slate-50 dark:bg-slate-900/20',
+  border: 'border-slate-200 dark:border-slate-700/50',
+  text: 'text-slate-600 dark:text-slate-400',
+  dot: 'bg-slate-400',
+  shadow: 'shadow-slate-500/10',
+  bar: 'from-slate-400 to-slate-500'
+};
 
 const LeaderDirectory = ({
   leaders,
@@ -62,7 +150,7 @@ const LeaderDirectory = ({
 
   const membersByLeader = useMemo(() => {
     const grouped = {};
-    allMembers.forEach(m => {
+    allMembers.forEach((m) => {
       if (!m.leader_id) return;
       if (!grouped[m.leader_id]) grouped[m.leader_id] = [];
       grouped[m.leader_id].push(m);
@@ -72,7 +160,7 @@ const LeaderDirectory = ({
 
   const unassignedMembersBySection = useMemo(() => {
     const grouped = {};
-    allMembers.forEach(m => {
+    allMembers.forEach((m) => {
       if (m.leader_id) return;
       const section = m.section_name || 'Unassigned';
       if (!grouped[section]) grouped[section] = [];
@@ -148,7 +236,9 @@ const LeaderDirectory = ({
             <div>
               <h2 className="text-xl font-bold">Leaders</h2>
               <p className="text-sm text-white/80">
-                {leadersLoading ? 'Loading leaders...' : `${totalLeaders} leaders · ${totalSections} sections`}
+                {leadersLoading
+                  ? 'Loading leaders...'
+                  : `${totalLeaders} leaders · ${totalSections} sections`}
               </p>
             </div>
           </div>
@@ -192,7 +282,8 @@ const LeaderDirectory = ({
           {sectionOrder.map((sectionName) => {
             const sectionLeaders = leadersBySection[sectionName];
             const sectionIdx = sections?.findIndex((s) => s.name === sectionName) ?? -1;
-            const style = sectionIdx >= 0 ? sectionStyles[sectionIdx % sectionStyles.length] : fallbackStyle;
+            const style =
+              sectionIdx >= 0 ? sectionStyles[sectionIdx % sectionStyles.length] : fallbackStyle;
             const isCollapsed = collapsedSections.has(sectionName);
             const headLeader = sectionLeaders.find((l) => l.is_head === 1);
 
@@ -204,14 +295,20 @@ const LeaderDirectory = ({
                   className={`w-full flex items-center justify-between px-5 py-3.5 rounded-xl border ${style.border} ${style.bg} hover:shadow-md transition-all group`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${style.gradient} flex items-center justify-center text-white shadow-sm ${style.shadow}`}>
+                    <div
+                      className={`w-8 h-8 rounded-lg bg-gradient-to-br ${style.gradient} flex items-center justify-center text-white shadow-sm ${style.shadow}`}
+                    >
                       <Layers className="w-4 h-4" />
                     </div>
                     <div className="text-left">
                       <h3 className={`font-bold text-sm ${style.text}`}>{sectionName}</h3>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {sectionLeaders.length} leader{sectionLeaders.length !== 1 ? 's' : ''}
-                        {headLeader && <span className="ml-1.5 text-slate-400 dark:text-slate-500">· Head: {headLeader.full_name}</span>}
+                        {headLeader && (
+                          <span className="ml-1.5 text-slate-400 dark:text-slate-500">
+                            · Head: {headLeader.full_name}
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -251,7 +348,9 @@ const LeaderDirectory = ({
                         <div className="p-4">
                           {/* Avatar & Name */}
                           <div className="flex items-start gap-3 mb-3">
-                            <div className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-lg font-bold text-white shadow-sm ${style.gradient} ${style.shadow}`}>
+                            <div
+                              className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-lg font-bold text-white shadow-sm ${style.gradient} ${style.shadow}`}
+                            >
                               {leader.profile_picture ? (
                                 <img
                                   src={leader.profile_picture}
@@ -264,13 +363,19 @@ const LeaderDirectory = ({
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <button onClick={() => onViewAnalytics(leader.id)} className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left" title="View Profile">
+                                <button
+                                  onClick={() => onViewAnalytics(leader.id)}
+                                  className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left"
+                                  title="View Profile"
+                                >
                                   {leader.full_name}
                                 </button>
                                 {leader.is_head === 1 && (
                                   <span className="flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50">
                                     <Shield className="w-2.5 h-2.5 text-amber-500" />
-                                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Head</span>
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                      Head
+                                    </span>
                                   </span>
                                 )}
                               </div>
@@ -298,7 +403,9 @@ const LeaderDirectory = ({
                                   onClick={() => toggleLeaderRoster(leader.id)}
                                   className={`text-xs font-bold ${style.text} hover:underline decoration-2 underline-offset-4`}
                                 >
-                                  {expandedLeaderRosters.has(leader.id) ? 'Hide Roster' : 'View Roster'}
+                                  {expandedLeaderRosters.has(leader.id)
+                                    ? 'Hide Roster'
+                                    : 'View Roster'}
                                 </button>
                               )}
                             </div>
@@ -308,10 +415,17 @@ const LeaderDirectory = ({
                           {expandedLeaderRosters.has(leader.id) && membersByLeader[leader.id] && (
                             <div className="mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-2 max-h-40 overflow-y-auto border border-slate-100 dark:border-slate-700/50 scrollbar-thin">
                               <div className="grid grid-cols-1 gap-1">
-                                {membersByLeader[leader.id].map(m => (
-                                  <div key={m.id} className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors group/member">
-                                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{m.full_name}</span>
-                                    <span className="text-[10px] text-slate-400 font-mono opacity-0 group-hover/member:opacity-100 transition-opacity">#{m.membership_id}</span>
+                                {membersByLeader[leader.id].map((m) => (
+                                  <div
+                                    key={m.id}
+                                    className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors group/member"
+                                  >
+                                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
+                                      {m.full_name}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-mono opacity-0 group-hover/member:opacity-100 transition-opacity">
+                                      #{m.membership_id}
+                                    </span>
                                   </div>
                                 ))}
                               </div>
@@ -321,9 +435,27 @@ const LeaderDirectory = ({
                           {/* Contact */}
                           <div className="space-y-1.5 mb-3">
                             {leader.phone && (
-                              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                <Phone className="w-3 h-3 shrink-0" />
-                                <span className="truncate">{leader.phone}</span>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex min-w-0 items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                  <Phone className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{leader.phone}</span>
+                                </div>
+                                {toWhatsAppNumber(leader.phone) && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openWhatsAppChat(
+                                        leader.phone,
+                                        buildWhatsAppGreeting(leader.full_name)
+                                      )
+                                    }
+                                    className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 transition-all hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+                                    title="Chat on WhatsApp"
+                                  >
+                                    <MessageCircle className="w-3 h-3" />
+                                    WhatsApp
+                                  </button>
+                                )}
                               </div>
                             )}
                             {leader.email && (
@@ -378,15 +510,22 @@ const LeaderDirectory = ({
                   <div className="mt-4 p-4 bg-amber-50/50 dark:bg-amber-900/10 rounded-2xl border border-amber-100/50 dark:border-amber-900/30">
                     <div className="flex items-center gap-2 mb-3">
                       <Users className="w-4 h-4 text-amber-600 dark:text-amber-500" />
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Section Members (Unassigned to Leader)</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                        Section Members (Unassigned to Leader)
+                      </h4>
                       <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
                         {unassignedMembersBySection[sectionName].length}
                       </span>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {unassignedMembersBySection[sectionName].map(m => (
-                        <div key={m.id} className="bg-white dark:bg-slate-800 p-2 rounded-lg border border-amber-100 dark:border-amber-900/40 text-center">
-                          <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{m.full_name}</p>
+                      {unassignedMembersBySection[sectionName].map((m) => (
+                        <div
+                          key={m.id}
+                          className="bg-white dark:bg-slate-800 p-2 rounded-lg border border-amber-100 dark:border-amber-900/40 text-center"
+                        >
+                          <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
+                            {m.full_name}
+                          </p>
                           <p className="text-[9px] text-slate-400 font-mono">#{m.membership_id}</p>
                         </div>
                       ))}
@@ -402,9 +541,13 @@ const LeaderDirectory = ({
           <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
             <UserCog className="w-8 h-8 text-slate-400 dark:text-slate-500" />
           </div>
-          <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">No leaders found</h4>
+          <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
+            No leaders found
+          </h4>
           <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm text-center">
-            {searchTerm || sectionFilter ? 'Try adjusting your search.' : 'Add your first leader to get started.'}
+            {searchTerm || sectionFilter
+              ? 'Try adjusting your search.'
+              : 'Add your first leader to get started.'}
           </p>
         </div>
       )}

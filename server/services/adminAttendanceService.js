@@ -133,6 +133,7 @@ function getAttendanceHistory(serviceId = 'all') {
   return all(`
     SELECT
       a.date,
+      a.service_type_id as service_id,
       COALESCE(MAX(sl.created_at), MAX(a.submitted_at)) as submitted_at,
       u.full_name as leader_name,
       s.name as section_name,
