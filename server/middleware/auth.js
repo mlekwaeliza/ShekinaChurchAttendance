@@ -15,7 +15,9 @@ function requireRole(allowedRoles) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
     if (!roles.includes(req.session.user.role)) {
-      console.error(`[requireRole] 403: path=${req.path}, session.role="${req.session.user.role}", allowed=[${roles}]`);
+      console.error(
+        `[requireRole] 403: path=${req.path}, session.role="${req.session.user.role}", allowed=[${roles}]`
+      );
       return res.status(403).json({ error: 'Forbidden: insufficient permissions' });
     }
     next();
@@ -33,17 +35,47 @@ async function isAuthenticated(req, res, next) {
     // Refresh user data from DB on every request to keep role in sync
     // (handles stale sessions from previous logins or role changes).
     try {
-      const dbUser = await get('SELECT id, username, role, full_name, is_new_member_leader FROM users WHERE id = ?', [req.session.userId]);
+      const dbUser = await get(
+        'SELECT id, username, role, full_name, is_new_member_leader, disabled FROM users WHERE id = ?',
+        [req.session.userId]
+      );
       if (dbUser) {
-        req.session.user = { id: dbUser.id, username: dbUser.username, role: dbUser.role, full_name: dbUser.full_name, is_new_member_leader: dbUser.is_new_member_leader };
+        // Security fix: disabled accounts (e.g. removed leaders) lose access
+        // immediately, even with a still-active session.
+        if (dbUser.disabled) {
+          return req.session.destroy(() =>
+            res.status(401).json({ error: 'Account has been disabled' })
+          );
+        }
+        req.session.user = {
+          id: dbUser.id,
+          username: dbUser.username,
+          role: dbUser.role,
+          full_name: dbUser.full_name,
+          is_new_member_leader: dbUser.is_new_member_leader
+        };
       } else {
         // User not found by ID — try username fallback
         const username = req.session.user?.username;
         if (username) {
-          const byUsername = await get('SELECT id, username, role, full_name, is_new_member_leader FROM users WHERE username = ?', [username]);
+          const byUsername = await get(
+            'SELECT id, username, role, full_name, is_new_member_leader, disabled FROM users WHERE username = ?',
+            [username]
+          );
           if (byUsername) {
+            if (byUsername.disabled) {
+              return req.session.destroy(() =>
+                res.status(401).json({ error: 'Account has been disabled' })
+              );
+            }
             req.session.userId = byUsername.id;
-            req.session.user = { id: byUsername.id, username: byUsername.username, role: byUsername.role, full_name: byUsername.full_name, is_new_member_leader: byUsername.is_new_member_leader };
+            req.session.user = {
+              id: byUsername.id,
+              username: byUsername.username,
+              role: byUsername.role,
+              full_name: byUsername.full_name,
+              is_new_member_leader: byUsername.is_new_member_leader
+            };
           }
         }
       }
@@ -56,7 +88,7 @@ async function isAuthenticated(req, res, next) {
       return res.status(401).json({
         error: 'Two-step verification required',
         requires2FA: true,
-        userId: req.session.userId,
+        userId: req.session.userId
       });
     }
 
@@ -75,7 +107,9 @@ function validateDate(paramName = 'date') {
     if (!dateStr) return next();
     const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!isoDateRegex.test(dateStr)) {
-      return res.status(400).json({ error: `Invalid date format for ${paramName}. Use YYYY-MM-DD` });
+      return res
+        .status(400)
+        .json({ error: `Invalid date format for ${paramName}. Use YYYY-MM-DD` });
     }
     const parsed = new Date(dateStr + 'T00:00:00');
     if (isNaN(parsed.getTime())) {

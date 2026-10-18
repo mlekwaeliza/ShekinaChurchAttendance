@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { all, get, run } = require('../database');
+const { isAuthenticated, requireRole } = require('../middleware/auth');
+
+// Security fix: the audit trail is administrative data (usernames, IPs,
+// before/after payloads, log forging risk). It must not be reachable
+// anonymously — admin only.
+router.use(isAuthenticated);
+router.use(requireRole(['admin']));
 
 // ─── Enhanced Audit Trail ──────────────────────────────────────────────────────────
 // Tracks user activity, login/logout, and provides user activity dashboard
@@ -8,8 +15,16 @@ const { all, get, run } = require('../database');
 // GET /api/admin/audit-trail - Get audit trail with filtering
 router.get('/', async (req, res) => {
   try {
-    const { user_id, action, entity_type, start_date, end_date, limit = 100, offset = 0 } = req.query;
-    
+    const {
+      user_id,
+      action,
+      entity_type,
+      start_date,
+      end_date,
+      limit = 100,
+      offset = 0
+    } = req.query;
+
     let sql = `
       SELECT al.*, u.username, u.full_name, u.role
       FROM audit_log al 
@@ -47,19 +62,34 @@ router.get('/', async (req, res) => {
     // Get total count for pagination
     let countSql = 'SELECT COUNT(*) as total FROM audit_log WHERE 1=1';
     const countParams = [];
-    if (user_id) { countSql += ' AND user_id = ?'; countParams.push(user_id); }
-    if (action) { countSql += ' AND action = ?'; countParams.push(action); }
-    if (entity_type) { countSql += ' AND entity_type = ?'; countParams.push(entity_type); }
-    if (start_date) { countSql += ' AND created_at >= ?'; countParams.push(start_date); }
-    if (end_date) { countSql += ' AND created_at <= ?'; countParams.push(end_date + ' 23:59:59'); }
-    
+    if (user_id) {
+      countSql += ' AND user_id = ?';
+      countParams.push(user_id);
+    }
+    if (action) {
+      countSql += ' AND action = ?';
+      countParams.push(action);
+    }
+    if (entity_type) {
+      countSql += ' AND entity_type = ?';
+      countParams.push(entity_type);
+    }
+    if (start_date) {
+      countSql += ' AND created_at >= ?';
+      countParams.push(start_date);
+    }
+    if (end_date) {
+      countSql += ' AND created_at <= ?';
+      countParams.push(end_date + ' 23:59:59');
+    }
+
     const total = await get(countSql, countParams);
 
     res.json({
       logs,
       total: total?.total || 0,
       limit: parseInt(limit),
-      offset: parseInt(offset),
+      offset: parseInt(offset)
     });
   } catch (error) {
     console.error('Audit trail error:', error);
@@ -73,34 +103,50 @@ router.get('/activity-summary', async (req, res) => {
     const { days = 30 } = req.query;
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-    const [totalActions, actionsByType, actionsByUser, recentActivity, dailyActivity] = await Promise.all([
-      get(`
+    const [totalActions, actionsByType, actionsByUser, recentActivity, dailyActivity] =
+      await Promise.all([
+        get(
+          `
         SELECT COUNT(*) as total 
         FROM audit_log WHERE created_at >= ?
-      `, [startDate]),
-      all(`
+      `,
+          [startDate]
+        ),
+        all(
+          `
         SELECT action, COUNT(*) as count 
         FROM audit_log WHERE created_at >= ?
         GROUP BY action ORDER BY count DESC
-      `, [startDate]),
-      all(`
+      `,
+          [startDate]
+        ),
+        all(
+          `
         SELECT u.username, u.full_name, u.role, COUNT(*) as action_count
         FROM audit_log al JOIN users u ON al.user_id = u.id
         WHERE al.created_at >= ?
         GROUP BY al.user_id ORDER BY action_count DESC LIMIT 10
-      `, [startDate]),
-      all(`
+      `,
+          [startDate]
+        ),
+        all(
+          `
         SELECT al.*, u.username, u.full_name
         FROM audit_log al LEFT JOIN users u ON al.user_id = u.id
         WHERE al.created_at >= ?
         ORDER BY al.created_at DESC LIMIT 20
-      `, [startDate]),
-      all(`
+      `,
+          [startDate]
+        ),
+        all(
+          `
         SELECT DATE(created_at) as date, COUNT(*) as count
         FROM audit_log WHERE created_at >= ?
         GROUP BY DATE(created_at) ORDER BY date
-      `, [startDate]),
-    ]);
+      `,
+          [startDate]
+        )
+      ]);
 
     res.json({
       period: { days: parseInt(days), start: startDate },
@@ -109,7 +155,7 @@ router.get('/activity-summary', async (req, res) => {
       actionsByUser,
       recentActivity,
       dailyActivity,
-      generatedAt: new Date().toISOString(),
+      generatedAt: new Date().toISOString()
     });
   } catch (error) {
     console.error('Activity summary error:', error);
@@ -125,13 +171,17 @@ router.get('/user/:userId', async (req, res) => {
 
     const [user, logs, stats] = await Promise.all([
       get('SELECT id, username, full_name, role FROM users WHERE id = ?', [userId]),
-      all(`
+      all(
+        `
         SELECT * FROM audit_log 
         WHERE user_id = ? 
         ORDER BY created_at DESC 
         LIMIT ? OFFSET ?
-      `, [userId, parseInt(limit), parseInt(offset)]),
-      get(`
+      `,
+        [userId, parseInt(limit), parseInt(offset)]
+      ),
+      get(
+        `
         SELECT 
           COUNT(*) as total_actions,
           COUNT(DISTINCT action) as unique_actions,
@@ -139,7 +189,9 @@ router.get('/user/:userId', async (req, res) => {
           MIN(created_at) as first_action,
           MAX(created_at) as last_action
         FROM audit_log WHERE user_id = ?
-      `, [userId]),
+      `,
+        [userId]
+      )
     ]);
 
     if (!user) {
@@ -149,7 +201,7 @@ router.get('/user/:userId', async (req, res) => {
     res.json({
       user,
       logs,
-      stats: stats || {},
+      stats: stats || {}
     });
   } catch (error) {
     console.error('User audit trail error:', error);
@@ -163,13 +215,16 @@ router.get('/entity/:entityType/:entityId', async (req, res) => {
     const { entityType, entityId } = req.params;
     const { limit = 50 } = req.query;
 
-    const logs = await all(`
+    const logs = await all(
+      `
       SELECT al.*, u.username, u.full_name
       FROM audit_log al LEFT JOIN users u ON al.user_id = u.id
       WHERE al.entity_type = ? AND al.entity_id = ?
       ORDER BY al.created_at DESC
       LIMIT ?
-    `, [entityType, parseInt(entityId), parseInt(limit)]);
+    `,
+      [entityType, parseInt(entityId), parseInt(limit)]
+    );
 
     res.json({ logs });
   } catch (error) {
@@ -192,7 +247,16 @@ router.post('/', async (req, res) => {
 
     await run(
       'INSERT INTO audit_log (user_id, action, entity_type, entity_id, old_value, new_value, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [user_id, action, entity_type, entity_id || null, old_value || null, new_value || null, ip_address, user_agent]
+      [
+        user_id,
+        action,
+        entity_type,
+        entity_id || null,
+        old_value || null,
+        new_value || null,
+        ip_address,
+        user_agent
+      ]
     );
 
     res.status(201).json({ message: 'Action logged' });
@@ -206,7 +270,7 @@ router.post('/', async (req, res) => {
 router.get('/export', async (req, res) => {
   try {
     const { user_id, action, entity_type, start_date, end_date } = req.query;
-    
+
     let sql = `
       SELECT al.*, u.username, u.full_name, u.role
       FROM audit_log al LEFT JOIN users u ON al.user_id = u.id
@@ -214,11 +278,26 @@ router.get('/export', async (req, res) => {
     `;
     const params = [];
 
-    if (user_id) { sql += ' AND al.user_id = ?'; params.push(user_id); }
-    if (action) { sql += ' AND al.action = ?'; params.push(action); }
-    if (entity_type) { sql += ' AND al.entity_type = ?'; params.push(entity_type); }
-    if (start_date) { sql += ' AND al.created_at >= ?'; params.push(start_date); }
-    if (end_date) { sql += ' AND al.created_at <= ?'; params.push(end_date + ' 23:59:59'); }
+    if (user_id) {
+      sql += ' AND al.user_id = ?';
+      params.push(user_id);
+    }
+    if (action) {
+      sql += ' AND al.action = ?';
+      params.push(action);
+    }
+    if (entity_type) {
+      sql += ' AND al.entity_type = ?';
+      params.push(entity_type);
+    }
+    if (start_date) {
+      sql += ' AND al.created_at >= ?';
+      params.push(start_date);
+    }
+    if (end_date) {
+      sql += ' AND al.created_at <= ?';
+      params.push(end_date + ' 23:59:59');
+    }
 
     sql += ' ORDER BY al.created_at DESC';
 
@@ -229,19 +308,30 @@ router.get('/export', async (req, res) => {
     }
 
     // Convert to CSV
-    const headers = ['Date', 'User', 'Full Name', 'Role', 'Action', 'Entity Type', 'Entity ID', 'IP Address'];
+    const headers = [
+      'Date',
+      'User',
+      'Full Name',
+      'Role',
+      'Action',
+      'Entity Type',
+      'Entity ID',
+      'IP Address'
+    ];
     const csvRows = [headers.join(',')];
     for (const log of logs) {
-      csvRows.push([
-        `"${log.created_at}"`,
-        `"${log.username || ''}"`,
-        `"${log.full_name || ''}"`,
-        `"${log.role || ''}"`,
-        `"${log.action}"`,
-        `"${log.entity_type}"`,
-        `"${log.entity_id || ''}"`,
-        `"${log.ip_address || ''}"`,
-      ].join(','));
+      csvRows.push(
+        [
+          `"${log.created_at}"`,
+          `"${log.username || ''}"`,
+          `"${log.full_name || ''}"`,
+          `"${log.role || ''}"`,
+          `"${log.action}"`,
+          `"${log.entity_type}"`,
+          `"${log.entity_id || ''}"`,
+          `"${log.ip_address || ''}"`
+        ].join(',')
+      );
     }
 
     const filename = `audit_trail_${new Date().toISOString().split('T')[0]}.csv`;

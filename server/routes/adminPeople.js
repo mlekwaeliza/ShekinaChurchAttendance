@@ -369,11 +369,9 @@ router.put('/members/:id', async (req, res) => {
 
     const duplicateName = await queries.findActiveMemberByName(full_name, id);
     if (duplicateName) {
-      return res
-        .status(400)
-        .json({
-          error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})`
-        });
+      return res.status(400).json({
+        error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})`
+      });
     }
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -874,10 +872,9 @@ router.delete('/leaders/:id', async (req, res) => {
       if (childLeader) {
         await run('DELETE FROM children_leaders WHERE id = ?', [id]);
         if (childLeader.user_id) {
-          await run(
-            "UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            [childLeader.user_id]
-          );
+          await run('UPDATE users SET disabled = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+            childLeader.user_id
+          ]);
         }
         invalidate('admin-');
         return res.json({ message: 'Leader removed successfully' });
@@ -887,10 +884,9 @@ router.delete('/leaders/:id', async (req, res) => {
 
     await run('DELETE FROM leaders WHERE id = ?', [id]);
     if (leader.user_id) {
-      await run(
-        "UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-        [leader.user_id]
-      );
+      await run('UPDATE users SET disabled = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
+        leader.user_id
+      ]);
     }
     invalidate('admin-');
     res.json({ message: 'Leader removed successfully' });
@@ -1418,9 +1414,10 @@ router.delete('/children-leaders/:id', async (req, res) => {
     const leader = await get('SELECT user_id FROM children_leaders WHERE id = ?', [id]);
     if (!leader) return res.status(404).json({ error: 'Children leader not found' });
 
-    // Remove the children_leaders row and revert user role (preserve login account)
+    // Remove the children_leaders row and disable the login account so the
+    // former leader keeps history but immediately loses access.
     await run('DELETE FROM children_leaders WHERE id = ?', [id]);
-    await run("UPDATE users SET role = 'accountant', updated_at = CURRENT_TIMESTAMP WHERE id = ?", [
+    await run('UPDATE users SET disabled = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [
       leader.user_id
     ]);
 
@@ -1710,11 +1707,9 @@ router.post('/members', async (req, res) => {
 
     const duplicateName = await queries.findActiveMemberByName(full_name);
     if (duplicateName) {
-      return res
-        .status(400)
-        .json({
-          error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})`
-        });
+      return res.status(400).json({
+        error: `A member named "${duplicateName.full_name}" already exists (${duplicateName.membership_id})`
+      });
     }
 
     const sectionId = Number(section_id);

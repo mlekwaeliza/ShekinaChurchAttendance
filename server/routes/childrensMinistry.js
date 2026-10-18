@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { run, get, all } = require('../database');
 const { logAudit } = require('../utils');
+const { isAuthenticated, requireRole } = require('../middleware/auth');
+
+// Security fix: this router was previously reachable without any
+// authentication, exposing children's personal and medical data and
+// allowing anonymous writes. Admin-only (the admin UI is the only client).
+router.use(isAuthenticated);
+router.use(requireRole(['admin']));
 
 // ─── Classes ────────────────────────────────────────────────────────────────────
 
@@ -31,9 +38,18 @@ router.post('/classes', async (req, res) => {
 
     const result = await run(
       'INSERT INTO children_classes (name, age_group, description, max_capacity, room_number, schedule) VALUES (?, ?, ?, ?, ?, ?)',
-      [name, age_group || null, description || null, max_capacity || null, room_number || null, schedule || null]
+      [
+        name,
+        age_group || null,
+        description || null,
+        max_capacity || null,
+        room_number || null,
+        schedule || null
+      ]
     );
-    logAudit(req.user?.id, 'children_class_create', 'children_classes', result.lastID, { name });
+    logAudit(req.session.userId, 'children_class_create', 'children_classes', result.lastID, {
+      name
+    });
     res.status(201).json({ id: result.lastID, message: 'Class created' });
   } catch (error) {
     console.error('Error creating class:', error);
@@ -43,12 +59,15 @@ router.post('/classes', async (req, res) => {
 
 router.put('/classes/:id', async (req, res) => {
   try {
-    const { name, age_group, description, max_capacity, room_number, schedule, is_active } = req.body;
+    const { name, age_group, description, max_capacity, room_number, schedule, is_active } =
+      req.body;
     await run(
       'UPDATE children_classes SET name = COALESCE(?, name), age_group = COALESCE(?, age_group), description = COALESCE(?, description), max_capacity = COALESCE(?, max_capacity), room_number = COALESCE(?, room_number), schedule = COALESCE(?, schedule), is_active = COALESCE(?, is_active), updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [name, age_group, description, max_capacity, room_number, schedule, is_active, req.params.id]
     );
-    logAudit(req.user?.id, 'children_class_update', 'children_classes', req.params.id, { name });
+    logAudit(req.session.userId, 'children_class_update', 'children_classes', req.params.id, {
+      name
+    });
     res.json({ message: 'Class updated' });
   } catch (error) {
     console.error('Error updating class:', error);
@@ -59,7 +78,7 @@ router.put('/classes/:id', async (req, res) => {
 router.delete('/classes/:id', async (req, res) => {
   try {
     await run('UPDATE children_classes SET is_active = 0 WHERE id = ?', [req.params.id]);
-    logAudit(req.user?.id, 'children_class_delete', 'children_classes', req.params.id);
+    logAudit(req.session.userId, 'children_class_delete', 'children_classes', req.params.id);
     res.json({ message: 'Class deactivated' });
   } catch (error) {
     console.error('Error deleting class:', error);
@@ -89,12 +108,29 @@ router.get('/teachers', async (req, res) => {
 
 router.post('/teachers', async (req, res) => {
   try {
-    const { member_id, user_id, full_name, phone, email, qualification, background_check, class_ids } = req.body;
+    const {
+      member_id,
+      user_id,
+      full_name,
+      phone,
+      email,
+      qualification,
+      background_check,
+      class_ids
+    } = req.body;
     if (!full_name) return res.status(400).json({ error: 'Teacher name is required' });
 
     const result = await run(
       'INSERT INTO children_teachers (member_id, user_id, full_name, phone, email, qualification, background_check) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [member_id || null, user_id || null, full_name, phone || null, email || null, qualification || null, background_check ? 1 : 0]
+      [
+        member_id || null,
+        user_id || null,
+        full_name,
+        phone || null,
+        email || null,
+        qualification || null,
+        background_check ? 1 : 0
+      ]
     );
 
     if (class_ids && class_ids.length > 0) {
@@ -106,7 +142,9 @@ router.post('/teachers', async (req, res) => {
       }
     }
 
-    logAudit(req.user?.id, 'children_teacher_create', 'children_teachers', result.lastID, { full_name });
+    logAudit(req.session.userId, 'children_teacher_create', 'children_teachers', result.lastID, {
+      full_name
+    });
     res.status(201).json({ id: result.lastID, message: 'Teacher created' });
   } catch (error) {
     console.error('Error creating teacher:', error);
@@ -116,7 +154,8 @@ router.post('/teachers', async (req, res) => {
 
 router.put('/teachers/:id', async (req, res) => {
   try {
-    const { full_name, phone, email, qualification, background_check, is_active, class_ids } = req.body;
+    const { full_name, phone, email, qualification, background_check, is_active, class_ids } =
+      req.body;
     await run(
       'UPDATE children_teachers SET full_name = COALESCE(?, full_name), phone = COALESCE(?, phone), email = COALESCE(?, email), qualification = COALESCE(?, qualification), background_check = COALESCE(?, background_check), is_active = COALESCE(?, is_active), updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       [full_name, phone, email, qualification, background_check, is_active, req.params.id]
@@ -134,7 +173,9 @@ router.put('/teachers/:id', async (req, res) => {
       }
     }
 
-    logAudit(req.user?.id, 'children_teacher_update', 'children_teachers', req.params.id, { full_name });
+    logAudit(req.session.userId, 'children_teacher_update', 'children_teachers', req.params.id, {
+      full_name
+    });
     res.json({ message: 'Teacher updated' });
   } catch (error) {
     console.error('Error updating teacher:', error);
@@ -145,7 +186,7 @@ router.put('/teachers/:id', async (req, res) => {
 router.delete('/teachers/:id', async (req, res) => {
   try {
     await run('UPDATE children_teachers SET is_active = 0 WHERE id = ?', [req.params.id]);
-    logAudit(req.user?.id, 'children_teacher_delete', 'children_teachers', req.params.id);
+    logAudit(req.session.userId, 'children_teacher_delete', 'children_teachers', req.params.id);
     res.json({ message: 'Teacher deactivated' });
   } catch (error) {
     console.error('Error deleting teacher:', error);
@@ -194,19 +235,50 @@ router.get('/children', async (req, res) => {
 
 router.post('/children', async (req, res) => {
   try {
-    const { full_name, date_of_birth, gender, parent_guardian_name, parent_guardian_phone, parent_guardian_email, emergency_contact, emergency_phone, medical_notes, allergies, class_id, age_group, photo_consent } = req.body;
+    const {
+      full_name,
+      date_of_birth,
+      gender,
+      parent_guardian_name,
+      parent_guardian_phone,
+      parent_guardian_email,
+      emergency_contact,
+      emergency_phone,
+      medical_notes,
+      allergies,
+      class_id,
+      age_group,
+      photo_consent
+    } = req.body;
     if (!full_name) return res.status(400).json({ error: 'Child name is required' });
 
     const result = await run(
       `INSERT INTO children (full_name, date_of_birth, gender, parent_guardian_name, parent_guardian_phone, parent_guardian_email, emergency_contact, emergency_phone, medical_notes, allergies, class_id, age_group, photo_consent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [full_name, date_of_birth || null, gender || null, parent_guardian_name || null, parent_guardian_phone || null, parent_guardian_email || null, emergency_contact || null, emergency_phone || null, medical_notes || null, allergies || null, class_id || null, age_group || null, photo_consent ? 1 : 0]
+      [
+        full_name,
+        date_of_birth || null,
+        gender || null,
+        parent_guardian_name || null,
+        parent_guardian_phone || null,
+        parent_guardian_email || null,
+        emergency_contact || null,
+        emergency_phone || null,
+        medical_notes || null,
+        allergies || null,
+        class_id || null,
+        age_group || null,
+        photo_consent ? 1 : 0
+      ]
     );
 
     if (class_id) {
-      await run('INSERT OR IGNORE INTO children_class_assignments (child_id, class_id) VALUES (?, ?)', [result.lastID, class_id]);
+      await run(
+        'INSERT OR IGNORE INTO children_class_assignments (child_id, class_id) VALUES (?, ?)',
+        [result.lastID, class_id]
+      );
     }
 
-    logAudit(req.user?.id, 'children_create', 'children', result.lastID, { full_name });
+    logAudit(req.session.userId, 'children_create', 'children', result.lastID, { full_name });
     res.status(201).json({ id: result.lastID, message: 'Child registered' });
   } catch (error) {
     console.error('Error creating child:', error);
@@ -216,18 +288,52 @@ router.post('/children', async (req, res) => {
 
 router.put('/children/:id', async (req, res) => {
   try {
-    const { full_name, date_of_birth, gender, parent_guardian_name, parent_guardian_phone, parent_guardian_email, emergency_contact, emergency_phone, medical_notes, allergies, class_id, age_group, photo_consent, is_active } = req.body;
+    const {
+      full_name,
+      date_of_birth,
+      gender,
+      parent_guardian_name,
+      parent_guardian_phone,
+      parent_guardian_email,
+      emergency_contact,
+      emergency_phone,
+      medical_notes,
+      allergies,
+      class_id,
+      age_group,
+      photo_consent,
+      is_active
+    } = req.body;
     await run(
       `UPDATE children SET full_name = COALESCE(?, full_name), date_of_birth = COALESCE(?, date_of_birth), gender = COALESCE(?, gender), parent_guardian_name = COALESCE(?, parent_guardian_name), parent_guardian_phone = COALESCE(?, parent_guardian_phone), parent_guardian_email = COALESCE(?, parent_guardian_email), emergency_contact = COALESCE(?, emergency_contact), emergency_phone = COALESCE(?, emergency_phone), medical_notes = COALESCE(?, medical_notes), allergies = COALESCE(?, allergies), class_id = COALESCE(?, class_id), age_group = COALESCE(?, age_group), photo_consent = COALESCE(?, photo_consent), is_active = COALESCE(?, is_active), updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-      [full_name, date_of_birth, gender, parent_guardian_name, parent_guardian_phone, parent_guardian_email, emergency_contact, emergency_phone, medical_notes, allergies, class_id, age_group, photo_consent, is_active, req.params.id]
+      [
+        full_name,
+        date_of_birth,
+        gender,
+        parent_guardian_name,
+        parent_guardian_phone,
+        parent_guardian_email,
+        emergency_contact,
+        emergency_phone,
+        medical_notes,
+        allergies,
+        class_id,
+        age_group,
+        photo_consent,
+        is_active,
+        req.params.id
+      ]
     );
 
     if (class_id) {
       await run('DELETE FROM children_class_assignments WHERE child_id = ?', [req.params.id]);
-      await run('INSERT OR IGNORE INTO children_class_assignments (child_id, class_id) VALUES (?, ?)', [req.params.id, class_id]);
+      await run(
+        'INSERT OR IGNORE INTO children_class_assignments (child_id, class_id) VALUES (?, ?)',
+        [req.params.id, class_id]
+      );
     }
 
-    logAudit(req.user?.id, 'children_update', 'children', req.params.id, { full_name });
+    logAudit(req.session.userId, 'children_update', 'children', req.params.id, { full_name });
     res.json({ message: 'Child updated' });
   } catch (error) {
     console.error('Error updating child:', error);
@@ -238,7 +344,7 @@ router.put('/children/:id', async (req, res) => {
 router.delete('/children/:id', async (req, res) => {
   try {
     await run('UPDATE children SET is_active = 0 WHERE id = ?', [req.params.id]);
-    logAudit(req.user?.id, 'children_delete', 'children', req.params.id);
+    logAudit(req.session.userId, 'children_delete', 'children', req.params.id);
     res.json({ message: 'Child deactivated' });
   } catch (error) {
     console.error('Error deleting child:', error);
@@ -285,13 +391,24 @@ router.get('/attendance', async (req, res) => {
 router.post('/attendance', async (req, res) => {
   try {
     const { child_id, class_id, date, status, notes } = req.body;
-    if (!child_id || !class_id || !date) return res.status(400).json({ error: 'Child, class, and date are required' });
+    if (!child_id || !class_id || !date)
+      return res.status(400).json({ error: 'Child, class, and date are required' });
 
     const result = await run(
       `INSERT INTO children_attendance (child_id, class_id, date, status, notes, checked_in_by)
        VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(child_id, class_id, date) DO UPDATE SET status = ?, notes = ?, checked_in_by = ?`,
-      [child_id, class_id, date, status || 'present', notes || null, req.user?.id, status || 'present', notes || null, req.user?.id]
+      [
+        child_id,
+        class_id,
+        date,
+        status || 'present',
+        notes || null,
+        req.session.userId,
+        status || 'present',
+        notes || null,
+        req.session.userId
+      ]
     );
 
     res.status(201).json({ id: result.lastID, message: 'Attendance recorded' });
@@ -304,14 +421,25 @@ router.post('/attendance', async (req, res) => {
 router.post('/attendance/bulk', async (req, res) => {
   try {
     const { class_id, date, records } = req.body;
-    if (!class_id || !date || !records) return res.status(400).json({ error: 'Class, date, and records are required' });
+    if (!class_id || !date || !records)
+      return res.status(400).json({ error: 'Class, date, and records are required' });
 
     for (const record of records) {
       await run(
         `INSERT INTO children_attendance (child_id, class_id, date, status, notes, checked_in_by)
          VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(child_id, class_id, date) DO UPDATE SET status = ?, notes = ?, checked_in_by = ?`,
-        [record.child_id, class_id, date, record.status || 'present', record.notes || null, req.user?.id, record.status || 'present', record.notes || null, req.user?.id]
+        [
+          record.child_id,
+          class_id,
+          date,
+          record.status || 'present',
+          record.notes || null,
+          req.session.userId,
+          record.status || 'present',
+          record.notes || null,
+          req.session.userId
+        ]
       );
     }
 
@@ -345,18 +473,35 @@ router.get('/promotions', async (req, res) => {
 router.post('/promotions', async (req, res) => {
   try {
     const { child_id, from_class_id, to_class_id, promotion_date, notes } = req.body;
-    if (!child_id || !to_class_id || !promotion_date) return res.status(400).json({ error: 'Child, new class, and date are required' });
+    if (!child_id || !to_class_id || !promotion_date)
+      return res.status(400).json({ error: 'Child, new class, and date are required' });
 
     const result = await run(
       'INSERT INTO children_promotions (child_id, from_class_id, to_class_id, promotion_date, notes, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [child_id, from_class_id || null, to_class_id, promotion_date, notes || null, req.user?.id]
+      [
+        child_id,
+        from_class_id || null,
+        to_class_id,
+        promotion_date,
+        notes || null,
+        req.session.userId
+      ]
     );
 
-    await run('UPDATE children SET class_id = ?, age_group = (SELECT age_group FROM children_classes WHERE id = ?) WHERE id = ?', [to_class_id, to_class_id, child_id]);
+    await run(
+      'UPDATE children SET class_id = ?, age_group = (SELECT age_group FROM children_classes WHERE id = ?) WHERE id = ?',
+      [to_class_id, to_class_id, child_id]
+    );
     await run('DELETE FROM children_class_assignments WHERE child_id = ?', [child_id]);
-    await run('INSERT OR IGNORE INTO children_class_assignments (child_id, class_id) VALUES (?, ?)', [child_id, to_class_id]);
+    await run(
+      'INSERT OR IGNORE INTO children_class_assignments (child_id, class_id) VALUES (?, ?)',
+      [child_id, to_class_id]
+    );
 
-    logAudit(req.user?.id, 'children_promotion', 'children_promotions', result.lastID, { child_id, to_class_id });
+    logAudit(req.session.userId, 'children_promotion', 'children_promotions', result.lastID, {
+      child_id,
+      to_class_id
+    });
     res.status(201).json({ id: result.lastID, message: 'Child promoted' });
   } catch (error) {
     console.error('Error creating promotion:', error);
@@ -369,8 +514,12 @@ router.post('/promotions', async (req, res) => {
 router.get('/dashboard', async (req, res) => {
   try {
     const totalChildren = await get('SELECT COUNT(*) as count FROM children WHERE is_active = 1');
-    const totalClasses = await get('SELECT COUNT(*) as count FROM children_classes WHERE is_active = 1');
-    const totalTeachers = await get('SELECT COUNT(*) as count FROM children_teachers WHERE is_active = 1');
+    const totalClasses = await get(
+      'SELECT COUNT(*) as count FROM children_classes WHERE is_active = 1'
+    );
+    const totalTeachers = await get(
+      'SELECT COUNT(*) as count FROM children_teachers WHERE is_active = 1'
+    );
 
     const today = new Date().toISOString().split('T')[0];
     const todayAttendance = await get(

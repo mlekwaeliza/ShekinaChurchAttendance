@@ -129,11 +129,9 @@ router.post('/login', async (req, res) => {
           { attempts, lockoutCount, lockUntil: lockUntil.toISOString() },
           req
         );
-        return res
-          .status(423)
-          .json({
-            error: `Account locked due to too many failed attempts. Try again in ${minutes} minutes.`
-          });
+        return res.status(423).json({
+          error: `Account locked due to too many failed attempts. Try again in ${minutes} minutes.`
+        });
       }
 
       recordSecurityEvent(
@@ -149,6 +147,16 @@ router.post('/login', async (req, res) => {
 
     await queries.resetFailedLogin(user.id);
     await resetIpLoginState(ip);
+
+    // Security fix: accounts disabled by an admin (e.g. removed leaders)
+    // must not be able to log in, even with a valid password. Checked only
+    // after password validation so it cannot be used for enumeration.
+    if (user.disabled) {
+      recordSecurityEvent('login_blocked', user.id, { reason: 'account_disabled' }, req);
+      return res
+        .status(403)
+        .json({ error: 'This account has been disabled. Contact an administrator.' });
+    }
 
     // Check if 2FA is enabled
     if (user.totp_enabled) {

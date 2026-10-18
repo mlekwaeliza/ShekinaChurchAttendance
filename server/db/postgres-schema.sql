@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   locked_until TIMESTAMPTZ,
   password_reset_token TEXT,
   password_reset_expires TIMESTAMPTZ,
+  disabled INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

@@ -29,6 +29,9 @@ if (!usePostgres) {
       password_reset_used INTEGER DEFAULT 0,
       -- P1-fix: brute-force lockout tracking with exponential backoff
       lockout_count INTEGER DEFAULT 0,
+      -- Security fix: soft-disable flag for accounts (removed leaders keep
+      -- their account but immediately lose access).
+      disabled INTEGER DEFAULT 0,
       member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -1067,23 +1070,34 @@ if (!usePostgres) {
           console.log('Migrating outreach_logs schema (non-destructive)...');
           if (!hasOutcome) {
             db.run('ALTER TABLE outreach_logs ADD COLUMN outcome TEXT', (e) => {
-              if (e && !e.message.includes('duplicate column')) console.log('Migration note:', e.message);
+              if (e && !e.message.includes('duplicate column'))
+                console.log('Migration note:', e.message);
             });
           }
           if (!hasServiceId) {
-            db.run('ALTER TABLE outreach_logs ADD COLUMN service_id INTEGER REFERENCES service_types(id) ON DELETE SET NULL', (e) => {
-              if (e && !e.message.includes('duplicate column')) console.log('Migration note:', e.message);
-            });
+            db.run(
+              'ALTER TABLE outreach_logs ADD COLUMN service_id INTEGER REFERENCES service_types(id) ON DELETE SET NULL',
+              (e) => {
+                if (e && !e.message.includes('duplicate column'))
+                  console.log('Migration note:', e.message);
+              }
+            );
           }
           if (!hasCreatedBy) {
-            db.run('ALTER TABLE outreach_logs ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL', (e) => {
-              if (e && !e.message.includes('duplicate column')) console.log('Migration note:', e.message);
-            });
+            db.run(
+              'ALTER TABLE outreach_logs ADD COLUMN created_by INTEGER REFERENCES users(id) ON DELETE SET NULL',
+              (e) => {
+                if (e && !e.message.includes('duplicate column'))
+                  console.log('Migration note:', e.message);
+              }
+            );
           }
           db.run('CREATE INDEX IF NOT EXISTS idx_outreach_leader ON outreach_logs(leader_id)');
           db.run('CREATE INDEX IF NOT EXISTS idx_outreach_member ON outreach_logs(member_id)');
           db.run('CREATE INDEX IF NOT EXISTS idx_outreach_week ON outreach_logs(week_start)');
-          db.run('CREATE INDEX IF NOT EXISTS idx_outreach_leader_week ON outreach_logs(leader_id, week_start)');
+          db.run(
+            'CREATE INDEX IF NOT EXISTS idx_outreach_leader_week ON outreach_logs(leader_id, week_start)'
+          );
           console.log('outreach_logs schema migration complete.');
         }
       }
@@ -1185,12 +1199,16 @@ async function ensureLeadershipAndDepartmentsSchema() {
     try {
       await run("ALTER TABLE congregation_titles ADD COLUMN category TEXT DEFAULT 'General'");
     } catch (e) {
-      if (!String(e.message).includes('duplicate column')) console.log('Migration note:', e.message);
+      if (!String(e.message).includes('duplicate column'))
+        console.log('Migration note:', e.message);
     }
     try {
-      await run('ALTER TABLE congregation_titles ADD COLUMN reports_to_title_id INTEGER REFERENCES congregation_titles(id) ON DELETE SET NULL');
+      await run(
+        'ALTER TABLE congregation_titles ADD COLUMN reports_to_title_id INTEGER REFERENCES congregation_titles(id) ON DELETE SET NULL'
+      );
     } catch (e) {
-      if (!String(e.message).includes('duplicate column')) console.log('Migration note:', e.message);
+      if (!String(e.message).includes('duplicate column'))
+        console.log('Migration note:', e.message);
     }
     // If tables still missing after additive attempt, create them. Only drop if we must.
     // Check again if still missing before destructive rebuild
@@ -1624,6 +1642,7 @@ async function ensureHomeCellSchema() {
         password_reset_used INTEGER DEFAULT 0,
         lockout_count INTEGER DEFAULT 0,
         is_new_member_leader INTEGER DEFAULT 0,
+        disabled INTEGER DEFAULT 0,
         member_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -2241,13 +2260,21 @@ async function ensureHomeCellSchema() {
         await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_email ON members(email)');
         await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_phone ON members(phone)');
         // P1-fix: additional composite indexes for hot paths
-        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_submission_log_leader_date_service ON submission_log(leader_id, date, service_type_id)');
-        await pgPool.query('CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id, created_at DESC)');
+        await pgPool.query(
+          'CREATE INDEX IF NOT EXISTS idx_submission_log_leader_date_service ON submission_log(leader_id, date, service_type_id)'
+        );
+        await pgPool.query(
+          'CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id, created_at DESC)'
+        );
         // Trigram indexes for member search (requires pg_trgm)
         try {
           await pgPool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
-          await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_fullname_trgm ON members USING gin (full_name gin_trgm_ops)');
-          await pgPool.query('CREATE INDEX IF NOT EXISTS idx_members_membership_trgm ON members USING gin (membership_id gin_trgm_ops)');
+          await pgPool.query(
+            'CREATE INDEX IF NOT EXISTS idx_members_fullname_trgm ON members USING gin (full_name gin_trgm_ops)'
+          );
+          await pgPool.query(
+            'CREATE INDEX IF NOT EXISTS idx_members_membership_trgm ON members USING gin (membership_id gin_trgm_ops)'
+          );
         } catch (e) {
           console.warn('Trigram index creation skipped (non-fatal):', e.message);
         }
@@ -2470,6 +2497,19 @@ async function migrateUsersRoleConstraint() {
         await run(`COMMIT`);
         await run(`PRAGMA foreign_keys=ON`);
         console.log('SQLite users role constraint migrated.');
+      }
+    }
+
+    // Security fix: add a soft-disable flag so removed staff keep their
+    // account history but immediately lose the ability to log in. This
+    // replaces the old (unsafe) practice of reassigning them to the
+    // accountant role on deletion.
+    if (usePostgres) {
+      await run(`ALTER TABLE users ADD COLUMN IF NOT EXISTS disabled INTEGER DEFAULT 0`);
+    } else {
+      const cols = await all(`PRAGMA table_info(users)`);
+      if (!cols.some((c) => c.name === 'disabled')) {
+        await run(`ALTER TABLE users ADD COLUMN disabled INTEGER DEFAULT 0`);
       }
     }
   } catch (err) {

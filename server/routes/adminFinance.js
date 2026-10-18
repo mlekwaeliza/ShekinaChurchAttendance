@@ -57,7 +57,16 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
-const EXPENSE_CATEGORIES = new Set(['Food', 'Water', 'Fruits', 'Sugar', 'Media', 'Visitors', 'Transport', 'Other']);
+const EXPENSE_CATEGORIES = new Set([
+  'Food',
+  'Water',
+  'Fruits',
+  'Sugar',
+  'Media',
+  'Visitors',
+  'Transport',
+  'Other'
+]);
 
 function validateExpenses(expenses) {
   if (!Array.isArray(expenses)) return;
@@ -85,13 +94,23 @@ function calcFinance(morning, afternoon, tithes) {
 
 router.post('/finance/records', async (req, res) => {
   try {
-    const { record_date, morning_offering, afternoon_offering, evangelism_offering, tithe_entries, expenses, notes } = req.body;
+    const {
+      record_date,
+      morning_offering,
+      afternoon_offering,
+      evangelism_offering,
+      tithe_entries,
+      expenses,
+      notes
+    } = req.body;
     if (!record_date) return res.status(400).json({ error: 'Record date is required' });
     validateExpenses(expenses);
 
     // Create-or-update by date: re-saving the same day updates the existing
     // record (resetting it to draft so it can be corrected and re-submitted).
-    const existing = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+    const existing = await get('SELECT * FROM finance_daily_records WHERE record_date = ?', [
+      record_date
+    ]);
     if (existing && existing.status === 'approved') {
       return res.status(409).json({ error: 'Approved records must be sent back before editing' });
     }
@@ -108,21 +127,38 @@ router.post('/finance/records', async (req, res) => {
         if (entry.member_id && Number(entry.amount) > 0) {
           await run(
             `INSERT INTO contributions (member_id, contribution_type_id, amount, payment_date, payment_method, reference_number, recorded_by) VALUES (?, ?, ?, ?, 'Cash', ?, ?)`,
-            [entry.member_id, titheType.id, Number(entry.amount), record_date, `finance-${record_date}`, req.session.userId]
+            [
+              entry.member_id,
+              titheType.id,
+              Number(entry.amount),
+              record_date,
+              `finance-${record_date}`,
+              req.session.userId
+            ]
           );
         }
       }
     }
 
-    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [record_date]);
+    const tithesResult = await get(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`,
+      [record_date]
+    );
     const auto_tithes = tithesResult?.total || 0;
     const c = calcFinance(morning_offering, afternoon_offering, auto_tithes);
     const recordData = {
-      record_date, morning_offering: Number(morning_offering) || 0, afternoon_offering: Number(afternoon_offering) || 0,
+      record_date,
+      morning_offering: Number(morning_offering) || 0,
+      afternoon_offering: Number(afternoon_offering) || 0,
       evangelism_offering: Number(evangelism_offering) || 0,
-      total_tithes: auto_tithes, total_income: c.total, mission_fund: c.mission,
-      remaining_after_mission: c.remaining, bishop_fund: c.bishop,
-      usable_church_funds: c.usable, notes, created_by: req.session.userId
+      total_tithes: auto_tithes,
+      total_income: c.total,
+      mission_fund: c.mission,
+      remaining_after_mission: c.remaining,
+      bishop_fund: c.bishop,
+      usable_church_funds: c.usable,
+      notes,
+      created_by: req.session.userId
     };
 
     let createdRecord;
@@ -131,10 +167,14 @@ router.post('/finance/records', async (req, res) => {
       // so the corrected figures can be re-submitted and re-approved.
       recordData.status = 'draft';
       await queries.updateFinanceRecord(existing.id, recordData);
-      createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+      createdRecord = await get('SELECT * FROM finance_daily_records WHERE record_date = ?', [
+        record_date
+      ]);
     } else {
       await queries.createFinanceRecord(recordData);
-      createdRecord = await get("SELECT * FROM finance_daily_records WHERE record_date = ?", [record_date]);
+      createdRecord = await get('SELECT * FROM finance_daily_records WHERE record_date = ?', [
+        record_date
+      ]);
     }
     if (!createdRecord) {
       console.error('Created record not found after write for date:', record_date);
@@ -147,7 +187,12 @@ router.post('/finance/records', async (req, res) => {
     }
     if (Array.isArray(expenses)) {
       for (const exp of expenses) {
-        await queries.createFinanceExpense({ record_id: createdRecord.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
+        await queries.createFinanceExpense({
+          record_id: createdRecord.id,
+          category: exp.category,
+          amount: Number(exp.amount),
+          description: exp.description || ''
+        });
       }
     }
 
@@ -167,7 +212,10 @@ router.get('/finance/records', async (req, res) => {
   try {
     const records = await queries.getFinanceRecords(req.query);
     for (const r of records) {
-      const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [r.record_date]);
+      const tithes = await get(
+        `SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`,
+        [r.record_date]
+      );
       r.auto_tithes = tithes?.total || 0;
       r.expenses = await queries.getFinanceExpenses(r.id);
     }
@@ -183,7 +231,10 @@ router.get('/finance/records/:id', async (req, res) => {
     const record = await queries.getFinanceRecordById(req.params.id);
     if (!record) return res.status(404).json({ error: 'Record not found' });
     const expenses = await queries.getFinanceExpenses(req.params.id);
-    const tithes = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [record.record_date]);
+    const tithes = await get(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`,
+      [record.record_date]
+    );
     record.auto_tithes = tithes?.total || 0;
     // Return individual tithe entries entered via the finance workspace
     const tithe_entries = await all(
@@ -207,10 +258,18 @@ router.put('/finance/records/:id', async (req, res) => {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
     // Approved records must be sent back by an admin before they can be edited.
-    if (existing.status === 'approved') return res.status(409).json({ error: 'Approved records must be sent back before editing' });
+    if (existing.status === 'approved')
+      return res.status(409).json({ error: 'Approved records must be sent back before editing' });
     // Records can be edited at any stage (draft/submitted/approved/rejected);
     // editing resets the record to draft so corrections re-enter the workflow.
-    const { morning_offering, afternoon_offering, evangelism_offering, notes, tithe_entries, expenses } = req.body;
+    const {
+      morning_offering,
+      afternoon_offering,
+      evangelism_offering,
+      notes,
+      tithe_entries,
+      expenses
+    } = req.body;
     validateExpenses(expenses);
 
     // ── Save individual tithe entries as Contributions ────────────────────
@@ -226,7 +285,14 @@ router.put('/finance/records/:id', async (req, res) => {
           if (entry.member_id && Number(entry.amount) > 0) {
             await run(
               `INSERT INTO contributions (member_id, contribution_type_id, amount, payment_date, payment_method, reference_number, recorded_by) VALUES (?, ?, ?, ?, 'Cash', ?, ?)`,
-              [entry.member_id, titheType.id, Number(entry.amount), existing.record_date, `finance-${req.params.id}`, req.session.userId]
+              [
+                entry.member_id,
+                titheType.id,
+                Number(entry.amount),
+                existing.record_date,
+                `finance-${req.params.id}`,
+                req.session.userId
+              ]
             );
           }
         }
@@ -237,7 +303,12 @@ router.put('/finance/records/:id', async (req, res) => {
     if (Array.isArray(expenses)) {
       await run(`DELETE FROM finance_expenses WHERE record_id = ?`, [req.params.id]);
       for (const exp of expenses) {
-        await queries.createFinanceExpense({ record_id: req.params.id, category: exp.category, amount: Number(exp.amount), description: exp.description || '' });
+        await queries.createFinanceExpense({
+          record_id: req.params.id,
+          category: exp.category,
+          amount: Number(exp.amount),
+          description: exp.description || ''
+        });
       }
     }
 
@@ -253,7 +324,10 @@ router.put('/finance/records/:id', async (req, res) => {
     if (notes !== undefined) data.notes = notes;
 
     // Recalculate tithes total (includes entries just saved above)
-    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [existing.record_date]);
+    const tithesResult = await get(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`,
+      [existing.record_date]
+    );
     const auto_tithes = tithesResult?.total || 0;
     data.total_tithes = auto_tithes;
     const c = calcFinance(
@@ -262,8 +336,10 @@ router.put('/finance/records/:id', async (req, res) => {
       auto_tithes
     );
     Object.assign(data, {
-      total_income: c.total, mission_fund: c.mission,
-      remaining_after_mission: c.remaining, bishop_fund: c.bishop,
+      total_income: c.total,
+      mission_fund: c.mission,
+      remaining_after_mission: c.remaining,
+      bishop_fund: c.bishop,
       usable_church_funds: c.usable
     });
     await queries.updateFinanceRecord(req.params.id, data);
@@ -278,7 +354,8 @@ router.delete('/finance/records/:id', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be deleted' });
+    if (!['draft', 'rejected'].includes(existing.status))
+      return res.status(400).json({ error: 'Only draft or rejected records can be deleted' });
     await queries.deleteFinanceRecord(req.params.id);
     res.json({ message: 'Record deleted' });
   } catch (err) {
@@ -291,7 +368,8 @@ router.post('/finance/records/:id/submit', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be submitted' });
+    if (!['draft', 'rejected'].includes(existing.status))
+      return res.status(400).json({ error: 'Only draft or rejected records can be submitted' });
     await queries.submitFinanceRecord(req.params.id, req.session.userId);
     res.json({ message: 'Record submitted for approval' });
   } catch (err) {
@@ -303,10 +381,12 @@ router.post('/finance/records/:id/submit', async (req, res) => {
 router.post('/finance/records/:id/expenses', async (req, res) => {
   try {
     const { category, amount, description } = req.body;
-    if (!category || !amount) return res.status(400).json({ error: 'Category and amount are required' });
+    if (!category || !amount)
+      return res.status(400).json({ error: 'Category and amount are required' });
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (!['draft', 'rejected'].includes(existing.status)) return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
+    if (!['draft', 'rejected'].includes(existing.status))
+      return res.status(400).json({ error: 'Only draft or rejected records can be edited' });
     await queries.createFinanceExpense({ record_id: req.params.id, category, amount, description });
     res.status(201).json({ message: 'Expense added' });
   } catch (err) {
@@ -318,8 +398,14 @@ router.post('/finance/records/:id/expenses', async (req, res) => {
 router.put('/finance/expenses/:id', async (req, res) => {
   try {
     const { category, amount, description } = req.body;
-    if (!category || !amount) return res.status(400).json({ error: 'Category and amount are required' });
-    await queries.updateFinanceExpense(req.params.id, { category, amount, description, receipt_path: undefined });
+    if (!category || !amount)
+      return res.status(400).json({ error: 'Category and amount are required' });
+    await queries.updateFinanceExpense(req.params.id, {
+      category,
+      amount,
+      description,
+      receipt_path: undefined
+    });
     res.json({ message: 'Expense updated' });
   } catch (err) {
     console.error('Error updating expense:', err);
@@ -342,14 +428,22 @@ router.post('/finance/expenses/:id/receipt', upload.single('receipt'), async (re
     if (!req.file) return res.status(400).json({ error: 'Receipt file is required' });
     const ext = path.extname(req.file.originalname).toLowerCase();
     if (ext !== '.pdf') {
-      try { await validateImageContent(req.file.path); } catch (imgErr) {
-        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
-        return res.status(400).json({ error: 'Invalid image file. File content does not match image type.' });
+      try {
+        await validateImageContent(req.file.path);
+      } catch (imgErr) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (_e) {} // eslint-disable-line no-empty
+        return res
+          .status(400)
+          .json({ error: 'Invalid image file. File content does not match image type.' });
       }
     } else {
       const header = fs.readFileSync(req.file.path, { encoding: 'utf8', flag: 'r' }).slice(0, 4);
       if (!header.startsWith('%PDF')) {
-        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (_e) {} // eslint-disable-line no-empty
         return res.status(400).json({ error: 'Invalid PDF file.' });
       }
     }
@@ -366,22 +460,35 @@ router.post('/finance/records/:id/receipt/:type', upload.single('receipt'), asyn
   try {
     if (!req.file) return res.status(400).json({ error: 'Receipt file is required' });
     const { type } = req.params;
-    if (!['bishop', 'evangelism', 'remaining'].includes(type)) return res.status(400).json({ error: 'Invalid receipt type' });
+    if (!['bishop', 'evangelism', 'remaining'].includes(type))
+      return res.status(400).json({ error: 'Invalid receipt type' });
     const ext2 = path.extname(req.file.originalname).toLowerCase();
     if (ext2 !== '.pdf') {
-      try { await validateImageContent(req.file.path); } catch (imgErr) {
-        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
-        return res.status(400).json({ error: 'Invalid image file. File content does not match image type.' });
+      try {
+        await validateImageContent(req.file.path);
+      } catch (imgErr) {
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (_e) {} // eslint-disable-line no-empty
+        return res
+          .status(400)
+          .json({ error: 'Invalid image file. File content does not match image type.' });
       }
     } else {
       const hdr = fs.readFileSync(req.file.path, { encoding: 'utf8', flag: 'r' }).slice(0, 4);
       if (!hdr.startsWith('%PDF')) {
-        try { fs.unlinkSync(req.file.path); } catch (_e) {} // eslint-disable-line no-empty
+        try {
+          fs.unlinkSync(req.file.path);
+        } catch (_e) {} // eslint-disable-line no-empty
         return res.status(400).json({ error: 'Invalid PDF file.' });
       }
     }
     const receiptPath = `/uploads/finance/${req.file.filename}`;
-    const fieldMap = { bishop: 'bishop_receipt', evangelism: 'evangelism_receipt', remaining: 'remaining_receipt' };
+    const fieldMap = {
+      bishop: 'bishop_receipt',
+      evangelism: 'evangelism_receipt',
+      remaining: 'remaining_receipt'
+    };
     await queries.updateFinanceRecord(req.params.id, { [fieldMap[type]]: receiptPath });
     res.json({ message: `${type} receipt uploaded`, path: receiptPath });
   } catch (err) {
@@ -390,11 +497,12 @@ router.post('/finance/records/:id/receipt/:type', upload.single('receipt'), asyn
   }
 });
 
-router.put('/finance/records/:id/approve', async (req, res) => {
+router.put('/finance/records/:id/approve', requireRole(['admin']), async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (existing.status !== 'submitted') return res.status(400).json({ error: 'Only submitted records can be approved' });
+    if (existing.status !== 'submitted')
+      return res.status(400).json({ error: 'Only submitted records can be approved' });
     await queries.approveFinanceRecord(req.params.id, req.session.userId);
     res.json({ message: 'Record approved' });
   } catch (err) {
@@ -403,13 +511,14 @@ router.put('/finance/records/:id/approve', async (req, res) => {
   }
 });
 
-router.put('/finance/records/:id/reject', async (req, res) => {
+router.put('/finance/records/:id/reject', requireRole(['admin']), async (req, res) => {
   try {
     const { reason } = req.body;
     if (!reason) return res.status(400).json({ error: 'Rejection reason is required' });
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (existing.status !== 'submitted') return res.status(400).json({ error: 'Only submitted records can be rejected' });
+    if (existing.status !== 'submitted')
+      return res.status(400).json({ error: 'Only submitted records can be rejected' });
     await queries.rejectFinanceRecord(req.params.id, req.session.userId, reason);
     res.json({ message: 'Record rejected' });
   } catch (err) {
@@ -418,12 +527,18 @@ router.put('/finance/records/:id/reject', async (req, res) => {
   }
 });
 
-router.put('/finance/records/:id/send-back', async (req, res) => {
+router.put('/finance/records/:id/send-back', requireRole(['admin']), async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    if (!['submitted', 'rejected', 'approved'].includes(existing.status)) return res.status(400).json({ error: 'Only submitted, rejected, or approved records can be sent back' });
-    await run(`UPDATE finance_daily_records SET status='draft', rejection_reason=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?`, [req.params.id]);
+    if (!['submitted', 'rejected', 'approved'].includes(existing.status))
+      return res
+        .status(400)
+        .json({ error: 'Only submitted, rejected, or approved records can be sent back' });
+    await run(
+      `UPDATE finance_daily_records SET status='draft', rejection_reason=NULL, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [req.params.id]
+    );
     res.json({ message: 'Record sent back for correction' });
   } catch (err) {
     console.error('Error sending back record:', err);
@@ -435,12 +550,19 @@ router.put('/finance/records/:id/recalculate', async (req, res) => {
   try {
     const existing = await queries.getFinanceRecordById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Record not found' });
-    const tithesResult = await get(`SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`, [existing.record_date]);
+    const tithesResult = await get(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM contributions c JOIN contribution_types ct ON c.contribution_type_id = ct.id WHERE ct.name = 'Tithes' AND c.payment_date = ? AND c.reference_number LIKE 'finance-%'`,
+      [existing.record_date]
+    );
     const auto_tithes = tithesResult?.total || 0;
     const c = calcFinance(existing.morning_offering, existing.afternoon_offering, auto_tithes);
     await queries.updateFinanceRecord(req.params.id, {
-      total_tithes: auto_tithes, total_income: c.total, mission_fund: c.mission,
-      remaining_after_mission: c.remaining, bishop_fund: c.bishop, usable_church_funds: c.usable
+      total_tithes: auto_tithes,
+      total_income: c.total,
+      mission_fund: c.mission,
+      remaining_after_mission: c.remaining,
+      bishop_fund: c.bishop,
+      usable_church_funds: c.usable
     });
     res.json({ message: 'Tithes recalculated', total_tithes: auto_tithes, ...c });
   } catch (err) {
@@ -466,7 +588,8 @@ router.get('/finance/submissions', async (req, res) => {
 router.get('/finance/reports/summary', async (req, res) => {
   try {
     const { date_from, date_to } = req.query;
-    if (!date_from || !date_to) return res.status(400).json({ error: 'date_from and date_to are required' });
+    if (!date_from || !date_to)
+      return res.status(400).json({ error: 'date_from and date_to are required' });
     const summary = await queries.getFinanceSummary(date_from, date_to);
     res.json(summary);
   } catch (err) {
@@ -489,7 +612,8 @@ router.get('/finance/reports/trend', async (req, res) => {
 router.get('/finance/reports/export', async (req, res) => {
   try {
     const { date_from, date_to } = req.query;
-    if (!date_from || !date_to) return res.status(400).json({ error: 'date_from and date_to are required' });
+    if (!date_from || !date_to)
+      return res.status(400).json({ error: 'date_from and date_to are required' });
     const records = await queries.getFinanceRecords({ date_from, date_to });
     for (const r of records) {
       r.expenses = await queries.getFinanceExpenses(r.id);
