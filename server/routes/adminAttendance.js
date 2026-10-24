@@ -595,6 +595,29 @@ router.get('/leader-dashboard/:id', async (req, res) => {
       db.all(q, params, (err, rows) => err ? reject(err) : resolve(rows));
     });
 
+    // Use dates on which another leader in the same section submitted as the
+    // expected service dates. This avoids treating ordinary non-service days
+    // as missed submissions.
+    const missedSubmissions = await new Promise((resolve, reject) => {
+      db.all(
+        `SELECT DISTINCT expected.date, expected.service_id, st.name as service_name
+         FROM submission_log expected
+         LEFT JOIN submission_log submitted
+           ON submitted.leader_id = ?
+          AND submitted.date = expected.date
+          AND COALESCE(submitted.service_id, 0) = COALESCE(expected.service_id, 0)
+         LEFT JOIN service_types st ON st.id = expected.service_id
+         WHERE expected.section_id = ?
+           AND expected.leader_id <> ?
+           AND expected.date >= ?
+           AND expected.date < ?
+           AND submitted.id IS NULL
+         ORDER BY expected.date DESC, st.name ASC`,
+        [leaderId, leader.section_id, leaderId, formatLocalDate(addDays(new Date(), -90)), formatLocalDate(new Date())],
+        (err, rows) => err ? reject(err) : resolve(rows)
+      );
+    });
+
     const trendStartDate = formatLocalDate(addDays(new Date(), -90));
     const trends = await new Promise((resolve, reject) => {
       const q = isHead
@@ -624,6 +647,7 @@ router.get('/leader-dashboard/:id', async (req, res) => {
       leader,
       roster: members,
       history,
+      missedSubmissions,
       trends
     });
   } catch (error) {

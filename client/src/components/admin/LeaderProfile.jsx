@@ -18,6 +18,7 @@ const SUBTABS = [
   { key: 'members', label: 'Members', icon: Users },
   { key: 'matrix', label: 'Weekly Matrix', icon: Calendar },
   { key: 'roster', label: 'Roster', icon: ClipboardList },
+  { key: 'missed', label: 'Missed Days', icon: AlertTriangle },
   { key: 'analytics', label: 'Analytics', icon: TrendingUp },
   { key: 'performance', label: 'Performance', icon: Award },
 ];
@@ -299,6 +300,51 @@ const AnalyticsTab = ({ trends, history }) => {
   );
 };
 
+const MissedSubmissionsTab = ({ missedSubmissions }) => {
+  const missed = asArray(missedSubmissions);
+
+  return (
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Missed Attendance Submissions</h3>
+          <p className="text-xs text-slate-400 mt-1">Service dates in the last 90 days when another leader in this section submitted attendance.</p>
+        </div>
+        <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+          {missed.length} missed
+        </span>
+      </div>
+      {missed.length === 0 ? (
+        <p className="text-xs text-slate-400 text-center py-8">No missed submission days found in the last 90 days.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-700">
+                <th className="text-left py-2 px-3 font-semibold text-slate-500">Date</th>
+                <th className="text-left py-2 px-3 font-semibold text-slate-500">Service</th>
+                <th className="text-left py-2 px-3 font-semibold text-slate-500">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {missed.map((entry, index) => {
+                const date = entry.date instanceof Date ? entry.date.toISOString().slice(0, 10) : String(entry.date).slice(0, 10);
+                return (
+                  <tr key={`${date}-${entry.service_id || 'service'}-${index}`} className="border-b border-slate-100 dark:border-slate-700/50">
+                    <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300">{fdate(date)}</td>
+                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{entry.service_name || 'Service'}</td>
+                    <td className="py-2.5 px-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Not submitted</span></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Performance Tab ──────────────────────────────────────────────────────
 const PerformanceTab = ({ performance, ranking }) => {
   if (!performance && !ranking) {
@@ -442,7 +488,7 @@ const LeaderProfile = ({ leaderId, onBack }) => {
     );
   }
 
-  const { leader, roster, trends, history } = data;
+  const { leader, roster, trends, history, missedSubmissions } = data;
   const ranking = leaderRankings.find(l => Number(l.id) === Number(leaderId) || Number(l.leader_id) === Number(leaderId));
   const rank = ranking ? (leaderRankings.indexOf(ranking) + 1) : null;
   const totalTrendRecords = asArray(trends).reduce((sum, t) => sum + (Number(t.present_count || 0) + Number(t.absent_count || 0) + Number(t.excused_count || 0)), 0);
@@ -618,6 +664,20 @@ const LeaderProfile = ({ leaderId, onBack }) => {
       y = doc.lastAutoTable.finalY + 12;
     }
 
+    addSectionHeader('Missed Attendance Submissions (90 Days)');
+    autoTableMod.default(doc, {
+      startY: y,
+      head: [['Date', 'Service', 'Status']],
+      body: asArray(missedSubmissions).length > 0
+        ? asArray(missedSubmissions).map(entry => {
+            const date = entry.date instanceof Date ? entry.date.toISOString().slice(0, 10) : String(entry.date).slice(0, 10);
+            return [fdate(date), entry.service_name || 'Service', 'Not submitted'];
+          })
+        : [['—', '—', 'No missed days found']],
+      ...tableDefaults,
+    });
+    y = doc.lastAutoTable.finalY + 12;
+
     const STATUS_SHORT = { present: 'P', absent: 'A', excused: 'E' };
     if (matrixData.length > 0 && weeksList.length > 0) {
       addSectionHeader('Weekly Attendance Matrix (12 Weeks)');
@@ -779,6 +839,7 @@ const LeaderProfile = ({ leaderId, onBack }) => {
       {tab === 'members' && <MembersTab roster={roster} />}
       {tab === 'matrix' && <WeeklyAttendanceMatrix leaderId={leaderId} title={`Weekly Attendance Matrix - ${leader.full_name}`} />}
       {tab === 'roster' && <RosterTab roster={roster} trends={trends} />}
+      {tab === 'missed' && <MissedSubmissionsTab missedSubmissions={missedSubmissions} />}
       {tab === 'analytics' && <AnalyticsTab trends={trends} history={history} />}
       {tab === 'performance' && <PerformanceTab performance={performance} ranking={ranking} />}
     </div>
