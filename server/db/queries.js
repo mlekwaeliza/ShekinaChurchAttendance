@@ -865,12 +865,13 @@ function createQueries({ run, get, all, usePostgres }) {
     getAttendanceByDateAndSection: (date, sectionId, serviceId = 1) => {
       const isAll = String(serviceId) === 'all';
       const query = `
-      SELECT a.status, m.full_name, m.membership_id, u.full_name as leader_name, submitter.full_name as submitted_by_name
+      SELECT a.status, m.full_name, m.membership_id, l.id as leader_id,
+             u.full_name as leader_name, submitter.full_name as submitted_by_name
       FROM attendance a
       JOIN members m ON a.member_id = m.id
       JOIN leaders l ON m.leader_id = l.id
       JOIN users u ON l.user_id = u.id
-      JOIN users submitter ON submitter.id = a.submitted_by
+      LEFT JOIN users submitter ON submitter.id = a.submitted_by
       WHERE a.date = ? AND m.section_id = ?
       ${isAll ? '' : 'AND a.service_type_id = ?'}
     `;

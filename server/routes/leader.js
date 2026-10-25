@@ -959,6 +959,43 @@ router.get('/history', async (req, res) => {
 });
 
 // Get attendance trends data for charts
+// Compare church-wide Main Service dates with this leader's submissions.
+router.get('/missed-submissions', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord) return res.status(404).json({ error: 'Leader record not found' });
+
+    const startDate = formatLocalDate(addDays(new Date(), -90));
+    const endDate = formatLocalDate(new Date());
+    const missedSubmissions = await all(
+      `SELECT DISTINCT expected.date, expected.service_id, st.name as service_name
+       FROM (
+         SELECT date, service_id FROM submission_log
+         WHERE service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+         UNION
+         SELECT date, service_type_id as service_id FROM attendance
+         WHERE service_type_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+       ) expected
+       LEFT JOIN submission_log submitted
+         ON submitted.leader_id = ?
+        AND submitted.date = expected.date
+        AND COALESCE(submitted.service_id, 0) = COALESCE(expected.service_id, 0)
+       LEFT JOIN service_types st ON st.id = expected.service_id
+       WHERE expected.service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+         AND expected.date >= ?
+         AND expected.date < ?
+         AND submitted.id IS NULL
+       ORDER BY expected.date DESC, st.name ASC`,
+      [leaderRecord.id, startDate, endDate]
+    );
+
+    res.json(missedSubmissions);
+  } catch (error) {
+    console.error('Failed to fetch missed leader submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch missed attendance submissions' });
+  }
+});
+
 router.get('/attendance-trends', async (req, res) => {
   try {
     const leaderRecord = await queries.getLeaderByUserId(req.session.userId);

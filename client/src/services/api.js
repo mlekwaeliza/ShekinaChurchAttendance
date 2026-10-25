@@ -382,7 +382,9 @@ export const leaderAPI = {
       ...(target_leader_id ? { target_leader_id } : {})
     }),
   getHistory: () => api.get('/leader/history'),
-  getSectionOverview: (date) => api.get(`/leader/section-overview/${date}`),
+  getMissedSubmissions: () => api.get('/leader/missed-submissions'),
+  getSectionOverview: (date, serviceId = 1) =>
+    api.get(`/leader/section-overview/${date}`, { params: { service_id: serviceId } }),
   getAttendanceTrends: (days = 90) => api.get(`/leader/attendance-trends?days=${days}`),
   getConsecutiveAbsences: () => api.get('/leader/consecutive-absences'),
   getFollowUps: () => api.get('/leader/follow-ups'),

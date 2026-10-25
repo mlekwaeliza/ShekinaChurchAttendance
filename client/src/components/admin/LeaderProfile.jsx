@@ -308,7 +308,7 @@ const MissedSubmissionsTab = ({ missedSubmissions }) => {
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <h3 className="text-sm font-bold text-slate-900 dark:text-white">Missed Attendance Submissions</h3>
-          <p className="text-xs text-slate-400 mt-1">Service dates in the last 90 days when another leader in this section submitted attendance.</p>
+          <p className="text-xs text-slate-400 mt-1">Sunday Main Service dates in church service history from the last 90 days that this leader has not submitted.</p>
         </div>
         <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
           {missed.length} missed
@@ -333,7 +333,7 @@ const MissedSubmissionsTab = ({ missedSubmissions }) => {
                   <tr key={`${date}-${entry.service_id || 'service'}-${index}`} className="border-b border-slate-100 dark:border-slate-700/50">
                     <td className="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300">{fdate(date)}</td>
                     <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{entry.service_name || 'Service'}</td>
-                    <td className="py-2.5 px-3"><span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">Not submitted</span></td>
+                    <td className="py-2.5 px-3"><span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">Pending submission</span></td>
                   </tr>
                 );
               })}

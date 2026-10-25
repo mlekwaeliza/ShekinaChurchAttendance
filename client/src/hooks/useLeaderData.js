@@ -145,6 +145,7 @@ const useLeaderData = () => {
   // History
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [missedSubmissions, setMissedSubmissions] = useState([]);
 
   // Section Overview (head leaders)
   const [overviewData, setOverviewData] = useState(null);
@@ -396,6 +397,19 @@ const useLeaderData = () => {
       console.error('Failed to load history:', error);
     } finally {
       setHistoryLoading(false);
+    }
+  }, [user?.is_new_member_leader]);
+
+  const loadMissedSubmissions = useCallback(async () => {
+    if (user?.is_new_member_leader) {
+      setMissedSubmissions([]);
+      return;
+    }
+    try {
+      const response = await leaderAPI.getMissedSubmissions();
+      setMissedSubmissions(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Failed to load missed attendance submissions:', error);
     }
   }, [user?.is_new_member_leader]);
 
@@ -718,6 +732,7 @@ const useLeaderData = () => {
       setSubmitted(true);
       removeDraft(draftKey);
       loadHistory();
+      loadMissedSubmissions();
       showMessage('Attendance submitted successfully!');
       return true;
     } catch (error) {
@@ -736,6 +751,7 @@ const useLeaderData = () => {
     actingOnBehalf,
     sectionInfo,
     loadHistory,
+    loadMissedSubmissions,
     showMessage,
     isOnline,
     queueSubmission,
@@ -815,6 +831,7 @@ const useLeaderData = () => {
     }
     loadMembers();
     loadHistory();
+    loadMissedSubmissions();
     loadConsecutiveAbsences();
     loadFollowUps();
     loadAssignments();
@@ -822,6 +839,7 @@ const useLeaderData = () => {
     user?.is_new_member_leader,
     loadMembers,
     loadHistory,
+    loadMissedSubmissions,
     loadConsecutiveAbsences,
     loadFollowUps,
     loadAssignments
@@ -834,12 +852,13 @@ const useLeaderData = () => {
       const detail = e?.detail || {};
       if (!detail.leader_id || Number(detail.leader_id) === Number(user?.id)) {
         loadHistory();
+        loadMissedSubmissions();
         checkSubmission();
       }
     };
     window.addEventListener('app:data-changed', handleDataChanged);
     return () => window.removeEventListener('app:data-changed', handleDataChanged);
-  }, [user?.id, loadHistory, checkSubmission]);
+  }, [user?.id, loadHistory, loadMissedSubmissions, checkSubmission]);
 
   useEffect(() => {
     if (selectedDate !== previousSelectedDateRef.current) {
@@ -933,6 +952,7 @@ const useLeaderData = () => {
         if (result.synced > 0) {
           showMessage(`${result.synced} offline attendance submission(s) synced successfully`);
           loadHistory();
+          loadMissedSubmissions();
           checkSubmission();
         }
         if (result.conflicts > 0) {
@@ -946,7 +966,7 @@ const useLeaderData = () => {
         }
       });
     }
-  }, [isOnline, serviceTypes, syncPending, showMessage, loadHistory, checkSubmission]);
+  }, [isOnline, serviceTypes, syncPending, showMessage, loadHistory, loadMissedSubmissions, checkSubmission]);
 
   return {
     // Section info
@@ -987,6 +1007,8 @@ const useLeaderData = () => {
     history,
     historyLoading,
     loadHistory,
+    missedSubmissions,
+    loadMissedSubmissions,
     // Overview (head)
     overviewData,
     overviewLoading,

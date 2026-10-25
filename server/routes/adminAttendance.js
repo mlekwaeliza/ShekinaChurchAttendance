@@ -576,44 +576,51 @@ router.get('/leader-dashboard/:id', async (req, res) => {
     });
 
     const history = await new Promise((resolve, reject) => {
-      const q = isHead
-        ? `SELECT sl.date, sl.created_at as submitted_at, COUNT(a.id) as records_count
-           FROM submission_log sl
-           LEFT JOIN attendance a ON sl.date = a.date AND a.member_id IN (SELECT id FROM members WHERE section_id = ?)
-           WHERE sl.section_id = ? OR sl.leader_id = ?
-           GROUP BY sl.id, sl.date, sl.created_at
-           ORDER BY sl.date DESC, sl.created_at DESC
-           LIMIT 20`
-        : `SELECT sl.date, sl.created_at as submitted_at, COUNT(a.id) as records_count
-           FROM submission_log sl
-           LEFT JOIN attendance a ON sl.date = a.date AND sl.leader_id = (SELECT m.leader_id FROM members m WHERE m.id = a.member_id LIMIT 1)
-           WHERE sl.leader_id = ?
-           GROUP BY sl.id, sl.date, sl.created_at
-           ORDER BY sl.date DESC, sl.created_at DESC
-           LIMIT 20`;
-      const params = isHead ? [leader.section_id, leader.section_id, leaderId] : [leaderId];
-      db.all(q, params, (err, rows) => err ? reject(err) : resolve(rows));
+      db.all(
+        `SELECT sl.date, sl.created_at AS submitted_at, COUNT(a.id) AS records_count
+         FROM submission_log sl
+         LEFT JOIN attendance a
+           ON a.date = sl.date
+          AND a.service_type_id = sl.service_id
+          AND a.member_id IN (
+            SELECT id FROM members
+            WHERE leader_id = ? OR (COALESCE(?, 0) = 1 AND section_id = ?)
+          )
+         WHERE sl.service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+           AND (sl.leader_id = ? OR (COALESCE(?, 0) = 1 AND sl.section_id = ?))
+         GROUP BY sl.id, sl.date, sl.created_at
+         ORDER BY sl.date DESC, sl.created_at DESC
+         LIMIT 20`,
+        [leaderId, isHead ? 1 : 0, leader.section_id, leaderId, isHead ? 1 : 0, leader.section_id],
+        (err, rows) => err ? reject(err) : resolve(rows)
+      );
     });
 
-    // Use dates on which another leader in the same section submitted as the
-    // expected service dates. This avoids treating ordinary non-service days
-    // as missed submissions.
+    // Service History is church-wide, so use every recorded Main Service date
+    // as an expected date, then compare it with this leader's submission log.
+    // Partial attendance entries remain pending until the leader submits.
     const missedSubmissions = await new Promise((resolve, reject) => {
       db.all(
         `SELECT DISTINCT expected.date, expected.service_id, st.name as service_name
-         FROM submission_log expected
+         FROM (
+           SELECT date, service_id FROM submission_log
+           WHERE service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+           UNION
+           SELECT a.date, a.service_type_id as service_id
+           FROM attendance a
+           WHERE a.service_type_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+         ) expected
          LEFT JOIN submission_log submitted
            ON submitted.leader_id = ?
           AND submitted.date = expected.date
           AND COALESCE(submitted.service_id, 0) = COALESCE(expected.service_id, 0)
          LEFT JOIN service_types st ON st.id = expected.service_id
-         WHERE expected.section_id = ?
-           AND expected.leader_id <> ?
+         WHERE expected.service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
            AND expected.date >= ?
            AND expected.date < ?
            AND submitted.id IS NULL
          ORDER BY expected.date DESC, st.name ASC`,
-        [leaderId, leader.section_id, leaderId, formatLocalDate(addDays(new Date(), -90)), formatLocalDate(new Date())],
+        [leaderId, formatLocalDate(addDays(new Date(), -90)), formatLocalDate(new Date())],
         (err, rows) => err ? reject(err) : resolve(rows)
       );
     });
