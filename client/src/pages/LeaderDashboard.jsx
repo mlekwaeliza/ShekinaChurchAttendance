@@ -37,6 +37,13 @@ const LeaderDashboard = () => {
   const selectedService = data.serviceTypes.find(
     (service) => Number(service.id) === Number(data.selectedServiceId)
   );
+  const {
+    isHead,
+    selectedDate,
+    selectedServiceId,
+    loadOverview,
+    loadSectionPendingSubmissions
+  } = data;
 
   // Load trends when reports tab is active
   useEffect(() => {
@@ -47,10 +54,18 @@ const LeaderDashboard = () => {
 
   // Load section submission status on the head leader's dashboard and overview tab.
   useEffect(() => {
-    if ((activeTab === 'dashboard' || activeTab === 'overview') && data.isHead) {
-      data.loadOverview();
+    if ((activeTab === 'dashboard' || activeTab === 'overview') && isHead) {
+      loadOverview();
+      if (activeTab === 'dashboard') loadSectionPendingSubmissions();
     }
-  }, [activeTab, data.isHead, data.selectedDate, data.selectedServiceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    activeTab,
+    isHead,
+    selectedDate,
+    selectedServiceId,
+    loadOverview,
+    loadSectionPendingSubmissions
+  ]);
 
   if (data.loading) {
     return (
@@ -297,70 +312,72 @@ const LeaderDashboard = () => {
           </div>
         </section>
       )}
-      {activeTab === 'dashboard' &&
-        data.isHead &&
-        data.overviewData &&
-        (() => {
-          const pendingLeaders = (data.overviewData.subleaders || []).filter(
-            (leader) =>
-              !leader.submitted && Number(leader.leader_id) !== Number(data.sectionInfo?.leader_id)
-          );
-          if (pendingLeaders.length === 0) return null;
-
-          return (
-            <section
-              className="mb-5 rounded-2xl border border-rose-300 bg-rose-50 p-4 shadow-sm dark:border-rose-800 dark:bg-rose-950/30"
-              role="alert"
-            >
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <h2 className="text-sm font-bold text-rose-900 dark:text-rose-200">
-                        Leaders need attendance follow-up
-                      </h2>
-                      <p className="mt-1 text-xs text-rose-800 dark:text-rose-300">
-                        {pendingLeaders.length} leader{pendingLeaders.length === 1 ? '' : 's'} have
-                        not submitted for {selectedService?.name || 'this service'} on{' '}
-                        {fdate(data.selectedDate)}.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/leader/overview')}
-                      className="text-xs font-bold text-rose-800 underline underline-offset-2 hover:text-rose-950 dark:text-rose-300 dark:hover:text-rose-100"
-                    >
-                      Open section overview
-                    </button>
-                  </div>
-                  <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {pendingLeaders.slice(0, 8).map((leader) => (
-                      <li
-                        key={leader.leader_id}
-                        className="rounded-xl border border-rose-200 bg-white/70 px-3 py-2 dark:border-rose-900 dark:bg-slate-900/40"
-                      >
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          {leader.leader_name}
-                        </p>
-                        {leader.phone && (
-                          <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">
-                            {leader.phone}
-                          </p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                  {pendingLeaders.length > 8 && (
-                    <p className="mt-2 text-[11px] text-rose-700 dark:text-rose-400">
-                      Showing 8 of {pendingLeaders.length} pending leaders.
-                    </p>
-                  )}
+      {activeTab === 'dashboard' && data.isHead && (
+        <section className="mb-5 rounded-2xl border border-rose-300 bg-rose-50 p-4 shadow-sm dark:border-rose-800 dark:bg-rose-950/30">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                    Leaders yet to submit
+                  </h2>
+                  <p className="mt-1 text-xs text-rose-800 dark:text-rose-300">
+                    {data.sectionPendingLoading
+                      ? 'Checking Sunday Main Service history…'
+                      : `${data.sectionPendingSubmissions.length} pending leader submission${data.sectionPendingSubmissions.length === 1 ? '' : 's'} across the last 90 days.`}
+                  </p>
                 </div>
+                {!data.sectionPendingLoading && data.sectionPendingSubmissions.length > 0 && (
+                  <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700 dark:bg-rose-900/50 dark:text-rose-300">
+                    {data.sectionPendingSubmissions.length} pending
+                  </span>
+                )}
               </div>
-            </section>
-          );
-        })()}
+              {!data.sectionPendingLoading && data.sectionPendingSubmissions.length === 0 ? (
+                <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                  All leaders in your section have submitted for recorded Main Service dates.
+                </p>
+              ) : (
+                <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                  {data.sectionPendingSubmissions.slice(0, 20).map((entry) => (
+                    <li
+                      key={`${entry.leader_id}-${entry.date}-${entry.service_id}`}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-200 bg-white/70 px-3 py-2 dark:border-rose-900 dark:bg-slate-900/40"
+                    >
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                          {entry.leader_name}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">
+                          {fdate(entry.date)} · {entry.service_name || 'Main Service'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          data.handleDateSelection(String(entry.date).slice(0, 10));
+                          data.handleServiceSelection(entry.service_id);
+                          data.handleAttendanceLeaderSelection(entry.leader_id);
+                          navigate('/leader/attendance');
+                        }}
+                        className="text-xs font-bold text-rose-800 underline underline-offset-2 hover:text-rose-950 dark:text-rose-300 dark:hover:text-rose-100"
+                      >
+                        Review attendance
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {data.sectionPendingSubmissions.length > 20 && (
+                <p className="mt-2 text-[11px] text-rose-700 dark:text-rose-400">
+                  Showing 20 of {data.sectionPendingSubmissions.length} pending submissions.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
       {activeTab === 'dashboard' && (
         <section className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm dark:border-amber-800 dark:bg-amber-950/30">
           <div className="flex items-start gap-3">

@@ -996,6 +996,48 @@ router.get('/missed-submissions', async (req, res) => {
   }
 });
 
+// List missing Main Service submissions by section leader and service date.
+router.get('/section-pending-submissions', async (req, res) => {
+  try {
+    const leaderRecord = await queries.getLeaderByUserId(req.session.userId);
+    if (!leaderRecord || !leaderRecord.is_head) {
+      return res.status(403).json({ error: 'Access denied. Not a head leader.' });
+    }
+
+    const startDate = formatLocalDate(addDays(new Date(), -90));
+    const endDate = formatLocalDate(new Date());
+    const pendingSubmissions = await all(
+      `SELECT DISTINCT l.id AS leader_id, u.full_name AS leader_name,
+              expected.date, expected.service_id, st.name AS service_name
+       FROM (
+         SELECT date, service_id FROM submission_log
+         WHERE service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+         UNION
+         SELECT date, service_type_id AS service_id FROM attendance
+         WHERE service_type_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+       ) expected
+       JOIN leaders l ON l.section_id = ? AND l.is_active = 1 AND COALESCE(l.is_head, 0) = 0
+       JOIN users u ON u.id = l.user_id
+       LEFT JOIN submission_log submitted
+         ON submitted.leader_id = l.id
+        AND submitted.date = expected.date
+        AND submitted.service_id = expected.service_id
+       LEFT JOIN service_types st ON st.id = expected.service_id
+       WHERE expected.service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+         AND expected.date >= ?
+         AND expected.date < ?
+         AND submitted.id IS NULL
+       ORDER BY expected.date DESC, u.full_name ASC`,
+      [leaderRecord.section_id, startDate, endDate]
+    );
+
+    res.json(pendingSubmissions);
+  } catch (error) {
+    console.error('Failed to fetch section pending submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch section pending submissions' });
+  }
+});
+
 router.get('/attendance-trends', async (req, res) => {
   try {
     const leaderRecord = await queries.getLeaderByUserId(req.session.userId);

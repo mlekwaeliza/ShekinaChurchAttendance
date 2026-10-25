@@ -146,6 +146,8 @@ const useLeaderData = () => {
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [missedSubmissions, setMissedSubmissions] = useState([]);
+  const [sectionPendingSubmissions, setSectionPendingSubmissions] = useState([]);
+  const [sectionPendingLoading, setSectionPendingLoading] = useState(false);
 
   // Section Overview (head leaders)
   const [overviewData, setOverviewData] = useState(null);
@@ -412,6 +414,22 @@ const useLeaderData = () => {
       console.error('Failed to load missed attendance submissions:', error);
     }
   }, [user?.is_new_member_leader]);
+
+  const loadSectionPendingSubmissions = useCallback(async () => {
+    if (user?.is_new_member_leader || !isHead) {
+      setSectionPendingSubmissions([]);
+      return;
+    }
+    setSectionPendingLoading(true);
+    try {
+      const response = await leaderAPI.getSectionPendingSubmissions();
+      setSectionPendingSubmissions(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Failed to load pending section submissions:', error);
+    } finally {
+      setSectionPendingLoading(false);
+    }
+  }, [isHead, user?.is_new_member_leader]);
 
   const loadOverview = useCallback(async () => {
     if (user?.is_new_member_leader) {
@@ -853,12 +871,13 @@ const useLeaderData = () => {
       if (!detail.leader_id || Number(detail.leader_id) === Number(user?.id)) {
         loadHistory();
         loadMissedSubmissions();
+        loadSectionPendingSubmissions();
         checkSubmission();
       }
     };
     window.addEventListener('app:data-changed', handleDataChanged);
     return () => window.removeEventListener('app:data-changed', handleDataChanged);
-  }, [user?.id, loadHistory, loadMissedSubmissions, checkSubmission]);
+  }, [user?.id, loadHistory, loadMissedSubmissions, loadSectionPendingSubmissions, checkSubmission]);
 
   useEffect(() => {
     if (selectedDate !== previousSelectedDateRef.current) {
@@ -1009,6 +1028,9 @@ const useLeaderData = () => {
     loadHistory,
     missedSubmissions,
     loadMissedSubmissions,
+    sectionPendingSubmissions,
+    sectionPendingLoading,
+    loadSectionPendingSubmissions,
     // Overview (head)
     overviewData,
     overviewLoading,

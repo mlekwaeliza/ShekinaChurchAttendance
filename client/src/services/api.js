@@ -383,6 +383,7 @@ export const leaderAPI = {
     }),
   getHistory: () => api.get('/leader/history'),
   getMissedSubmissions: () => api.get('/leader/missed-submissions'),
+  getSectionPendingSubmissions: () => api.get('/leader/section-pending-submissions'),
   getSectionOverview: (date, serviceId = 1) =>
     api.get(`/leader/section-overview/${date}`, { params: { service_id: serviceId } }),
   getAttendanceTrends: (days = 90) => api.get(`/leader/attendance-trends?days=${days}`),
