@@ -4,7 +4,8 @@ import { adminAPI } from '../../services/api';
 
 const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
   const [rows, setRows] = useState([]);
-  const [search, setSearch] = useState('');
+  const [leaderSearch, setLeaderSearch] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
   const [section, setSection] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,19 +28,22 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
   }, [loadSubmissions]);
 
   const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = leaderSearch.trim().toLowerCase();
     return rows.filter((row) => {
       if (section && String(row.section_id) !== section) return false;
-      return (
-        !term ||
-        `${row.leader_name} ${row.section_name} ${row.date}`.toLowerCase().includes(term)
-      );
+      if (dateFilter && row.date !== dateFilter) return false;
+      return !term || row.leader_name.toLowerCase().includes(term);
     });
-  }, [rows, search, section]);
+  }, [rows, leaderSearch, dateFilter, section]);
+
+  const availableDates = useMemo(
+    () => [...new Set(rows.map((row) => row.date))].sort((a, b) => b.localeCompare(a)),
+    [rows]
+  );
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div className="grid min-w-0 gap-5 border-b border-slate-200 p-5 dark:border-slate-700 xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.9fr)] xl:items-center">
+      <div className="grid min-w-0 gap-5 border-b border-slate-200 p-5 dark:border-slate-700 xl:grid-cols-[minmax(0,1fr)_minmax(640px,1.15fr)] xl:items-center">
         <div className="flex min-w-0 items-start gap-3">
           <ClipboardList className="mt-1 h-5 w-5 shrink-0 text-rose-500" />
           <div>
@@ -51,16 +55,34 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
             </p>
           </div>
         </div>
-        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.75fr)_auto]">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(170px,1fr)_minmax(145px,0.8fr)_minmax(150px,0.8fr)_auto]">
           <div className="relative min-w-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search leader or date"
+              value={leaderSearch}
+              onChange={(event) => setLeaderSearch(event.target.value)}
+              placeholder="Filter by leader"
+              aria-label="Filter by leader"
               className="input h-10 w-full min-w-0 rounded-xl pl-9"
             />
           </div>
+          <select
+            value={dateFilter}
+            onChange={(event) => setDateFilter(event.target.value)}
+            className="input h-10 w-full min-w-0 rounded-xl"
+            aria-label="Filter by date"
+          >
+            <option value="">All dates</option>
+            {availableDates.map((date) => (
+              <option key={date} value={date}>
+                {new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
+                })}
+              </option>
+            ))}
+          </select>
           <select
             value={section}
             onChange={(event) => setSection(event.target.value)}
