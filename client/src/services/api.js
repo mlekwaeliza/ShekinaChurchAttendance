@@ -172,6 +172,7 @@ export const adminAPI = {
     api.post('/admin/attendance', { date, attendance, leader_id, section_id }),
   getMissingSubmissions: (date, service_id = 1) =>
     api.get('/admin/attendance/missing-submissions', { params: { date, service_id } }),
+  getLeadersMissingSubmissions: () => api.get('/admin/leaders/missing-submissions'),
   getLeaderMembers: (leaderId, date, service_id = 1) =>
     api.get(`/admin/attendance/leader-members/${leaderId}`, { params: { date, service_id } }),
   bulkCorrectAttendance: (data) => api.post('/admin/attendance/bulk-correct', data),

@@ -17,6 +17,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { openWhatsAppChat, toWhatsAppNumber } from '../../utils/phone';
+import MissingLeaderSubmissions from './MissingLeaderSubmissions';
 
 // Opens WhatsApp with a short greeting — the admin edits it before sending.
 const buildWhatsAppGreeting = (fullName) => {
@@ -129,6 +130,7 @@ const LeaderDirectory = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [collapsedSections, setCollapsedSections] = useState(new Set());
   const [expandedLeaderRosters, setExpandedLeaderRosters] = useState(new Set());
+  const [activeView, setActiveView] = useState('directory');
 
   const toggleSection = (name) => {
     setCollapsedSections((prev) => {
@@ -252,6 +254,30 @@ const LeaderDirectory = ({
         </div>
       </div>
 
+      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
+        <button
+          type="button"
+          onClick={() => setActiveView('directory')}
+          className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeView === 'directory' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-slate-500'}`}
+        >
+          Leader Directory
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveView('missing')}
+          className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeView === 'missing' ? 'border-rose-500 text-rose-600 dark:text-rose-400' : 'border-transparent text-slate-500'}`}
+        >
+          Missing Submissions
+        </button>
+      </div>
+
+      {activeView === 'missing' ? (
+        <MissingLeaderSubmissions
+          sections={sections}
+          onViewLeader={(id) => onViewAnalytics(id)}
+        />
+      ) : (
+        <>
       {/* Search */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
         <div className="flex items-center gap-3">
@@ -550,6 +576,8 @@ const LeaderDirectory = ({
               : 'Add your first leader to get started.'}
           </p>
         </div>
+      )}
+        </>
       )}
     </div>
   );

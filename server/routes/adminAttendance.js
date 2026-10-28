@@ -804,6 +804,45 @@ router.get('/attendance/missing-submissions', async (req, res) => {
   }
 });
 
+// GET missing Sunday Main Service submissions for every active leader.
+router.get('/leaders/missing-submissions', async (req, res) => {
+  try {
+    const startDate = formatLocalDate(addDays(new Date(), -90));
+    const endDate = formatLocalDate(new Date());
+    const missing = await all(
+      `SELECT l.id AS leader_id, u.full_name AS leader_name,
+              s.id AS section_id, s.name AS section_name,
+              expected.date, expected.service_id, st.name AS service_name
+       FROM (
+         SELECT date, service_id FROM submission_log
+         WHERE service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+         UNION
+         SELECT date, service_type_id AS service_id FROM attendance
+         WHERE service_type_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+       ) expected
+       JOIN leaders l ON l.is_active = 1
+       JOIN users u ON u.id = l.user_id
+       LEFT JOIN sections s ON s.id = l.section_id
+       LEFT JOIN submission_log submitted
+         ON submitted.leader_id = l.id
+        AND submitted.date = expected.date
+        AND submitted.service_id = expected.service_id
+       LEFT JOIN service_types st ON st.id = expected.service_id
+       WHERE expected.service_id = (SELECT id FROM service_types WHERE LOWER(TRIM(name)) = 'main service' LIMIT 1)
+         AND expected.date >= ?
+         AND expected.date <= ?
+         AND submitted.id IS NULL
+       ORDER BY expected.date DESC, s.name ASC, u.full_name ASC`,
+      [startDate, endDate]
+    );
+
+    res.json(missing.filter((row) => new Date(`${row.date}T00:00:00`).getDay() === 0));
+  } catch (error) {
+    console.error('Failed to fetch missing leader submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch missing leader submissions' });
+  }
+});
+
 // GET all members for a leader with their current attendance status for a given date+service.
 router.get('/attendance/leader-members/:leaderId', async (req, res) => {
   try {
