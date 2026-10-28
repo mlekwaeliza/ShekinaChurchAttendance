@@ -39,8 +39,8 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div className="flex flex-col gap-4 border-b border-slate-200 p-5 dark:border-slate-700 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-3">
+      <div className="grid min-w-0 gap-5 border-b border-slate-200 p-5 dark:border-slate-700 xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.9fr)] xl:items-center">
+        <div className="flex min-w-0 items-start gap-3">
           <ClipboardList className="mt-1 h-5 w-5 shrink-0 text-rose-500" />
           <div>
             <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -51,20 +51,20 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
             </p>
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="relative">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.75fr)_auto]">
+          <div className="relative min-w-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search leader or date"
-              className="input h-10 w-full rounded-xl pl-9 sm:w-52"
+              className="input h-10 w-full min-w-0 rounded-xl pl-9"
             />
           </div>
           <select
             value={section}
             onChange={(event) => setSection(event.target.value)}
-            className="input h-10 rounded-xl"
+            className="input h-10 w-full min-w-0 rounded-xl"
             aria-label="Filter by section"
           >
             <option value="">All sections</option>
