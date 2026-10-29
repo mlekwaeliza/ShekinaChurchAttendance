@@ -836,7 +836,21 @@ router.get('/leaders/missing-submissions', async (req, res) => {
       [startDate, endDate]
     );
 
-    res.json(missing.filter((row) => new Date(`${row.date}T00:00:00`).getDay() === 0));
+    const sundaySubmissions = missing.flatMap((row) => {
+      const rawDate = row.date;
+      const date =
+        rawDate instanceof Date
+          ? rawDate.toISOString().slice(0, 10)
+          : String(rawDate || '').match(/^\d{4}-\d{2}-\d{2}/)?.[0] ||
+            (Number.isNaN(new Date(rawDate).getTime())
+              ? null
+              : new Date(rawDate).toISOString().slice(0, 10));
+
+      if (!date || new Date(`${date}T00:00:00`).getDay() !== 0) return [];
+      return [{ ...row, date }];
+    });
+
+    res.json(sundaySubmissions);
   } catch (error) {
     console.error('Failed to fetch missing leader submissions:', error);
     res.status(500).json({ error: 'Failed to fetch missing leader submissions' });
