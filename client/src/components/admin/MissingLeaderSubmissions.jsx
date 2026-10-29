@@ -36,11 +36,6 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
     });
   }, [rows, leaderSearch, dateFilter, section]);
 
-  const availableDates = useMemo(
-    () => [...new Set(rows.map((row) => row.date))].sort((a, b) => b.localeCompare(a)),
-    [rows]
-  );
-
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div className="grid min-w-0 gap-5 border-b border-slate-200 p-5 dark:border-slate-700 xl:grid-cols-[minmax(0,1fr)_minmax(640px,1.15fr)] xl:items-center">
@@ -55,7 +50,7 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
             </p>
           </div>
         </div>
-        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(170px,1fr)_minmax(145px,0.8fr)_minmax(150px,0.8fr)_auto]">
+        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(170px,1fr)_minmax(160px,0.85fr)_minmax(150px,0.8fr)_auto]">
           <div className="relative min-w-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
@@ -66,23 +61,18 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
               className="input h-10 w-full min-w-0 rounded-xl pl-9"
             />
           </div>
-          <select
-            value={dateFilter}
-            onChange={(event) => setDateFilter(event.target.value)}
-            className="input h-10 w-full min-w-0 rounded-xl"
-            aria-label="Filter by date"
-          >
-            <option value="">All dates</option>
-            {availableDates.map((date) => (
-              <option key={date} value={date}>
-                {new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric'
-                })}
-              </option>
-            ))}
-          </select>
+          <label className="block min-w-0">
+            <span className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Date
+            </span>
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
+              className="input h-10 w-full min-w-0 rounded-xl"
+              aria-label="Filter by date"
+            />
+          </label>
           <select
             value={section}
             onChange={(event) => setSection(event.target.value)}
