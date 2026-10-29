@@ -31,69 +31,105 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
     const term = leaderSearch.trim().toLowerCase();
     return rows.filter((row) => {
       if (section && String(row.section_id) !== section) return false;
-      if (dateFilter && row.date !== dateFilter) return false;
-      return !term || row.leader_name.toLowerCase().includes(term);
+      if (dateFilter && String(row.date || '').slice(0, 10) !== dateFilter) return false;
+      return (
+        !term ||
+        String(row.leader_name || '')
+          .toLowerCase()
+          .includes(term)
+      );
     });
   }, [rows, leaderSearch, dateFilter, section]);
 
+  const hasFilters = Boolean(leaderSearch || dateFilter || section);
+
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div className="grid min-w-0 gap-5 border-b border-slate-200 p-5 dark:border-slate-700 xl:grid-cols-[minmax(0,1fr)_minmax(640px,1.15fr)] xl:items-center">
-        <div className="flex min-w-0 items-start gap-3">
-          <ClipboardList className="mt-1 h-5 w-5 shrink-0 text-rose-500" />
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              Missing Sunday Main Service submissions
-            </h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Active leaders with no submission for each service date in the last 90 days.
-            </p>
+      <div className="space-y-5 border-b border-slate-200 p-5 dark:border-slate-700">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <ClipboardList className="mt-1 h-5 w-5 shrink-0 text-rose-500" />
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Missing Sunday Main Service submissions
+              </h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Active leaders with no submission for each service date in the last 90 days.
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(170px,1fr)_minmax(160px,0.85fr)_minmax(150px,0.8fr)_auto]">
-          <div className="relative min-w-0">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              value={leaderSearch}
-              onChange={(event) => setLeaderSearch(event.target.value)}
-              placeholder="Filter by leader"
-              aria-label="Filter by leader"
-              className="input h-10 w-full min-w-0 rounded-xl pl-9"
-            />
-          </div>
-          <label className="block min-w-0">
-            <span className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Date
-            </span>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(event) => setDateFilter(event.target.value)}
-              className="input h-10 w-full min-w-0 rounded-xl"
-              aria-label="Filter by date"
-            />
-          </label>
-          <select
-            value={section}
-            onChange={(event) => setSection(event.target.value)}
-            className="input h-10 w-full min-w-0 rounded-xl"
-            aria-label="Filter by section"
-          >
-            <option value="">All sections</option>
-            {sections.map((item) => (
-              <option key={item.id} value={String(item.id)}>
-                {item.name}
-              </option>
-            ))}
-          </select>
           <button
             type="button"
             onClick={loadSubmissions}
             disabled={loading}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
+        </div>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(180px,0.85fr)_minmax(180px,0.85fr)_auto] xl:items-end">
+          <label className="block min-w-0">
+            <span className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Leader
+            </span>
+            <span className="relative block min-w-0">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={leaderSearch}
+                onChange={(event) => setLeaderSearch(event.target.value)}
+                placeholder="Search leaders"
+                aria-label="Filter by leader"
+                className="input h-10 w-full min-w-0 rounded-xl pl-9"
+              />
+            </span>
+          </label>
+          <label className="block min-w-0">
+            <span className="mb-1 flex justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span>Date</span>
+              {!dateFilter && <span className="font-normal">All dates</span>}
+            </span>
+            <span className="relative block min-w-0">
+              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(event) => setDateFilter(event.target.value)}
+                className="input h-10 w-full min-w-0 rounded-xl pl-9 dark:[color-scheme:dark]"
+                aria-label="Filter by date"
+              />
+            </span>
+          </label>
+          <label className="block min-w-0">
+            <span className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Section
+            </span>
+            <select
+              value={section}
+              onChange={(event) => setSection(event.target.value)}
+              className="input h-10 w-full min-w-0 rounded-xl"
+              aria-label="Filter by section"
+            >
+              <option value="">All sections</option>
+              {sections.map((item) => (
+                <option key={item.id} value={String(item.id)}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setLeaderSearch('');
+                setDateFilter('');
+                setSection('');
+              }}
+              className="h-10 cursor-pointer rounded-xl px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -134,11 +170,14 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
                     {row.section_name || 'Unassigned'}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 font-medium text-slate-800 dark:text-slate-200">
-                    {new Date(`${row.date}T00:00:00`).toLocaleDateString(undefined, {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
+                    {new Date(`${String(row.date || '').slice(0, 10)}T00:00:00`).toLocaleDateString(
+                      undefined,
+                      {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      }
+                    )}
                   </td>
                   <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
                     <span className="inline-flex items-center gap-1.5">

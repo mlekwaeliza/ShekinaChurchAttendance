@@ -1,5 +1,5 @@
 // Bump this whenever a frontend release must replace previously cached assets.
-const CACHE_NAME = 'church-attendance-v11';
+const CACHE_NAME = 'church-attendance-v12';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
