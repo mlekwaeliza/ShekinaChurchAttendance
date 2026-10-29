@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ClipboardList, RefreshCw, Search } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 
-const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
+const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader }) => {
   const [rows, setRows] = useState([]);
-  const [leaderSearch, setLeaderSearch] = useState('');
+  const [leaderId, setLeaderId] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [section, setSection] = useState('');
+  const [appliedFilters, setAppliedFilters] = useState({ leaderId: '', date: '', section: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,20 +29,36 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
   }, [loadSubmissions]);
 
   const filteredRows = useMemo(() => {
-    const term = leaderSearch.trim().toLowerCase();
     return rows.filter((row) => {
-      if (section && String(row.section_id) !== section) return false;
-      if (dateFilter && String(row.date || '').slice(0, 10) !== dateFilter) return false;
-      return (
-        !term ||
-        String(row.leader_name || '')
-          .toLowerCase()
-          .includes(term)
-      );
+      if (appliedFilters.leaderId && String(row.leader_id) !== appliedFilters.leaderId)
+        return false;
+      if (appliedFilters.section && String(row.section_id) !== appliedFilters.section) return false;
+      if (appliedFilters.date && String(row.date || '').slice(0, 10) !== appliedFilters.date)
+        return false;
+      return true;
     });
-  }, [rows, leaderSearch, dateFilter, section]);
+  }, [rows, appliedFilters]);
 
-  const hasFilters = Boolean(leaderSearch || dateFilter || section);
+  const leaderOptions = useMemo(() => {
+    const availableLeaders = leaders.length
+      ? leaders.filter((leader) => leader.is_active === undefined || Number(leader.is_active) === 1)
+      : rows.map((row) => ({ id: row.leader_id, full_name: row.leader_name }));
+    return [...availableLeaders].sort((a, b) =>
+      String(a.full_name || '').localeCompare(String(b.full_name || ''))
+    );
+  }, [leaders, rows]);
+
+  const hasFilters = Boolean(leaderId || dateFilter || section);
+  const applyFilters = (event) => {
+    event.preventDefault();
+    setAppliedFilters({ leaderId, date: dateFilter, section });
+  };
+  const clearFilters = () => {
+    setLeaderId('');
+    setDateFilter('');
+    setSection('');
+    setAppliedFilters({ leaderId: '', date: '', section: '' });
+  };
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -67,21 +84,27 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
         </div>
-        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(180px,0.85fr)_minmax(180px,0.85fr)_auto] xl:items-end">
+        <form
+          onSubmit={applyFilters}
+          className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(180px,0.85fr)_minmax(180px,0.85fr)_auto_auto] xl:items-end"
+        >
           <label className="block min-w-0">
             <span className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
               Leader
             </span>
-            <span className="relative block min-w-0">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={leaderSearch}
-                onChange={(event) => setLeaderSearch(event.target.value)}
-                placeholder="Search leaders"
-                aria-label="Filter by leader"
-                className="input h-10 w-full min-w-0 rounded-xl pl-9"
-              />
-            </span>
+            <select
+              value={leaderId}
+              onChange={(event) => setLeaderId(event.target.value)}
+              className="input h-10 w-full min-w-0 rounded-xl"
+              aria-label="Filter by leader"
+            >
+              <option value="">All leaders</option>
+              {leaderOptions.map((leader) => (
+                <option key={leader.id} value={String(leader.id)}>
+                  {leader.full_name}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="block min-w-0">
             <span className="mb-1 flex justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -117,20 +140,22 @@ const MissingLeaderSubmissions = ({ sections = [], onViewLeader }) => {
               ))}
             </select>
           </label>
+          <button
+            type="submit"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+          >
+            <Search className="h-4 w-4" /> Search
+          </button>
           {hasFilters && (
             <button
               type="button"
-              onClick={() => {
-                setLeaderSearch('');
-                setDateFilter('');
-                setSection('');
-              }}
+              onClick={clearFilters}
               className="h-10 cursor-pointer rounded-xl px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
             >
               Clear filters
             </button>
           )}
-        </div>
+        </form>
       </div>
 
       {error ? (

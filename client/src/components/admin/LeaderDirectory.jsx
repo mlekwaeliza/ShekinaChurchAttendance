@@ -273,6 +273,7 @@ const LeaderDirectory = ({
 
       {activeView === 'missing' ? (
         <MissingLeaderSubmissions
+          leaders={leaders}
           sections={sections}
           onViewLeader={(id) => onViewAnalytics(id)}
         />
