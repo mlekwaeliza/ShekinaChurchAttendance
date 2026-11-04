@@ -5,6 +5,20 @@ import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
 import { fdatetime } from '../../utils/date';
 
+const actionColors = {
+  create: 'success',
+  update: 'info',
+  delete: 'danger'
+};
+
+const entityIcons = {
+  member: <Users className="w-3.5 h-3.5" />,
+  section: <FileText className="w-3.5 h-3.5" />,
+  leader: <UserCog className="w-3.5 h-3.5" />,
+  attendance: <Calendar className="w-3.5 h-3.5" />,
+  user: <User className="w-3.5 h-3.5" />
+};
+
 const AuditLog = () => {
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,7 +27,7 @@ const AuditLog = () => {
     action: '',
     userId: '',
     startDate: '',
-    endDate: '',
+    endDate: ''
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -42,7 +56,7 @@ const AuditLog = () => {
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleApplyFilters = () => {
@@ -54,118 +68,113 @@ const AuditLog = () => {
     setTimeout(() => loadAuditLog(), 0);
   };
 
-  const actionColors = {
-    create: 'success',
-    update: 'info',
-    delete: 'danger',
-  };
-
-  const entityIcons = {
-    member: <Users className="w-3.5 h-3.5" />,
-    section: <FileText className="w-3.5 h-3.5" />,
-    leader: <UserCog className="w-3.5 h-3.5" />,
-    attendance: <Calendar className="w-3.5 h-3.5" />,
-    user: <User className="w-3.5 h-3.5" />,
-  };
-
   const formatDateTime = (dateStr) => {
     return fdatetime(dateStr);
   };
 
   const parseValue = (val) => {
     if (!val) return null;
-    try { return JSON.parse(val); } catch { return val; }
+    try {
+      return JSON.parse(val);
+    } catch {
+      return val;
+    }
   };
 
-  const columns = useMemo(() => [
-    {
-      accessor: 'created_at',
-      header: 'Timestamp',
-      sortable: true,
-      render: (row) => (
-        <span className="text-sm text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">
-          {formatDateTime(row.created_at)}
-        </span>
-      ),
-    },
-    {
-      accessor: 'user',
-      header: 'User',
-      sortable: true,
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300">
-            {(row.user_full_name || row.user_username || '?').charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-              {row.user_full_name || row.user_username || 'System'}
-            </p>
-            {row.user_role && (
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 capitalize">{row.user_role}</span>
-            )}
-          </div>
-        </div>
-      ),
-    },
-    {
-      accessor: 'action',
-      header: 'Action',
-      sortable: true,
-      render: (row) => (
-        <Badge variant={actionColors[row.action] || 'neutral'}>
-          {row.action}
-        </Badge>
-      ),
-    },
-    {
-      accessor: 'entity',
-      header: 'Entity',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 dark:text-slate-500">
-            {entityIcons[row.entity_type] || <Shield className="w-3.5 h-3.5" />}
+  const columns = useMemo(
+    () => [
+      {
+        accessor: 'created_at',
+        header: 'Timestamp',
+        sortable: true,
+        render: (row) => (
+          <span className="text-footnote text-secondary-label tabular-nums whitespace-nowrap">
+            {formatDateTime(row.created_at)}
           </span>
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300 capitalize">
-            {row.entity_type}
-          </span>
-          {row.entity_id && (
-            <span className="text-xs text-slate-400 dark:text-slate-500">#{row.entity_id}</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessor: 'details',
-      header: 'Details',
-      render: (row) => {
-        const oldValue = parseValue(row.old_value);
-        const newValue = parseValue(row.new_value);
-        return (
-          <div className="text-xs text-slate-500 dark:text-slate-400 max-w-xs">
-            {row.action === 'delete' && <span className="text-rose-500 dark:text-rose-400">Record deleted</span>}
-            {row.action === 'create' && newValue && (
-              <span className="text-emerald-600 dark:text-emerald-400">Created with {Object.keys(newValue).length} fields</span>
-            )}
-            {row.action === 'update' && oldValue && newValue && (
-              <span className="text-primary-600 dark:text-primary-400">
-                {Object.keys(newValue).length} field(s) modified
-              </span>
-            )}
-          </div>
-        );
+        )
       },
-    },
-    {
-      accessor: 'ip_address',
-      header: 'IP',
-      render: (row) => (
-        <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
-          {row.ip_address || '—'}
-        </span>
-      ),
-    },
-  ], []); // eslint-disable-line react-hooks/exhaustive-deps
+      {
+        accessor: 'user',
+        header: 'User',
+        sortable: true,
+        render: (row) => (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-system-fill flex items-center justify-center text-caption-1 font-semibold text-secondary-label">
+              {(row.user_full_name || row.user_username || '?').charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-footnote font-medium text-label">
+                {row.user_full_name || row.user_username || 'System'}
+              </p>
+              {row.user_role && (
+                <span className="text-caption-2 text-tertiary-label capitalize">
+                  {row.user_role}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      },
+      {
+        accessor: 'action',
+        header: 'Action',
+        sortable: true,
+        render: (row) => <Badge variant={actionColors[row.action] || 'neutral'}>{row.action}</Badge>
+      },
+      {
+        accessor: 'entity',
+        header: 'Entity',
+        render: (row) => (
+          <div className="flex items-center gap-2">
+            <span className="text-tertiary-label">
+              {entityIcons[row.entity_type] || <Shield className="w-3.5 h-3.5" />}
+            </span>
+            <span className="text-footnote font-medium text-secondary-label capitalize">
+              {row.entity_type}
+            </span>
+            {row.entity_id && (
+              <span className="text-caption-1 text-tertiary-label">#{row.entity_id}</span>
+            )}
+          </div>
+        )
+      },
+      {
+        accessor: 'details',
+        header: 'Details',
+        render: (row) => {
+          const oldValue = parseValue(row.old_value);
+          const newValue = parseValue(row.new_value);
+          return (
+            <div className="text-caption-1 text-secondary-label max-w-xs">
+              {row.action === 'delete' && (
+                <span className="text-rose-500 dark:text-rose-400">Record deleted</span>
+              )}
+              {row.action === 'create' && newValue && (
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  Created with {Object.keys(newValue).length} fields
+                </span>
+              )}
+              {row.action === 'update' && oldValue && newValue && (
+                <span className="text-primary-600 dark:text-primary-400">
+                  {Object.keys(newValue).length} field(s) modified
+                </span>
+              )}
+            </div>
+          );
+        }
+      },
+      {
+        accessor: 'ip_address',
+        header: 'IP',
+        render: (row) => (
+          <span className="text-caption-1 text-tertiary-label font-mono">
+            {row.ip_address || '—'}
+          </span>
+        )
+      }
+    ],
+    []
+  ); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -176,8 +185,10 @@ const AuditLog = () => {
             <Shield className="w-5 h-5 text-primary-600 dark:text-primary-400" />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Audit Log</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Track all changes made in the system</p>
+            <h3 className="text-base font-semibold text-label">Audit Log</h3>
+            <p className="text-footnote text-secondary-label">
+              Track all changes made in the system
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -257,10 +268,12 @@ const AuditLog = () => {
       )}
 
       {/* Summary */}
-      <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex items-center gap-4 text-footnote text-secondary-label">
         <span>{entries.length} entries</span>
         {filters.entityType && <Badge variant="info">{filters.entityType}</Badge>}
-        {filters.action && <Badge variant={actionColors[filters.action] || 'neutral'}>{filters.action}</Badge>}
+        {filters.action && (
+          <Badge variant={actionColors[filters.action] || 'neutral'}>{filters.action}</Badge>
+        )}
       </div>
 
       {/* Table */}

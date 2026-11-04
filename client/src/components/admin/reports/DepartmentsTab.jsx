@@ -8,11 +8,9 @@ const DepartmentsTab = ({ departmentsData = [] }) => {
   return (
     <div className="space-y-6">
       {depts.length > 0 ? (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Department Report
-            </h3>
+        <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] shadow-card">
+          <div className="p-4 border-b border-separator/60 dark:border-white/[0.08]">
+            <h3 className="text-footnote font-semibold text-label">Department Report</h3>
           </div>
           <IntelligenceTable
             columns={[
@@ -20,15 +18,13 @@ const DepartmentsTab = ({ departmentsData = [] }) => {
                 key: 'rank',
                 label: '#',
                 render: (_, __, i) => (
-                  <span className="text-xs font-bold text-slate-400">#{i + 1}</span>
+                  <span className="text-caption-1 font-semibold text-tertiary-label">#{i + 1}</span>
                 )
               },
               {
                 key: 'name',
                 label: 'Department',
-                render: (v) => (
-                  <span className="font-medium text-slate-900 dark:text-white">{v}</span>
-                )
+                render: (v) => <span className="font-medium text-label">{v}</span>
               },
               { key: 'member_count', label: 'Members', align: 'right' },
               {
@@ -60,7 +56,9 @@ const DepartmentsTab = ({ departmentsData = [] }) => {
                 render: (v) => {
                   const d = Number(v) || 0;
                   return (
-                    <span className={`font-bold ${d >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <span
+                      className={`font-semibold ${d >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                    >
                       {d >= 0 ? '+' : ''}
                       {R(d)}%
                     </span>
@@ -84,7 +82,7 @@ const DepartmentsTab = ({ departmentsData = [] }) => {
                 align: 'right',
                 render: (v) => (
                   <span
-                    className={`font-bold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}
+                    className={`font-semibold ${v >= 70 ? 'text-emerald-600' : v >= 40 ? 'text-amber-600' : 'text-rose-600'}`}
                   >
                     {v || 0}
                   </span>
@@ -105,8 +103,8 @@ const DepartmentsTab = ({ departmentsData = [] }) => {
           />
         </div>
       ) : (
-        <div className="text-center py-12 text-slate-400 text-sm">
-          <BarChart3 className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+        <div className="text-center py-12 text-tertiary-label text-footnote">
+          <BarChart3 className="w-8 h-8 mx-auto mb-2 text-tertiary-label" />
           Department data not available for current filter
         </div>
       )}

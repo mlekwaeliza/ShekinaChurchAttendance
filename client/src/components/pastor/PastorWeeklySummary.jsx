@@ -55,8 +55,8 @@ const PastorWeeklySummary = () => {
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Weekly Summary</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h2 className="text-title-1 font-semibold text-label">Weekly Summary</h2>
+          <p className="text-footnote text-secondary-label mt-1">
             {formatDisplayDate(weekStart)} — {formatDisplayDate(weekEnd)}
           </p>
         </div>
@@ -77,34 +77,36 @@ const PastorWeeklySummary = () => {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-1">
+          <div className="flex items-center gap-2 text-footnote text-secondary-label mb-1">
             <CheckCircle className="w-4 h-4 text-emerald-500" />
             <span>Submitted</span>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">
+          <p className="text-title-1 font-semibold text-label">
             {submitted}/{total}
           </p>
         </div>
         <div className="card p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-1">
+          <div className="flex items-center gap-2 text-footnote text-secondary-label mb-1">
             <XCircle className="w-4 h-4 text-rose-500" />
             <span>Not Submitted</span>
           </div>
-          <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{total - submitted}</p>
+          <p className="text-title-1 font-semibold text-rose-600 dark:text-rose-400">
+            {total - submitted}
+          </p>
         </div>
         <div className="card p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-1">
+          <div className="flex items-center gap-2 text-footnote text-secondary-label mb-1">
             <MessageSquare className="w-4 h-4 text-blue-500" />
             <span>Outreach Logs</span>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{totalOutreach}</p>
+          <p className="text-title-1 font-semibold text-label">{totalOutreach}</p>
         </div>
         <div className="card p-4">
-          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-1">
+          <div className="flex items-center gap-2 text-footnote text-secondary-label mb-1">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
             <span>Absent Members</span>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{totalAbsent}</p>
+          <p className="text-title-1 font-semibold text-label">{totalAbsent}</p>
         </div>
       </div>
 
@@ -112,9 +114,7 @@ const PastorWeeklySummary = () => {
         <div className="card border-l-4 border-amber-400 p-6">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-              Members Needing Follow-Up
-            </h3>
+            <h3 className="text-headline font-semibold text-label">Members Needing Follow-Up</h3>
             <Badge variant="warning">{followUpAlerts.length}</Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -124,10 +124,8 @@ const PastorWeeklySummary = () => {
                 className="flex items-center justify-between gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-900 dark:text-white text-sm">
-                    {m.full_name}
-                  </p>
-                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                  <p className="truncate font-medium text-label text-footnote">{m.full_name}</p>
+                  <p className="truncate text-caption-1 text-secondary-label">
                     {m.section_name} · {m.recent_absences} absences
                   </p>
                 </div>
@@ -144,7 +142,7 @@ const PastorWeeklySummary = () => {
         <div className="card border-l-4 border-pink-400 p-6">
           <div className="flex items-center gap-2 mb-4">
             <Cake className="w-5 h-5 text-pink-500" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Today's Birthdays</h3>
+            <h3 className="text-headline font-semibold text-label">Today's Birthdays</h3>
             <Badge variant="info">{birthdayAlerts.length}</Badge>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -154,10 +152,8 @@ const PastorWeeklySummary = () => {
                 className="flex items-center justify-between gap-3 p-3 bg-pink-50 dark:bg-pink-900/20 rounded-xl"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-900 dark:text-white text-sm">
-                    {m.full_name}
-                  </p>
-                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                  <p className="truncate font-medium text-label text-footnote">{m.full_name}</p>
+                  <p className="truncate text-caption-1 text-secondary-label">
                     {m.section_name}
                     {m.phone ? ` · ${m.phone}` : ''}
                   </p>
@@ -178,19 +174,13 @@ const PastorWeeklySummary = () => {
               accessor: 'section_name',
               header: 'Section',
               sortable: true,
-              render: (row) => (
-                <span className="font-medium text-slate-900 dark:text-white">
-                  {row.section_name}
-                </span>
-              )
+              render: (row) => <span className="font-medium text-label">{row.section_name}</span>
             },
             {
               accessor: 'leader_name',
               header: 'Leader',
               sortable: true,
-              render: (row) => (
-                <span className="text-slate-700 dark:text-slate-300">{row.leader_name}</span>
-              )
+              render: (row) => <span className="text-secondary-label">{row.leader_name}</span>
             },
             {
               accessor: 'submitted',
@@ -210,7 +200,7 @@ const PastorWeeklySummary = () => {
               sortable: true,
               align: 'center',
               render: (row) => (
-                <span className="inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1 text-footnote text-secondary-label">
                   <MessageSquare className="w-3.5 h-3.5" />
                   {row.outreach_count}
                 </span>
@@ -222,9 +212,7 @@ const PastorWeeklySummary = () => {
               sortable: true,
               align: 'center',
               render: (row) => (
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  {row.members_contacted}
-                </span>
+                <span className="text-footnote text-secondary-label">{row.members_contacted}</span>
               )
             },
             {
@@ -234,7 +222,7 @@ const PastorWeeklySummary = () => {
               align: 'center',
               render: (row) => (
                 <span
-                  className={`text-sm font-medium ${row.absent_members > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}
+                  className={`text-footnote font-medium ${row.absent_members > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-tertiary-label'}`}
                 >
                   {row.absent_members}
                 </span>

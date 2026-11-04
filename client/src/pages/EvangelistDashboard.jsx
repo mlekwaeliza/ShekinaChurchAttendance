@@ -47,8 +47,7 @@ const MONTH_NAMES = [
   'December'
 ];
 
-const STAT_STYLE =
-  'rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm';
+const STAT_STYLE = 'card p-5';
 
 // EvangelistDashboard is defined after all tab sub-components to avoid TDZ
 // in minified bundles (esbuild renames consts to single letters).
@@ -56,7 +55,7 @@ const STAT_STYLE =
 // ── Soul Winning Trend Chart ────────────────────────────────────────
 const SoulWinningTrendChart = ({ data }) => (
   <div className={STAT_STYLE}>
-    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+    <h3 className="text-headline font-semibold text-label mb-4 flex items-center gap-2">
       <TrendingUp className="w-5 h-5 text-primary-500" /> Soul Winning Trend
     </h3>
     {data.length === 0 ? (
@@ -69,16 +68,18 @@ const SoulWinningTrendChart = ({ data }) => (
       <div className="space-y-2">
         {data.map((point, i) => (
           <div key={i} className="flex items-center gap-3">
-            <span className="text-xs font-medium text-slate-500 w-16">{point.month}</span>
-            <div className="flex-1 h-6 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+            <span className="text-caption-1 font-medium text-secondary-label w-16">
+              {point.month}
+            </span>
+            <div className="flex-1 h-6 rounded-full bg-system-fill overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all"
+                className="h-full rounded-full bg-primary-500 transition-all"
                 style={{
                   width: `${Math.min((point.count / Math.max(...data.map((d) => d.count))) * 100, 100)}%`
                 }}
               />
             </div>
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 w-10 text-right">
+            <span className="text-footnote font-semibold text-secondary-label w-10 text-right">
               {point.count}
             </span>
           </div>
@@ -93,11 +94,11 @@ const ConversionFunnelChart = ({ data }) => {
   if (!data)
     return (
       <div className={STAT_STYLE}>
-        <p className="text-sm text-slate-400 py-8 text-center">Loading...</p>
+        <p className="text-footnote text-tertiary-label py-8 text-center">Loading...</p>
       </div>
     );
   const stages = [
-    { label: 'Visitors', value: data.visitors, color: 'bg-slate-400' },
+    { label: 'Visitors', value: data.visitors, color: 'bg-system-gray' },
     { label: 'Saved', value: data.saved, color: 'bg-blue-400' },
     { label: 'Followed Up', value: data.followed_up, color: 'bg-cyan-400' },
     { label: 'Baptized', value: data.baptized, color: 'bg-emerald-400' },
@@ -106,17 +107,17 @@ const ConversionFunnelChart = ({ data }) => {
   const maxVal = Math.max(...stages.map((s) => s.value), 1);
   return (
     <div className={STAT_STYLE}>
-      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+      <h3 className="text-headline font-semibold text-label mb-4 flex items-center gap-2">
         <Activity className="w-5 h-5 text-primary-500" /> Conversion Funnel
       </h3>
       <div className="space-y-3">
         {stages.map((stage, i) => (
           <div key={i}>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="font-medium text-slate-700 dark:text-slate-300">{stage.label}</span>
-              <span className="font-bold text-slate-900 dark:text-white">{stage.value}</span>
+            <div className="flex justify-between text-footnote mb-1">
+              <span className="font-medium text-secondary-label">{stage.label}</span>
+              <span className="font-semibold text-label">{stage.value}</span>
             </div>
-            <div className="h-3 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+            <div className="h-3 rounded-full bg-system-fill overflow-hidden">
               <div
                 className={`h-full rounded-full ${stage.color} transition-all`}
                 style={{ width: `${(stage.value / maxVal) * 100}%` }}
@@ -156,17 +157,19 @@ const ConvertModal = ({ onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-modal">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Register New Convert</h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="bg-secondary-system-grouped-background rounded-2xl w-full max-w-lg shadow-modal">
+        <div className="flex items-center justify-between p-6 border-b border-black/[0.06] dark:border-white/[0.08]">
+          <h3 className="text-headline font-semibold text-label">Register New Convert</h3>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-system-fill">
             <X className="w-4 h-4" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+            <label className="block text-footnote font-medium text-secondary-label mb-1">
+              Full Name *
+            </label>
             <input
               type="text"
               value={form.full_name}
@@ -181,7 +184,9 @@ const ConvertModal = ({ onClose, onSaved }) => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Phone
+              </label>
               <input
                 type="text"
                 value={form.phone}
@@ -190,7 +195,9 @@ const ConvertModal = ({ onClose, onSaved }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Gender
+              </label>
               <select
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
@@ -204,7 +211,9 @@ const ConvertModal = ({ onClose, onSaved }) => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Age Group</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Age Group
+              </label>
               <select
                 value={form.age_group}
                 onChange={(e) => setForm({ ...form, age_group: e.target.value })}
@@ -220,7 +229,9 @@ const ConvertModal = ({ onClose, onSaved }) => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date Saved</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Date Saved
+              </label>
               <input
                 type="date"
                 value={form.date_saved}
@@ -231,7 +242,9 @@ const ConvertModal = ({ onClose, onSaved }) => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Soul Winner</label>
+            <label className="block text-footnote font-medium text-secondary-label mb-1">
+              Soul Winner
+            </label>
             <input
               type="text"
               value={form.soul_winner}
@@ -240,7 +253,9 @@ const ConvertModal = ({ onClose, onSaved }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+            <label className="block text-footnote font-medium text-secondary-label mb-1">
+              Location
+            </label>
             <input
               type="text"
               value={form.location}
@@ -288,19 +303,19 @@ const EventModal = ({ onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg shadow-modal">
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-            Create Outreach Event
-          </h3>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="bg-secondary-system-grouped-background rounded-2xl w-full max-w-lg shadow-modal">
+        <div className="flex items-center justify-between p-6 border-b border-black/[0.06] dark:border-white/[0.08]">
+          <h3 className="text-headline font-semibold text-label">Create Outreach Event</h3>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-system-fill">
             <X className="w-4 h-4" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Event Name *</label>
+            <label className="block text-footnote font-medium text-secondary-label mb-1">
+              Event Name *
+            </label>
             <input
               type="text"
               value={form.name}
@@ -311,7 +326,9 @@ const EventModal = ({ onClose, onSaved }) => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Date *
+              </label>
               <input
                 type="date"
                 value={form.date}
@@ -321,7 +338,9 @@ const EventModal = ({ onClose, onSaved }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Location
+              </label>
               <input
                 type="text"
                 value={form.location}
@@ -332,7 +351,9 @@ const EventModal = ({ onClose, onSaved }) => {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Event Type</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Event Type
+              </label>
               <input
                 type="text"
                 value={form.event_type}
@@ -342,7 +363,9 @@ const EventModal = ({ onClose, onSaved }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Organizer</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Organizer
+              </label>
               <input
                 type="text"
                 value={form.organizer}
@@ -468,15 +491,18 @@ const Overview = ({ user }) => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Welcome Hero */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-600 via-orange-600 to-rose-500 p-8 text-white shadow-xl shadow-amber-500/20">
-        <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-white/5 translate-y-24" />
-        <div className="relative z-10">
-          <p className="text-white/80 text-sm font-medium tracking-wide uppercase">
+      <div className="card flex items-start gap-4 p-6 sm:p-8">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-primary-500/10">
+          <Sparkles className="h-5 w-5 text-primary-700 dark:text-primary-300" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
             Welcome{user?.full_name ? `, ${user.full_name}` : ''}
           </p>
-          <h2 className="text-2xl font-bold tracking-tight mt-1">Evangelism Department Report</h2>
-          <p className="mt-2 max-w-lg text-base text-white/80">
+          <h2 className="mt-1 text-title-1 font-semibold tracking-tight text-label">
+            Evangelism Department Report
+          </h2>
+          <p className="mt-2 max-w-lg text-footnote text-secondary-label">
             Overview of souls won, outreach events, follow-ups, and evangelism team performance.
           </p>
         </div>
@@ -519,7 +545,7 @@ const Overview = ({ user }) => {
 
       {/* New Converts This Week */}
       <div className={STAT_STYLE}>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+        <h3 className="text-headline font-semibold text-label mb-4 flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-amber-500" /> New Converts This Week
         </h3>
         {recentConverts.length === 0 ? (
@@ -533,24 +559,22 @@ const Overview = ({ user }) => {
             {recentConverts.map((soul) => (
               <div
                 key={soul.id}
-                className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50"
+                className="flex items-center justify-between p-3 rounded-xl bg-system-fill"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-sm font-bold">
+                  <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-footnote font-semibold">
                     {soul.full_name?.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                      {soul.full_name}
-                    </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-semibold text-label text-footnote">{soul.full_name}</p>
+                    <p className="text-caption-1 text-secondary-label">
                       Saved:{' '}
                       {soul.date_saved ? new Date(soul.date_saved).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
                 </div>
                 <span
-                  className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                  className={`text-caption-1 font-medium px-2.5 py-1 rounded-full ${
                     soul.follow_up_status === 'new_convert'
                       ? 'bg-amber-100 text-amber-700'
                       : 'bg-emerald-100 text-emerald-700'
@@ -671,7 +695,7 @@ const OutreachEvents = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Outreach Events</h2>
+        <h2 className="text-title-2 font-semibold text-label">Outreach Events</h2>
         <button
           onClick={() => {
             setEditing(null);
@@ -697,7 +721,9 @@ const OutreachEvents = () => {
         <form onSubmit={handleSave} className={STAT_STYLE + ' space-y-4'}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Name *
+              </label>
               <input
                 type="text"
                 value={form.name}
@@ -707,7 +733,9 @@ const OutreachEvents = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date *</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Date *
+              </label>
               <input
                 type="date"
                 value={form.date}
@@ -717,7 +745,9 @@ const OutreachEvents = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Location
+              </label>
               <input
                 type="text"
                 value={form.location}
@@ -726,7 +756,9 @@ const OutreachEvents = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Event Type</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Event Type
+              </label>
               <input
                 type="text"
                 value={form.event_type}
@@ -736,7 +768,9 @@ const OutreachEvents = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Organizer</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Organizer
+              </label>
               <input
                 type="text"
                 value={form.organizer}
@@ -745,7 +779,9 @@ const OutreachEvents = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Volunteers</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Volunteers
+              </label>
               <input
                 type="number"
                 value={form.volunteers}
@@ -754,7 +790,9 @@ const OutreachEvents = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Budget</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Budget
+              </label>
               <input
                 type="number"
                 step="0.01"
@@ -764,7 +802,9 @@ const OutreachEvents = () => {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Results</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Results
+              </label>
               <input
                 type="text"
                 value={form.results}
@@ -808,8 +848,8 @@ const OutreachEvents = () => {
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white">{ev.name}</h3>
-                    <p className="text-xs text-slate-500">
+                    <h3 className="font-semibold text-label">{ev.name}</h3>
+                    <p className="text-caption-1 text-secondary-label">
                       {ev.date ? new Date(ev.date).toLocaleDateString() : ''}{' '}
                       {ev.location ? `\u00B7 ${ev.location}` : ''}
                     </p>
@@ -818,21 +858,23 @@ const OutreachEvents = () => {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(ev)}
-                    className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-primary-600"
+                    className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-system-fill text-tertiary-label hover:text-primary-600"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(ev.id)}
-                    className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-rose-50 text-slate-400 hover:text-rose-600"
+                    className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-rose-50 text-tertiary-label hover:text-rose-600"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
+              <div className="mt-3 flex flex-wrap gap-3 text-caption-1 text-secondary-label">
                 {ev.event_type && (
-                  <span className="px-2 py-1 rounded-full bg-slate-100">{ev.event_type}</span>
+                  <span className="rounded-full bg-system-fill px-2 py-1 text-caption-1 text-secondary-label">
+                    {ev.event_type}
+                  </span>
                 )}
                 {ev.organizer && (
                   <span>
@@ -952,7 +994,7 @@ const SoulsWonRegistry = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Souls Won Registry</h2>
+        <h2 className="text-title-2 font-semibold text-label">Souls Won Registry</h2>
         <div className="flex gap-3">
           <select
             value={statusFilter}
@@ -994,7 +1036,9 @@ const SoulsWonRegistry = () => {
         <form onSubmit={handleSave} className={STAT_STYLE + ' space-y-4'}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Full Name *
+              </label>
               <input
                 type="text"
                 value={form.full_name}
@@ -1008,7 +1052,9 @@ const SoulsWonRegistry = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Phone
+              </label>
               <input
                 type="text"
                 value={form.phone}
@@ -1017,7 +1063,9 @@ const SoulsWonRegistry = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Gender</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Gender
+              </label>
               <select
                 value={form.gender}
                 onChange={(e) => setForm({ ...form, gender: e.target.value })}
@@ -1029,7 +1077,9 @@ const SoulsWonRegistry = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Age Group</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Age Group
+              </label>
               <select
                 value={form.age_group}
                 onChange={(e) => setForm({ ...form, age_group: e.target.value })}
@@ -1045,7 +1095,9 @@ const SoulsWonRegistry = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Location</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Location
+              </label>
               <input
                 type="text"
                 value={form.location}
@@ -1054,7 +1106,9 @@ const SoulsWonRegistry = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date Saved *</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Date Saved *
+              </label>
               <input
                 type="date"
                 value={form.date_saved}
@@ -1064,7 +1118,9 @@ const SoulsWonRegistry = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Soul Winner</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Soul Winner
+              </label>
               <input
                 type="text"
                 value={form.soul_winner}
@@ -1073,7 +1129,9 @@ const SoulsWonRegistry = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Status
+              </label>
               <select
                 value={form.follow_up_status}
                 onChange={(e) => setForm({ ...form, follow_up_status: e.target.value })}
@@ -1105,16 +1163,18 @@ const SoulsWonRegistry = () => {
         </form>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-black/[0.06] dark:border-white/[0.08]">
+        <table className="w-full text-footnote">
           <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Name</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Contact</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Date Saved</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Soul Winner</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Status</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-600">Actions</th>
+            <tr className="bg-system-fill border-b border-black/[0.06] dark:border-white/[0.08]">
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Name</th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Contact</th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Date Saved</th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">
+                Soul Winner
+              </th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Status</th>
+              <th className="text-right py-3 px-4 font-semibold text-secondary-label">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1134,19 +1194,17 @@ const SoulsWonRegistry = () => {
                 return (
                   <tr
                     key={s.id}
-                    className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03]"
                   >
-                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-white">
-                      {s.full_name}
-                    </td>
-                    <td className="py-3 px-4 text-slate-500">{s.phone || '-'}</td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3 px-4 font-medium text-label">{s.full_name}</td>
+                    <td className="py-3 px-4 text-secondary-label">{s.phone || '-'}</td>
+                    <td className="py-3 px-4 text-secondary-label">
                       {s.date_saved ? new Date(s.date_saved).toLocaleDateString() : '-'}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">{s.soul_winner || '-'}</td>
+                    <td className="py-3 px-4 text-secondary-label">{s.soul_winner || '-'}</td>
                     <td className="py-3 px-4">
                       <span
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${status?.color || ''}`}
+                        className={`text-caption-1 font-medium px-2.5 py-1 rounded-full ${status?.color || ''}`}
                       >
                         {status?.label || s.follow_up_status}
                       </span>
@@ -1169,7 +1227,7 @@ const SoulsWonRegistry = () => {
                           });
                           setShowForm(true);
                         }}
-                        className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-primary-600"
+                        className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-system-fill text-tertiary-label hover:text-primary-600"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
@@ -1184,7 +1242,7 @@ const SoulsWonRegistry = () => {
                             }
                           }
                         }}
-                        className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-rose-50 text-slate-400 hover:text-rose-600"
+                        className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-rose-50 text-tertiary-label hover:text-rose-600"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1290,7 +1348,7 @@ const FollowUpManagement = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Follow-Up Management</h2>
+        <h2 className="text-title-2 font-semibold text-label">Follow-Up Management</h2>
         <button
           onClick={() => setShowForm(!showForm)}
           className="btn-primary flex items-center gap-2 self-start"
@@ -1303,7 +1361,9 @@ const FollowUpManagement = () => {
         <form onSubmit={handleSave} className={STAT_STYLE + ' space-y-4'}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Soul Won *</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Soul Won *
+              </label>
               <select
                 value={form.soul_won_id}
                 onChange={(e) => setForm({ ...form, soul_won_id: e.target.value })}
@@ -1319,7 +1379,7 @@ const FollowUpManagement = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 First Contact Date
               </label>
               <input
@@ -1330,7 +1390,7 @@ const FollowUpManagement = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 Last Contact Date
               </label>
               <input
@@ -1341,7 +1401,7 @@ const FollowUpManagement = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 Follow-Up Officer
               </label>
               <input
@@ -1352,7 +1412,7 @@ const FollowUpManagement = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 Home Visit Status
               </label>
               <input
@@ -1364,7 +1424,7 @@ const FollowUpManagement = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 Counseling Status
               </label>
               <input
@@ -1375,7 +1435,9 @@ const FollowUpManagement = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Prayer Needs</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Prayer Needs
+              </label>
               <input
                 type="text"
                 value={form.prayer_needs}
@@ -1384,7 +1446,9 @@ const FollowUpManagement = () => {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Notes
+              </label>
               <input
                 type="text"
                 value={form.notes}
@@ -1401,7 +1465,7 @@ const FollowUpManagement = () => {
 
       <div className="space-y-3">
         {souls.length === 0 ? (
-          <p className="text-center py-12 text-slate-400">No souls awaiting follow-up</p>
+          <p className="text-center py-12 text-tertiary-label">No souls awaiting follow-up</p>
         ) : (
           souls.map((soul) => (
             <div key={soul.id} className={STAT_STYLE}>
@@ -1410,12 +1474,12 @@ const FollowUpManagement = () => {
                 onClick={() => toggleExpand(soul.id)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-bold">
+                  <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-footnote font-semibold">
                     {soul.full_name?.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 dark:text-white">{soul.full_name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="font-semibold text-label">{soul.full_name}</p>
+                    <p className="text-caption-1 text-secondary-label">
                       Saved:{' '}
                       {soul.date_saved ? new Date(soul.date_saved).toLocaleDateString() : 'N/A'}{' '}
                       {soul.soul_winner ? `\u00B7 ${soul.soul_winner}` : ''}
@@ -1423,22 +1487,19 @@ const FollowUpManagement = () => {
                   </div>
                 </div>
                 {expanded === soul.id ? (
-                  <ChevronUp className="w-4 h-4 text-slate-400" />
+                  <ChevronUp className="w-4 h-4 text-tertiary-label" />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                  <ChevronDown className="w-4 h-4 text-tertiary-label" />
                 )}
               </div>
               {expanded === soul.id && (
-                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
+                <div className="mt-4 pt-4 border-t border-separator/60 dark:border-white/[0.08] space-y-3">
                   {(followUps[soul.id] || []).length === 0 ? (
-                    <p className="text-sm text-slate-400">No follow-up records yet</p>
+                    <p className="text-footnote text-tertiary-label">No follow-up records yet</p>
                   ) : (
                     followUps[soul.id].map((fu) => (
-                      <div
-                        key={fu.id}
-                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-sm"
-                      >
-                        <div className="flex justify-between text-slate-500 mb-1">
+                      <div key={fu.id} className="p-3 rounded-xl bg-system-fill text-footnote">
+                        <div className="flex justify-between text-secondary-label mb-1">
                           <span>
                             <UserCheck className="w-3 h-3 inline mr-1" />
                             {fu.follow_up_officer || 'Unassigned'}
@@ -1451,17 +1512,17 @@ const FollowUpManagement = () => {
                           </span>
                         </div>
                         {fu.home_visit_status && (
-                          <span className="inline-block mr-2 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                          <span className="inline-block mr-2 text-caption-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
                             {fu.home_visit_status}
                           </span>
                         )}
                         {fu.counseling_status && (
-                          <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700">
+                          <span className="inline-block text-caption-1 px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700">
                             {fu.counseling_status}
                           </span>
                         )}
                         {fu.prayer_needs && (
-                          <p className="mt-2 text-slate-600">
+                          <p className="mt-2 text-secondary-label">
                             <HandHeart className="w-3 h-3 inline mr-1" />
                             {fu.prayer_needs}
                           </p>
@@ -1556,7 +1617,7 @@ const EvangelismTeam = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Evangelism Team</h2>
+        <h2 className="text-title-2 font-semibold text-label">Evangelism Team</h2>
         <button
           onClick={() => {
             setEditing(null);
@@ -1580,7 +1641,9 @@ const EvangelismTeam = () => {
         <form onSubmit={handleSave} className={STAT_STYLE + ' space-y-4'}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Full Name *
+              </label>
               <input
                 type="text"
                 value={form.full_name}
@@ -1594,7 +1657,9 @@ const EvangelismTeam = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Role
+              </label>
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
@@ -1608,7 +1673,9 @@ const EvangelismTeam = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Phone
+              </label>
               <input
                 type="text"
                 value={form.phone}
@@ -1617,7 +1684,9 @@ const EvangelismTeam = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Email
+              </label>
               <input
                 type="email"
                 value={form.email}
@@ -1626,7 +1695,9 @@ const EvangelismTeam = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Section</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Section
+              </label>
               <input
                 type="text"
                 value={form.section}
@@ -1635,7 +1706,9 @@ const EvangelismTeam = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Souls Won</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Souls Won
+              </label>
               <input
                 type="number"
                 value={form.souls_won}
@@ -1664,7 +1737,7 @@ const EvangelismTeam = () => {
 
       {/* Leaderboard */}
       <div className={STAT_STYLE}>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+        <h3 className="text-headline font-semibold text-label mb-4 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-amber-500" /> Soul Winner Leaderboard
         </h3>
         {team.length === 0 ? (
@@ -1680,26 +1753,24 @@ const EvangelismTeam = () => {
               .map((member, i) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50"
+                  className="flex items-center justify-between p-3 rounded-xl bg-system-fill"
                 >
                   <div className="flex items-center gap-3">
                     <span
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-100 text-amber-600' : i === 1 ? 'bg-slate-200 text-slate-600' : i === 2 ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'}`}
+                      className={`flex h-7 w-7 items-center justify-center rounded-full text-caption-1 font-semibold tabular-nums ${i === 0 ? 'bg-system-yellow/20 text-yellow-700 dark:text-system-yellow' : i === 1 ? 'bg-system-gray/25 text-secondary-label' : i === 2 ? 'bg-system-orange/15 text-orange-700 dark:text-system-orange' : 'bg-secondary-system-grouped-background text-tertiary-label'}`}
                     >
                       {i + 1}
                     </span>
                     <div>
-                      <p className="font-semibold text-slate-900 dark:text-white text-sm">
-                        {member.full_name}
-                      </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="font-semibold text-label text-footnote">{member.full_name}</p>
+                      <p className="text-caption-1 text-secondary-label">
                         {roleOptions.find((o) => o.value === member.role)?.label || member.role}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-primary-600">{member.souls_won}</p>
-                    <p className="text-xs text-slate-400">souls won</p>
+                    <p className="font-semibold text-primary-600">{member.souls_won}</p>
+                    <p className="text-caption-1 text-tertiary-label">souls won</p>
                   </div>
                 </div>
               ))}
@@ -1708,33 +1779,35 @@ const EvangelismTeam = () => {
       </div>
 
       {/* Team List */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-black/[0.06] dark:border-white/[0.08]">
+        <table className="w-full text-footnote">
           <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Name</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Role</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Section</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Contact</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-600">Souls Won</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-600">Actions</th>
+            <tr className="bg-system-fill border-b border-black/[0.06] dark:border-white/[0.08]">
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Name</th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Role</th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Section</th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Contact</th>
+              <th className="text-right py-3 px-4 font-semibold text-secondary-label">Souls Won</th>
+              <th className="text-right py-3 px-4 font-semibold text-secondary-label">Actions</th>
             </tr>
           </thead>
           <tbody>
             {team.map((m) => (
               <tr
                 key={m.id}
-                className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50"
+                className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-grouped-background/60"
               >
-                <td className="py-3 px-4 font-medium text-slate-900">{m.full_name}</td>
+                <td className="py-3 px-4 font-medium text-label">{m.full_name}</td>
                 <td className="py-3 px-4">
-                  <span className="text-xs px-2 py-1 rounded-full bg-primary-100 text-primary-700">
+                  <span className="text-caption-1 px-2 py-1 rounded-full bg-primary-100 text-primary-700">
                     {roleOptions.find((o) => o.value === m.role)?.label || m.role}
                   </span>
                 </td>
-                <td className="py-3 px-4 text-slate-600">{m.section || '-'}</td>
-                <td className="py-3 px-4 text-slate-500">{m.phone || m.email || '-'}</td>
-                <td className="py-3 px-4 text-right font-bold text-primary-600">{m.souls_won}</td>
+                <td className="py-3 px-4 text-secondary-label">{m.section || '-'}</td>
+                <td className="py-3 px-4 text-secondary-label">{m.phone || m.email || '-'}</td>
+                <td className="py-3 px-4 text-right font-semibold text-primary-600">
+                  {m.souls_won}
+                </td>
                 <td className="py-3 px-4 text-right">
                   <button
                     onClick={() => {
@@ -1749,7 +1822,7 @@ const EvangelismTeam = () => {
                       });
                       setShowForm(true);
                     }}
-                    className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-primary-600"
+                    className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-system-fill text-tertiary-label hover:text-primary-600"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -1764,7 +1837,7 @@ const EvangelismTeam = () => {
                         }
                       }
                     }}
-                    className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-rose-50 text-slate-400 hover:text-rose-600"
+                    className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-rose-50 text-tertiary-label hover:text-rose-600"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1855,7 +1928,7 @@ const BaptismTracking = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Baptism Tracking</h2>
+        <h2 className="text-title-2 font-semibold text-label">Baptism Tracking</h2>
         <button
           onClick={() => {
             setEditing(null);
@@ -1879,7 +1952,7 @@ const BaptismTracking = () => {
         <form onSubmit={handleSave} className={STAT_STYLE + ' space-y-4'}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 Candidate Name *
               </label>
               <input
@@ -1891,7 +1964,7 @@ const BaptismTracking = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 Salvation Date
               </label>
               <input
@@ -1902,7 +1975,9 @@ const BaptismTracking = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Baptism Date</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Baptism Date
+              </label>
               <input
                 type="date"
                 value={form.baptism_date}
@@ -1911,7 +1986,9 @@ const BaptismTracking = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Baptized By</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Baptized By
+              </label>
               <input
                 type="text"
                 value={form.baptized_by}
@@ -1920,7 +1997,9 @@ const BaptismTracking = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Status
+              </label>
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
@@ -1952,16 +2031,22 @@ const BaptismTracking = () => {
         </form>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-black/[0.06] dark:border-white/[0.08]">
+        <table className="w-full text-footnote">
           <thead>
-            <tr className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Candidate</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Salvation Date</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Baptism Date</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Baptized By</th>
-              <th className="text-left py-3 px-4 font-semibold text-slate-600">Status</th>
-              <th className="text-right py-3 px-4 font-semibold text-slate-600">Actions</th>
+            <tr className="bg-system-fill border-b border-black/[0.06] dark:border-white/[0.08]">
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Candidate</th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">
+                Salvation Date
+              </th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">
+                Baptism Date
+              </th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">
+                Baptized By
+              </th>
+              <th className="text-left py-3 px-4 font-semibold text-secondary-label">Status</th>
+              <th className="text-right py-3 px-4 font-semibold text-secondary-label">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -1981,19 +2066,19 @@ const BaptismTracking = () => {
                 return (
                   <tr
                     key={r.id}
-                    className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50"
+                    className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-grouped-background/60"
                   >
-                    <td className="py-3 px-4 font-medium text-slate-900">{r.candidate_name}</td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3 px-4 font-medium text-label">{r.candidate_name}</td>
+                    <td className="py-3 px-4 text-secondary-label">
                       {r.salvation_date ? new Date(r.salvation_date).toLocaleDateString() : '-'}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3 px-4 text-secondary-label">
                       {r.baptism_date ? new Date(r.baptism_date).toLocaleDateString() : '-'}
                     </td>
-                    <td className="py-3 px-4 text-slate-600">{r.baptized_by || '-'}</td>
+                    <td className="py-3 px-4 text-secondary-label">{r.baptized_by || '-'}</td>
                     <td className="py-3 px-4">
                       <span
-                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${st?.color || ''}`}
+                        className={`text-caption-1 font-medium px-2.5 py-1 rounded-full ${st?.color || ''}`}
                       >
                         {st?.label || r.status}
                       </span>
@@ -2012,7 +2097,7 @@ const BaptismTracking = () => {
                           });
                           setShowForm(true);
                         }}
-                        className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-slate-100 text-slate-400 hover:text-primary-600"
+                        className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-system-fill text-tertiary-label hover:text-primary-600"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
@@ -2027,7 +2112,7 @@ const BaptismTracking = () => {
                             }
                           }
                         }}
-                        className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-rose-50 text-slate-400 hover:text-rose-600"
+                        className="h-9 w-9 rounded-lg inline-flex items-center justify-center hover:bg-rose-50 text-tertiary-label hover:text-rose-600"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -2088,7 +2173,7 @@ const EvangelismReports = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Evangelism Reports</h2>
+        <h2 className="text-title-2 font-semibold text-label">Evangelism Reports</h2>
         <select
           value={year}
           onChange={(e) => setYear(parseInt(e.target.value))}
@@ -2105,52 +2190,64 @@ const EvangelismReports = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className={STAT_STYLE}>
-          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Outreach Events</p>
-          <p className="text-2xl font-bold text-slate-900">{monthly.length}</p>
+          <p className="text-caption-1 font-semibold text-secondary-label uppercase mb-1">
+            Outreach Events
+          </p>
+          <p className="text-title-1 font-semibold text-label">{monthly.length}</p>
         </div>
         <div className={STAT_STYLE}>
-          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Souls Won</p>
-          <p className="text-2xl font-bold text-emerald-600">{totalSouls}</p>
+          <p className="text-caption-1 font-semibold text-secondary-label uppercase mb-1">
+            Souls Won
+          </p>
+          <p className="text-title-1 font-semibold text-emerald-600">{totalSouls}</p>
         </div>
         <div className={STAT_STYLE}>
-          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Baptized</p>
-          <p className="text-2xl font-bold text-blue-600">{annual?.baptisms || 0}</p>
+          <p className="text-caption-1 font-semibold text-secondary-label uppercase mb-1">
+            Baptized
+          </p>
+          <p className="text-title-1 font-semibold text-blue-600">{annual?.baptisms || 0}</p>
         </div>
         <div className={STAT_STYLE}>
-          <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Members Added</p>
-          <p className="text-2xl font-bold text-primary-600">{totalMembers}</p>
+          <p className="text-caption-1 font-semibold text-secondary-label uppercase mb-1">
+            Members Added
+          </p>
+          <p className="text-title-1 font-semibold text-primary-600">{totalMembers}</p>
         </div>
       </div>
 
       {/* Monthly Breakdown */}
       <div className={STAT_STYLE}>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Monthly Report</h3>
+        <h3 className="text-headline font-semibold text-label mb-4">Monthly Report</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-footnote">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-700">
-                <th className="text-left py-3 px-4 font-semibold text-slate-600">Month</th>
-                <th className="text-right py-3 px-4 font-semibold text-slate-600">Souls Won</th>
-                <th className="text-right py-3 px-4 font-semibold text-slate-600">Members Added</th>
+              <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                <th className="text-left py-3 px-4 font-semibold text-secondary-label">Month</th>
+                <th className="text-right py-3 px-4 font-semibold text-secondary-label">
+                  Souls Won
+                </th>
+                <th className="text-right py-3 px-4 font-semibold text-secondary-label">
+                  Members Added
+                </th>
               </tr>
             </thead>
             <tbody>
               {monthly.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="text-center py-8 text-slate-400">
+                  <td colSpan={3} className="text-center py-8 text-tertiary-label">
                     No data for {year}
                   </td>
                 </tr>
               ) : (
                 monthly.map((row, i) => (
-                  <tr key={i} className="border-b border-slate-100 dark:border-slate-700">
-                    <td className="py-3 px-4 text-slate-800 font-medium">
+                  <tr key={i} className="border-b border-separator/60 dark:border-white/[0.08]">
+                    <td className="py-3 px-4 text-label font-medium">
                       {MONTH_NAMES[parseInt(row.month) - 1] || row.month}
                     </td>
-                    <td className="py-3 px-4 text-right text-emerald-600 font-bold">
+                    <td className="py-3 px-4 text-right text-emerald-600 font-semibold">
                       {row.souls_won}
                     </td>
-                    <td className="py-3 px-4 text-right text-primary-600 font-bold">
+                    <td className="py-3 px-4 text-right text-primary-600 font-semibold">
                       {row.members_added || 0}
                     </td>
                   </tr>
@@ -2164,17 +2261,17 @@ const EvangelismReports = () => {
       {/* Annual Summary */}
       {annual && (
         <div className={STAT_STYLE}>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
-            Annual Report {year}
-          </h3>
+          <h3 className="text-headline font-semibold text-label mb-4">Annual Report {year}</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-center">
-              <p className="text-2xl font-bold text-slate-900">{annual.souls_won || 0}</p>
-              <p className="text-xs text-slate-500 mt-1">Souls Won</p>
+            <div className="p-4 rounded-xl bg-system-fill text-center">
+              <p className="text-title-1 font-semibold text-label">{annual.souls_won || 0}</p>
+              <p className="text-caption-1 text-secondary-label mt-1">Souls Won</p>
             </div>
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-center">
-              <p className="text-2xl font-bold text-primary-600">{annual.members_added || 0}</p>
-              <p className="text-xs text-slate-500 mt-1">Members Added</p>
+            <div className="p-4 rounded-xl bg-system-fill text-center">
+              <p className="text-title-1 font-semibold text-primary-600">
+                {annual.members_added || 0}
+              </p>
+              <p className="text-caption-1 text-secondary-label mt-1">Members Added</p>
             </div>
           </div>
         </div>

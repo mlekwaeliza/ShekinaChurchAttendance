@@ -47,39 +47,36 @@ const PWAInstallPrompt = () => {
   if (isInstalled || !showPrompt || !deferredPrompt) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:bottom-6 sm:right-6 z-50 animate-slide-up">
-      <div className="card p-4 shadow-xl border border-indigo-100 dark:border-indigo-900 max-w-sm">
+    <div className="fixed bottom-4 left-4 right-4 z-50 animate-slide-up sm:bottom-6 sm:left-auto sm:right-6">
+      <div className="card relative max-w-sm p-4 shadow-elevated">
         <button
           onClick={handleDismiss}
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg text-secondary-label transition-colors hover:bg-system-fill hover:text-label"
           aria-label="Dismiss"
         >
-          <X className="w-4 h-4" />
+          <X className="h-4 w-4" />
         </button>
 
         <div className="flex items-start gap-3">
-          <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl">
-            <Smartphone className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary-500/[0.12]">
+            <Smartphone className="h-[18px] w-[18px] text-primary-700 dark:text-primary-300" />
           </div>
 
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Install App</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <div className="flex-1 pr-4">
+            <p className="text-footnote font-semibold text-label">Install App</p>
+            <p className="mt-0.5 text-caption-1 leading-relaxed text-secondary-label">
               Add Church Attendance to your home screen for quick access and offline support.
             </p>
 
-            <div className="flex gap-2 mt-3">
+            <div className="mt-3 flex items-center gap-2">
               <button
                 onClick={handleInstall}
-                className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
+                className="btn-sm btn-primary flex items-center gap-1.5"
               >
-                <Download className="w-3.5 h-3.5" />
+                <Download className="h-3.5 w-3.5" />
                 Install
               </button>
-              <button
-                onClick={handleDismiss}
-                className="text-xs px-3 py-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
+              <button onClick={handleDismiss} className="btn-sm btn-ghost">
                 Not now
               </button>
             </div>

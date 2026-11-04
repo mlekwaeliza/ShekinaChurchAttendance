@@ -90,14 +90,14 @@ const WeeklyAttendanceMatrix = ({
   });
 
   return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden shadow-sm">
+    <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background overflow-hidden shadow-card">
       {/* ── Controls Header ─────────────────────────────────────── */}
-      <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/30">
+      <div className="p-4 border-b border-separator/60 dark:border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-3 bg-system-grouped-background/60 dark:bg-white/[0.03]">
         <div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-indigo-500" /> {title}
+          <h3 className="text-footnote font-semibold text-label flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary-600" /> {title}
           </h3>
-          <p className="text-[11px] text-slate-400 mt-0.5">
+          <p className="text-caption-1 text-tertiary-label mt-0.5">
             Showing member attendance records per week (Green P = Present, Red A = Absent, Amber E =
             Excused)
           </p>
@@ -106,13 +106,13 @@ const WeeklyAttendanceMatrix = ({
         <div className="flex flex-wrap items-center gap-2">
           {/* Search bar */}
           <div className="relative min-w-36">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-tertiary-label" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search member..."
-              className="h-8 w-full pl-8 pr-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              className="h-8 w-full pl-8 pr-2 text-caption-1 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-label focus:outline-none focus:ring-2 focus:ring-primary-500/30"
             />
           </div>
 
@@ -121,7 +121,7 @@ const WeeklyAttendanceMatrix = ({
             <select
               value={serviceId}
               onChange={(e) => setServiceId(e.target.value)}
-              className="h-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              className="h-8 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background px-2.5 text-caption-1 font-medium text-secondary-label focus:outline-none focus:ring-2 focus:ring-primary-500/30"
             >
               <option value="all">All Services</option>
               {serviceTypes.map((st) => (
@@ -134,11 +134,13 @@ const WeeklyAttendanceMatrix = ({
 
           {/* Weeks Count Selector */}
           <div className="flex items-center gap-1">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase">Weeks:</span>
+            <span className="text-caption-2 font-semibold text-tertiary-label uppercase">
+              Weeks:
+            </span>
             <select
               value={weeksCount}
               onChange={(e) => setWeeksCount(Number(e.target.value))}
-              className="h-8 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              className="h-8 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background px-2.5 text-caption-1 font-semibold text-primary-700 dark:text-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
             >
               <option value={4}>4 weeks</option>
               <option value={8}>8 weeks</option>
@@ -150,17 +152,17 @@ const WeeklyAttendanceMatrix = ({
           </div>
 
           {/* Legend */}
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-system-fill/50 border border-black/[0.06] dark:border-white/[0.16]">
+            <span className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
               Legend:
             </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-700 dark:text-emerald-300">
+            <span className="inline-flex items-center gap-1 text-caption-2 font-semibold text-emerald-700 dark:text-emerald-300">
               <span className="w-2.5 h-2.5 rounded bg-emerald-500" /> P
             </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-black text-rose-700 dark:text-rose-300">
+            <span className="inline-flex items-center gap-1 text-caption-2 font-semibold text-rose-700 dark:text-rose-300">
               <span className="w-2.5 h-2.5 rounded bg-rose-500" /> A
             </span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-700 dark:text-amber-300">
+            <span className="inline-flex items-center gap-1 text-caption-2 font-semibold text-amber-700 dark:text-amber-300">
               <span className="w-2.5 h-2.5 rounded bg-amber-500" /> E
             </span>
           </div>
@@ -169,27 +171,27 @@ const WeeklyAttendanceMatrix = ({
 
       {/* ── Table Grid ────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-400 text-xs">
-          <Loader2 className="w-5 h-5 mr-2 animate-spin text-indigo-500" />
+        <div className="flex items-center justify-center py-16 text-tertiary-label text-caption-1">
+          <Loader2 className="w-5 h-5 mr-2 animate-spin text-primary-600" />
           Loading weekly attendance matrix...
         </div>
       ) : filteredMatrix.length === 0 ? (
-        <div className="text-center py-16 text-slate-400 text-xs">
+        <div className="text-center py-16 text-tertiary-label text-caption-1">
           No weekly attendance records found for the selected period/filters.
         </div>
       ) : (
         <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
           <div className="min-w-max">
             {/* Header row */}
-            <div className="flex bg-slate-100 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider text-slate-500 sticky top-0 z-20">
-              <div className="sticky left-0 z-10 bg-slate-100 dark:bg-slate-900/90 w-44 shrink-0 px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 shadow-sm">
+            <div className="flex bg-system-fill dark:bg-white/[0.03] border-b border-black/[0.06] dark:border-white/[0.08] text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label sticky top-0 z-20">
+              <div className="sticky left-0 z-10 bg-system-fill dark:bg-white/[0.04] w-44 shrink-0 px-3 py-2.5 border-r border-black/[0.06] dark:border-white/[0.08] shadow-card">
                 Member
               </div>
               <div className="w-28 shrink-0 px-3 py-2.5">Section</div>
               {weeksList.map((w) => (
                 <div
                   key={w}
-                  className="w-14 shrink-0 px-1 py-2.5 text-center font-bold text-slate-600 dark:text-slate-300"
+                  className="w-14 shrink-0 px-1 py-2.5 text-center font-semibold text-secondary-label"
                   title={w}
                 >
                   {weekToDate(w)}
@@ -201,18 +203,18 @@ const WeeklyAttendanceMatrix = ({
             {filteredMatrix.map((m, idx) => (
               <div
                 key={m.member_id || idx}
-                className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-violet-50/30 dark:hover:bg-violet-950/20 transition-colors"
+                className="flex border-b border-separator/60 dark:border-white/[0.08] text-caption-1 hover:bg-violet-50/30 dark:hover:bg-violet-950/20 transition-colors"
               >
-                <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-44 shrink-0 px-3 py-2.5 border-r border-slate-200 dark:border-slate-700 truncate">
-                  <span className="font-semibold text-slate-900 dark:text-white block truncate">
-                    {m.full_name}
-                  </span>
+                <div className="sticky left-0 z-10 bg-secondary-system-grouped-background w-44 shrink-0 px-3 py-2.5 border-r border-black/[0.06] dark:border-white/[0.08] truncate">
+                  <span className="font-semibold text-label block truncate">{m.full_name}</span>
                   {m.membership_id && (
-                    <span className="text-[10px] text-slate-400 block">{m.membership_id}</span>
+                    <span className="text-caption-2 text-tertiary-label block">
+                      {m.membership_id}
+                    </span>
                   )}
                 </div>
                 <div
-                  className="w-28 shrink-0 px-3 py-2.5 text-slate-500 truncate"
+                  className="w-28 shrink-0 px-3 py-2.5 text-secondary-label truncate"
                   title={m.section_name || ''}
                 >
                   {m.section_name || '—'}
@@ -224,7 +226,7 @@ const WeeklyAttendanceMatrix = ({
                   >
                     {status === 'present' && (
                       <span
-                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-black shadow-sm"
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-300 text-caption-2 font-semibold shadow-card"
                         title="Present"
                       >
                         P
@@ -232,7 +234,7 @@ const WeeklyAttendanceMatrix = ({
                     )}
                     {status === 'absent' && (
                       <span
-                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-rose-700 bg-rose-100 dark:bg-rose-900/40 dark:text-rose-300 text-[10px] font-black shadow-sm"
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-rose-700 bg-rose-100 dark:bg-rose-900/40 dark:text-rose-300 text-caption-2 font-semibold shadow-card"
                         title="Absent"
                       >
                         A
@@ -240,14 +242,16 @@ const WeeklyAttendanceMatrix = ({
                     )}
                     {status === 'excused' && (
                       <span
-                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-black shadow-sm"
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-md text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 text-caption-2 font-semibold shadow-card"
                         title="Excused"
                       >
                         E
                       </span>
                     )}
                     {!status && (
-                      <span className="text-slate-300 dark:text-slate-600 font-bold">·</span>
+                      <span className="text-tertiary-label dark:text-secondary-label font-semibold">
+                        ·
+                      </span>
                     )}
                   </div>
                 ))}

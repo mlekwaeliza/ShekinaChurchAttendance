@@ -222,13 +222,13 @@ export default function ExecutiveReportingCenter() {
   };
 
   const statColors = {
-    slate: 'text-slate-900 dark:text-white',
+    slate: 'text-label',
     blue: 'text-blue-700 dark:text-blue-300',
     green: 'text-emerald-700 dark:text-emerald-300',
     red: 'text-rose-700 dark:text-rose-300',
     emerald: 'text-emerald-700 dark:text-emerald-300',
     purple: 'text-violet-700 dark:text-violet-300',
-    indigo: 'text-indigo-700 dark:text-indigo-300',
+    indigo: 'text-primary-700 dark:text-primary-300',
     cyan: 'text-cyan-700 dark:text-cyan-300',
     amber: 'text-amber-700 dark:text-amber-300',
     rose: 'text-rose-700 dark:text-rose-300'
@@ -236,13 +236,13 @@ export default function ExecutiveReportingCenter() {
 
   const renderStatCard = (label, value, subtitle, color = 'slate') => (
     <div className="product-surface p-4">
-      <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="text-footnote text-secondary-label">{label}</p>
       <p
-        className={`mt-1 text-2xl font-bold tabular-nums ${statColors[color] || statColors.slate}`}
+        className={`mt-1 text-title-1 font-semibold tabular-nums ${statColors[color] || statColors.slate}`}
       >
         {value}
       </p>
-      {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+      {subtitle && <p className="text-caption-1 text-tertiary-label mt-1">{subtitle}</p>}
     </div>
   );
 
@@ -250,14 +250,16 @@ export default function ExecutiveReportingCenter() {
     <div className="space-y-2">
       {data.map((item, i) => (
         <div key={i} className="flex items-center gap-3">
-          <span className="text-xs text-slate-500 w-32 truncate">{item[labelKey]}</span>
-          <div className="flex-1 bg-slate-100 dark:bg-slate-800 rounded-full h-4 overflow-hidden">
+          <span className="text-caption-1 text-secondary-label w-32 truncate">
+            {item[labelKey]}
+          </span>
+          <div className="flex-1 bg-system-fill rounded-full h-4 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all"
+              className="h-full rounded-full bg-primary-500 transition-all"
               style={{ width: `${Math.min((item[valueKey] / maxValue) * 100, 100)}%` }}
             />
           </div>
-          <span className="text-xs font-medium text-slate-700 dark:text-slate-300 w-16 text-right">
+          <span className="text-caption-1 font-medium text-secondary-label w-16 text-right">
             {typeof item[valueKey] === 'number' ? item[valueKey].toLocaleString() : item[valueKey]}
           </span>
         </div>
@@ -278,7 +280,7 @@ export default function ExecutiveReportingCenter() {
         <p className="font-semibold text-rose-700 dark:text-rose-300">
           This report could not be loaded.
         </p>
-        <p className="mt-2 text-sm text-slate-500">{loadError}</p>
+        <p className="mt-2 text-footnote text-secondary-label">{loadError}</p>
         <button type="button" onClick={loadReport} className="btn-primary mt-4">
           Try again
         </button>
@@ -291,10 +293,10 @@ export default function ExecutiveReportingCenter() {
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="max-w-2xl">
             <p className="section-eyebrow">Decision support</p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 dark:text-white">
+            <h1 className="mt-2 text-title-1 font-semibold tracking-tight text-label">
               Church Reports
             </h1>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            <p className="mt-2 text-footnote leading-relaxed text-secondary-label">
               Turn ministry activity into clear pastoral and operational decisions.
             </p>
           </div>
@@ -362,21 +364,19 @@ export default function ExecutiveReportingCenter() {
       <div className="product-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
         <div className="flex items-center gap-2 pb-2 sm:mr-2">
           <Filter className="h-4 w-4 text-primary-600 dark:text-primary-300" />
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-            Reporting period
-          </span>
+          <span className="text-footnote font-semibold text-secondary-label">Reporting period</span>
         </div>
-        <label className="flex flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <label className="flex flex-1 flex-col gap-1.5 text-caption-1 font-semibold text-secondary-label">
           From
           <input
             type="date"
             value={startDate}
             max={endDate}
             onChange={(event) => setStartDate(event.target.value)}
-            className="input h-10 w-full text-sm"
+            className="input h-10 w-full text-footnote"
           />
         </label>
-        <label className="flex flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+        <label className="flex flex-1 flex-col gap-1.5 text-caption-1 font-semibold text-secondary-label">
           To
           <input
             type="date"
@@ -384,10 +384,10 @@ export default function ExecutiveReportingCenter() {
             min={startDate}
             max={new Date().toISOString().split('T')[0]}
             onChange={(event) => setEndDate(event.target.value)}
-            className="input h-10 w-full text-sm"
+            className="input h-10 w-full text-footnote"
           />
         </label>
-        <span className="pb-2 text-xs font-medium text-slate-400 dark:text-slate-500">
+        <span className="pb-2 text-caption-1 font-medium text-tertiary-label">
           Updates automatically
         </span>
       </div>
@@ -429,7 +429,7 @@ export default function ExecutiveReportingCenter() {
               {reportData.topPerformers?.length > 0 && (
                 <div className="card p-4">
                   <h3 className="font-semibold mb-1">Consistent Attendance</h3>
-                  <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mb-4 text-caption-1 text-secondary-label">
                     Members with the strongest recorded attendance in this period.
                   </p>
                   <div className="space-y-2">
@@ -439,11 +439,13 @@ export default function ExecutiveReportingCenter() {
                         className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 rounded-lg"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{i + 1}.</span>
-                          <span className="text-sm">{p.name}</span>
+                          <span className="text-footnote font-medium">{i + 1}.</span>
+                          <span className="text-footnote">{p.name}</span>
                           <Badge variant="info">{p.section_name}</Badge>
                         </div>
-                        <span className="text-sm font-bold text-green-600">{p.rate}%</span>
+                        <span className="text-footnote font-semibold text-green-600">
+                          {p.rate}%
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -455,7 +457,7 @@ export default function ExecutiveReportingCenter() {
                   <h3 className="font-semibold text-amber-700 dark:text-amber-300">
                     Members Needing Care
                   </h3>
-                  <p className="mb-4 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mb-4 mt-1 text-caption-1 text-secondary-label">
                     Below 30% recorded attendance. Use this as a conversation signal, not a
                     judgment.
                   </p>
@@ -466,10 +468,10 @@ export default function ExecutiveReportingCenter() {
                         className="flex items-center justify-between rounded-lg bg-amber-50 p-2 dark:bg-amber-900/20"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-sm">{m.name}</span>
+                          <span className="text-footnote">{m.name}</span>
                           <Badge variant="info">{m.section_name}</Badge>
                         </div>
-                        <span className="text-sm font-bold text-amber-700 dark:text-amber-300">
+                        <span className="text-footnote font-semibold text-amber-700 dark:text-amber-300">
                           {m.rate}%
                         </span>
                       </div>
@@ -509,7 +511,7 @@ export default function ExecutiveReportingCenter() {
                         <div
                           className={`w-4 h-4 rounded-full ${g.gender === 'Male' ? 'bg-blue-500' : 'bg-pink-500'}`}
                         />
-                        <span className="text-sm">
+                        <span className="text-footnote">
                           {g.gender}: {g.count}
                         </span>
                       </div>
@@ -537,11 +539,13 @@ export default function ExecutiveReportingCenter() {
                     {reportData.topSections.map((s, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                        className="flex items-center justify-between p-2 bg-system-fill rounded-lg"
                       >
-                        <span className="text-sm">{s.section_name}</span>
+                        <span className="text-footnote">{s.section_name}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-500">{s.active_members} members</span>
+                          <span className="text-footnote text-secondary-label">
+                            {s.active_members} members
+                          </span>
                           <Badge variant="success">{s.retention_rate}%</Badge>
                         </div>
                       </div>
@@ -579,22 +583,22 @@ export default function ExecutiveReportingCenter() {
               {reportData.rankings?.length > 0 && (
                 <div className="card p-4">
                   <h3 className="font-semibold mb-1">Leadership Reporting Consistency</h3>
-                  <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mb-4 text-caption-1 text-secondary-label">
                     Attendance submissions recorded by each ministry leader.
                   </p>
                   <div className="space-y-2">
                     {reportData.rankings.slice(0, 15).map((l, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                        className="flex items-center justify-between p-2 bg-system-fill rounded-lg"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{i + 1}.</span>
-                          <span className="text-sm">{l.name}</span>
+                          <span className="text-footnote font-medium">{i + 1}.</span>
+                          <span className="text-footnote">{l.name}</span>
                           <Badge variant="info">{l.section_name}</Badge>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-slate-500">
+                          <span className="text-footnote text-secondary-label">
                             {l.submissions} submissions
                           </span>
                         </div>
@@ -658,10 +662,10 @@ export default function ExecutiveReportingCenter() {
                         className="flex items-center justify-between p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{i + 1}.</span>
-                          <span className="text-sm">{c.name}</span>
+                          <span className="text-footnote font-medium">{i + 1}.</span>
+                          <span className="text-footnote">{c.name}</span>
                         </div>
-                        <span className="text-sm font-bold text-emerald-600">
+                        <span className="text-footnote font-semibold text-emerald-600">
                           ₦{c.total_contributed.toLocaleString()}
                         </span>
                       </div>
@@ -757,12 +761,12 @@ export default function ExecutiveReportingCenter() {
                         className="flex items-center justify-between p-2 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg"
                       >
                         <div>
-                          <span className="text-sm font-medium">{m.name}</span>
+                          <span className="text-footnote font-medium">{m.name}</span>
                           <Badge variant="info" className="ml-2">
                             {m.stage}
                           </Badge>
                         </div>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-caption-1 text-tertiary-label">
                           {new Date(m.join_date).toLocaleDateString()}
                         </span>
                       </div>
@@ -849,11 +853,11 @@ export default function ExecutiveReportingCenter() {
                     {reportData.recentPromotions.map((p, i) => (
                       <div
                         key={i}
-                        className="flex items-center gap-2 p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg"
+                        className="flex items-center gap-2 p-2 bg-primary-500/10 dark:bg-primary-500/10 rounded-lg"
                       >
-                        <TrendingUp className="w-4 h-4 text-indigo-600" />
-                        <span className="text-sm">{p.child_name}</span>
-                        <span className="text-xs text-slate-400">
+                        <TrendingUp className="w-4 h-4 text-primary-700" />
+                        <span className="text-footnote">{p.child_name}</span>
+                        <span className="text-caption-1 text-tertiary-label">
                           from {p.from_class || 'N/A'} to {p.to_class}
                         </span>
                       </div>
@@ -871,7 +875,7 @@ export default function ExecutiveReportingCenter() {
                         key={i}
                         className="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg"
                       >
-                        <span className="text-sm">{c.full_name}</span>
+                        <span className="text-footnote">{c.full_name}</span>
                         {c.allergies && <Badge variant="warning">Allergies: {c.allergies}</Badge>}
                         {c.medical_notes && <Badge variant="info">{c.medical_notes}</Badge>}
                       </div>
@@ -886,7 +890,7 @@ export default function ExecutiveReportingCenter() {
 
       {/* Report Footer */}
       {reportData && (
-        <div className="text-xs text-slate-400 text-center">
+        <div className="text-caption-1 text-tertiary-label text-center">
           Report generated at {new Date(reportData.generatedAt).toLocaleString()} | Period:{' '}
           {startDate} to {endDate}
         </div>

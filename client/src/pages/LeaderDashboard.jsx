@@ -37,13 +37,8 @@ const LeaderDashboard = () => {
   const selectedService = data.serviceTypes.find(
     (service) => Number(service.id) === Number(data.selectedServiceId)
   );
-  const {
-    isHead,
-    selectedDate,
-    selectedServiceId,
-    loadOverview,
-    loadSectionPendingSubmissions
-  } = data;
+  const { isHead, selectedDate, selectedServiceId, loadOverview, loadSectionPendingSubmissions } =
+    data;
 
   // Load trends when reports tab is active
   useEffect(() => {
@@ -256,7 +251,7 @@ const LeaderDashboard = () => {
       {/* Toast Message */}
       {data.message && (
         <div className="toast-success mb-6">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-700 dark:text-system-green" />
           <span>{data.message}</span>
         </div>
       )}
@@ -264,18 +259,18 @@ const LeaderDashboard = () => {
       {/* Active Tab Content */}
       {activeTab === 'dashboard' && !data.submitted && (
         <section
-          className="mb-5 rounded-2xl border border-rose-300 bg-rose-50 p-4 shadow-sm dark:border-rose-800 dark:bg-rose-950/30"
+          className="mb-5 rounded-2xl border border-system-red/20 bg-system-red/[0.07] p-4 dark:border-system-red/30"
           role="alert"
         >
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-700 dark:text-system-red" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                  <h2 className="text-footnote font-semibold text-rose-700 dark:text-system-red">
                     Attendance not submitted
                   </h2>
-                  <p className="mt-1 text-xs text-rose-800 dark:text-rose-300">
+                  <p className="mt-1 text-footnote text-rose-700/90 dark:text-system-red/90">
                     {selectedService?.name || 'Main Service'} on {fdate(data.selectedDate)} ·{' '}
                     {unmarkedDashboardMembers.length > 0
                       ? `${unmarkedDashboardMembers.length} member${unmarkedDashboardMembers.length === 1 ? '' : 's'} still need to be marked.`
@@ -285,7 +280,7 @@ const LeaderDashboard = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/leader/attendance')}
-                  className="rounded-lg bg-rose-700 px-3 py-2 text-xs font-bold text-white hover:bg-rose-800 dark:bg-rose-600 dark:hover:bg-rose-500"
+                  className="btn-sm btn-danger"
                 >
                   Complete attendance
                 </button>
@@ -295,7 +290,7 @@ const LeaderDashboard = () => {
                   {unmarkedDashboardMembers.slice(0, 9).map((member) => (
                     <li
                       key={member.id}
-                      className="rounded-xl border border-rose-200 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-800 dark:border-rose-900 dark:bg-slate-900/40 dark:text-slate-200"
+                      className="rounded-xl border border-system-red/15 bg-secondary-system-grouped-background/70 px-3 py-2 text-caption-1 font-semibold text-label dark:border-system-red/20"
                     >
                       {member.full_name}
                     </li>
@@ -303,7 +298,7 @@ const LeaderDashboard = () => {
                 </ul>
               )}
               {unmarkedDashboardMembers.length > 9 && (
-                <p className="mt-2 text-[11px] text-rose-700 dark:text-rose-400">
+                <p className="mt-2 text-caption-2 text-rose-700 dark:text-system-red">
                   And {unmarkedDashboardMembers.length - 9} more member
                   {unmarkedDashboardMembers.length - 9 === 1 ? '' : 's'}.
                 </p>
@@ -313,29 +308,29 @@ const LeaderDashboard = () => {
         </section>
       )}
       {activeTab === 'dashboard' && data.isHead && (
-        <section className="mb-5 rounded-2xl border border-rose-300 bg-rose-50 p-4 shadow-sm dark:border-rose-800 dark:bg-rose-950/30">
+        <section className="mb-5 rounded-2xl border border-system-red/20 bg-system-red/[0.07] p-4 dark:border-system-red/30">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-700 dark:text-system-red" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                  <h2 className="text-footnote font-semibold text-rose-700 dark:text-system-red">
                     Leaders yet to submit
                   </h2>
-                  <p className="mt-1 text-xs text-rose-800 dark:text-rose-300">
+                  <p className="mt-1 text-footnote text-rose-700/90 dark:text-system-red/90">
                     {data.sectionPendingLoading
                       ? 'Checking Sunday Main Service history…'
                       : `${data.sectionPendingSubmissions.length} pending leader submission${data.sectionPendingSubmissions.length === 1 ? '' : 's'} across the last 90 days.`}
                   </p>
                 </div>
                 {!data.sectionPendingLoading && data.sectionPendingSubmissions.length > 0 && (
-                  <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700 dark:bg-rose-900/50 dark:text-rose-300">
+                  <span className="badge-danger">
                     {data.sectionPendingSubmissions.length} pending
                   </span>
                 )}
               </div>
               {!data.sectionPendingLoading && data.sectionPendingSubmissions.length === 0 ? (
-                <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                <p className="mt-3 rounded-xl bg-system-green/10 px-3 py-2 text-footnote font-semibold text-emerald-700 dark:text-system-green">
                   All leaders in your section have submitted for recorded Main Service dates.
                 </p>
               ) : (
@@ -343,13 +338,13 @@ const LeaderDashboard = () => {
                   {data.sectionPendingSubmissions.slice(0, 20).map((entry) => (
                     <li
                       key={`${entry.leader_id}-${entry.date}-${entry.service_id}`}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-rose-200 bg-white/70 px-3 py-2 dark:border-rose-900 dark:bg-slate-900/40"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-system-red/15 bg-secondary-system-grouped-background/70 px-3 py-2 dark:border-system-red/20"
                     >
                       <div>
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <p className="text-caption-1 font-semibold text-label">
                           {entry.leader_name}
                         </p>
-                        <p className="mt-0.5 text-[11px] text-slate-600 dark:text-slate-400">
+                        <p className="mt-0.5 text-caption-2 text-secondary-label">
                           {fdate(entry.date)} · {entry.service_name || 'Main Service'}
                         </p>
                       </div>
@@ -361,7 +356,7 @@ const LeaderDashboard = () => {
                           data.handleAttendanceLeaderSelection(entry.leader_id);
                           navigate('/leader/attendance');
                         }}
-                        className="text-xs font-bold text-rose-800 underline underline-offset-2 hover:text-rose-950 dark:text-rose-300 dark:hover:text-rose-100"
+                        className="text-caption-1 font-semibold text-rose-700 underline underline-offset-2 hover:text-rose-800 dark:text-system-red"
                       >
                         Review attendance
                       </button>
@@ -370,7 +365,7 @@ const LeaderDashboard = () => {
                 </ul>
               )}
               {data.sectionPendingSubmissions.length > 20 && (
-                <p className="mt-2 text-[11px] text-rose-700 dark:text-rose-400">
+                <p className="mt-2 text-caption-2 text-rose-700 dark:text-system-red">
                   Showing 20 of {data.sectionPendingSubmissions.length} pending submissions.
                 </p>
               )}
@@ -379,14 +374,14 @@ const LeaderDashboard = () => {
         </section>
       )}
       {activeTab === 'dashboard' && (
-        <section className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm dark:border-amber-800 dark:bg-amber-950/30">
+        <section className="mb-5 rounded-2xl border border-system-orange/20 bg-system-orange/[0.07] p-4 dark:border-system-orange/30">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-system-orange" />
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+              <h2 className="text-footnote font-semibold text-amber-700 dark:text-system-orange">
                 Unsubmitted Main Service Attendance
               </h2>
-              <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+              <p className="mt-1 text-footnote text-amber-700/90 dark:text-system-orange/90">
                 {data.missedSubmissions.length > 0
                   ? `${data.missedSubmissions.length} Sunday Main Service date${data.missedSubmissions.length === 1 ? '' : 's'} in the last 90 days have no submission from you.`
                   : 'No unsubmitted Sunday Main Service dates in the last 90 days.'}
@@ -396,10 +391,10 @@ const LeaderDashboard = () => {
                   {data.missedSubmissions.slice(0, 5).map((entry) => (
                     <li
                       key={`${entry.date}-${entry.service_id || 'service'}`}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-white/70 px-3 py-2 dark:border-amber-900 dark:bg-slate-900/40"
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-system-orange/15 bg-secondary-system-grouped-background/70 px-3 py-2 dark:border-system-orange/20"
                     >
-                      <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        <CalendarDays className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      <span className="inline-flex items-center gap-2 text-caption-1 font-semibold text-label">
+                        <CalendarDays className="h-3.5 w-3.5 text-amber-700 dark:text-system-orange" />
                         {fdate(entry.date)} · {entry.service_name || 'Service'}
                       </span>
                       <button
@@ -409,7 +404,7 @@ const LeaderDashboard = () => {
                           if (entry.service_id) data.handleServiceSelection(entry.service_id);
                           navigate('/leader/attendance');
                         }}
-                        className="text-xs font-bold text-amber-800 underline underline-offset-2 hover:text-amber-950 dark:text-amber-300 dark:hover:text-amber-100"
+                        className="text-caption-1 font-semibold text-amber-700 underline underline-offset-2 hover:text-amber-800 dark:text-system-orange"
                       >
                         Review attendance
                       </button>
@@ -418,7 +413,7 @@ const LeaderDashboard = () => {
                 </ul>
               )}
               {data.missedSubmissions.length > 5 && (
-                <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-400">
+                <p className="mt-2 text-caption-2 text-amber-700 dark:text-system-orange">
                   Showing the 5 most recent missed dates.
                 </p>
               )}

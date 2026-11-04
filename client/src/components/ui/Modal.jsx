@@ -8,10 +8,11 @@ const sizeClasses = {
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
   '2xl': 'max-w-6xl',
-  full: 'max-w-[95vw]',
+  full: 'max-w-[95vw]'
 };
 
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const Modal = ({
   isOpen,
@@ -39,7 +40,9 @@ const Modal = ({
     } else {
       document.body.style.overflow = '';
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen]);
 
   const handleEsc = useCallback((e) => {
@@ -91,10 +94,7 @@ const Modal = ({
   };
 
   return createPortal(
-    <div
-      className="modal-overlay"
-      onClick={handleOverlayClick}
-    >
+    <div className="modal-overlay" onClick={handleOverlayClick}>
       <div
         ref={dialogRef}
         role="dialog"
@@ -109,12 +109,18 @@ const Modal = ({
         {title && (
           <div className="modal-header">
             <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="truncate">{title}</h2>
-              {subtitle && <p id={subtitleId} className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 truncate">{subtitle}</p>}
+              <h2 id={titleId} className="truncate">
+                {title}
+              </h2>
+              {subtitle && (
+                <p id={subtitleId} className="mt-0.5 truncate text-footnote text-secondary-label">
+                  {subtitle}
+                </p>
+              )}
             </div>
             <button
               onClick={onClose}
-              className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 shrink-0"
+              className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-lg shrink-0"
               aria-label="Close dialog"
               type="button"
             >
@@ -124,16 +130,10 @@ const Modal = ({
         )}
 
         {/* Body */}
-        <div className="modal-body">
-          {children}
-        </div>
+        <div className="modal-body">{children}</div>
 
         {/* Footer */}
-        {footer && (
-          <div className="modal-footer">
-            {footer}
-          </div>
-        )}
+        {footer && <div className="modal-footer">{footer}</div>}
       </div>
     </div>,
     document.body

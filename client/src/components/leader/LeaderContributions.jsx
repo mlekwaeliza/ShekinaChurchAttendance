@@ -148,26 +148,58 @@ export default function LeaderContributions({ members: propMembers = [], showMes
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [filtered]);
 
+  const statCards = [
+    {
+      label: 'Total contributions',
+      value: `${CURRENCY} ${fmt(total)}`,
+      icon: DollarSign,
+      well: 'bg-system-green/15',
+      iconColor: 'text-emerald-700 dark:text-system-green'
+    },
+    {
+      label: 'Records',
+      value: filtered.length,
+      icon: List,
+      well: 'bg-system-blue/15',
+      iconColor: 'text-blue-700 dark:text-system-blue'
+    },
+    {
+      label: 'Types',
+      value: summaryByType.length,
+      icon: PieChart,
+      well: 'bg-system-purple/15',
+      iconColor: 'text-purple-700 dark:text-system-purple'
+    },
+    {
+      label: 'Avg / record',
+      value: `${CURRENCY} ${fmt(filtered.length ? total / filtered.length : 0)}`,
+      icon: TrendingUp,
+      well: 'bg-system-orange/15',
+      iconColor: 'text-amber-700 dark:text-system-orange'
+    }
+  ];
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="animate-fade-in space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30">
-            <Receipt className="w-6 h-6 text-emerald-400" />
-          </div>
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-system-green/15">
+            <Receipt className="h-5 w-5 text-emerald-700 dark:text-system-green" />
+          </span>
           <div>
-            <h1 className="text-2xl font-bold text-white">Contributions</h1>
-            <p className="text-sm text-gray-400 mt-0.5">
-              Record and manage your members' contributions
+            <h1 className="text-title-1 font-semibold text-label">Contributions</h1>
+            <p className="mt-0.5 text-footnote text-secondary-label">
+              Record and manage your members&apos; contributions
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={loadData}
-            className="btn-ghost p-2 text-gray-400 hover:text-white"
+            className="btn-icon btn-ghost h-10 w-10 rounded-lg"
             title="Refresh"
+            aria-label="Refresh contributions"
           >
             <RotateCw size={16} />
           </button>
@@ -178,87 +210,47 @@ export default function LeaderContributions({ members: propMembers = [], showMes
               setIsTypeDropdownOpen(false);
               setIsModalOpen(true);
             }}
-            className="btn-primary text-sm flex items-center gap-1.5"
+            className="btn-primary flex items-center gap-1.5"
           >
             <Plus size={15} /> Record Contribution
           </button>
         </div>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-emerald-900/30 to-emerald-800/10 rounded-xl p-5 border border-emerald-700/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-emerald-400/80 uppercase tracking-wider">
-                Total
-              </p>
-              <p className="text-xl font-bold text-white mt-1">
-                {CURRENCY} {fmt(total)}
-              </p>
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {statCards.map((card) => (
+          <article key={card.label} className="card p-5">
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-footnote font-medium text-secondary-label">{card.label}</p>
+              <span
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${card.well}`}
+              >
+                <card.icon className={`h-[18px] w-[18px] ${card.iconColor}`} />
+              </span>
             </div>
-            <div className="p-2.5 rounded-xl bg-emerald-500/20">
-              <DollarSign className="w-5 h-5 text-emerald-400" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-blue-900/30 to-blue-800/10 rounded-xl p-5 border border-blue-700/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-blue-400/80 uppercase tracking-wider">
-                Records
-              </p>
-              <p className="text-xl font-bold text-white mt-1">{filtered.length}</p>
-            </div>
-            <div className="p-2.5 rounded-xl bg-blue-500/20">
-              <List className="w-5 h-5 text-blue-400" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-purple-900/30 to-purple-800/10 rounded-xl p-5 border border-purple-700/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-purple-400/80 uppercase tracking-wider">
-                Types
-              </p>
-              <p className="text-xl font-bold text-white mt-1">{summaryByType.length}</p>
-            </div>
-            <div className="p-2.5 rounded-xl bg-purple-500/20">
-              <PieChart className="w-5 h-5 text-purple-400" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-gradient-to-br from-amber-900/30 to-amber-800/10 rounded-xl p-5 border border-amber-700/30">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-amber-400/80 uppercase tracking-wider">
-                Avg / Record
-              </p>
-              <p className="text-xl font-bold text-white mt-1">
-                {CURRENCY} {fmt(filtered.length ? total / filtered.length : 0)}
-              </p>
-            </div>
-            <div className="p-2.5 rounded-xl bg-amber-500/20">
-              <TrendingUp className="w-5 h-5 text-amber-400" />
-            </div>
-          </div>
-        </div>
+            <p className="mt-2.5 text-title-2 font-semibold leading-tight tabular-nums text-label">
+              {card.value}
+            </p>
+          </article>
+        ))}
       </div>
 
-      {/* Breakdown by Type */}
+      {/* Breakdown by type */}
       {summaryByType.length > 0 && (
-        <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/50 p-5">
-          <h3 className="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
-            <PieChart size={15} className="text-emerald-400" /> Breakdown by Type
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="card p-5">
+          <div className="mb-4 flex items-center gap-2">
+            <PieChart size={15} className="text-emerald-700 dark:text-system-green" />
+            <h3 className="text-headline font-semibold text-label">Breakdown by Type</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {summaryByType.map(([name, amt]) => (
               <div
                 key={name}
-                className="flex items-center justify-between px-3 py-2.5 bg-gray-700/30 rounded-lg"
+                className="flex items-center justify-between gap-3 rounded-xl bg-system-grouped-background/70 px-3 py-2.5 dark:bg-white/[0.03]"
               >
-                <span className="text-sm text-gray-300">{name}</span>
-                <span className="text-sm font-semibold text-emerald-400">
+                <span className="min-w-0 truncate text-footnote text-secondary-label">{name}</span>
+                <span className="shrink-0 text-footnote font-semibold tabular-nums text-emerald-700 dark:text-system-green">
                   {CURRENCY} {fmt(amt)}
                 </span>
               </div>
@@ -267,26 +259,27 @@ export default function LeaderContributions({ members: propMembers = [], showMes
         </div>
       )}
 
-      {/* Search & Filter */}
-      <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/50 p-4">
+      {/* Search & filter */}
+      <div className="card p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative min-w-0 flex-1 sm:max-w-xs">
             <Search
               size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+              className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-tertiary-label"
             />
             <input
               type="text"
               placeholder="Search by name or type..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 pr-4 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              className="input pl-10"
             />
           </div>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            className="select sm:w-48"
+            aria-label="Filter by contribution type"
           >
             <option value="">All Types</option>
             {types.map((t) => (
@@ -299,61 +292,68 @@ export default function LeaderContributions({ members: propMembers = [], showMes
       </div>
 
       {/* Table */}
-      <div className="bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-700/50 overflow-hidden">
+      <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-8 space-y-3">
+          <div className="space-y-3 p-5">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="skeleton h-10 rounded-lg" />
             ))}
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-700/50 bg-gray-800/40">
-              <span className="text-sm text-gray-400">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-separator/60 px-5 py-3 dark:border-white/[0.08]">
+              <span className="text-footnote text-secondary-label">
                 {filtered.length} record{filtered.length !== 1 ? 's' : ''}
               </span>
-              <span className="text-sm font-semibold text-emerald-400">
+              <span className="text-footnote font-semibold tabular-nums text-emerald-700 dark:text-system-green">
                 Total: {CURRENCY} {fmt(total)}
               </span>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700/50 text-gray-400 text-left">
-                    <th className="py-3.5 px-5 font-medium">Date</th>
-                    <th className="py-3.5 px-5 font-medium">Type</th>
-                    <th className="py-3.5 px-5 font-medium text-right">Amount ({CURRENCY})</th>
-                    <th className="py-3.5 px-5 font-medium">Method</th>
+                  <tr className="border-b border-separator/60 text-left dark:border-white/[0.08]">
+                    <th className="px-5 py-3 text-caption-1 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+                      Date
+                    </th>
+                    <th className="px-5 py-3 text-caption-1 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+                      Type
+                    </th>
+                    <th className="px-5 py-3 text-right text-caption-1 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+                      Amount ({CURRENCY})
+                    </th>
+                    <th className="px-5 py-3 text-caption-1 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+                      Method
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((c) => (
                     <tr
                       key={c.id}
-                      className="border-b border-gray-700/20 hover:bg-gray-700/20 transition-colors"
+                      className="border-b border-separator/40 transition-colors last:border-0 hover:bg-system-grouped-background/60 dark:border-white/[0.05] dark:hover:bg-white/[0.03]"
                     >
-                      <td className="py-3 px-5 text-gray-300 whitespace-nowrap">
+                      <td className="whitespace-nowrap px-5 py-3 text-footnote tabular-nums text-secondary-label">
                         {c.payment_date}
                       </td>
-                      <td className="py-3 px-5">
-                        <span className="inline-flex px-2.5 py-1 bg-emerald-900/40 text-emerald-300 rounded-lg text-xs font-medium">
-                          {c.contribution_type_name}
-                        </span>
+                      <td className="px-5 py-3">
+                        <span className="badge-success">{c.contribution_type_name}</span>
                       </td>
-                      <td className="py-3 px-5 text-right text-emerald-400 font-semibold whitespace-nowrap">
+                      <td className="whitespace-nowrap px-5 py-3 text-right text-footnote font-semibold tabular-nums text-emerald-700 dark:text-system-green">
                         {CURRENCY} {fmt(c.amount)}
                       </td>
-                      <td className="py-3 px-5">
-                        <span className="inline-flex px-2 py-1 bg-gray-700/50 rounded-lg text-xs text-gray-400">
-                          {c.payment_method}
-                        </span>
+                      <td className="px-5 py-3">
+                        <span className="badge-neutral">{c.payment_method}</span>
                       </td>
                     </tr>
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-12 text-center text-gray-500">
-                        No contributions yet. Click "Record Contribution" to add one.
+                      <td
+                        colSpan={4}
+                        className="px-5 py-12 text-center text-footnote text-secondary-label"
+                      >
+                        No contributions yet. Click &ldquo;Record Contribution&rdquo; to add one.
                       </td>
                     </tr>
                   )}
@@ -367,29 +367,33 @@ export default function LeaderContributions({ members: propMembers = [], showMes
       {/* Record Contribution Modal */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
           onClick={() => setIsModalOpen(false)}
         >
           <div
-            className="bg-gray-800 rounded-2xl w-full max-w-lg mx-4 shadow-2xl border border-gray-700/50"
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-black/[0.08] bg-secondary-system-grouped-background shadow-modal animate-scale-in dark:border-white/[0.1]"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Record contribution"
           >
-            <div className="flex items-center justify-between p-5 border-b border-gray-700/50">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <Wallet size={18} className="text-emerald-400" />
+            <div className="flex items-center justify-between border-b border-separator/60 px-5 py-4 dark:border-white/[0.08]">
+              <h3 className="flex items-center gap-2 text-headline font-semibold text-label">
+                <Wallet size={18} className="text-emerald-700 dark:text-system-green" />
                 Record Contribution
               </h3>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-secondary-label transition-colors hover:bg-system-fill hover:text-label"
+                aria-label="Close"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="col-span-2 relative">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Member</label>
+            <form onSubmit={handleSubmit} className="space-y-4 p-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="relative col-span-2">
+                  <label className="input-label">Member</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -404,9 +408,9 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                       }}
                       onFocus={() => setIsMemberDropdownOpen(true)}
                       placeholder="Search member by name..."
-                      className="w-full pl-10 pr-10 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-white placeholder-gray-400"
+                      className="input pl-10 pr-10"
                     />
-                    <div className="absolute left-3 top-3 text-gray-400">
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-tertiary-label">
                       <Search size={16} />
                     </div>
                     {memberSearch && (
@@ -417,9 +421,10 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                           setForm((f) => ({ ...f, member_id: '' }));
                           setIsMemberDropdownOpen(true);
                         }}
-                        className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                        className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-tertiary-label hover:bg-system-fill hover:text-label"
+                        aria-label="Clear member"
                       >
-                        <X size={16} />
+                        <X size={14} />
                       </button>
                     )}
                   </div>
@@ -430,7 +435,7 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                         className="fixed inset-0 z-40"
                         onClick={() => setIsMemberDropdownOpen(false)}
                       />
-                      <div className="absolute z-50 w-full mt-1.5 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-700/40">
+                      <div className="absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-xl border border-black/[0.08] bg-secondary-system-grouped-background shadow-popover dark:border-white/[0.1]">
                         {members.filter((m) =>
                           m.full_name.toLowerCase().includes(memberSearch.toLowerCase())
                         ).length > 0 ? (
@@ -448,24 +453,26 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                                   setForm((f) => ({ ...f, member_id: m.id }));
                                   setIsMemberDropdownOpen(false);
                                 }}
-                                className={`w-full text-left px-4 py-3 hover:bg-gray-750 flex items-center justify-between transition-colors ${
-                                  form.member_id === m.id
-                                    ? 'bg-emerald-600/10 border-l-2 border-emerald-500'
-                                    : ''
+                                className={`flex w-full items-center justify-between border-b border-separator/40 px-4 py-3 text-left transition-colors last:border-0 hover:bg-system-grouped-background dark:border-white/[0.06] dark:hover:bg-white/[0.04] ${
+                                  form.member_id === m.id ? 'bg-primary-500/[0.06]' : ''
                                 }`}
                               >
-                                <div>
-                                  <p className="text-sm font-medium text-white">{m.full_name}</p>
-                                  <p className="text-xs text-gray-400 mt-0.5">
+                                <div className="min-w-0">
+                                  <p className="truncate text-footnote font-semibold text-label">
+                                    {m.full_name}
+                                  </p>
+                                  <p className="mt-0.5 truncate text-caption-1 text-secondary-label">
                                     {m.section_name || 'No Section'}{' '}
                                     {m.leader_name ? `• Leader: ${m.leader_name}` : ''}
                                   </p>
                                 </div>
-                                <span className="text-xs text-gray-500 font-mono">#{m.id}</span>
+                                <span className="ml-3 shrink-0 font-mono text-caption-1 text-tertiary-label">
+                                  #{m.id}
+                                </span>
                               </button>
                             ))
                         ) : (
-                          <p className="p-3 text-xs text-gray-400 text-center italic">
+                          <p className="p-3 text-center text-caption-1 italic text-tertiary-label">
                             No members found
                           </p>
                         )}
@@ -474,19 +481,19 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                   )}
                 </div>
                 <div className="relative">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                    Contribution Type
-                  </label>
+                  <label className="input-label">Contribution Type</label>
                   <button
                     type="button"
                     onClick={() => setIsTypeDropdownOpen(!isTypeDropdownOpen)}
-                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-left text-white flex items-center justify-between"
+                    className="input flex items-center justify-between text-left"
                   >
-                    <span>
+                    <span
+                      className={form.contribution_type_id ? 'text-label' : 'text-tertiary-label'}
+                    >
                       {types.find((t) => t.id === Number(form.contribution_type_id))?.name ||
                         'Select type...'}
                     </span>
-                    <ChevronDown size={16} className="text-gray-400" />
+                    <ChevronDown size={16} className="text-tertiary-label" />
                   </button>
 
                   {isTypeDropdownOpen && (
@@ -495,13 +502,13 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                         className="fixed inset-0 z-40"
                         onClick={() => setIsTypeDropdownOpen(false)}
                       />
-                      <div className="absolute z-50 w-full mt-1.5 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-gray-700/40">
+                      <div className="absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-xl border border-black/[0.08] bg-secondary-system-grouped-background shadow-popover dark:border-white/[0.1]">
                         {typesLoading ? (
-                          <p className="p-3 text-xs text-gray-400 text-center italic">
+                          <p className="p-3 text-center text-caption-1 italic text-tertiary-label">
                             Loading types...
                           </p>
                         ) : types.filter((t) => t.is_active !== 0).length === 0 ? (
-                          <p className="p-3 text-xs text-gray-400 text-center italic">
+                          <p className="p-3 text-center text-caption-1 italic text-tertiary-label">
                             No contribution types found
                           </p>
                         ) : (
@@ -515,13 +522,13 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                                   setForm((f) => ({ ...f, contribution_type_id: t.id }));
                                   setIsTypeDropdownOpen(false);
                                 }}
-                                className={`w-full text-left px-4 py-2.5 hover:bg-gray-750 flex items-center justify-between transition-colors ${
+                                className={`flex w-full items-center justify-between border-b border-separator/40 px-4 py-2.5 text-left transition-colors last:border-0 hover:bg-system-grouped-background dark:border-white/[0.06] dark:hover:bg-white/[0.04] ${
                                   Number(form.contribution_type_id) === t.id
-                                    ? 'bg-emerald-600/10 border-l-2 border-emerald-500 text-emerald-400'
-                                    : 'text-gray-200'
+                                    ? 'bg-primary-500/[0.06] text-primary-700 dark:text-primary-300'
+                                    : 'text-label'
                                 }`}
                               >
-                                <span className="text-sm font-medium">{t.name}</span>
+                                <span className="text-footnote font-medium">{t.name}</span>
                               </button>
                             ))
                         )}
@@ -530,9 +537,7 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                    Amount ({CURRENCY})
-                  </label>
+                  <label className="input-label">Amount ({CURRENCY})</label>
                   <input
                     type="number"
                     step="1"
@@ -540,28 +545,26 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                     value={form.amount}
                     onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
                     required
-                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    className="input tabular-nums"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Date</label>
+                  <label className="input-label">Date</label>
                   <input
                     type="date"
                     value={form.payment_date}
                     onChange={(e) => setForm((f) => ({ ...f, payment_date: e.target.value }))}
                     required
-                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    className="input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                    Payment Method
-                  </label>
+                  <label className="input-label">Payment Method</label>
                   <select
                     value={form.payment_method}
                     onChange={(e) => setForm((f) => ({ ...f, payment_method: e.target.value }))}
-                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    className="select w-full"
                   >
                     {PAYMENT_METHODS.map((m) => (
                       <option key={m} value={m}>
@@ -571,41 +574,35 @@ export default function LeaderContributions({ members: propMembers = [], showMes
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">
-                    Reference Number
-                  </label>
+                  <label className="input-label">Reference Number</label>
                   <input
                     type="text"
                     value={form.reference_number}
                     onChange={(e) => setForm((f) => ({ ...f, reference_number: e.target.value }))}
                     placeholder="e.g. MOMO ref"
-                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    className="input"
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Notes</label>
+                  <label className="input-label">Notes</label>
                   <textarea
                     value={form.notes}
                     onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
                     rows={2}
-                    className="w-full px-3 py-2.5 bg-gray-700/50 border border-gray-600/50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                    className="input resize-none"
                     placeholder="Optional notes..."
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="btn-ghost px-4 py-2 text-sm text-gray-400 hover:text-white"
+                  className="btn-secondary"
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="btn-primary px-5 py-2 text-sm rounded-xl"
-                >
+                <button type="submit" disabled={saving} className="btn-primary">
                   {saving ? 'Recording...' : 'Record'}
                 </button>
               </div>

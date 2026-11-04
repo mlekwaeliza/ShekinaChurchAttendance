@@ -159,10 +159,8 @@ export default function ChildrensMinistry() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Children's Ministry</h1>
-          <p className="text-slate-500 dark:text-slate-400">
-            Manage classes, teachers, and children
-          </p>
+          <h1 className="text-title-1 font-semibold text-label">Children's Ministry</h1>
+          <p className="text-secondary-label">Manage classes, teachers, and children</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {activeTab === 'classes' && (
@@ -254,7 +252,7 @@ export default function ChildrensMinistry() {
             <div className="card p-4 md:col-span-2 lg:col-span-4">
               <div className="flex items-center gap-2 mb-3">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
-                <h3 className="font-semibold text-slate-900 dark:text-white">Medical Alerts</h3>
+                <h3 className="font-semibold text-label">Medical Alerts</h3>
               </div>
               <div className="space-y-2">
                 {medicalAlerts.map((child) => (
@@ -276,9 +274,7 @@ export default function ChildrensMinistry() {
 
           {data.dashboard.recentPromotions?.length > 0 && (
             <div className="card p-4 md:col-span-2 lg:col-span-4">
-              <h3 className="font-semibold text-slate-900 dark:text-white mb-3">
-                Recent Promotions
-              </h3>
+              <h3 className="font-semibold text-label mb-3">Recent Promotions</h3>
               <div className="space-y-2">
                 {data.dashboard.recentPromotions.map((p) => (
                   <div
@@ -287,9 +283,9 @@ export default function ChildrensMinistry() {
                   >
                     <TrendingUp className="w-4 h-4 text-green-600" />
                     <span className="font-medium">{p.child_name}</span>
-                    <span className="text-slate-500">promoted to</span>
+                    <span className="text-secondary-label">promoted to</span>
                     <Badge variant="success">{p.new_class}</Badge>
-                    <span className="text-sm text-slate-400 ml-auto">
+                    <span className="text-footnote text-tertiary-label ml-auto">
                       {new Date(p.promotion_date).toLocaleDateString()}
                     </span>
                   </div>
@@ -307,20 +303,22 @@ export default function ChildrensMinistry() {
             <div key={cls.id} className="card p-4">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white">{cls.name}</h3>
-                  {cls.age_group && <p className="text-sm text-slate-500">{cls.age_group}</p>}
+                  <h3 className="font-semibold text-label">{cls.name}</h3>
+                  {cls.age_group && (
+                    <p className="text-footnote text-secondary-label">{cls.age_group}</p>
+                  )}
                 </div>
                 <Badge variant="info">{cls.enrolled_count || 0} children</Badge>
               </div>
               {cls.description && (
-                <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{cls.description}</p>
+                <p className="text-footnote text-secondary-label mb-3">{cls.description}</p>
               )}
-              <div className="flex gap-2 text-sm text-slate-500 mb-3">
+              <div className="flex gap-2 text-footnote text-secondary-label mb-3">
                 {cls.room_number && <span>Room: {cls.room_number}</span>}
                 {cls.schedule && <span>Schedule: {cls.schedule}</span>}
               </div>
               {cls.teacher_name && (
-                <p className="text-sm text-slate-500">
+                <p className="text-footnote text-secondary-label">
                   <Users className="w-4 h-4 inline mr-1" />
                   {cls.teacher_name}
                 </p>
@@ -331,13 +329,13 @@ export default function ChildrensMinistry() {
                     setFormData(cls);
                     setShowModal('class');
                   }}
-                  className="btn-secondary text-xs px-3 py-1.5"
+                  className="btn-secondary text-caption-1 px-3 py-1.5"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete('class', cls.id)}
-                  className="btn-danger text-xs px-3 py-1.5"
+                  className="btn-danger text-caption-1 px-3 py-1.5"
                 >
                   Delete
                 </button>
@@ -358,10 +356,8 @@ export default function ChildrensMinistry() {
                     <Users className="w-5 h-5 text-purple-600" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-slate-900 dark:text-white truncate">
-                      {teacher.full_name}
-                    </h3>
-                    <p className="text-sm text-slate-500 truncate">
+                    <h3 className="font-semibold text-label truncate">{teacher.full_name}</h3>
+                    <p className="text-footnote text-secondary-label truncate">
                       {teacher.phone || teacher.email || 'No contact info'}
                     </p>
                   </div>
@@ -380,13 +376,13 @@ export default function ChildrensMinistry() {
                       setFormData(teacher);
                       setShowModal('teacher');
                     }}
-                    className="btn-secondary text-xs px-3 py-1.5"
+                    className="btn-secondary text-caption-1 px-3 py-1.5"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete('teacher', teacher.id)}
-                    className="btn-danger text-xs px-3 py-1.5"
+                    className="btn-danger text-caption-1 px-3 py-1.5"
                   >
                     Delete
                   </button>
@@ -402,19 +398,19 @@ export default function ChildrensMinistry() {
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary-label" />
               <input
                 type="text"
                 placeholder="Search children or parents..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                className="w-full pl-10 pr-4 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
               />
             </div>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full sm:w-auto px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+              className="w-full sm:w-auto px-4 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
             >
               <option value="">All Classes</option>
               {data.classes.map((cls) => (
@@ -436,10 +432,8 @@ export default function ChildrensMinistry() {
                         <Baby className="w-5 h-5 text-blue-600" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-semibold text-slate-900 dark:text-white truncate">
-                          {child.full_name}
-                        </h3>
-                        <p className="text-sm text-slate-500 truncate">
+                        <h3 className="font-semibold text-label truncate">{child.full_name}</h3>
+                        <p className="text-footnote text-secondary-label truncate">
                           {child.age_group} | Parent: {child.parent_guardian_name || 'N/A'}
                           {child.parent_guardian_phone && ` | ${child.parent_guardian_phone}`}
                         </p>
@@ -458,13 +452,13 @@ export default function ChildrensMinistry() {
                           setFormData(child);
                           setShowModal('child');
                         }}
-                        className="btn-secondary text-xs px-3 py-1.5"
+                        className="btn-secondary text-caption-1 px-3 py-1.5"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete('child', child.id)}
-                        className="btn-danger text-xs px-3 py-1.5"
+                        className="btn-danger text-caption-1 px-3 py-1.5"
                       >
                         Delete
                       </button>
@@ -483,7 +477,7 @@ export default function ChildrensMinistry() {
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+              className="px-4 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
             >
               <option value="">Select Class</option>
               {data.classes.map((cls) => (
@@ -496,7 +490,7 @@ export default function ChildrensMinistry() {
               type="date"
               value={attendanceDate}
               onChange={(e) => setAttendanceDate(e.target.value)}
-              className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+              className="px-4 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
             />
           </div>
 
@@ -511,7 +505,7 @@ export default function ChildrensMinistry() {
                   .map((child) => (
                     <div
                       key={child.id}
-                      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-xl"
+                      className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 bg-system-fill rounded-xl"
                     >
                       <span className="font-medium min-w-0 truncate">{child.full_name}</span>
                       <div className="flex flex-wrap gap-2">
@@ -521,16 +515,16 @@ export default function ChildrensMinistry() {
                             onClick={() =>
                               setAttendanceRecords((prev) => ({ ...prev, [child.id]: status }))
                             }
-                            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            className={`rounded-lg px-3 py-1 text-caption-1 font-medium transition-colors ${
                               attendanceRecords[child.id] === status
                                 ? status === 'present'
-                                  ? 'bg-green-500 text-white'
+                                  ? 'bg-system-green/15 text-emerald-700 dark:text-system-green'
                                   : status === 'absent'
-                                    ? 'bg-red-500 text-white'
+                                    ? 'bg-system-red/15 text-rose-700 dark:text-system-red'
                                     : status === 'excused'
-                                      ? 'bg-yellow-500 text-white'
-                                      : 'bg-orange-500 text-white'
-                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                      ? 'bg-system-yellow/20 text-yellow-800 dark:text-system-yellow'
+                                      : 'bg-system-orange/15 text-orange-700 dark:text-system-orange'
+                                : 'bg-system-gray-4 text-secondary-label'
                             }`}
                           >
                             {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -564,16 +558,18 @@ export default function ChildrensMinistry() {
                   <TrendingUp className="w-5 h-5 text-green-600 shrink-0" />
                   <div className="min-w-0">
                     <span className="font-medium">{promo.child_name}</span>
-                    <span className="text-slate-500 mx-2">promoted from</span>
+                    <span className="text-secondary-label mx-2">promoted from</span>
                     <Badge variant="outline">{promo.from_class_name || 'N/A'}</Badge>
-                    <span className="text-slate-500 mx-2">to</span>
+                    <span className="text-secondary-label mx-2">to</span>
                     <Badge variant="success">{promo.to_class_name}</Badge>
                   </div>
-                  <span className="text-sm text-slate-400 ml-auto shrink-0">
+                  <span className="text-footnote text-tertiary-label ml-auto shrink-0">
                     {new Date(promo.promotion_date).toLocaleDateString()}
                   </span>
                 </div>
-                {promo.notes && <p className="text-sm text-slate-500 mt-2 ml-8">{promo.notes}</p>}
+                {promo.notes && (
+                  <p className="text-footnote text-secondary-label mt-2 ml-8">{promo.notes}</p>
+                )}
               </div>
             ))}
           </div>
@@ -606,25 +602,25 @@ export default function ChildrensMinistry() {
             {showModal === 'class' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Class Name *
                   </label>
                   <input
                     type="text"
                     value={formData.name || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Age Group
                   </label>
                   <select
                     value={formData.age_group || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, age_group: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   >
                     <option value="">Select Age Group</option>
                     {AGE_GROUPS.map((ag) => (
@@ -635,18 +631,18 @@ export default function ChildrensMinistry() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Description
                   </label>
                   <input
                     type="text"
                     value={formData.description || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Max Capacity
                   </label>
                   <input
@@ -655,22 +651,22 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, max_capacity: parseInt(e.target.value) || null }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Room Number
                   </label>
                   <input
                     type="text"
                     value={formData.room_number || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, room_number: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Schedule
                   </label>
                   <input
@@ -678,7 +674,7 @@ export default function ChildrensMinistry() {
                     value={formData.schedule || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, schedule: e.target.value }))}
                     placeholder="e.g., Sunday 9:00 AM"
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
               </>
@@ -686,48 +682,48 @@ export default function ChildrensMinistry() {
             {showModal === 'teacher' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Full Name *
                   </label>
                   <input
                     type="text"
                     value={formData.full_name || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, full_name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Phone
                   </label>
                   <input
                     type="text"
                     value={formData.phone || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, phone: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Email
                   </label>
                   <input
                     type="email"
                     value={formData.email || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Qualification
                   </label>
                   <input
                     type="text"
                     value={formData.qualification || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, qualification: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <label className="flex items-center gap-2">
@@ -738,10 +734,10 @@ export default function ChildrensMinistry() {
                       setFormData((p) => ({ ...p, background_check: e.target.checked }))
                     }
                   />
-                  <span className="text-sm">Background Check Completed</span>
+                  <span className="text-footnote">Background Check Completed</span>
                 </label>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Assign Classes
                   </label>
                   <select
@@ -753,7 +749,7 @@ export default function ChildrensMinistry() {
                         class_ids: Array.from(e.target.selectedOptions, (o) => parseInt(o.value))
                       }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   >
                     {data.classes.map((cls) => (
                       <option key={cls.id} value={cls.id}>
@@ -767,36 +763,36 @@ export default function ChildrensMinistry() {
             {showModal === 'child' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Child's Full Name *
                   </label>
                   <input
                     type="text"
                     value={formData.full_name || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, full_name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Date of Birth
                   </label>
                   <input
                     type="date"
                     value={formData.date_of_birth || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, date_of_birth: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Gender
                   </label>
                   <select
                     value={formData.gender || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, gender: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   >
                     <option value="">Select</option>
                     <option value="Male">Male</option>
@@ -804,7 +800,7 @@ export default function ChildrensMinistry() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Parent/Guardian Name
                   </label>
                   <input
@@ -813,11 +809,11 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, parent_guardian_name: e.target.value }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Parent Phone
                   </label>
                   <input
@@ -826,11 +822,11 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, parent_guardian_phone: e.target.value }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Parent Email
                   </label>
                   <input
@@ -839,11 +835,11 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, parent_guardian_email: e.target.value }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Emergency Contact
                   </label>
                   <input
@@ -852,11 +848,11 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, emergency_contact: e.target.value }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Emergency Phone
                   </label>
                   <input
@@ -865,11 +861,11 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, emergency_phone: e.target.value }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Class
                   </label>
                   <select
@@ -877,7 +873,7 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, class_id: parseInt(e.target.value) || null }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   >
                     <option value="">Select Class</option>
                     {data.classes.map((cls) => (
@@ -888,13 +884,13 @@ export default function ChildrensMinistry() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Age Group
                   </label>
                   <select
                     value={formData.age_group || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, age_group: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   >
                     <option value="">Select Age Group</option>
                     {AGE_GROUPS.map((ag) => (
@@ -905,25 +901,25 @@ export default function ChildrensMinistry() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Medical Notes
                   </label>
                   <input
                     type="text"
                     value={formData.medical_notes || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, medical_notes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Allergies
                   </label>
                   <input
                     type="text"
                     value={formData.allergies || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, allergies: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <label className="flex items-center gap-2">
@@ -934,14 +930,14 @@ export default function ChildrensMinistry() {
                       setFormData((p) => ({ ...p, photo_consent: e.target.checked }))
                     }
                   />
-                  <span className="text-sm">Photo Consent Given</span>
+                  <span className="text-footnote">Photo Consent Given</span>
                 </label>
               </>
             )}
             {showModal === 'promotion' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Child
                   </label>
                   <select
@@ -949,7 +945,7 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, child_id: parseInt(e.target.value) }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   >
                     <option value="">Select Child</option>
                     {data.children.map((c) => (
@@ -960,7 +956,7 @@ export default function ChildrensMinistry() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     From Class
                   </label>
                   <select
@@ -971,7 +967,7 @@ export default function ChildrensMinistry() {
                         from_class_id: parseInt(e.target.value) || null
                       }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   >
                     <option value="">Current Class</option>
                     {data.classes.map((cls) => (
@@ -982,7 +978,7 @@ export default function ChildrensMinistry() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     To Class *
                   </label>
                   <select
@@ -990,7 +986,7 @@ export default function ChildrensMinistry() {
                     onChange={(e) =>
                       setFormData((p) => ({ ...p, to_class_id: parseInt(e.target.value) }))
                     }
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   >
                     <option value="">Select New Class</option>
                     {data.classes.map((cls) => (
@@ -1001,25 +997,25 @@ export default function ChildrensMinistry() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Promotion Date *
                   </label>
                   <input
                     type="date"
                     value={formData.promotion_date || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, promotion_date: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-footnote font-medium text-secondary-label mb-1">
                     Notes
                   </label>
                   <input
                     type="text"
                     value={formData.notes || ''}
                     onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-sm"
+                    className="w-full px-3 py-2 border border-black/[0.06] dark:border-white/[0.08] rounded-xl bg-secondary-system-grouped-background text-footnote"
                   />
                 </div>
               </>
@@ -1027,11 +1023,11 @@ export default function ChildrensMinistry() {
             <div className="flex justify-end gap-2 pt-4">
               <button
                 onClick={() => setShowModal(null)}
-                className="btn-secondary px-4 py-2 text-sm"
+                className="btn-secondary px-4 py-2 text-footnote"
               >
                 Cancel
               </button>
-              <button onClick={handleSave} className="btn-primary px-4 py-2 text-sm">
+              <button onClick={handleSave} className="btn-primary px-4 py-2 text-footnote">
                 Save
               </button>
             </div>

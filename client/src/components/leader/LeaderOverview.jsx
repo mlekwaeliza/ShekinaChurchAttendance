@@ -70,85 +70,78 @@ const LeaderOverview = ({
       label: 'Present',
       count: presentMembers.length,
       icon: CheckCircle2,
-      gradient: 'from-emerald-500 to-teal-600',
-      bgGradient: 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20',
-      borderColor: 'border-emerald-200 dark:border-emerald-800',
-      shadowColor: 'shadow-emerald-500/20',
-      listBg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
+      well: 'bg-system-green/15',
+      iconColor: 'text-emerald-700 dark:text-system-green',
       members: presentMembers
     },
     {
       label: 'Absent',
       count: absentMembers.length,
       icon: XCircle,
-      gradient: 'from-rose-500 to-pink-600',
-      bgGradient: 'from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20',
-      borderColor: 'border-rose-200 dark:border-rose-800',
-      shadowColor: 'shadow-rose-500/20',
-      listBg: 'bg-rose-50/50 dark:bg-rose-900/10',
+      well: 'bg-system-red/15',
+      iconColor: 'text-rose-700 dark:text-system-red',
       members: absentMembers
     },
     {
       label: 'Excused',
       count: excusedMembers.length,
       icon: Clock3,
-      gradient: 'from-amber-500 to-orange-600',
-      bgGradient: 'from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
-      borderColor: 'border-amber-200 dark:border-amber-800',
-      shadowColor: 'shadow-amber-500/20',
-      listBg: 'bg-amber-50/50 dark:bg-amber-900/10',
+      well: 'bg-system-orange/15',
+      iconColor: 'text-amber-700 dark:text-system-orange',
       members: excusedMembers
     }
   ];
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-500 p-8 text-white shadow-xl shadow-emerald-500/20">
-        <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/3 h-60 w-60 rounded-full bg-white/5 translate-y-24" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white backdrop-blur-sm">
-              <MapPin className="h-3.5 w-3.5" />
-              {sectionName || 'Unassigned Section'}
+      <section className="card p-6 sm:p-8">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-500/10 px-3 py-1 text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
+            <MapPin className="h-3.5 w-3.5" />
+            {sectionName || 'Unassigned Section'}
+          </span>
+          {isHead && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-system-yellow/15 px-3 py-1 text-caption-1 font-semibold text-amber-700 dark:text-system-yellow">
+              <Crown className="h-3.5 w-3.5" />
+              Head Leader
             </span>
-            {isHead && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-100 backdrop-blur-sm">
-                <Crown className="h-3.5 w-3.5" />
-                Head Leader
-              </span>
-            )}
+          )}
+        </div>
+        <h2 className="text-title-1 font-semibold text-label">Welcome, {leaderName || 'Leader'}</h2>
+        <p className="mt-2 max-w-lg text-subheadline leading-relaxed text-secondary-label">
+          {serviceName} dashboard is ready. Track the attendance roster for the service scheduled on
+          this day and keep your section up to date.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3 rounded-xl bg-system-grouped-background/70 px-4 py-3 dark:bg-white/[0.03]">
+            <Users className="h-5 w-5 text-primary-700 dark:text-primary-300" />
+            <div>
+              <p className="text-caption-2 font-medium text-secondary-label">Total Members</p>
+              <p className="text-headline font-semibold text-label tabular-nums">
+                {members.length}
+              </p>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight">Welcome, {leaderName || 'Leader'}</h2>
-          <p className="mt-2 max-w-lg text-base text-white/80">
-            {serviceName} dashboard is ready. Track the attendance roster for the service scheduled
-            on this day and keep your section up to date.
-          </p>
-          <div className="mt-5 flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-5 py-3 backdrop-blur-sm">
-              <Users className="h-5 w-5 text-emerald-200" />
-              <div>
-                <p className="text-xs font-medium text-white/70">Total Members</p>
-                <p className="text-xl font-bold">{members.length}</p>
-              </div>
+          <div className="flex items-center gap-3 rounded-xl bg-system-grouped-background/70 px-4 py-3 dark:bg-white/[0.03]">
+            <FileText className="h-5 w-5 text-blue-700 dark:text-system-blue" />
+            <div>
+              <p className="text-caption-2 font-medium text-secondary-label">Submissions</p>
+              <p className="text-headline font-semibold text-label tabular-nums">
+                {history.length}
+              </p>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-5 py-3 backdrop-blur-sm">
-              <FileText className="h-5 w-5 text-sky-200" />
-              <div>
-                <p className="text-xs font-medium text-white/70">Submissions</p>
-                <p className="text-xl font-bold">{history.length}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-2xl bg-white/15 px-5 py-3 backdrop-blur-sm">
-              <CheckCircle2 className="h-5 w-5 text-cyan-200" />
-              <div>
-                <p className="text-xs font-medium text-white/70">Roster Size</p>
-                <p className="text-xl font-bold">{rosterMembers.length}</p>
-              </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl bg-system-grouped-background/70 px-4 py-3 dark:bg-white/[0.03]">
+            <CheckCircle2 className="h-5 w-5 text-emerald-700 dark:text-system-green" />
+            <div>
+              <p className="text-caption-2 font-medium text-secondary-label">Roster Size</p>
+              <p className="text-headline font-semibold text-label tabular-nums">
+                {rosterMembers.length}
+              </p>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {attendanceOverviewCards.map((card) => (
@@ -165,46 +158,37 @@ const LeaderOverview = ({
 
       {submitted ? (
         <div>
-          <h3 className="mb-5 flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+          <h3 className="mb-5 flex items-center gap-2 text-title-3 font-semibold text-label">
             {serviceName} Roster Detail
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-              Submitted
-            </span>
+            <span className="badge-success">Submitted</span>
           </h3>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             {summaryCards.map((card) => (
-              <div
-                key={card.label}
-                className={`relative overflow-hidden rounded-2xl border ${card.borderColor} bg-gradient-to-br ${card.bgGradient} p-5 shadow-sm`}
-              >
+              <div key={card.label} className="card p-5">
                 <div className="mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <div
-                      className={`flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br ${card.gradient} shadow-md ${card.shadowColor}`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-[10px] ${card.well}`}
                     >
-                      <card.icon className="h-4 w-4 text-white" />
+                      <card.icon className={`h-4 w-4 ${card.iconColor}`} />
                     </div>
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                      {card.label}
-                    </span>
+                    <span className="text-footnote font-semibold text-label">{card.label}</span>
                   </div>
-                  <span className="text-xl font-bold text-slate-900 dark:text-white">
+                  <span className="text-title-3 font-semibold text-label tabular-nums">
                     {card.count}
                   </span>
                 </div>
-                <ul
-                  className={`max-h-40 space-y-1.5 overflow-y-auto rounded-xl p-2 scrollbar-thin ${card.listBg}`}
-                >
+                <ul className="max-h-40 space-y-1 overflow-y-auto rounded-xl bg-system-grouped-background/70 p-2 dark:bg-white/[0.03]">
                   {card.members.map((member) => (
                     <li
                       key={member.id}
-                      className="rounded-lg px-2 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300"
+                      className="rounded-lg px-2 py-1.5 text-footnote font-medium text-secondary-label"
                     >
                       {member.full_name}
                     </li>
                   ))}
                   {card.members.length === 0 && (
-                    <li className="py-2 text-center text-sm italic text-slate-400 dark:text-slate-500">
+                    <li className="py-2 text-center text-caption-1 italic text-tertiary-label">
                       None
                     </li>
                   )}
@@ -214,18 +198,14 @@ const LeaderOverview = ({
           </div>
         </div>
       ) : (
-        <div className="relative flex flex-col items-center justify-between gap-4 overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-6 text-white shadow-xl shadow-indigo-500/20 sm:flex-row">
-          <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-white/5 -translate-y-20 translate-x-20" />
-          <div className="relative z-10">
-            <h4 className="text-lg font-bold">Ready for {serviceName}?</h4>
-            <p className="mt-1 text-sm text-white/80">
+        <div className="card flex flex-col items-center justify-between gap-4 p-6 sm:flex-row">
+          <div>
+            <h4 className="text-headline font-semibold text-label">Ready for {serviceName}?</h4>
+            <p className="mt-1 text-footnote text-secondary-label">
               Head to the attendance tab to record attendance for this service.
             </p>
           </div>
-          <button
-            onClick={onGoToAttendance}
-            className="relative z-10 flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-bold text-indigo-600 shadow-lg transition-all duration-200 hover:bg-white/90"
-          >
+          <button onClick={onGoToAttendance} className="btn-primary flex items-center gap-2">
             Mark Attendance Now <ArrowRight className="h-4 w-4" />
           </button>
         </div>

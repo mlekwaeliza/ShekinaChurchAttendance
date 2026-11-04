@@ -20,7 +20,8 @@ import { useEffect, useRef } from 'react';
 //   useModalA11y(dialogRef, isOpen, onClose);
 //   ...
 //   <div ref={dialogRef} role="dialog" aria-modal="true" ...>
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export function useModalA11y(dialogRef, isOpen, onClose) {
   const onCloseRef = useRef(onClose);
@@ -35,7 +36,11 @@ export function useModalA11y(dialogRef, isOpen, onClose) {
       document.body.style.overflow = '';
       const prev = previouslyFocusedRef.current;
       if (prev && typeof prev.focus === 'function') {
-        try { prev.focus(); } catch (_) { /* element may be gone */ }
+        try {
+          prev.focus();
+        } catch (_) {
+          /* element may be gone */
+        }
       }
     };
   }, [isOpen]);

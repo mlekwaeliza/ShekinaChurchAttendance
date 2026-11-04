@@ -1,7 +1,20 @@
 import React, { useMemo, useCallback } from 'react';
 import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 import { Calendar, CheckCircle2, Users, XCircle } from 'lucide-react';
 import StatCard from '../ui/StatCard';
@@ -19,142 +32,140 @@ const LeaderReports = ({ trendsData, trendsLoading, _loadTrends }) => {
 
   const { present, absent, avgAttendance } = summaryStats;
 
-  const columns = useMemo(() => [
-    {
-      accessor: 'date',
-      header: 'Date',
-      sortable: true,
-      render: (row) => (
-        <span className="font-medium text-slate-900 dark:text-slate-100">
-          {new Date(row.date).toLocaleDateString(undefined, {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
-        </span>
-      ),
-    },
-    {
-      accessor: 'present_count',
-      header: 'Present',
-      sortable: true,
-      align: 'center',
-      render: (row) => (
-        <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-          {row.present_count}
-        </span>
-      ),
-    },
-    {
-      accessor: 'absent_count',
-      header: 'Absent',
-      sortable: true,
-      align: 'center',
-      render: (row) => (
-        <span className="font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
-          {row.absent_count}
-        </span>
-      ),
-    },
-    {
-      accessor: 'excused_count',
-      header: 'Excused',
-      sortable: true,
-      align: 'center',
-      render: (row) => (
-        <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
-          {row.excused_count}
-        </span>
-      ),
-    },
-    {
-      accessor: 'total_members',
-      header: 'Total',
-      sortable: true,
-      align: 'center',
-      render: (row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
-          {row.total_members}
-        </span>
-      ),
-    },
-    {
-      id: 'rate',
-      header: 'Rate',
-      align: 'center',
-      sortable: false,
-      render: (row) => {
-        const rate =
-          row.total_members > 0
-            ? Math.round((row.present_count / row.total_members) * 100)
-            : 0;
-        const variant =
-          rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger';
-        const badgeClass = variant === 'success' ? 'badge-success' : variant === 'warning' ? 'badge-warning' : 'badge-danger';
-        return <span className={badgeClass}>{rate}%</span>;
+  const columns = useMemo(
+    () => [
+      {
+        accessor: 'date',
+        header: 'Date',
+        sortable: true,
+        render: (row) => (
+          <span className="font-medium text-label">
+            {new Date(row.date).toLocaleDateString(undefined, {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            })}
+          </span>
+        )
       },
-    },
-  ], []);
+      {
+        accessor: 'present_count',
+        header: 'Present',
+        sortable: true,
+        align: 'center',
+        render: (row) => (
+          <span className="font-semibold text-emerald-700 dark:text-system-green tabular-nums">
+            {row.present_count}
+          </span>
+        )
+      },
+      {
+        accessor: 'absent_count',
+        header: 'Absent',
+        sortable: true,
+        align: 'center',
+        render: (row) => (
+          <span className="font-semibold text-rose-700 dark:text-system-red tabular-nums">
+            {row.absent_count}
+          </span>
+        )
+      },
+      {
+        accessor: 'excused_count',
+        header: 'Excused',
+        sortable: true,
+        align: 'center',
+        render: (row) => (
+          <span className="font-semibold text-amber-700 dark:text-system-orange tabular-nums">
+            {row.excused_count}
+          </span>
+        )
+      },
+      {
+        accessor: 'total_members',
+        header: 'Total',
+        sortable: true,
+        align: 'center',
+        render: (row) => (
+          <span className="font-semibold text-label tabular-nums">{row.total_members}</span>
+        )
+      },
+      {
+        id: 'rate',
+        header: 'Rate',
+        align: 'center',
+        sortable: false,
+        render: (row) => {
+          const rate =
+            row.total_members > 0 ? Math.round((row.present_count / row.total_members) * 100) : 0;
+          const variant = rate >= 80 ? 'success' : rate >= 60 ? 'warning' : 'danger';
+          const badgeClass =
+            variant === 'success'
+              ? 'badge-success'
+              : variant === 'warning'
+                ? 'badge-warning'
+                : 'badge-danger';
+          return <span className={badgeClass}>{rate}%</span>;
+        }
+      }
+    ],
+    []
+  );
 
-  const chartTooltipStyle = useMemo(() => ({
-    borderRadius: '12px',
-    border: 'none',
-    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
-  }), []);
+  const chartTooltipStyle = useMemo(
+    () => ({
+      borderRadius: '12px',
+      border: '1px solid rgba(0,0,0,0.06)',
+      boxShadow: '0 8px 28px rgba(16,24,40,0.12)',
+      fontSize: 12
+    }),
+    []
+  );
 
-  const labelFormatter = useCallback((val) =>
-    new Date(val).toLocaleDateString(undefined, {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }), []);
+  const labelFormatter = useCallback(
+    (val) =>
+      new Date(val).toLocaleDateString(undefined, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+    []
+  );
 
-  const tickFormatter = useCallback((val) =>
-    new Date(val).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-    }), []);
+  const tickFormatter = useCallback(
+    (val) =>
+      new Date(val).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric'
+      }),
+    []
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Info Banner */}
-      <div className="card p-5 bg-gradient-to-r from-primary-50 to-slate-50 dark:from-primary-900/20 dark:to-slate-800/50 border-primary-100 dark:border-primary-800/50">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+      <div className="card p-5">
+        <h3 className="text-headline font-semibold text-label">
           Attendance Reports & Visualization
         </h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        <p className="mt-1 text-footnote text-secondary-label">
           Visual analysis of your section's attendance over the last 90 days
         </p>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={Calendar}
-          label="Total Sessions"
-          value={trendsData.length}
-          variant="info"
-        />
+        <StatCard icon={Calendar} label="Total Sessions" value={trendsData.length} variant="info" />
         <StatCard
           icon={CheckCircle2}
           label="Avg Attendance"
           value={`${avgAttendance}%`}
           variant="success"
         />
-        <StatCard
-          icon={Users}
-          label="Total Present"
-          value={present}
-          variant="success"
-        />
-        <StatCard
-          icon={XCircle}
-          label="Total Absent"
-          value={absent}
-          variant="danger"
-        />
+        <StatCard icon={Users} label="Total Present" value={present} variant="success" />
+        <StatCard icon={XCircle} label="Total Absent" value={absent} variant="danger" />
       </div>
 
       {/* Charts Grid */}
@@ -168,14 +179,44 @@ const LeaderReports = ({ trendsData, trendsLoading, _loadTrends }) => {
         >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={trendsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={tickFormatter} />
-              <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#c7c7cc" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11, fill: '#8e8e93' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={tickFormatter}
+              />
+              <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={chartTooltipStyle} labelFormatter={labelFormatter} />
               <Legend iconType="circle" />
-              <Line type="monotone" dataKey="present_count" stroke="#10b981" strokeWidth={2.5} name="Present" dot={{ r: 3 }} activeDot={{ r: 5 }} />
-              <Line type="monotone" dataKey="absent_count" stroke="#ef4444" strokeWidth={2.5} name="Absent" dot={{ r: 3 }} activeDot={{ r: 5 }} />
-              <Line type="monotone" dataKey="excused_count" stroke="#f59e0b" strokeWidth={2.5} name="Excused" dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              <Line
+                type="monotone"
+                dataKey="present_count"
+                stroke="#34c759"
+                strokeWidth={2.5}
+                name="Present"
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="absent_count"
+                stroke="#ff3b30"
+                strokeWidth={2.5}
+                name="Absent"
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="excused_count"
+                stroke="#ff9500"
+                strokeWidth={2.5}
+                name="Excused"
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -189,14 +230,44 @@ const LeaderReports = ({ trendsData, trendsLoading, _loadTrends }) => {
         >
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trendsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={tickFormatter} />
-              <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#c7c7cc" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11, fill: '#8e8e93' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={tickFormatter}
+              />
+              <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={chartTooltipStyle} labelFormatter={labelFormatter} />
               <Legend iconType="circle" />
-              <Area type="monotone" dataKey="present_count" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Present" />
-              <Area type="monotone" dataKey="absent_count" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} name="Absent" />
-              <Area type="monotone" dataKey="excused_count" stackId="1" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.6} name="Excused" />
+              <Area
+                type="monotone"
+                dataKey="present_count"
+                stackId="1"
+                stroke="#34c759"
+                fill="#34c759"
+                fillOpacity={0.6}
+                name="Present"
+              />
+              <Area
+                type="monotone"
+                dataKey="absent_count"
+                stackId="1"
+                stroke="#ff3b30"
+                fill="#ff3b30"
+                fillOpacity={0.6}
+                name="Absent"
+              />
+              <Area
+                type="monotone"
+                dataKey="excused_count"
+                stackId="1"
+                stroke="#ff9500"
+                fill="#ff9500"
+                fillOpacity={0.6}
+                name="Excused"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -214,7 +285,7 @@ const LeaderReports = ({ trendsData, trendsLoading, _loadTrends }) => {
                 data={[
                   { name: 'Present', value: trendsData[trendsData.length - 1]?.present_count || 0 },
                   { name: 'Absent', value: trendsData[trendsData.length - 1]?.absent_count || 0 },
-                  { name: 'Excused', value: trendsData[trendsData.length - 1]?.excused_count || 0 },
+                  { name: 'Excused', value: trendsData[trendsData.length - 1]?.excused_count || 0 }
                 ]}
                 cx="50%"
                 cy="50%"
@@ -223,9 +294,9 @@ const LeaderReports = ({ trendsData, trendsLoading, _loadTrends }) => {
                 outerRadius={90}
                 dataKey="value"
               >
-                <Cell fill="#10b981" />
-                <Cell fill="#ef4444" />
-                <Cell fill="#f59e0b" />
+                <Cell fill="#34c759" />
+                <Cell fill="#ff3b30" />
+                <Cell fill="#ff9500" />
               </Pie>
               <Tooltip />
               <Legend iconType="circle" />
@@ -245,20 +316,35 @@ const LeaderReports = ({ trendsData, trendsLoading, _loadTrends }) => {
               data={trendsData.map((d) => ({
                 ...d,
                 attendance_rate:
-                  d.total_members > 0
-                    ? Math.round((d.present_count / d.total_members) * 100)
-                    : 0,
+                  d.total_members > 0 ? Math.round((d.present_count / d.total_members) * 100) : 0
               }))}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={tickFormatter} />
-              <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={(val) => `${val}%`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#c7c7cc" vertical={false} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 11, fill: '#8e8e93' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={tickFormatter}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: '#8e8e93' }}
+                axisLine={false}
+                tickLine={false}
+                domain={[0, 100]}
+                tickFormatter={(val) => `${val}%`}
+              />
               <Tooltip
                 contentStyle={chartTooltipStyle}
                 labelFormatter={labelFormatter}
                 formatter={(value) => [`${value}%`, 'Attendance Rate']}
               />
-              <Bar dataKey="attendance_rate" fill="#6366f1" radius={[6, 6, 0, 0]} name="Attendance Rate" />
+              <Bar
+                dataKey="attendance_rate"
+                fill="#0d897b"
+                radius={[6, 6, 0, 0]}
+                name="Attendance Rate"
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

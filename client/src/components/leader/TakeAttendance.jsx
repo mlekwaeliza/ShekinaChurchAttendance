@@ -21,24 +21,21 @@ import { formatLocalDate, parseLocalDate } from '../../utils/date';
 
 const STATUS_CONFIG = {
   present: {
-    active:
-      'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-400/50',
+    active: 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 active:bg-emerald-800',
     inactive:
-      'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400',
+      'bg-system-fill text-secondary-label hover:bg-system-green/[0.08] hover:text-emerald-700 dark:bg-white/[0.06] dark:hover:text-system-green',
     icon: UserCheck
   },
   absent: {
-    active:
-      'bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-lg shadow-rose-500/30 ring-2 ring-rose-400/50',
+    active: 'bg-rose-600 text-white shadow-sm hover:bg-rose-700 active:bg-rose-800',
     inactive:
-      'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-600 dark:hover:text-rose-400',
+      'bg-system-fill text-secondary-label hover:bg-system-red/[0.08] hover:text-rose-700 dark:bg-white/[0.06] dark:hover:text-system-red',
     icon: UserX
   },
   excused: {
-    active:
-      'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30 ring-2 ring-amber-400/50',
+    active: 'bg-amber-600 text-white shadow-sm hover:bg-amber-700 active:bg-amber-800',
     inactive:
-      'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-600 dark:hover:text-amber-400',
+      'bg-system-fill text-secondary-label hover:bg-system-orange/[0.08] hover:text-amber-700 dark:bg-white/[0.06] dark:hover:text-system-orange',
     icon: Clock
   }
 };
@@ -56,29 +53,17 @@ const MemberCard = memo(function MemberCard({
 }) {
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${
+      className={`card relative overflow-hidden p-5 ${
         status === 'present'
-          ? 'border-emerald-300 dark:border-emerald-700'
+          ? 'border-system-green/40 dark:border-system-green/30'
           : status === 'absent'
-            ? 'border-rose-300 dark:border-rose-700'
+            ? 'border-system-red/40 dark:border-system-red/30'
             : status === 'excused'
-              ? 'border-amber-300 dark:border-amber-700'
+              ? 'border-system-orange/40 dark:border-system-orange/30'
               : ''
       }`}
     >
-      {status && (
-        <div
-          className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
-            status === 'present'
-              ? 'from-emerald-500 to-teal-500'
-              : status === 'absent'
-                ? 'from-rose-500 to-pink-500'
-                : 'from-amber-500 to-orange-500'
-          }`}
-        />
-      )}
-
-      <div className="mb-4 relative z-10 pt-1">
+      <div className="relative z-10 mb-4 pt-1">
         {/* Avatar */}
         <div className="flex justify-center mb-3">
           {member.profile_picture ? (
@@ -87,7 +72,7 @@ const MemberCard = memo(function MemberCard({
               onClick={() => onViewPhoto(member)}
               aria-label={`View photo of ${member.full_name}`}
               title="Click to view full photo"
-              className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-black text-white shadow-md cursor-pointer hover:scale-105 hover:ring-2 hover:ring-indigo-400 transition-all focus-ring"
+              className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary-500 text-3xl font-black text-white cursor-pointer transition-all hover:ring-4 hover:ring-primary-500/25 focus-ring"
             >
               <img
                 src={member.profile_picture}
@@ -98,7 +83,7 @@ const MemberCard = memo(function MemberCard({
           ) : (
             <div
               aria-hidden="true"
-              className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-black text-white shadow-md"
+              className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary-500 text-3xl font-black text-white"
             >
               <span>
                 {member.full_name
@@ -111,14 +96,14 @@ const MemberCard = memo(function MemberCard({
             </div>
           )}
         </div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5 text-center">
+        <p className="mb-0.5 text-center text-caption-1 font-medium text-tertiary-label">
           ID: {member.membership_id}
         </p>
-        <h4 className="text-base font-bold text-slate-900 dark:text-slate-100 text-center leading-tight">
+        <h4 className="text-center text-subheadline font-semibold leading-tight text-label">
           {member.full_name}
         </h4>
         {member.phone && (
-          <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium mt-0.5 text-center">
+          <p className="mt-0.5 text-center text-footnote font-medium text-secondary-label">
             {member.phone}
           </p>
         )}
@@ -137,7 +122,7 @@ const MemberCard = memo(function MemberCard({
               disabled={!isEditable}
               aria-pressed={isActive}
               aria-label={`Mark ${member.full_name} as ${option}`}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${isActive ? config.active : config.inactive}`}
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-semibold transition-colors duration-200 ${isActive ? config.active : config.inactive}`}
             >
               <StatusIcon className="w-3.5 h-3.5" />
               {t(`attendance.${option}`)}
@@ -266,15 +251,18 @@ const TakeAttendance = ({
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Progress & Stats */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200/60 dark:border-slate-700 shadow-sm">
+      <div className="card p-5">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="min-w-0">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
+            <h3 className="truncate text-title-3 font-semibold text-label">
               {t('attendance.takeAttendance')}
             </h3>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            <p className="mt-0.5 truncate text-footnote text-secondary-label">
               {t('attendance.markAttendanceFor')}:{' '}
-              <span className="text-primary-600 font-bold">{serviceName}</span> •{' '}
+              <span className="font-semibold text-primary-700 dark:text-primary-300">
+                {serviceName}
+              </span>{' '}
+              •{' '}
               {parseLocalDate(selectedDate).toLocaleDateString(undefined, {
                 weekday: 'long',
                 month: 'short',
@@ -282,19 +270,21 @@ const TakeAttendance = ({
               })}
             </p>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-2xl font-black text-primary-600 dark:text-primary-400 leading-none">
+          <div className="shrink-0 text-right">
+            <p className="text-title-1 font-semibold leading-none tabular-nums text-primary-700 dark:text-primary-300">
               {completed.length}
-              <span className="text-sm text-slate-400 font-bold ml-1">/ {members.length}</span>
+              <span className="ml-1 text-subheadline font-medium text-tertiary-label">
+                / {members.length}
+              </span>
             </p>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+            <p className="mt-1 text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
               {t('attendance.marked')}
             </p>
           </div>
         </div>
 
         <div
-          className="h-2 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden"
+          className="h-1.5 w-full overflow-hidden rounded-full bg-system-fill"
           role="progressbar"
           aria-label={t('attendance.progress', {
             completed: completed.length,
@@ -305,7 +295,7 @@ const TakeAttendance = ({
           aria-valuenow={Math.round(progress)}
         >
           <div
-            className="h-full bg-gradient-to-r from-primary-500 to-indigo-600 transition-all duration-500 ease-out"
+            className="h-full bg-primary-500 transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -314,17 +304,17 @@ const TakeAttendance = ({
       {/* Context & Selection */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {isHead && sectionLeaders.length > 0 && (
-          <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
+          <div className="card p-5">
             <div className="flex items-center gap-2 mb-2">
-              <UserCheck className="w-4 h-4 text-emerald-500" />
-              <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              <UserCheck className="w-4 h-4 text-emerald-700 dark:text-system-green" />
+              <label className="text-footnote font-semibold text-secondary-label">
                 Roster Owner
               </label>
             </div>
             <select
               value={attendanceLeaderId || ''}
               onChange={(event) => onAttendanceLeaderChange?.(event.target.value)}
-              className="input w-full bg-slate-50 dark:bg-slate-900 shadow-inner"
+              className="input w-full"
             >
               {availableLeaders.map((leader) => (
                 <option key={leader.id} value={leader.id}>
@@ -333,7 +323,7 @@ const TakeAttendance = ({
                 </option>
               ))}
             </select>
-            <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-3 text-footnote text-secondary-label">
               {submittedCount > 0
                 ? `${submittedCount} leader(s) already submitted and hidden. Select another to continue.`
                 : 'Select a subleader here when they are absent and you need to submit their roster.'}
@@ -342,12 +332,10 @@ const TakeAttendance = ({
         )}
 
         {/* Date Selector */}
-        <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-primary-500" />
-            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
-              Target Date
-            </label>
+        <div className="card p-5">
+          <div className="mb-2 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-primary-700 dark:text-primary-300" />
+            <label className="text-footnote font-semibold text-secondary-label">Target Date</label>
           </div>
           <input
             type="date"
@@ -355,10 +343,10 @@ const TakeAttendance = ({
             max={todayStr}
             onChange={(e) => setSelectedDate(e.target.value)}
             disabled={submitted && !editMode}
-            className="input w-full bg-slate-50 dark:bg-slate-900 shadow-inner"
+            className="input w-full"
           />
           {submitted && !editMode && (
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mt-3 font-medium text-sm">
+            <div className="mt-3 flex items-center gap-2 text-footnote font-medium text-emerald-700 dark:text-system-green">
               <CheckCircle2 className="w-4 h-4" />
               Roster locked for {serviceName}
             </div>
@@ -366,10 +354,10 @@ const TakeAttendance = ({
         </div>
 
         {/* Service Selector */}
-        <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <UserCheck className="w-4 h-4 text-violet-500" />
-            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+        <div className="card p-5">
+          <div className="mb-2 flex items-center gap-2">
+            <UserCheck className="w-4 h-4 text-purple-700 dark:text-system-purple" />
+            <label className="text-footnote font-semibold text-secondary-label">
               Select Service Type
             </label>
           </div>
@@ -379,17 +367,17 @@ const TakeAttendance = ({
                 key={service.id}
                 onClick={() => onServiceChange(service.id)}
                 disabled={submitted && !editMode}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${
+                className={`rounded-lg px-3 py-2 text-caption-1 font-semibold transition-colors focus-ring ${
                   selectedServiceId === service.id
-                    ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                    : 'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-system-fill text-secondary-label hover:text-label dark:bg-white/[0.06]'
+                } disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 {service.name}
               </button>
             ))}
           </div>
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-3 text-footnote text-secondary-label">
             The roster auto-selects the scheduled service for the chosen date, and you can still
             switch it when needed.
           </p>
@@ -397,23 +385,23 @@ const TakeAttendance = ({
       </div>
 
       {actingOnBehalf && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+        <div className="rounded-xl bg-system-orange/10 px-4 py-3 text-footnote font-medium text-amber-700 dark:text-system-orange">
           You are marking attendance for {attendanceLeaderName}. The record will show that you
           submitted it on their behalf.
         </div>
       )}
 
       {submitError && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+        <div className="rounded-xl bg-system-red/10 px-4 py-3 text-footnote font-medium text-rose-700 dark:text-system-red">
           {submitError}
         </div>
       )}
 
       {members.length > 0 && !isUnauthorized && (
-        <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="card p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
               <input
                 type="search"
                 value={searchTerm}
@@ -434,10 +422,10 @@ const TakeAttendance = ({
                   type="button"
                   onClick={() => setViewMode(mode)}
                   aria-pressed={viewMode === mode}
-                  className={`h-10 rounded-xl px-3 text-xs font-bold transition-all ${
+                  className={`h-10 rounded-lg px-3 text-caption-1 font-semibold transition-colors focus-ring ${
                     viewMode === mode
-                      ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-700'
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-system-fill text-secondary-label hover:text-label dark:bg-white/[0.06]'
                   }`}
                 >
                   {label}
@@ -445,7 +433,7 @@ const TakeAttendance = ({
               ))}
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 dark:border-slate-700">
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-separator/60 pt-3 dark:border-white/[0.08]">
             <button
               type="button"
               onClick={() =>
@@ -456,7 +444,7 @@ const TakeAttendance = ({
               }
               disabled={!canBulkEdit || filteredMembers.length === 0}
               title={`${t('attendance.markAllPresent')} (${filteredMembers.length})`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="btn btn-sm h-9 gap-1.5 bg-emerald-700 px-3 text-white hover:bg-emerald-800 focus-ring disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ListChecks className="h-4 w-4" />
               {t('attendance.markAllPresent')}
@@ -474,13 +462,13 @@ const TakeAttendance = ({
               }
               disabled={!canBulkEdit || !filteredMembers.some((m) => attendance[m.id])}
               title={t('attendance.clearMarks')}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"
+              className="btn-secondary btn-sm h-9"
             >
               <Eraser className="h-4 w-4" />
               {t('attendance.clearMarks')}
             </button>
             {!isEditable && (
-              <span className="text-[11px] font-semibold text-slate-400">
+              <span className="text-caption-2 font-medium text-tertiary-label">
                 {t('attendance.submitted')}
               </span>
             )}
@@ -490,9 +478,9 @@ const TakeAttendance = ({
 
       {/* Offline Banner */}
       {!isOnline && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200/60 dark:border-amber-700/60 text-amber-800 dark:text-amber-300">
+        <div className="flex items-center gap-3 rounded-xl border border-system-orange/30 bg-system-orange/10 px-4 py-3 text-amber-700 dark:text-system-orange">
           <WifiOff className="w-5 h-5 shrink-0" />
-          <p className="text-sm font-medium">
+          <p className="text-footnote font-medium leading-relaxed">
             You are offline. Attendance will be saved locally and synced automatically when you
             reconnect.
             {pendingCount > 0 && (
@@ -507,13 +495,13 @@ const TakeAttendance = ({
 
       {/* Pending sync status — visible while online until the queue drains */}
       {isOnline && pendingCount > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-900/20 dark:to-indigo-900/20 border border-sky-200/60 dark:border-sky-700/60 text-sky-800 dark:text-sky-300">
+        <div className="flex items-center gap-3 rounded-xl border border-system-blue/30 bg-system-blue/10 px-4 py-3 text-blue-700 dark:text-system-blue">
           {syncing ? (
             <Loader2 className="w-5 h-5 shrink-0 animate-spin" />
           ) : (
             <CloudOff className="w-5 h-5 shrink-0" />
           )}
-          <p className="text-sm font-medium" aria-live="polite">
+          <p className="text-footnote font-medium leading-relaxed" aria-live="polite">
             {syncing
               ? `Syncing ${pendingCount} offline submission${pendingCount === 1 ? '' : 's'}…`
               : `${pendingCount} offline submission${pendingCount === 1 ? '' : 's'} still pending — they will sync automatically. Keep the app open.`}
@@ -523,30 +511,31 @@ const TakeAttendance = ({
 
       {/* Attendance Cards */}
       {isUnauthorized ? (
-        <div className="py-20 flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 shadow-inner">
-          <div className="w-16 h-16 rounded-2xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center mb-4">
-            <XCircle className="w-8 h-8 text-rose-500" />
+        <div className="card flex flex-col items-center justify-center py-20">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-system-red/15">
+            <XCircle className="w-8 h-8 text-rose-700 dark:text-system-red" />
           </div>
-          <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
-            Duty Roster Unassigned
-          </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm text-center mt-2">
+          <p className="text-title-3 font-semibold text-label">Duty Roster Unassigned</p>
+          <p className="mt-2 max-w-sm text-center text-subheadline text-secondary-label">
             You are not currently assigned to take attendance for{' '}
-            <span className="text-primary-600 font-bold">{serviceName}</span> on this date.
+            <span className="font-semibold text-primary-700 dark:text-primary-300">
+              {serviceName}
+            </span>{' '}
+            on this date.
           </p>
         </div>
       ) : members.length === 0 ? (
-        <div className="py-20 flex flex-col items-center justify-center bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 shadow-inner">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center mb-4">
-            <UserX className="w-8 h-8 text-slate-400" />
+        <div className="card flex flex-col items-center justify-center py-20">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-system-fill">
+            <UserX className="w-8 h-8 text-tertiary-label" />
           </div>
-          <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
-            No eligible members found
-          </p>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs text-center mt-2">
+          <p className="text-title-3 font-semibold text-label">No eligible members found</p>
+          <p className="mt-2 max-w-xs text-center text-subheadline text-secondary-label">
             None of your members meet the criteria for{' '}
-            <span className="text-primary-600 font-bold">{serviceName}</span>. Check your section
-            rules or try another service.
+            <span className="font-semibold text-primary-700 dark:text-primary-300">
+              {serviceName}
+            </span>
+            . Check your section rules or try another service.
           </p>
         </div>
       ) : (
@@ -554,12 +543,7 @@ const TakeAttendance = ({
           {/* Active / Unmarked Members */}
           {filteredUnmarked.length > 0 && !editMode && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-primary-500 rounded-full" />
-                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  Remaining Members
-                </h3>
-              </div>
+              <h3 className="section-eyebrow">Remaining Members</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredUnmarked.map((member) => renderMemberCard(member))}
               </div>
@@ -568,27 +552,23 @@ const TakeAttendance = ({
 
           {/* All marked message & Submit Action */}
           {unmarked.length === 0 && members.length > 0 && !submitted && (
-            <div className="py-12 px-6 flex flex-col items-center justify-center bg-gradient-to-b from-emerald-50/50 to-white dark:from-emerald-900/10 dark:to-slate-800 rounded-3xl border border-emerald-200/60 dark:border-emerald-700/60 border-dashed animate-scale-in">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4 shadow-inner">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            <div className="flex animate-scale-in flex-col items-center justify-center rounded-2xl border border-dashed border-system-green/30 bg-system-green/[0.06] px-6 py-12">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-system-green/15">
+                <CheckCircle2 className="w-8 h-8 text-emerald-700 dark:text-system-green" />
               </div>
-              <h3 className="text-xl font-bold text-emerald-900 dark:text-emerald-100 text-center">
+              <h3 className="text-center text-title-3 font-semibold text-emerald-800 dark:text-system-green">
                 Roster Complete!
               </h3>
-              <p className="text-sm text-emerald-600/70 dark:text-emerald-400/70 max-w-xs text-center mt-2 mb-8">
+              <p className="mb-8 mt-2 max-w-xs text-center text-footnote text-secondary-label">
                 You've accounted for every member in your section. Ready to finalize the records?
               </p>
 
               <button
                 onClick={requestSubmit}
                 disabled={submitting}
-                className={`w-full max-w-sm py-4 text-base font-bold rounded-2xl transition-all duration-300 ${
-                  confirmArmed
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl shadow-amber-500/20 hover:-translate-y-1'
-                    : !isOnline
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/20'
-                      : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1'
-                }`}
+                className={`h-12 w-full max-w-sm rounded-xl text-subheadline font-semibold text-white transition-colors ${
+                  confirmArmed || !isOnline ? 'bg-system-orange hover:bg-amber-600' : 'btn-primary'
+                } disabled:opacity-50`}
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
@@ -612,31 +592,28 @@ const TakeAttendance = ({
           {/* Edit Mode: show all members for editing */}
           {editMode && submitted && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-indigo-500 rounded-full" />
-                <h3 className="text-sm font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
-                  Editing Attendance — {attendanceLeaderName}
-                </h3>
-              </div>
+              <h3 className="section-eyebrow">Editing Attendance — {attendanceLeaderName}</h3>
 
               {/* Edit controls — inline at the top of the edit section */}
               {editError && (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+                <div className="rounded-xl bg-system-red/10 px-4 py-3 text-footnote font-medium text-rose-700 dark:text-system-red">
                   {editError}
                 </div>
               )}
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between p-5 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-200 dark:border-indigo-800">
-                <div className="flex items-center gap-2">
-                  <Edit3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  <span className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
+              <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-system-indigo/20 bg-system-indigo/[0.07] p-4 sm:flex-row sm:items-center dark:border-system-indigo/30">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-system-indigo/15">
+                    <Edit3 className="h-4 w-4 text-primary-700 dark:text-primary-300" />
+                  </span>
+                  <span className="text-footnote font-semibold text-primary-700 dark:text-primary-300">
                     Edit Mode — changes are tracked and audited
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-3 items-center w-full sm:w-auto">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                   <select
                     value={editReason}
                     onChange={(e) => setEditReason(e.target.value)}
-                    className="input bg-white dark:bg-slate-800 text-sm py-2 flex-1 sm:flex-none"
+                    className="select h-9 flex-1 text-footnote sm:w-auto sm:flex-none"
                   >
                     <option value="">Select reason...</option>
                     <option value="Correction">Correction</option>
@@ -648,21 +625,21 @@ const TakeAttendance = ({
                   <button
                     onClick={() => onEditSubmit(editReason)}
                     disabled={editSaving || !editReason}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-sm btn-primary"
                   >
                     {editSaving ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Save className="w-4 h-4" />
+                      <Save className="h-4 w-4" />
                     )}
                     {editSaving ? 'Saving...' : 'Save Changes'}
                   </button>
                   <button
                     onClick={onToggleEdit}
                     disabled={editSaving}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold transition-all disabled:opacity-50"
+                    className="btn-sm btn-secondary"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                     Cancel
                   </button>
                 </div>
@@ -676,23 +653,21 @@ const TakeAttendance = ({
 
           {/* Locked / Submitted State */}
           {submitted && !editMode && (
-            <div className="py-12 px-6 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-700 border-dashed">
-              <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-separator/70 bg-system-grouped-background/60 px-6 py-12 dark:border-white/[0.12] dark:bg-white/[0.02]">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-system-green/15">
+                <CheckCircle2 className="h-7 w-7 text-emerald-700 dark:text-system-green" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 text-center">
-                Records Locked
-              </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs text-center mt-2">
+              <h3 className="text-center text-title-3 font-semibold text-label">Records Locked</h3>
+              <p className="mt-2 max-w-xs text-center text-footnote leading-relaxed text-secondary-label">
                 Attendance for {attendanceLeaderName} has been{' '}
                 {isOfflineSubmit ? 'queued for sync' : 'successfully submitted'}.
               </p>
               {isHead && (
                 <button
                   onClick={onToggleEdit}
-                  className="mt-6 flex items-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all hover:-translate-y-0.5"
+                  className="btn-secondary btn-sm mt-6 flex items-center gap-2"
                 >
-                  <Edit3 className="w-4 h-4" />
+                  <Edit3 className="h-4 w-4" />
                   Edit Attendance
                 </button>
               )}
@@ -701,33 +676,27 @@ const TakeAttendance = ({
 
           {/* Hint for unmarked members */}
           {unmarked.length > 0 && !submitted && (
-            <div className="flex items-center justify-center gap-3 p-4 bg-slate-100/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
-              <Clock className="w-4 h-4 animate-pulse" />
-              <p className="text-xs font-semibold uppercase tracking-wider">
-                Mark remaining{' '}
-                <span className="text-primary-600 dark:text-primary-400">{unmarked.length}</span>{' '}
-                members to unlock submission
+            <div className="flex items-center justify-center gap-2.5 rounded-xl bg-system-orange/[0.08] px-4 py-3 text-amber-700 dark:text-system-orange">
+              <Clock className="h-4 w-4 shrink-0 animate-pulse" />
+              <p className="text-footnote font-medium">
+                Mark remaining <strong className="font-semibold">{unmarked.length}</strong> member
+                {unmarked.length === 1 ? '' : 's'} to unlock submission
               </p>
             </div>
           )}
 
           {/* Completed Members List */}
           {filteredCompleted.length > 0 && !editMode && (
-            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-                <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-                  Completed
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
+            <div className="space-y-4 border-t border-separator/60 pt-5 dark:border-white/[0.08]">
+              <h3 className="section-eyebrow">Completed</h3>
+              <div className="grid grid-cols-1 gap-4 opacity-75 md:grid-cols-2 lg:grid-cols-3">
                 {filteredCompleted.map((member) => renderMemberCard(member))}
               </div>
             </div>
           )}
 
           {filteredMembers.length === 0 && !editMode && (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+            <div className="rounded-2xl border border-dashed border-separator/70 bg-secondary-system-grouped-background p-8 text-center text-footnote font-medium text-secondary-label dark:border-white/[0.12]">
               No members match the current search or filter.
             </div>
           )}
@@ -736,11 +705,13 @@ const TakeAttendance = ({
 
       {/* Sticky action bar — keeps progress + submit reachable on long rosters */}
       {members.length > 0 && !isUnauthorized && !submitted && !editMode && (
-        <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-2xl border border-slate-200/70 bg-white/95 p-4 shadow-xl shadow-slate-900/10 backdrop-blur dark:border-slate-700 dark:bg-slate-800/95 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm font-bold text-slate-900 dark:text-slate-100" aria-live="polite">
-            {completed.length}
-            <span className="font-bold text-slate-400"> / {members.length}</span>{' '}
-            <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+        <div className="sticky bottom-4 z-20 flex flex-col gap-3 rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background/95 p-3.5 shadow-popover backdrop-blur dark:border-white/[0.1] sm:flex-row sm:items-center sm:justify-between">
+          <p className="flex items-baseline gap-1.5 text-footnote" aria-live="polite">
+            <span className="text-headline font-semibold tabular-nums text-label">
+              {completed.length}
+            </span>
+            <span className="font-medium tabular-nums text-tertiary-label">/ {members.length}</span>
+            <span className="ml-1 text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
               {t('attendance.marked')}
             </span>
           </p>
@@ -755,11 +726,9 @@ const TakeAttendance = ({
                   ? confirmLabel
                   : t('attendance.submit')
             }
-            className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-bold text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:shadow-none ${
-              confirmArmed
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/20 hover:from-amber-600 hover:to-orange-600'
-                : 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-500/20 hover:from-emerald-700 hover:to-teal-700 disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 dark:disabled:from-slate-700 dark:disabled:to-slate-700 dark:disabled:text-slate-400'
-            }`}
+            className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-footnote font-semibold text-white transition-colors disabled:cursor-not-allowed ${
+              confirmArmed ? 'bg-system-orange hover:bg-amber-600' : 'btn-primary'
+            } disabled:bg-system-fill disabled:text-tertiary-label`}
           >
             {submitting ? (
               <>

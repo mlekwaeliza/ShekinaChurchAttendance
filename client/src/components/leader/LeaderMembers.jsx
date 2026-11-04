@@ -82,7 +82,7 @@ const LeaderMembers = ({
         header: 'ID',
         sortable: true,
         render: (row) => (
-          <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          <span className="text-footnote font-medium tabular-nums text-secondary-label">
             {row.membership_id}
           </span>
         )
@@ -93,9 +93,7 @@ const LeaderMembers = ({
         sortable: true,
         render: (row) => (
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-900 dark:text-slate-100">
-              {row.full_name}
-            </span>
+            <span className="font-semibold text-label">{row.full_name}</span>
             {absenceMap[row.id] && <Badge variant="danger">{absenceMap[row.id]} absent</Badge>}
           </div>
         )
@@ -104,7 +102,7 @@ const LeaderMembers = ({
         accessor: 'phone',
         header: 'Phone',
         render: (row) => (
-          <span className="text-slate-600 dark:text-slate-400">{row.phone || '—'}</span>
+          <span className="tabular-nums text-secondary-label">{row.phone || '—'}</span>
         )
       },
       {
@@ -114,15 +112,9 @@ const LeaderMembers = ({
           const fu = followUpMap[row.id];
           if (fu) {
             return (
-              <span
-                className={`text-xs font-medium px-2 py-1 rounded-full ${
-                  fu.contacted
-                    ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                    : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                }`}
-              >
+              <Badge variant={fu.contacted ? 'success' : 'warning'}>
                 {fu.contacted ? 'Contacted' : 'Pending'}
-              </span>
+              </Badge>
             );
           }
           if (absenceMap[row.id] && isHead) {
@@ -132,21 +124,21 @@ const LeaderMembers = ({
                   e.stopPropagation();
                   handleOpenFollowUp(row);
                 }}
-                className="btn-ghost btn-sm text-amber-600 dark:text-amber-400"
+                className="btn-ghost btn-sm text-amber-700 dark:text-system-orange"
               >
                 <Phone className="w-3.5 h-3.5" />
                 Follow Up
               </button>
             );
           }
-          return <span className="text-slate-300 dark:text-slate-600">—</span>;
+          return <span className="text-tertiary-label">—</span>;
         }
       },
       {
         id: 'actions',
         header: 'Actions',
         render: (row) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {isHead ? (
               <>
                 <button
@@ -154,7 +146,7 @@ const LeaderMembers = ({
                     e.stopPropagation();
                     onEdit(row);
                   }}
-                  className="btn-ghost btn-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
+                  className="btn-ghost btn-sm text-primary-700 dark:text-primary-300"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   Edit
@@ -164,7 +156,7 @@ const LeaderMembers = ({
                     e.stopPropagation();
                     setDeletingMember(row);
                   }}
-                  className="btn-ghost btn-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300"
+                  className="btn-ghost btn-sm text-rose-700 dark:text-system-red"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Delete
@@ -176,7 +168,7 @@ const LeaderMembers = ({
                   e.stopPropagation();
                   setDetailsMember(row);
                 }}
-                className="btn-ghost btn-sm text-slate-600 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                className="btn-ghost btn-sm text-secondary-label"
               >
                 <Users className="w-3.5 h-3.5" />
                 Details
@@ -190,12 +182,15 @@ const LeaderMembers = ({
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="animate-fade-in space-y-5">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          My Section Members
-        </h3>
+        <div>
+          <h3 className="text-title-2 font-semibold text-label">My Section Members</h3>
+          <p className="mt-0.5 text-footnote text-secondary-label">
+            {members.length} member{members.length === 1 ? '' : 's'} in your roster
+          </p>
+        </div>
         {isHead && (
           <button onClick={onAdd} className="btn-primary self-start">
             <Plus className="w-4 h-4" />
@@ -238,7 +233,7 @@ const LeaderMembers = ({
                 className="input"
               />
               {editingMember && (
-                <span className="text-xs text-slate-400 dark:text-slate-500 mt-1 block">
+                <span className="mt-1 block text-caption-1 text-tertiary-label">
                   Cannot edit ID
                 </span>
               )}
@@ -330,7 +325,7 @@ const LeaderMembers = ({
             />
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700 mt-4">
+          <div className="mt-4 flex justify-end gap-2 border-t border-separator/60 pt-4 dark:border-white/[0.08]">
             <button
               type="button"
               onClick={() => setIsMemberModalOpen(false)}
@@ -349,21 +344,17 @@ const LeaderMembers = ({
 
       {/* Delete Confirmation Modal */}
       <Modal isOpen={!!deletingMember} onClose={() => setDeletingMember(null)} size="sm">
-        <div className="text-center py-4">
-          <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center mx-auto mb-5">
-            <AlertTriangle className="w-7 h-7 text-rose-500 dark:text-rose-400" />
+        <div className="py-4 text-center">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-system-red/15">
+            <AlertTriangle className="h-7 w-7 text-rose-700 dark:text-system-red" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-            Delete Member?
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+          <h3 className="mb-2 text-title-3 font-semibold text-label">Delete Member?</h3>
+          <p className="mb-8 text-footnote leading-relaxed text-secondary-label">
             Are you sure you want to delete{' '}
-            <strong className="text-slate-800 dark:text-slate-200">
-              {deletingMember?.full_name}
-            </strong>
-            ? This action cannot be undone.
+            <strong className="font-semibold text-label">{deletingMember?.full_name}</strong>? This
+            action cannot be undone.
           </p>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <button onClick={() => setDeletingMember(null)} className="btn-secondary flex-1">
               Cancel
             </button>
@@ -383,8 +374,8 @@ const LeaderMembers = ({
           size="md"
         >
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <div className="flex items-center gap-2 rounded-xl bg-system-orange/10 px-3 py-2 text-footnote font-medium text-amber-700 dark:text-system-orange">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>{absenceMap[followUpMember.id]} consecutive absences</span>
             </div>
 
@@ -417,21 +408,19 @@ const LeaderMembers = ({
               />
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex cursor-pointer items-center gap-2.5">
               <input
                 type="checkbox"
                 checked={followUpForm.contacted}
                 onChange={(e) =>
                   setFollowUpForm((prev) => ({ ...prev, contacted: e.target.checked }))
                 }
-                className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-primary-600"
+                className="h-4 w-4 rounded accent-primary-600"
               />
-              <span className="text-sm text-slate-700 dark:text-slate-300">
-                Member has been contacted
-              </span>
+              <span className="text-footnote text-secondary-label">Member has been contacted</span>
             </label>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex justify-end gap-2 border-t border-separator/60 pt-4 dark:border-white/[0.08]">
               <button onClick={() => setFollowUpMember(null)} className="btn-secondary">
                 Cancel
               </button>

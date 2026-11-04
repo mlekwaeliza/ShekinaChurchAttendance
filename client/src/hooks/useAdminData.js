@@ -260,16 +260,19 @@ const useAdminData = () => {
     }
   }, []);
 
-  const openLeaderDashboard = useCallback(async (leaderId) => {
-    setDrilldownData({ loading: true });
-    try {
-      const res = await adminAPI.getLeaderDashboard(leaderId);
-      setDrilldownData({ loading: false, data: res.data });
-    } catch (error) {
-      showMessage('Failed to launch leader analytics');
-      setDrilldownData(null);
-    }
-  }, [showMessage]);
+  const openLeaderDashboard = useCallback(
+    async (leaderId) => {
+      setDrilldownData({ loading: true });
+      try {
+        const res = await adminAPI.getLeaderDashboard(leaderId);
+        setDrilldownData({ loading: false, data: res.data });
+      } catch (error) {
+        showMessage('Failed to launch leader analytics');
+        setDrilldownData(null);
+      }
+    },
+    [showMessage]
+  );
 
   // --- Section Handlers ---
   const handleSectionSave = useCallback(

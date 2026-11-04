@@ -55,8 +55,8 @@ const AccountantOverview = () => {
   if (loading)
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('accountant.dashboard')}</h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <h1 className="text-title-1 font-semibold text-label">{t('accountant.dashboard')}</h1>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <LoadingSkeleton key={i} type="card" />
           ))}
@@ -139,9 +139,9 @@ const AccountantOverview = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('accountant.dashboard')}</h1>
+      <h1 className="text-title-1 font-semibold text-label">{t('accountant.dashboard')}</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         {cards.map((card, i) => (
           <StatCard
             key={i}
@@ -153,9 +153,9 @@ const AccountantOverview = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="card p-5">
+          <h3 className="mb-4 text-title-3 font-semibold text-label">
             All Contributions by Type (This Month)
           </h3>
           {Object.keys(contributionsByType).length === 0 ? (
@@ -165,23 +165,21 @@ const AccountantOverview = () => {
               description="Contributions received this month will appear here."
             />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {Object.entries(contributionsByType).map(([type, total]) => (
                 <div
                   key={type}
-                  className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700 last:border-0"
+                  className="flex items-center justify-between border-b border-separator/50 py-2.5 last:border-0 dark:border-white/[0.06]"
                 >
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    {type}
-                  </span>
-                  <span className="text-sm font-bold text-emerald-600">
+                  <span className="text-footnote font-medium text-secondary-label">{type}</span>
+                  <span className="text-footnote font-semibold text-emerald-700 tabular-nums dark:text-system-green">
                     TZS {total.toLocaleString()}
                   </span>
                 </div>
               ))}
-              <div className="flex items-center justify-between py-2 pt-3 border-t-2 border-slate-200 dark:border-slate-600">
-                <span className="text-sm font-bold text-slate-900 dark:text-white">Total</span>
-                <span className="text-sm font-bold text-emerald-600">
+              <div className="flex items-center justify-between border-t border-separator/60 py-2.5 pt-3 dark:border-white/[0.08]">
+                <span className="text-footnote font-semibold text-label">Total</span>
+                <span className="text-footnote font-semibold text-emerald-700 tabular-nums dark:text-system-green">
                   TZS {totalContributions.toLocaleString()}
                 </span>
               </div>
@@ -189,38 +187,34 @@ const AccountantOverview = () => {
           )}
         </div>
 
-        <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
-            Recent Contributions
-          </h3>
+        <div className="card p-5">
+          <h3 className="mb-4 text-title-3 font-semibold text-label">Recent Contributions</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-footnote">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-700">
-                  <th className="text-left py-2 px-2 font-semibold text-slate-600">Member</th>
-                  <th className="text-left py-2 px-2 font-semibold text-slate-600">Type</th>
-                  <th className="text-right py-2 px-2 font-semibold text-slate-600">Amount</th>
+                <tr className="border-b border-separator/60 dark:border-white/[0.08]">
+                  <th className="px-2 py-2 text-left font-semibold text-secondary-label">Member</th>
+                  <th className="px-2 py-2 text-left font-semibold text-secondary-label">Type</th>
+                  <th className="px-2 py-2 text-right font-semibold text-secondary-label">
+                    Amount
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {data.memberContributions.slice(0, 10).map((c) => (
-                  <tr key={c.id} className="border-b border-slate-100 dark:border-slate-700">
-                    <td className="py-2 px-2 text-slate-900 dark:text-white">
-                      {c.full_name || 'Unknown'}
+                  <tr key={c.id} className="border-b border-separator/40 dark:border-white/[0.05]">
+                    <td className="px-2 py-2 text-label">{c.full_name || 'Unknown'}</td>
+                    <td className="px-2 py-2">
+                      <span className="badge-info">{c.contribution_type_name}</span>
                     </td>
-                    <td className="py-2 px-2">
-                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                        {c.contribution_type_name}
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-right font-semibold text-emerald-600">
+                    <td className="px-2 py-2 text-right font-semibold text-emerald-700 tabular-nums dark:text-system-green">
                       TZS {Number(c.amount).toLocaleString()}
                     </td>
                   </tr>
                 ))}
                 {data.memberContributions.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="text-center py-8 text-slate-400">
+                    <td colSpan={3} className="py-8 text-center text-secondary-label">
                       No contributions yet this month
                     </td>
                   </tr>

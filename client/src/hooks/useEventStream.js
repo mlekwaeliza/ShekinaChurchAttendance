@@ -32,7 +32,11 @@ export default function useEventStream(url, handlers = {}) {
   const connect = useCallback(() => {
     if (closedByUserRef.current) return;
     if (esRef.current) {
-      try { esRef.current.close(); } catch (_) { /* noop */ }
+      try {
+        esRef.current.close();
+      } catch (_) {
+        /* noop */
+      }
     }
     setStatus('connecting');
     let es;
@@ -54,7 +58,11 @@ export default function useEventStream(url, handlers = {}) {
 
     es.addEventListener('error', () => {
       // The browser will not auto-reconnect on 4xx/5xx; we must.
-      try { es.close(); } catch (_) { /* noop */ }
+      try {
+        es.close();
+      } catch (_) {
+        /* noop */
+      }
       if (esRef.current === es) esRef.current = null;
       if (closedByUserRef.current) return;
       setStatus('reconnecting');
@@ -74,7 +82,11 @@ export default function useEventStream(url, handlers = {}) {
       if (e.lastEventId) lastEventIdRef.current = e.lastEventId;
       const fn = handlersRef.current[e.type];
       if (fn) {
-        try { fn(safeParse(e.data), e); } catch (err) { console.error(`[SSE] handler for ${e.type} threw:`, err); }
+        try {
+          fn(safeParse(e.data), e);
+        } catch (err) {
+          console.error(`[SSE] handler for ${e.type} threw:`, err);
+        }
       }
     };
 
@@ -106,7 +118,11 @@ export default function useEventStream(url, handlers = {}) {
     const onVisibility = () => {
       if (document.hidden) {
         if (esRef.current) {
-          try { esRef.current.close(); } catch (_) { /* noop */ }
+          try {
+            esRef.current.close();
+          } catch (_) {
+            /* noop */
+          }
           esRef.current = null;
         }
         if (reconnectTimerRef.current) {
@@ -127,7 +143,11 @@ export default function useEventStream(url, handlers = {}) {
       document.removeEventListener('visibilitychange', onVisibility);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (esRef.current) {
-        try { esRef.current.close(); } catch (_) { /* noop */ }
+        try {
+          esRef.current.close();
+        } catch (_) {
+          /* noop */
+        }
         esRef.current = null;
       }
       setStatus('closed');
@@ -139,5 +159,9 @@ export default function useEventStream(url, handlers = {}) {
 
 function safeParse(data) {
   if (data == null) return null;
-  try { return JSON.parse(data); } catch (_) { return data; }
+  try {
+    return JSON.parse(data);
+  } catch (_) {
+    return data;
+  }
 }

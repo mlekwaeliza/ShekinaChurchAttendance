@@ -40,7 +40,7 @@ import LoadingSkeleton from '../components/ui/LoadingSkeleton';
 import StatCard from '../components/ui/StatCard';
 import { addDays, formatDisplayDate, formatLocalDate } from '../utils/date';
 
-const SECTION_COLORS = ['#2563eb', '#7c3aed', '#14b8a6', '#f97316', '#ec4899', '#22c55e'];
+const SECTION_COLORS = ['#0d897b', '#5856d6', '#007aff', '#ff9500', '#ff2d55', '#34c759'];
 
 function numberOrZero(value) {
   const parsed = Number(value);
@@ -318,24 +318,22 @@ const PastorDashboard = () => {
 
     return (
       <div className="space-y-8 animate-fade-in">
-        <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
+        <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-start">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary-50 dark:bg-primary-900/20 px-3 py-1 text-xs font-semibold text-primary-700 dark:text-primary-300">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary-500/10 px-3 py-1 text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
               <CalendarRange className="w-3.5 h-3.5" />
               <span>{reportSummary.windowLabel}</span>
             </div>
             <div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-title-1 font-semibold text-label">
                 {t('pastor.welcomePst', { name: user?.full_name || 'Jeremiah' })}
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                {t('pastor.subtitle')}
-              </p>
+              <p className="mt-1 text-subheadline text-secondary-label">{t('pastor.subtitle')}</p>
             </div>
           </div>
 
-          <div className="w-full xl:w-auto flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center xl:w-auto">
+            <div className="flex items-center gap-2 rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background px-3 py-2 shadow-card dark:border-white/[0.08]">
               <input
                 type="date"
                 value={dateRange.start}
@@ -343,9 +341,9 @@ const PastorDashboard = () => {
                 onChange={(event) =>
                   setDateRange((current) => ({ ...current, start: event.target.value }))
                 }
-                className="bg-transparent border-none p-0 focus:ring-0 text-sm text-slate-700 dark:text-slate-300"
+                className="border-none bg-transparent p-0 text-footnote text-label focus:ring-0"
               />
-              <span className="text-slate-300 dark:text-slate-600 text-sm">to</span>
+              <span className="text-footnote text-tertiary-label">to</span>
               <input
                 type="date"
                 value={dateRange.end}
@@ -353,7 +351,7 @@ const PastorDashboard = () => {
                 onChange={(event) =>
                   setDateRange((current) => ({ ...current, end: event.target.value }))
                 }
-                className="bg-transparent border-none p-0 focus:ring-0 text-sm text-slate-700 dark:text-slate-300"
+                className="border-none bg-transparent p-0 text-footnote text-label focus:ring-0"
               />
             </div>
 
@@ -375,10 +373,10 @@ const PastorDashboard = () => {
         </div>
 
         {error && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-900/40 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-3 text-rose-700 dark:text-rose-300 min-w-0">
+          <div className="flex flex-col gap-4 rounded-2xl bg-system-red/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3 text-rose-700 dark:text-system-red">
               <AlertTriangle className="w-5 h-5 shrink-0" />
-              <span className="text-sm font-medium break-words">{error}</span>
+              <span className="break-words text-footnote font-medium">{error}</span>
             </div>
             <button
               onClick={loadAllData}
@@ -417,80 +415,76 @@ const PastorDashboard = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-6">
-          <section className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-5">
-              <ShieldAlert className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                Priority Actions
-              </h3>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+          <section className="card p-6">
+            <div className="mb-5 flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-system-orange/15">
+                <ShieldAlert className="h-[18px] w-[18px] text-amber-700 dark:text-system-orange" />
+              </span>
+              <h3 className="text-title-3 font-semibold text-label">Priority Actions</h3>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {reportSummary.actionItems.map((item) => (
                 <div
                   key={item}
-                  className="flex items-start gap-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 px-4 py-3"
+                  className="flex items-start gap-3 rounded-xl bg-system-grouped-background/70 px-4 py-3 dark:bg-white/[0.03]"
                 >
-                  <div className="mt-1 w-2 h-2 rounded-full bg-primary-500 shrink-0" />
-                  <p className="text-sm text-slate-600 dark:text-slate-300">{item}</p>
+                  <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-500" />
+                  <p className="text-footnote leading-relaxed text-secondary-label">{item}</p>
                 </div>
               ))}
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-5">
-              <TrendingUp className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                Report Snapshot
-              </h3>
+          <section className="card p-6">
+            <div className="mb-5 flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-system-green/15">
+                <TrendingUp className="h-[18px] w-[18px] text-emerald-700 dark:text-system-green" />
+              </span>
+              <h3 className="text-title-3 font-semibold text-label">Report Snapshot</h3>
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500 dark:text-slate-400 min-w-0">
-                  Trend delta
-                </span>
+                <span className="min-w-0 text-footnote text-secondary-label">Trend delta</span>
                 <Badge variant={reportSummary.trendDelta >= 0 ? 'success' : 'danger'}>
                   {reportSummary.trendDelta > 0 ? '+' : ''}
                   {reportSummary.trendDelta}%
                 </Badge>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500 dark:text-slate-400">
-                  Strongest section
-                </span>
-                <div className="text-right min-w-0">
-                  <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <span className="text-footnote text-secondary-label">Strongest section</span>
+                <div className="min-w-0 text-right">
+                  <div className="truncate text-footnote font-semibold text-label">
                     {reportSummary.strongestSection?.section_name || 'No data'}
                   </div>
                   {reportSummary.strongestSection && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <div className="text-caption-1 text-secondary-label tabular-nums">
                       {reportSummary.strongestSection.attendance_rate}%
                     </div>
                   )}
                 </div>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500 dark:text-slate-400">Needs support</span>
-                <div className="text-right min-w-0">
-                  <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <span className="text-footnote text-secondary-label">Needs support</span>
+                <div className="min-w-0 text-right">
+                  <div className="truncate text-footnote font-semibold text-label">
                     {reportSummary.weakestSection?.section_name || 'No data'}
                   </div>
                   {reportSummary.weakestSection && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <div className="text-caption-1 text-secondary-label tabular-nums">
                       {reportSummary.weakestSection.attendance_rate}%
                     </div>
                   )}
                 </div>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-sm text-slate-500 dark:text-slate-400">Top leader</span>
-                <div className="text-right min-w-0">
-                  <div className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <span className="text-footnote text-secondary-label">Top leader</span>
+                <div className="min-w-0 text-right">
+                  <div className="truncate text-footnote font-semibold text-label">
                     {reportSummary.topLeader?.leader_name || 'No data'}
                   </div>
                   {reportSummary.topLeader && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <div className="text-caption-1 text-secondary-label">
                       {reportSummary.topLeader.section_name} ·{' '}
                       {reportSummary.topLeader.attendance_rate}%
                     </div>
@@ -511,12 +505,12 @@ const PastorDashboard = () => {
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={overviewTrend} margin={{ top: 8, right: 12, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#c7c7cc" />
                 <XAxis
                   dataKey="date"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tick={{ fontSize: 11, fill: '#8e8e93' }}
                   tickFormatter={(value) =>
                     formatDisplayDate(value, { month: 'short', day: 'numeric' })
                   }
@@ -524,7 +518,7 @@ const PastorDashboard = () => {
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tick={{ fontSize: 11, fill: '#8e8e93' }}
                   domain={[0, 100]}
                 />
                 <Tooltip
@@ -534,7 +528,7 @@ const PastorDashboard = () => {
                 <Line
                   type="monotone"
                   dataKey="attendance_rate"
-                  stroke="#2563eb"
+                  stroke="#14a896"
                   strokeWidth={3}
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
@@ -555,12 +549,12 @@ const PastorDashboard = () => {
                 data={sectionBreakdown}
                 margin={{ top: 8, right: 12, left: -18, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#c7c7cc" />
                 <XAxis
                   dataKey="section_name"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tick={{ fontSize: 11, fill: '#8e8e93' }}
                   tickFormatter={(value) =>
                     value.length > 11 ? `${value.slice(0, 11)}...` : value
                   }
@@ -568,7 +562,7 @@ const PastorDashboard = () => {
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: '#64748b' }}
+                  tick={{ fontSize: 11, fill: '#8e8e93' }}
                   domain={[0, 100]}
                 />
                 <Tooltip formatter={(value) => [`${value}%`, 'Attendance Rate']} />
@@ -591,11 +585,7 @@ const PastorDashboard = () => {
               accessor: 'leader_name',
               header: 'Leader',
               sortable: true,
-              render: (row) => (
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  {row.leader_name}
-                </span>
-              )
+              render: (row) => <span className="font-semibold text-label">{row.leader_name}</span>
             },
             {
               accessor: 'section_name',
@@ -646,11 +636,7 @@ const PastorDashboard = () => {
               accessor: 'full_name',
               header: 'Member',
               sortable: true,
-              render: (row) => (
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  {row.full_name}
-                </span>
-              )
+              render: (row) => <span className="font-semibold text-label">{row.full_name}</span>
             },
             {
               accessor: 'section_name',

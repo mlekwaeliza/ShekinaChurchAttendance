@@ -717,14 +717,14 @@ const AttendanceReports = ({
       {/* ── Single Compact Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3 px-1">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-            <Eye className="w-4.5 h-4.5 text-slate-600 dark:text-slate-300" />
+          <div className="w-9 h-9 rounded-xl bg-system-fill flex items-center justify-center">
+            <Eye className="w-4.5 h-4.5 text-secondary-label" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+            <h2 className="text-subheadline font-semibold text-label">
               Executive Attendance Intelligence
             </h2>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-caption-1 text-tertiary-label">
               Numbers-first business intelligence for strategic decisions
             </p>
           </div>
@@ -734,12 +734,12 @@ const AttendanceReports = ({
             <button
               onClick={() => setQuickActionsOpen((o) => !o)}
               onBlur={() => setTimeout(() => setQuickActionsOpen(false), 150)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-caption-1 font-medium text-secondary-label hover:text-secondary-label dark:hover:text-tertiary-label border border-black/[0.06] dark:border-white/[0.08] hover:bg-system-fill/50 transition-colors"
             >
               <Sparkles className="w-3.5 h-3.5" /> Actions <ChevronDown className="w-3 h-3" />
             </button>
             {quickActionsOpen && (
-              <div className="absolute right-0 top-full mt-1 w-52 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg z-50 py-1">
+              <div className="absolute right-0 top-full mt-1 w-52 rounded-xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] shadow-lg z-50 py-1">
                 {[
                   {
                     label: 'Download PDF',
@@ -751,7 +751,7 @@ const AttendanceReports = ({
                     label: 'Print Report',
                     icon: Printer,
                     onClick: () => window.print(),
-                    color: 'text-slate-600'
+                    color: 'text-secondary-label'
                   },
                   {
                     label: 'Generate AI Report',
@@ -763,7 +763,7 @@ const AttendanceReports = ({
                   <button
                     key={label}
                     onClick={onClick}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-caption-1 font-medium text-secondary-label hover:bg-system-fill/50 transition-colors"
                   >
                     <I className={`w-3.5 h-3.5 ${color}`} /> {label}
                   </button>
@@ -773,13 +773,13 @@ const AttendanceReports = ({
           </div>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-caption-1 font-medium text-secondary-label hover:text-secondary-label dark:hover:text-tertiary-label border border-black/[0.06] dark:border-white/[0.08] hover:bg-system-fill/50 transition-colors"
           >
             <Printer className="w-3.5 h-3.5" /> Print
           </button>
           <button
             onClick={loadAnalytics}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-caption-1 font-medium text-secondary-label hover:text-secondary-label dark:hover:text-tertiary-label border border-black/[0.06] dark:border-white/[0.08] hover:bg-system-fill/50 transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </button>
@@ -794,7 +794,7 @@ const AttendanceReports = ({
             setFilterType(e.target.value);
             setFilterValue('');
           }}
-          className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+          className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background px-3 py-1.5 text-caption-1 font-medium text-secondary-label focus:outline-none focus:ring-2 focus:ring-blue-500/30"
         >
           <option value="weekly">This Week</option>
           <option value="monthly">This Month</option>
@@ -809,7 +809,7 @@ const AttendanceReports = ({
             type="date"
             value={filterValue || ''}
             onChange={(e) => setFilterValue(e.target.value)}
-            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background px-3 py-1.5 text-caption-1 text-secondary-label focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           />
         ) : (
           <div className="flex items-center gap-1">
@@ -817,14 +817,14 @@ const AttendanceReports = ({
               type="date"
               value={customDate1}
               onChange={(e) => setCustomDate1(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none w-32"
+              className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background px-3 py-1.5 text-caption-1 text-secondary-label focus:outline-none w-32"
             />
-            <span className="text-slate-400 text-xs">to</span>
+            <span className="text-tertiary-label text-caption-1">to</span>
             <input
               type="date"
               value={customDate2}
               onChange={(e) => setCustomDate2(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 focus:outline-none w-32"
+              className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background px-3 py-1.5 text-caption-1 text-secondary-label focus:outline-none w-32"
             />
           </div>
         )}
@@ -832,14 +832,14 @@ const AttendanceReports = ({
       </div>
 
       {/* ── Primary Navigation (6 tabs) ── */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
+      <div className="tab-pills overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-medium whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            className={`tab-pill whitespace-nowrap ${activeTab === tab.id ? 'active' : ''}`}
           >
-            <tab.icon className="w-3 h-3" />
+            <tab.icon className="h-3 w-3" />
             {t(`attendance.tabs.${tab.id}`, tab.label)}
           </button>
         ))}

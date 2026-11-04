@@ -21,7 +21,7 @@ const HistoryTab = ({
             key={p}
             type="button"
             onClick={() => onPeriodChange(p)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${historicalPeriod === p ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700'}`}
+            className={`px-3 py-1.5 rounded-xl text-caption-1 font-medium transition-all ${historicalPeriod === p ? 'bg-primary-600 text-white shadow-card' : 'bg-system-fill text-secondary-label hover:text-secondary-label'}`}
           >
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -68,20 +68,20 @@ const HistoryTab = ({
       </div>
 
       {historicalData.daily?.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] shadow-card">
+          <div className="p-4 border-b border-separator/60 dark:border-white/[0.08]">
+            <h3 className="text-footnote font-semibold text-label">
               Historical Attendance Records
             </h3>
           </div>
           <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-            <table className="min-w-full text-sm">
-              <thead className="sticky top-0 bg-white dark:bg-slate-800">
-                <tr className="border-b border-slate-200 dark:border-slate-700">
+            <table className="min-w-full text-footnote">
+              <thead className="sticky top-0 bg-secondary-system-grouped-background">
+                <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
                   {['Date', 'Present', 'Absent', 'Excused', 'Total', 'Rate'].map((h) => (
                     <th
                       key={h}
-                      className={`py-2 px-3 text-[10px] font-semibold uppercase text-slate-400 ${h === 'Date' ? 'text-left' : 'text-right'}`}
+                      className={`py-2 px-3 text-caption-2 font-semibold uppercase text-tertiary-label ${h === 'Date' ? 'text-left' : 'text-right'}`}
                     >
                       {h}
                     </th>
@@ -95,9 +95,9 @@ const HistoryTab = ({
                   return (
                     <tr
                       key={i}
-                      className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                      className="border-b border-separator/50 dark:border-white/[0.08] hover:bg-system-fill/30"
                     >
-                      <td className="py-2 px-3 text-left font-medium text-slate-900 dark:text-white">
+                      <td className="py-2 px-3 text-left font-medium text-label">
                         {fdate(t.date)}
                       </td>
                       <td className="py-2 px-3 text-right text-emerald-600">{t.present_count}</td>
@@ -119,11 +119,9 @@ const HistoryTab = ({
       )}
 
       {yearOverYear?.length > 0 && (
-        <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm">
-          <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              Year-over-Year Comparison
-            </h3>
+        <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] shadow-card">
+          <div className="p-4 border-b border-separator/60 dark:border-white/[0.08]">
+            <h3 className="text-footnote font-semibold text-label">Year-over-Year Comparison</h3>
           </div>
           <IntelligenceTable
             columns={[
@@ -132,20 +130,22 @@ const HistoryTab = ({
                 key: 'current_rate',
                 label: 'Current',
                 align: 'right',
-                render: (v) => <span className="font-bold">{R(v)}%</span>
+                render: (v) => <span className="font-semibold">{R(v)}%</span>
               },
               {
                 key: 'previous_rate',
                 label: 'Previous',
                 align: 'right',
-                render: (v) => <span className="text-slate-500">{R(v)}%</span>
+                render: (v) => <span className="text-secondary-label">{R(v)}%</span>
               },
               {
                 key: 'difference',
                 label: 'Difference',
                 align: 'right',
                 render: (v) => (
-                  <span className={`font-bold ${v >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <span
+                    className={`font-semibold ${v >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                  >
                     {v >= 0 ? '+' : ''}
                     {R(v)}%
                   </span>

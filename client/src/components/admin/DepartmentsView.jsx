@@ -21,51 +21,6 @@ import Badge from '../ui/Badge';
 import StatCard from '../ui/StatCard';
 import { fdatetime } from '../../utils/date';
 
-const cardGradients = [
-  {
-    bg: 'from-blue-500 to-indigo-600',
-    light: 'bg-blue-50 dark:bg-blue-900/20',
-    border: 'border-blue-200 dark:border-blue-700/50',
-    text: 'text-blue-600 dark:text-blue-400',
-    shadow: 'shadow-blue-500/10'
-  },
-  {
-    bg: 'from-emerald-500 to-teal-600',
-    light: 'bg-emerald-50 dark:bg-emerald-900/20',
-    border: 'border-emerald-200 dark:border-emerald-700/50',
-    text: 'text-emerald-600 dark:text-emerald-400',
-    shadow: 'shadow-emerald-500/10'
-  },
-  {
-    bg: 'from-violet-500 to-purple-600',
-    light: 'bg-violet-50 dark:bg-violet-900/20',
-    border: 'border-violet-200 dark:border-violet-700/50',
-    text: 'text-violet-600 dark:text-violet-400',
-    shadow: 'shadow-violet-500/10'
-  },
-  {
-    bg: 'from-amber-500 to-orange-600',
-    light: 'bg-amber-50 dark:bg-amber-900/20',
-    border: 'border-amber-200 dark:border-amber-700/50',
-    text: 'text-amber-600 dark:text-amber-400',
-    shadow: 'shadow-amber-500/10'
-  },
-  {
-    bg: 'from-rose-500 to-pink-600',
-    light: 'bg-rose-50 dark:bg-rose-900/20',
-    border: 'border-rose-200 dark:border-rose-700/50',
-    text: 'text-rose-600 dark:text-rose-400',
-    shadow: 'shadow-rose-500/10'
-  },
-  {
-    bg: 'from-sky-500 to-cyan-600',
-    light: 'bg-sky-50 dark:bg-sky-900/20',
-    border: 'border-sky-200 dark:border-sky-700/50',
-    text: 'text-sky-600 dark:text-sky-400',
-    shadow: 'shadow-sky-500/10'
-  }
-];
-
 const emptyForm = {
   name: '',
   description: '',
@@ -356,18 +311,18 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 p-6 text-white shadow-xl shadow-emerald-500/20">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-inner">
-              <Building2 className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">{t('departments.title')} &amp; {t('nav.items.departments')} Teams</h1>
-              <p className="text-sm text-teal-50/90 font-medium mt-0.5">
+      {/* Header */}
+      <section className="product-surface relative overflow-hidden px-5 py-6 sm:px-7">
+        <div className="relative flex min-w-0 flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-primary-500/[0.12] text-primary-700 dark:text-primary-300">
+              <Building2 className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h1 className="font-display text-title-2 font-semibold text-label">
+                {t('departments.title')} &amp; {t('nav.items.departments')} Teams
+              </h1>
+              <p className="mt-1 text-subheadline text-secondary-label">
                 {loading
                   ? t('common.loading')
                   : `${departments.length} ${t('departments.totalDepartments').toLowerCase()} · ${totalMembersInDepts} ${t('common.active').toLowerCase()}`}
@@ -375,30 +330,24 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="tab-pills shrink-0 self-start md:self-auto">
             <button
               onClick={() => setActiveTab('grid')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                activeTab === 'grid'
-                  ? 'bg-white text-teal-800 shadow-md'
-                  : 'bg-white/10 hover:bg-white/20 text-white'
-              }`}
+              aria-pressed={activeTab === 'grid'}
+              className="tab-pill focus-ring shrink-0"
             >
               Directory
             </button>
             <button
               onClick={() => setActiveTab('chart')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                activeTab === 'chart'
-                  ? 'bg-white text-teal-800 shadow-md'
-                  : 'bg-white/10 hover:bg-white/20 text-white'
-              }`}
+              aria-pressed={activeTab === 'chart'}
+              className="tab-pill focus-ring shrink-0"
             >
               Org Chart
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Stats Summary Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -426,31 +375,28 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
       {activeTab === 'grid' ? (
         <div className="space-y-6">
           {/* Filters Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-700 shadow-sm">
+          <div className="card flex flex-col items-center justify-between gap-4 p-4 sm:flex-row">
             <div className="relative w-full sm:w-80">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 w-4 h-4 -translate-y-1/2 text-tertiary-label" />
               <input
                 type="text"
                 placeholder="Search department, description or pastor..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input pl-10 rounded-xl w-full h-11"
+                className="input pl-10 pr-9"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  className="focus-ring absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-tertiary-label transition-colors hover:bg-system-fill hover:text-label"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            <button
-              onClick={handleOpenCreate}
-              className="btn-primary rounded-xl h-11 w-full sm:w-auto px-5 font-semibold shadow-lg shadow-teal-500/10 flex items-center justify-center gap-2 hover:-translate-y-0.5 active:translate-y-0 transition-all"
-            >
-              <Plus className="w-4.5 h-4.5" />
+            <button onClick={handleOpenCreate} className="btn-primary w-full sm:w-auto">
+              <Plus className="w-4 h-4" />
               <span>Add Department</span>
             </button>
           </div>
@@ -459,29 +405,25 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div
-                  key={i}
-                  className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 h-64 animate-pulse flex flex-col p-5 space-y-4"
-                >
+                <div key={i} className="card flex h-64 animate-pulse flex-col p-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700" />
-                    <div className="space-y-2 flex-1">
-                      <div className="h-4 w-32 bg-slate-100 dark:bg-slate-700 rounded" />
-                      <div className="h-3 w-20 bg-slate-100 dark:bg-slate-700 rounded" />
+                    <div className="h-9 w-9 rounded-[10px] bg-system-fill" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-32 rounded bg-system-fill" />
+                      <div className="h-3 w-20 rounded bg-system-fill" />
                     </div>
                   </div>
-                  <div className="space-y-2 flex-1">
-                    <div className="h-3 w-full bg-slate-100 dark:bg-slate-700 rounded" />
-                    <div className="h-3 w-5/6 bg-slate-100 dark:bg-slate-700 rounded" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-full rounded bg-system-fill" />
+                    <div className="h-3 w-5/6 rounded bg-system-fill" />
                   </div>
-                  <div className="h-9 w-full bg-slate-100 dark:bg-slate-700 rounded-xl" />
+                  <div className="h-9 w-full rounded-xl bg-system-fill" />
                 </div>
               ))}
             </div>
           ) : filteredDepartments.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredDepartments.map((dept, index) => {
-                const colors = cardGradients[index % cardGradients.length];
+              {filteredDepartments.map((dept) => {
                 return (
                   <div
                     key={dept.id}
@@ -490,79 +432,70 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                       setDetailTab('overview');
                       setDetailModalOpen(true);
                     }}
-                    className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/60 dark:border-slate-700 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col overflow-hidden relative"
+                    className="group card flex cursor-pointer flex-col transition-shadow duration-200 hover:shadow-card-hover"
                   >
-                    {/* Top colored accent bar */}
-                    <div className={`h-1.5 bg-gradient-to-r ${colors.bg}`} />
-
                     {/* Card Content */}
-                    <div className="p-5 flex-1 flex flex-col space-y-4">
+                    <div className="flex flex-1 flex-col space-y-4 p-5">
                       {/* Name & Reports to */}
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <h3 className="font-bold text-slate-800 dark:text-slate-100 text-lg group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 space-y-1.5">
+                          <h3 className="truncate text-headline font-semibold text-label transition-colors group-hover:text-primary-700 dark:group-hover:text-primary-300">
                             {dept.name}
                           </h3>
                           {dept.reports_to_title_name ? (
-                            <Badge
-                              variant="info"
-                              className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5"
-                            >
+                            <Badge variant="info" className="text-caption-2">
                               Reports to: {dept.reports_to_title_name}
                             </Badge>
                           ) : (
-                            <Badge
-                              variant="neutral"
-                              className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5"
-                            >
+                            <Badge variant="neutral" className="text-caption-2">
                               Independent
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex shrink-0 items-center gap-1.5">
                           {dept.is_active === 0 || dept.is_active === false ? (
-                            <Badge variant="neutral" className="text-[10px] font-bold px-2 py-0.5">
-                              Inactive
-                            </Badge>
+                            <Badge variant="neutral">Inactive</Badge>
                           ) : null}
-                          <Badge
-                            variant="success"
-                            className="text-[11px] font-bold px-2 py-0.5 flex items-center gap-1"
-                          >
-                            <Users className="w-3 h-3" />
-                            <span>{dept.member_count || 0}</span>
+                          <Badge variant="success" icon={Users}>
+                            {dept.member_count || 0}
                           </Badge>
                         </div>
                       </div>
 
                       {/* Description */}
-                      <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed flex-1">
+                      <p className="line-clamp-2 flex-1 text-footnote leading-relaxed text-secondary-label">
                         {dept.description || 'No description provided.'}
                       </p>
 
                       {/* Leadership roles brief */}
-                      <div className="bg-slate-50/60 dark:bg-slate-900/40 rounded-xl p-3 border border-slate-100 dark:border-slate-800/40 text-xs space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400 font-medium">Leader</span>
-                          <span className="text-slate-700 dark:text-slate-300 font-semibold max-w-[150px] truncate">
+                      <div className="space-y-2 rounded-xl bg-system-grouped-background/70 p-3 dark:bg-white/[0.03]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-caption-1 font-medium text-secondary-label">
+                            Leader
+                          </span>
+                          <span className="max-w-[150px] truncate text-footnote font-semibold text-label">
                             {dept.leader_name || (
-                              <span className="text-slate-400 font-normal">Unassigned</span>
+                              <span className="font-medium text-secondary-label">Unassigned</span>
                             )}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400 font-medium">Assistant Leader</span>
-                          <span className="text-slate-700 dark:text-slate-300 font-semibold max-w-[150px] truncate">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-caption-1 font-medium text-secondary-label">
+                            Assistant Leader
+                          </span>
+                          <span className="max-w-[150px] truncate text-footnote font-semibold text-label">
                             {dept.assistant_leader_name || (
-                              <span className="text-slate-400 font-normal">Unassigned</span>
+                              <span className="font-medium text-secondary-label">Unassigned</span>
                             )}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-400 font-medium">Secretary</span>
-                          <span className="text-slate-700 dark:text-slate-300 font-semibold max-w-[150px] truncate">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-caption-1 font-medium text-secondary-label">
+                            Secretary
+                          </span>
+                          <span className="max-w-[150px] truncate text-footnote font-semibold text-label">
                             {dept.secretary_name || (
-                              <span className="text-slate-400 font-normal">Unassigned</span>
+                              <span className="font-medium text-secondary-label">Unassigned</span>
                             )}
                           </span>
                         </div>
@@ -572,7 +505,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                     {/* Actions Footer */}
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className="px-5 py-3.5 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between"
+                      className="flex items-center justify-between border-t border-separator/60 bg-system-grouped-background/70 px-5 py-3.5 dark:border-white/[0.08] dark:bg-white/[0.03]"
                     >
                       <button
                         onClick={() => {
@@ -580,23 +513,23 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                           setDetailTab('overview');
                           setDetailModalOpen(true);
                         }}
-                        className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors flex items-center gap-1 group/more"
+                        className="focus-ring inline-flex items-center gap-1 rounded-md text-caption-1 font-semibold text-primary-700 transition-colors hover:text-primary-800 group/more dark:text-primary-300"
                       >
-                        <span>Manage & Members</span>
-                        <ChevronRight className="w-3.5 h-3.5 group-hover/more:translate-x-0.5 transition-transform" />
+                        <span>Manage &amp; Members</span>
+                        <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover/more:translate-x-0.5" />
                       </button>
 
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => handleOpenEdit(dept)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-all"
+                          className="btn-icon focus-ring rounded-lg text-secondary-label transition-colors hover:bg-system-fill hover:text-primary-700 dark:hover:text-primary-300"
                           title="Edit department settings"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(dept)}
-                          className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all"
+                          className="btn-icon focus-ring rounded-lg text-secondary-label transition-colors hover:bg-system-red/10 hover:text-rose-700 dark:hover:text-system-red"
                           title="Delete Department"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -608,19 +541,17 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
               })}
             </div>
           ) : (
-            <div className="bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center flex flex-col items-center justify-center max-w-lg mx-auto mt-6">
-              <div className="w-16 h-16 rounded-2xl bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center text-teal-600 dark:text-teal-400 mb-4 shadow-inner">
-                <Building2 className="w-8 h-8" />
+            <div className="card mx-auto mt-6 flex max-w-lg flex-col items-center justify-center p-12 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-system-fill text-secondary-label">
+                <Building2 className="w-7 h-7" />
               </div>
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-1">
-                No Departments Found
-              </h3>
-              <p className="text-sm text-slate-400 dark:text-slate-500 mb-6">
+              <h3 className="empty-state-title mb-1">No Departments Found</h3>
+              <p className="empty-state-desc mb-6">
                 {searchTerm
                   ? 'No departments match your search filter.'
                   : 'Create a department or ministry team to get started.'}
               </p>
-              <button onClick={handleOpenCreate} className="btn-primary rounded-xl px-5 h-11">
+              <button onClick={handleOpenCreate} className="btn-primary px-5">
                 Create Department
               </button>
             </div>
@@ -628,11 +559,11 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
         </div>
       ) : (
         /* Org Chart Tab */
-        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 p-6 shadow-sm overflow-x-auto">
-          <div className="min-w-[900px] py-4 space-y-12">
-            <h2 className="text-center font-bold text-slate-800 dark:text-slate-100 text-lg mb-8 flex items-center justify-center gap-2">
-              <GitBranch className="w-5 h-5 text-teal-600" />
-              <span>Leadership & Reporting Hierarchy Structure</span>
+        <div className="card overflow-x-auto p-6">
+          <div className="min-w-[900px] space-y-12 py-4">
+            <h2 className="mb-8 flex items-center justify-center gap-2 text-center text-title-3 font-semibold text-label">
+              <GitBranch className="w-5 h-5 text-primary-700 dark:text-primary-300" />
+              <span>Leadership &amp; Reporting Hierarchy Structure</span>
             </h2>
 
             {/* Tree Root */}
@@ -641,19 +572,19 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                 {orgChartHierarchy.map((rootNode) => (
                   <div key={rootNode.id} className="flex flex-col items-center">
                     {/* Pastor Node */}
-                    <div className="bg-gradient-to-br from-teal-600 to-emerald-700 text-white rounded-2xl p-4 shadow-md text-center max-w-sm w-72 border border-teal-500/20 relative z-10 hover:shadow-lg transition-shadow">
-                      <Award className="w-6 h-6 mx-auto mb-1 text-teal-200" />
-                      <h4 className="font-bold text-sm leading-tight">{rootNode.name}</h4>
-                      <p className="text-xs text-teal-100/90 font-medium mt-1">
+                    <div className="relative z-10 w-72 max-w-sm rounded-2xl bg-primary-600 p-4 text-center text-white shadow-card">
+                      <Award className="mx-auto mb-1 w-6 h-6 text-white/80" />
+                      <h4 className="text-headline font-semibold leading-tight">{rootNode.name}</h4>
+                      <p className="mt-1 text-footnote font-medium text-white/70">
                         {rootNode.description || 'Spiritual oversight'}
                       </p>
                     </div>
 
                     {/* Root level departments directly under head pastor */}
                     {rootNode.departments.length > 0 && (
-                      <div className="relative mt-8 w-full flex flex-col items-center">
-                        <div className="w-0.5 h-8 bg-slate-300 dark:bg-slate-700" />
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 justify-center">
+                      <div className="relative mt-8 flex w-full flex-col items-center">
+                        <div className="h-8 w-0.5 bg-separator dark:bg-white/[0.12]" />
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 justify-center">
                           {rootNode.departments.map((dept) => (
                             <div
                               key={dept.id}
@@ -662,18 +593,18 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                                 setDetailTab('overview');
                                 setDetailModalOpen(true);
                               }}
-                              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-center cursor-pointer hover:border-teal-500 dark:hover:border-teal-500 transition-colors w-48 shadow-sm flex flex-col justify-between"
+                              className="focus-ring flex w-48 cursor-pointer flex-col justify-between rounded-xl border border-separator/60 bg-system-grouped-background/70 p-3 text-center shadow-sm transition-colors hover:bg-system-fill dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
                             >
-                              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-secondary-label">
                                 Department
                               </span>
-                              <h5 className="font-bold text-sm text-slate-800 dark:text-slate-100 mt-1 truncate">
+                              <h5 className="mt-1 truncate text-subheadline font-semibold text-label">
                                 {dept.name}
                               </h5>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">
+                              <p className="mt-1 truncate text-caption-2 text-secondary-label">
                                 Leader: {dept.leader_name || 'Unassigned'}
                               </p>
-                              <div className="mt-2 text-[10px] text-teal-600 font-bold">
+                              <div className="mt-2 text-caption-1 font-semibold tabular-nums text-primary-700 dark:text-primary-300">
                                 {dept.member_count || 0} members
                               </div>
                             </div>
@@ -684,29 +615,29 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
                     {/* Children nodes (Subordinate Pastors) */}
                     {rootNode.children.length > 0 && (
-                      <div className="relative mt-8 w-full flex flex-col items-center">
+                      <div className="relative mt-8 flex w-full flex-col items-center">
                         {/* Connector line down */}
-                        <div className="w-0.5 h-8 bg-slate-300 dark:bg-slate-700" />
+                        <div className="h-8 w-0.5 bg-separator dark:bg-white/[0.12]" />
 
-                        <div className="flex items-start gap-12 mt-4">
+                        <div className="mt-4 flex items-start gap-12">
                           {rootNode.children.map((child) => (
                             <div key={child.id} className="flex flex-col items-center">
                               {/* Sub-Pastor Node */}
-                              <div className="bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-850 rounded-2xl p-4 shadow-sm text-center max-w-sm w-64 relative z-10">
-                                <Award className="w-5 h-5 mx-auto mb-1 text-emerald-600 dark:text-emerald-400" />
-                                <h4 className="font-bold text-sm text-slate-800 dark:text-slate-100 leading-tight">
+                              <div className="relative z-10 w-64 max-w-sm rounded-2xl border border-separator/60 bg-secondary-system-grouped-background p-4 text-center shadow-card dark:border-white/[0.1] dark:bg-tertiary-system-background">
+                                <Award className="mx-auto mb-1 w-5 h-5 text-primary-700 dark:text-primary-300" />
+                                <h4 className="text-headline font-semibold leading-tight text-label">
                                   {child.name}
                                 </h4>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold inline-block mt-1">
+                                <span className="mt-1 inline-block rounded-full bg-system-fill px-2.5 py-0.5 text-caption-2 font-semibold text-secondary-label">
                                   {child.category}
                                 </span>
                               </div>
 
                               {/* Departments reporting to this child pastor */}
                               {child.departments.length > 0 ? (
-                                <div className="relative mt-6 flex flex-col items-center w-full">
-                                  <div className="w-0.5 h-6 bg-slate-300 dark:bg-slate-700" />
-                                  <div className="flex flex-col gap-2 mt-2 w-full items-center">
+                                <div className="relative mt-6 flex w-full flex-col items-center">
+                                  <div className="h-6 w-0.5 bg-separator dark:bg-white/[0.12]" />
+                                  <div className="mt-2 flex w-full flex-col items-center gap-2">
                                     {child.departments.map((dept) => (
                                       <div
                                         key={dept.id}
@@ -715,15 +646,15 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                                           setDetailTab('overview');
                                           setDetailModalOpen(true);
                                         }}
-                                        className="bg-teal-50/50 dark:bg-slate-900/80 border border-teal-100 dark:border-slate-800 rounded-xl p-3 text-center cursor-pointer hover:border-teal-500 transition-colors w-48 shadow-sm"
+                                        className="focus-ring w-48 cursor-pointer rounded-xl border border-separator/60 bg-system-grouped-background/70 p-3 text-center shadow-sm transition-colors hover:bg-system-fill dark:border-white/[0.08] dark:bg-white/[0.03] dark:hover:bg-white/[0.06]"
                                       >
-                                        <h5 className="font-bold text-xs text-slate-800 dark:text-slate-100 truncate">
+                                        <h5 className="truncate text-footnote font-semibold text-label">
                                           {dept.name}
                                         </h5>
-                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                        <p className="mt-0.5 truncate text-caption-2 text-secondary-label">
                                           Leader: {dept.leader_name || 'Unassigned'}
                                         </p>
-                                        <div className="mt-1.5 text-[9px] bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-400 font-bold px-2 py-0.5 rounded-full inline-block">
+                                        <div className="mt-1.5 inline-block rounded-full bg-primary-500/[0.12] px-2.5 py-0.5 text-caption-2 font-semibold tabular-nums text-primary-700 dark:text-primary-300">
                                           {dept.member_count || 0} Members
                                         </div>
                                       </div>
@@ -731,7 +662,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                                   </div>
                                 </div>
                               ) : (
-                                <div className="mt-6 text-[10px] text-slate-400 dark:text-slate-500 italic">
+                                <div className="mt-6 text-[10px] italic text-tertiary-label">
                                   No departments report here
                                 </div>
                               )}
@@ -739,17 +670,17 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                               {/* Recursion for grandchildren pastors if they exist */}
                               {child.children.length > 0 && (
                                 <div className="relative mt-6 flex flex-col items-center">
-                                  <div className="w-0.5 h-6 bg-slate-300 dark:bg-slate-700" />
-                                  <div className="flex gap-4 mt-2">
+                                  <div className="h-6 w-0.5 bg-separator dark:bg-white/[0.12]" />
+                                  <div className="mt-2 flex gap-4">
                                     {child.children.map((grand) => (
                                       <div
                                         key={grand.id}
-                                        className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-center w-48 shadow-sm"
+                                        className="w-48 rounded-xl border border-separator/60 bg-system-grouped-background/70 p-3 text-center shadow-sm dark:border-white/[0.08] dark:bg-white/[0.03]"
                                       >
-                                        <h6 className="font-semibold text-xs text-slate-800 dark:text-slate-100">
+                                        <h6 className="text-caption-1 font-semibold text-label">
                                           {grand.name}
                                         </h6>
-                                        <p className="text-[10px] text-slate-400 mt-1">
+                                        <p className="mt-1 text-[10px] text-tertiary-label">
                                           {grand.departments.length} departments report
                                         </p>
                                       </div>
@@ -766,7 +697,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                 ))}
               </div>
             ) : (
-              <div className="text-center text-slate-400 py-8 italic">
+              <div className="py-8 text-center text-footnote italic text-secondary-label">
                 No reporting pastor titles available. Define them under Titles.
               </div>
             )}
@@ -787,19 +718,19 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
         size="md"
       >
         <form onSubmit={handleSaveSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {/* Name */}
             <div className="md:col-span-2">
               <label className="input-label">Department Name</label>
               <div className="relative">
-                <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Building2 className="pointer-events-none absolute left-3.5 top-1/2 w-[18px] h-[18px] -translate-y-1/2 text-tertiary-label" />
                 <input
                   required
                   type="text"
                   placeholder="e.g. Youth Department, Prayer Ministry"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="input pl-11 rounded-xl"
+                  className="input pl-11"
                   autoFocus
                 />
               </div>
@@ -813,7 +744,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                 placeholder="Brief summary of department responsibilities or vision statement..."
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="input py-2.5 rounded-xl text-sm"
+                className="input"
               />
             </div>
 
@@ -821,11 +752,11 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
             <div className="md:col-span-2">
               <label className="input-label">Reports to Pastor / Title</label>
               <div className="relative">
-                <Award className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <Award className="pointer-events-none absolute left-3.5 top-1/2 w-[18px] h-[18px] -translate-y-1/2 text-tertiary-label" />
                 <select
                   value={form.reports_to_title_id}
                   onChange={(e) => setForm({ ...form, reports_to_title_id: e.target.value })}
-                  className="input pl-11 rounded-xl appearance-none"
+                  className="select pl-11"
                 >
                   <option value="">-- No Direct Pastoral Report (Independent) --</option>
                   {titles.map((t) => (
@@ -841,11 +772,11 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
             <div>
               <label className="input-label">Department Leader</label>
               <div className="relative">
-                <UserCog className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <UserCog className="pointer-events-none absolute left-3.5 top-1/2 w-[18px] h-[18px] -translate-y-1/2 text-tertiary-label" />
                 <select
                   value={form.leader_id}
                   onChange={(e) => setForm({ ...form, leader_id: e.target.value })}
-                  className="input pl-11 rounded-xl appearance-none"
+                  className="select pl-11"
                 >
                   <option value="">-- Unassigned --</option>
                   {sortedMembers.map((m) => (
@@ -861,11 +792,11 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
             <div>
               <label className="input-label">Assistant Leader</label>
               <div className="relative">
-                <UserCog className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <UserCog className="pointer-events-none absolute left-3.5 top-1/2 w-[18px] h-[18px] -translate-y-1/2 text-tertiary-label" />
                 <select
                   value={form.assistant_leader_id}
                   onChange={(e) => setForm({ ...form, assistant_leader_id: e.target.value })}
-                  className="input pl-11 rounded-xl appearance-none"
+                  className="select pl-11"
                 >
                   <option value="">-- Unassigned --</option>
                   {sortedMembers.map((m) => (
@@ -881,11 +812,11 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
             <div className="md:col-span-2">
               <label className="input-label">Department Secretary</label>
               <div className="relative">
-                <UserCog className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+                <UserCog className="pointer-events-none absolute left-3.5 top-1/2 w-[18px] h-[18px] -translate-y-1/2 text-tertiary-label" />
                 <select
                   value={form.secretary_id}
                   onChange={(e) => setForm({ ...form, secretary_id: e.target.value })}
-                  className="input pl-11 rounded-xl appearance-none"
+                  className="select pl-11"
                 >
                   <option value="">-- Unassigned --</option>
                   {sortedMembers.map((m) => (
@@ -898,38 +829,38 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
             </div>
 
             {/* Status toggle */}
-            <div className="md:col-span-2 flex items-center gap-3 py-2 bg-slate-50 dark:bg-slate-900 px-4 rounded-xl border border-slate-100 dark:border-slate-800">
+            <div className="md:col-span-2 flex items-center gap-3 rounded-xl border border-separator/60 bg-system-grouped-background/70 px-4 py-2.5 dark:border-white/[0.08] dark:bg-white/[0.03]">
               <input
                 id="dept-active-toggle"
                 type="checkbox"
                 checked={form.is_active}
                 onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                className="w-4 h-4 text-teal-600 focus:ring-teal-500 rounded border-slate-350"
+                className="h-4 w-4 accent-primary-600 focus:outline-none focus:ring-4 focus:ring-primary-500/20"
               />
               <label
                 htmlFor="dept-active-toggle"
-                className="text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
+                className="cursor-pointer text-subheadline font-semibold text-label"
               >
                 Department is active and operating
               </label>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+          <div className="flex justify-end gap-3 border-t border-separator/60 pt-4">
             <button
               type="button"
               onClick={() => setIsFormModalOpen(false)}
-              className="btn-secondary rounded-xl h-11"
+              className="btn-secondary"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="btn-primary min-w-[120px] rounded-xl h-11 justify-center font-semibold"
+              className="btn-primary min-w-[120px] justify-center"
             >
               {saving ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               ) : editingId ? (
                 'Save Changes'
               ) : (
@@ -963,46 +894,37 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
         size="lg"
       >
         {detailLoading || !detailDept ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-600 border-t-transparent" />
-            <p className="text-sm font-medium text-slate-500">
+          <div className="flex flex-col items-center justify-center space-y-3 py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
+            <p className="text-footnote font-medium text-secondary-label">
               Retrieving members and audit logs...
             </p>
           </div>
         ) : (
           <div className="space-y-6">
             {/* Sub-tabs */}
-            <div className="flex border-b border-slate-150 dark:border-slate-700">
+            <div className="tab-pills overflow-x-auto">
               <button
                 onClick={() => setDetailTab('overview')}
-                className={`pb-3 px-4 font-semibold text-sm border-b-2 transition-colors ${
-                  detailTab === 'overview'
-                    ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                }`}
+                aria-pressed={detailTab === 'overview'}
+                className="tab-pill focus-ring shrink-0"
               >
-                Overview & Leadership
+                Overview &amp; Leadership
               </button>
               <button
                 onClick={() => setDetailTab('members')}
-                className={`pb-3 px-4 font-semibold text-sm border-b-2 transition-colors flex items-center gap-1.5 ${
-                  detailTab === 'members'
-                    ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                }`}
+                aria-pressed={detailTab === 'members'}
+                className="tab-pill focus-ring inline-flex shrink-0 items-center gap-1.5"
               >
                 <span>Members List</span>
-                <Badge variant="neutral" className="text-[10px] font-bold px-1.5 py-0.5">
+                <Badge variant="neutral" className="text-caption-2">
                   {deptMembers.length}
                 </Badge>
               </button>
               <button
                 onClick={() => setDetailTab('history')}
-                className={`pb-3 px-4 font-semibold text-sm border-b-2 transition-colors flex items-center gap-1.5 ${
-                  detailTab === 'history'
-                    ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                    : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                }`}
+                aria-pressed={detailTab === 'history'}
+                className="tab-pill focus-ring inline-flex shrink-0 items-center gap-1.5"
               >
                 <Clock className="w-3.5 h-3.5" />
                 <span>Audit Trail</span>
@@ -1013,10 +935,8 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
             {detailTab === 'overview' && (
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Vision Statement / Description
-                  </h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <h4 className="section-eyebrow">Vision Statement / Description</h4>
+                  <p className="rounded-xl bg-system-grouped-background/70 p-4 text-subheadline leading-relaxed text-label dark:bg-white/[0.03]">
                     {detailDept.description ||
                       'No vision statement registered for this department.'}
                   </p>
@@ -1024,49 +944,59 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
                 {/* Main Leadership Officers */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Assigned Officers
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <h4 className="section-eyebrow">Assigned Officers</h4>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {/* Leader Card */}
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-850 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[100px]">
-                      <div className="absolute top-0 right-0 h-1 bg-teal-500 w-full" />
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase">
-                        Department Leader
-                      </span>
-                      <p className="font-bold text-slate-800 dark:text-slate-100 mt-2 truncate">
+                    <div className="flex min-h-[100px] flex-col justify-between rounded-xl border border-separator/50 bg-system-grouped-background/70 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-500/[0.12] text-primary-700 dark:text-primary-300">
+                          <UserCog className="w-4 h-4" />
+                        </span>
+                        <span className="text-caption-1 font-medium text-secondary-label">
+                          Department Leader
+                        </span>
+                      </div>
+                      <p className="mt-3 truncate text-headline font-semibold text-label">
                         {detailDept.leader_name || 'Unassigned'}
                       </p>
                     </div>
 
                     {/* Assistant Leader Card */}
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-850 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[100px]">
-                      <div className="absolute top-0 right-0 h-1 bg-sky-500 w-full" />
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase">
-                        Assistant Leader
-                      </span>
-                      <p className="font-bold text-slate-800 dark:text-slate-100 mt-2 truncate">
+                    <div className="flex min-h-[100px] flex-col justify-between rounded-xl border border-separator/50 bg-system-grouped-background/70 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-system-blue/15 text-blue-700 dark:text-system-blue">
+                          <Users className="w-4 h-4" />
+                        </span>
+                        <span className="text-caption-1 font-medium text-secondary-label">
+                          Assistant Leader
+                        </span>
+                      </div>
+                      <p className="mt-3 truncate text-headline font-semibold text-label">
                         {detailDept.assistant_leader_name || 'Unassigned'}
                       </p>
                     </div>
 
                     {/* Secretary Card */}
-                    <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-850 shadow-sm relative overflow-hidden flex flex-col justify-between min-h-[100px]">
-                      <div className="absolute top-0 right-0 h-1 bg-indigo-500 w-full" />
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase">
-                        Secretary
-                      </span>
-                      <p className="font-bold text-slate-800 dark:text-slate-100 mt-2 truncate">
+                    <div className="flex min-h-[100px] flex-col justify-between rounded-xl border border-separator/50 bg-system-grouped-background/70 p-4 dark:border-white/[0.06] dark:bg-white/[0.03]">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-system-orange/15 text-amber-700 dark:text-system-orange">
+                          <Award className="w-4 h-4" />
+                        </span>
+                        <span className="text-caption-1 font-medium text-secondary-label">
+                          Secretary
+                        </span>
+                      </div>
+                      <p className="mt-3 truncate text-headline font-semibold text-label">
                         {detailDept.secretary_name || 'Unassigned'}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <div className="flex justify-end gap-2 border-t border-separator/60 pt-4">
                   <button
                     onClick={() => handleOpenEdit(detailDept)}
-                    className="btn-secondary rounded-xl flex items-center gap-1.5 h-10"
+                    className="btn-secondary inline-flex items-center gap-1.5"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     <span>Edit Department Info</span>
@@ -1081,9 +1011,9 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                 {/* Add Member Form */}
                 <form
                   onSubmit={handleAddMemberSubmit}
-                  className="flex flex-col sm:flex-row items-end gap-3 bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800"
+                  className="flex flex-col items-end gap-3 rounded-2xl border border-separator/60 bg-system-grouped-background/70 p-4 sm:flex-row dark:border-white/[0.08] dark:bg-white/[0.03]"
                 >
-                  <div className="flex-1 w-full relative" ref={memberSearchRef}>
+                  <div className="relative w-full flex-1" ref={memberSearchRef}>
                     <label className="input-label">Add Member to Department</label>
                     <input
                       required
@@ -1111,10 +1041,10 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                         }, 200);
                       }}
                       placeholder="Search member name..."
-                      className="input rounded-xl w-full"
+                      className="input"
                     />
                     {showMemberDropdown && filteredMembers.length > 0 && (
-                      <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
+                      <div className="absolute left-0 right-0 z-50 mt-1.5 max-h-48 overflow-y-auto rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background shadow-card animate-fade-in dark:border-white/[0.08]">
                         {filteredMembers.map((m) => (
                           <button
                             key={m.id}
@@ -1125,13 +1055,13 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                               setMemberFocused(false);
                               setShowMemberDropdown(false);
                             }}
-                            className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
+                            className={`focus-ring flex w-full items-center gap-2.5 px-4 py-2.5 text-left transition-colors ${
                               Number(m.id) === Number(selectedMemberToAdd)
-                                ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300'
-                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                                ? 'bg-primary-500/[0.12] text-primary-700 dark:text-primary-300'
+                                : 'text-label hover:bg-system-grouped-background/70 dark:hover:bg-white/[0.03]'
                             }`}
                           >
-                            <span className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-500/[0.12] text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
                               {(m.full_name || '')
                                 .split(' ')
                                 .map((n) => n[0])
@@ -1141,7 +1071,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                             </span>
                             <span className="truncate font-medium">{m.full_name}</span>
                             {m.section_name && (
-                              <span className="text-[10px] text-slate-400 dark:text-slate-500 ml-auto shrink-0">
+                              <span className="ml-auto shrink-0 text-caption-2 text-tertiary-label">
                                 {m.section_name}
                               </span>
                             )}
@@ -1153,7 +1083,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                       !selectedMemberToAdd &&
                       !showMemberDropdown &&
                       memberSearch.trim() && (
-                        <p className="text-[11px] text-rose-500 mt-1">
+                        <p className="mt-1 text-caption-1 text-rose-700 dark:text-system-red">
                           Please select a member from the list
                         </p>
                       )}
@@ -1161,7 +1091,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                   <button
                     type="submit"
                     disabled={addingMember || !selectedMemberToAdd}
-                    className="btn-primary rounded-xl h-11 w-full sm:w-auto font-semibold px-5 shadow-lg shadow-teal-500/10 flex items-center justify-center gap-1.5"
+                    className="btn-primary flex w-full items-center justify-center gap-1.5 px-5 sm:w-auto"
                   >
                     {addingMember ? 'Adding...' : 'Add Member'}
                   </button>
@@ -1169,18 +1099,18 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
                 {/* Members List */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  <h4 className="section-eyebrow">
                     Registered Department Members ({deptMembers.length})
                   </h4>
                   {deptMembers.length > 0 ? (
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden shadow-sm max-h-80 overflow-y-auto">
+                    <div className="max-h-80 divide-y divide-separator/50 overflow-hidden overflow-y-auto rounded-2xl border border-separator/60 bg-secondary-system-grouped-background dark:divide-white/[0.08] dark:border-white/[0.08]">
                       {deptMembers.map((member) => (
                         <div
                           key={member.id}
-                          className="flex items-center justify-between p-3.5 hover:bg-slate-50/50 dark:hover:bg-slate-850/50 transition-colors"
+                          className="flex items-center justify-between p-3.5 transition-colors hover:bg-system-grouped-background/70 dark:hover:bg-white/[0.03]"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold text-sm">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-500/[0.12] text-footnote font-semibold text-primary-700 dark:text-primary-300">
                               {member.member_name
                                 ? member.member_name
                                     .split(' ')
@@ -1191,10 +1121,10 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                                 : '?'}
                             </div>
                             <div>
-                              <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                              <h5 className="text-subheadline font-semibold text-label">
                                 {member.member_name}
                               </h5>
-                              <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                              <p className="text-caption-1 text-secondary-label">
                                 {member.member_section || 'No Section'} · Joined{' '}
                                 {fdatetime(member.joined_at)}
                               </p>
@@ -1204,7 +1134,7 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                           <button
                             type="button"
                             onClick={() => handleRemoveMember(member.member_id)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all text-xs font-medium flex items-center gap-1"
+                            className="focus-ring flex items-center gap-1 rounded-lg p-1.5 text-caption-1 font-medium text-secondary-label transition-colors hover:bg-system-red/10 hover:text-rose-700 dark:hover:text-system-red"
                             title="Remove member from department"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -1214,12 +1144,12 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-10 bg-slate-50/40 dark:bg-slate-900/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                      <Users className="w-8 h-8 mx-auto text-slate-350 dark:text-slate-600 mb-2" />
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <div className="rounded-2xl border border-dashed border-separator bg-system-grouped-background/50 py-10 text-center dark:bg-white/[0.02]">
+                      <Users className="mx-auto mb-2 w-8 h-8 text-tertiary-label" />
+                      <p className="text-footnote text-secondary-label">
                         No general members in this department yet.
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="mt-1 text-caption-1 text-tertiary-label">
                         Use the search box above to add members.
                       </p>
                     </div>
@@ -1231,32 +1161,28 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
             {/* History / Audit Log Tab */}
             {detailTab === 'history' && (
               <div className="space-y-4">
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Department Operations & Leadership History
-                </h4>
+                <h4 className="section-eyebrow">Department Operations &amp; Leadership History</h4>
                 {deptHistory.length > 0 ? (
-                  <div className="relative border-l border-slate-200 dark:border-slate-800 ml-3.5 pl-6 space-y-6 max-h-80 overflow-y-auto py-2">
+                  <div className="relative ml-3.5 max-h-80 space-y-6 overflow-y-auto border-l border-separator py-2 pl-6 dark:border-white/[0.1]">
                     {deptHistory.map((log) => (
                       <div key={log.id} className="relative">
                         {/* Dot indicator */}
-                        <span className="absolute -left-[31px] top-1 flex h-4 w-4 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 ring-4 ring-white dark:ring-slate-800">
-                          <Clock className="w-2.5 h-2.5 text-slate-500 dark:text-slate-400" />
+                        <span className="absolute top-1 -left-[31px] flex h-4 w-4 items-center justify-center rounded-full border border-separator bg-system-fill ring-4 ring-secondary-system-grouped-background">
+                          <Clock className="w-2.5 h-2.5 text-tertiary-label" />
                         </span>
 
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 capitalize">
+                            <span className="text-caption-1 font-semibold text-label capitalize">
                               {log.entity_type.replace('_', ' ')} {log.action}
                             </span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                            <span className="text-caption-2 text-secondary-label">
                               {fdatetime(log.created_at)}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                            {log.details}
-                          </p>
+                          <p className="mt-1 text-footnote text-secondary-label">{log.details}</p>
                           {log.operator_name && (
-                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                            <p className="mt-0.5 text-caption-1 text-secondary-label">
                               Action by: <span className="font-semibold">{log.operator_name}</span>
                             </p>
                           )}
@@ -1265,9 +1191,9 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-10 bg-slate-50/40 dark:bg-slate-900/20 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-                    <Clock className="w-8 h-8 mx-auto text-slate-350 dark:text-slate-600 mb-2" />
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <div className="rounded-2xl border border-dashed border-separator bg-system-grouped-background/50 py-10 text-center dark:bg-white/[0.02]">
+                    <Clock className="mx-auto mb-2 w-8 h-8 text-tertiary-label" />
+                    <p className="text-footnote text-secondary-label">
                       No actions recorded for this department yet.
                     </p>
                   </div>
@@ -1280,30 +1206,21 @@ const DepartmentsView = ({ allMembers = [], showMessage }) => {
 
       {/* DELETE CONFIRMATION MODAL */}
       <Modal isOpen={!!deletingDept} onClose={() => setDeletingDept(null)} size="sm">
-        <div className="text-center py-4">
-          <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center mx-auto mb-4">
-            <Trash2 className="w-7 h-7 text-rose-500" />
+        <div className="py-4 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-system-red/15 text-rose-700 dark:text-system-red">
+            <Trash2 className="w-7 h-7" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-            Delete Department?
-          </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 px-2">
+          <h3 className="mb-2 text-title-3 font-semibold text-label">Delete Department?</h3>
+          <p className="mb-6 px-2 text-subheadline text-secondary-label">
             Are you sure you want to permanently delete the{' '}
-            <strong className="text-slate-800 dark:text-slate-200">{deletingDept?.name}</strong>{' '}
-            department? This will remove all department memberships and history record logs.
+            <strong className="font-semibold text-label">{deletingDept?.name}</strong> department?
+            This will remove all department memberships and history record logs.
           </p>
           <div className="flex gap-3">
-            <button
-              onClick={() => setDeletingDept(null)}
-              className="btn-secondary flex-1 h-11 rounded-xl"
-            >
+            <button onClick={() => setDeletingDept(null)} className="btn-secondary flex-1">
               Cancel
             </button>
-            <button
-              onClick={handleConfirmDelete}
-              disabled={deleting}
-              className="btn-danger flex-1 h-11 rounded-xl"
-            >
+            <button onClick={handleConfirmDelete} disabled={deleting} className="btn-danger flex-1">
               {deleting ? 'Deleting...' : 'Delete Department'}
             </button>
           </div>

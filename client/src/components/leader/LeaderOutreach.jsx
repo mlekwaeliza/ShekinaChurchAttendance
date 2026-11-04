@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import DataTable from '../ui/DataTable';
 import Modal from '../ui/Modal';
+import StatCard from '../ui/StatCard';
 import { outreachAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -177,93 +178,80 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
     switch (method?.toLowerCase()) {
       case 'call':
       case 'phone':
-        return <Phone className="w-4 h-4 text-violet-500" />;
+        return <Phone className="h-4 w-4 text-purple-700 dark:text-system-purple" />;
       case 'whatsapp':
-        return <MessageSquare className="w-4 h-4 text-emerald-500" />;
+        return <MessageSquare className="h-4 w-4 text-emerald-700 dark:text-system-green" />;
       case 'visit':
-        return <Home className="w-4 h-4 text-rose-500" />;
+        return <Home className="h-4 w-4 text-rose-700 dark:text-system-red" />;
       case 'hospital visit':
-        return <Stethoscope className="w-4 h-4 text-rose-600" />;
+        return <Stethoscope className="h-4 w-4 text-rose-700 dark:text-system-red" />;
       case 'prayer':
-        return <Heart className="w-4 h-4 text-amber-500" />;
+        return <Heart className="h-4 w-4 text-amber-700 dark:text-system-orange" />;
       default:
-        return <MessageSquare className="w-4 h-4 text-blue-500" />;
+        return <MessageSquare className="h-4 w-4 text-blue-700 dark:text-system-blue" />;
     }
   };
 
+  const actionButton =
+    'flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-ring';
+
   return (
-    <div className="space-y-6 animate-fade-in pb-20">
-      {/* 1. HEADER STATS BAR */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="card p-4 hover:-translate-y-1 transition-transform border-l-4 border-indigo-500">
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-            <Activity className="w-4 h-4" /> This Week Logs
-          </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.thisWeek}</p>
-        </div>
-        <div className="card p-4 hover:-translate-y-1 transition-transform border-l-4 border-emerald-500">
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-            <Users className="w-4 h-4" /> Members Contacted
-          </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">
-            {stats.membersContacted}
-          </p>
-        </div>
-        <div
-          className={`card p-4 hover:-translate-y-1 transition-transform border-l-4 ${stats.notContacted > 0 ? 'border-amber-500' : 'border-slate-300'}`}
-        >
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-            <Info className="w-4 h-4" /> Uncontacted Assigned
-          </div>
-          <p
-            className={`text-2xl font-bold ${stats.notContacted > 0 ? 'text-amber-600' : 'text-slate-900 dark:text-white'}`}
-          >
-            {stats.notContacted}
-          </p>
-        </div>
-        <div
-          className="card p-4 hover:-translate-y-1 transition-transform border-l-4 border-blue-500"
+    <div className="animate-fade-in space-y-6 pb-20">
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard icon={Activity} label="This Week Logs" value={stats.thisWeek} variant="default" />
+        <StatCard
+          icon={Users}
+          label="Members Contacted"
+          value={stats.membersContacted}
+          variant="success"
+        />
+        <StatCard
+          icon={Info}
+          label="Uncontacted Assigned"
+          value={stats.notContacted}
+          variant={stats.notContacted > 0 ? 'warning' : 'default'}
+        />
+        <StatCard
+          icon={TrendingUp}
+          label="Total Logs History"
+          value={stats.totalLogs}
+          variant="info"
+          trendLabel="View history →"
           onClick={() => setActiveMainTab('history')}
-          role="button"
-        >
-          <div className="flex items-center gap-2 text-sm text-slate-500 mb-1">
-            <TrendingUp className="w-4 h-4" /> Total Logs History
-          </div>
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {stats.totalLogs} <span className="text-xs font-normal">view &rarr;</span>
-          </p>
-        </div>
+        />
       </div>
 
-      {/* Main Tabs */}
-      <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700">
+      {/* Main tabs */}
+      <div className="tab-pills w-full sm:w-auto">
         <button
           onClick={() => setActiveMainTab('log')}
-          className={`px-4 py-2 font-medium border-b-2 ${activeMainTab === 'log' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+          className={`tab-pill flex-1 justify-center sm:flex-none ${activeMainTab === 'log' ? 'active' : ''}`}
         >
           Log Outreach
         </button>
         <button
           onClick={() => setActiveMainTab('history')}
-          className={`px-4 py-2 font-medium border-b-2 ${activeMainTab === 'history' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+          className={`tab-pill flex-1 justify-center sm:flex-none ${activeMainTab === 'history' ? 'active' : ''}`}
         >
           History
         </button>
       </div>
 
       {activeMainTab === 'log' && (
-        <div className="space-y-6">
-          {/* 2. FILTER + SEARCH BAR */}
-          <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-            <div className="flex flex-wrap gap-2">
+        <div className="space-y-5">
+          {/* Filter + search */}
+          <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
+            <div className="flex flex-wrap gap-1.5">
               {TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveFilterTab(tab.id)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  aria-pressed={activeFilterTab === tab.id}
+                  className={`focus-ring rounded-full px-3 py-1.5 text-caption-1 font-semibold transition-colors ${
                     activeFilterTab === tab.id
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-system-fill text-secondary-label hover:text-label'
                   }`}
                 >
                   {tab.label}
@@ -271,112 +259,119 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
               ))}
             </div>
 
-            <div className="relative w-full md:w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="relative w-full lg:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
               <input
                 type="text"
                 placeholder="Search..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="input pl-9 h-10 w-full"
+                className="input h-10 w-full pl-9"
               />
             </div>
           </div>
 
-          {/* 3. MEMBER LIST */}
+          {/* Members */}
           {loading ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="skeleton h-32 rounded-xl" />
+                <div key={i} className="skeleton h-32 rounded-2xl" />
               ))}
             </div>
           ) : filteredMembers.length === 0 ? (
-            <div className="card p-12 text-center border-dashed border-2 bg-slate-50/50">
-              <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-50" />
-              <h3 className="text-lg font-medium text-slate-900 dark:text-white">
-                Awesome! Everyone is covered.
-              </h3>
-              <p className="text-slate-500 mt-1">No members match the current filter.</p>
-              <button className="btn-secondary mt-4" onClick={() => setActiveMainTab('history')}>
+            <div className="flex flex-col items-center rounded-2xl border border-dashed border-separator/70 px-6 py-14 text-center dark:border-white/[0.12]">
+              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-system-green/15">
+                <CheckCircle className="h-7 w-7 text-emerald-700 dark:text-system-green" />
+              </div>
+              <h3 className="text-headline font-semibold text-label">Everyone is covered</h3>
+              <p className="mt-1 text-footnote text-secondary-label">
+                No members match the current filter.
+              </p>
+              <button
+                className="btn-secondary btn-sm mt-4"
+                onClick={() => setActiveMainTab('history')}
+              >
                 View History
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {filteredMembers.map((member) => (
                 <div
                   key={member.id}
-                  className="card p-4 flex flex-col md:flex-row items-start md:items-center justify-between hover:shadow-lg transition-all border-l-4 border-indigo-200 hover:border-indigo-500 dark:border-indigo-900 group"
+                  className="card flex flex-col items-start justify-between gap-4 p-4 transition-shadow hover:shadow-card-hover md:flex-row md:items-center"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center text-indigo-700 font-bold border border-indigo-200">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-500/[0.12] text-headline font-semibold text-primary-700 dark:text-primary-300">
                       {member.full_name?.charAt(0)}
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900 dark:text-white text-base">
+                    <div className="min-w-0">
+                      <h4 className="flex flex-wrap items-center gap-2 text-footnote font-semibold text-label">
                         {member.full_name}
                         {member.status === 'Visitor' && (
-                          <span className="ml-2 text-[10px] uppercase tracking-wider bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
-                            Visitor
-                          </span>
+                          <span className="badge-warning">Visitor</span>
                         )}
                       </h4>
-                      <p className="text-xs text-slate-500 font-medium mb-2">
+                      <p className="mb-2 mt-0.5 truncate text-caption-1 text-secondary-label">
                         {member.membership_id} • {member.section_name}
                       </p>
 
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption-1 text-secondary-label">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
+                          <Clock className="h-3 w-3" />
                           {member.latest_contact_date
                             ? `Last: ${new Date(member.latest_contact_date).toLocaleDateString()} by ${member.latest_contact_by.split(' ')[0]}`
                             : 'Never Contacted'}
                         </span>
 
                         {member.flags?.length > 0 && (
-                          <span className="flex items-center gap-1 text-rose-600 bg-rose-50 px-1.5 rounded">
-                            <Flag className="w-3 h-3" /> {member.flags.length} Flag(s)
+                          <span className="flex items-center gap-1 rounded-full bg-system-red/10 px-2 py-0.5 font-medium text-rose-700 dark:text-system-red">
+                            <Flag className="h-3 w-3" /> {member.flags.length} flag
+                            {member.flags.length === 1 ? '' : 's'}
                           </span>
                         )}
                         {member.prayer_requests?.length > 0 && (
                           <span
-                            className="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-1.5 rounded"
+                            className="flex items-center gap-1 rounded-full bg-system-indigo/10 px-2 py-0.5 font-medium text-primary-700 dark:text-primary-300"
                             title={member.prayer_requests[0].request}
                           >
-                            <Heart className="w-3 h-3" /> Prayer Req
+                            <Heart className="h-3 w-3" /> Prayer req
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-4 md:mt-0 w-full md:w-auto justify-end">
+                  <div className="flex w-full items-center justify-end gap-1.5 md:w-auto">
                     <button
                       onClick={() => handleOpenLog(member, 'Call')}
-                      className="h-9 w-9 flex items-center justify-center bg-slate-100 hover:bg-violet-100 text-violet-600 rounded-lg transition-colors border border-transparent hover:border-violet-200"
+                      className={`${actionButton} bg-system-fill text-purple-700 hover:bg-system-purple/15 dark:text-system-purple`}
                       title="Log Call"
+                      aria-label={`Log call for ${member.full_name}`}
                     >
-                      <Phone className="w-4 h-4" />
+                      <Phone className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleOpenLog(member, 'WhatsApp')}
-                      className="h-9 w-9 flex items-center justify-center bg-slate-100 hover:bg-emerald-100 text-emerald-600 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
+                      className={`${actionButton} bg-system-fill text-emerald-700 hover:bg-system-green/15 dark:text-system-green`}
                       title="Log WhatsApp"
+                      aria-label={`Log WhatsApp for ${member.full_name}`}
                     >
-                      <MessageSquare className="w-4 h-4" />
+                      <MessageSquare className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleOpenLog(member, 'Visit')}
-                      className="h-9 w-9 flex items-center justify-center bg-slate-100 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors border border-transparent hover:border-rose-200"
+                      className={`${actionButton} bg-system-fill text-rose-700 hover:bg-system-red/15 dark:text-system-red`}
                       title="Log Visit"
+                      aria-label={`Log visit for ${member.full_name}`}
                     >
-                      <Home className="w-4 h-4" />
+                      <Home className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleOpenLog(member, '')}
-                      className="btn-primary pl-3 pr-4 group-hover:shadow-md"
+                      className="btn-primary btn-sm ml-1 gap-1.5"
                     >
-                      <CheckSquare className="w-4 h-4 mr-1.5 opacity-70" /> Log
+                      <CheckSquare className="h-4 w-4 opacity-80" /> Log
                     </button>
                   </div>
                 </div>
@@ -386,7 +381,7 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
         </div>
       )}
 
-      {/* HISTORY TAB */}
+      {/* History */}
       {activeMainTab === 'history' && (
         <div className="card">
           <DataTable
@@ -394,22 +389,22 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
               {
                 accessor: 'created_at',
                 header: 'Date',
-                render: (row) => new Date(row.created_at).toLocaleDateString()
+                render: (row) => (
+                  <span className="tabular-nums text-secondary-label">
+                    {new Date(row.created_at).toLocaleDateString()}
+                  </span>
+                )
               },
               {
                 accessor: 'member_name',
                 header: 'Member',
-                render: (row) => (
-                  <span className="font-semibold text-indigo-900 dark:text-indigo-200">
-                    {row.member_name}
-                  </span>
-                )
+                render: (row) => <span className="font-semibold text-label">{row.member_name}</span>
               },
               {
                 accessor: 'contact_method',
                 header: 'Type',
                 render: (row) => (
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5 text-secondary-label">
                     {getMethodIcon(row.contact_method)} {row.contact_method}
                   </span>
                 )
@@ -418,9 +413,7 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
                 accessor: 'outcome',
                 header: 'Outcome',
                 render: (row) => (
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${row.outcome === 'Reached' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}
-                  >
+                  <span className={row.outcome === 'Reached' ? 'badge-success' : 'badge-neutral'}>
                     {row.outcome}
                   </span>
                 )
@@ -430,7 +423,7 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
                 accessor: 'message',
                 header: 'Notes',
                 render: (row) => (
-                  <span className="truncate max-w-[200px] block text-sm" title={row.message}>
+                  <span className="block max-w-[200px] truncate text-footnote" title={row.message}>
                     {row.message || '—'}
                   </span>
                 )
@@ -440,11 +433,11 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
                 header: 'HOF',
                 render: (row) =>
                   row.awarded_points ? (
-                    <span className="text-amber-600 text-xs font-bold">
-                      +{row.awarded_points}pts
+                    <span className="text-caption-1 font-semibold tabular-nums text-amber-700 dark:text-system-orange">
+                      +{row.awarded_points} pts
                     </span>
                   ) : (
-                    '—'
+                    <span className="text-tertiary-label">—</span>
                   )
               }
             ]}
@@ -458,16 +451,16 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
         </div>
       )}
 
-      {/* 4. LOG OUTREACH MODAL */}
+      {/* Log outreach modal */}
       <Modal
         isOpen={showLogModal}
         onClose={() => setShowLogModal(false)}
         title={`Log Outreach - ${selectedMember?.full_name}`}
         subtitle={`${selectedMember?.section_name} • Last contact: ${selectedMember?.latest_contact_date ? new Date(selectedMember.latest_contact_date).toLocaleDateString() : 'Never'}`}
         size="lg"
-        className="max-h-[90vh] flex flex-col max-sm:fixed max-sm:bottom-0 max-sm:w-full max-sm:max-h-[95vh] max-sm:rounded-none max-sm:rounded-t-3xl max-sm:m-0"
+        className="max-h-[90vh] flex flex-col max-sm:fixed max-sm:bottom-0 max-sm:m-0 max-sm:w-full max-sm:max-h-[95vh] max-sm:rounded-none max-sm:rounded-t-3xl"
         footer={
-          <div className="flex justify-end gap-3 w-full">
+          <div className="flex w-full justify-end gap-2">
             <button type="button" onClick={() => setShowLogModal(false)} className="btn-secondary">
               Cancel
             </button>
@@ -475,26 +468,21 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
               type="submit"
               form="log-outreach-form"
               disabled={saving || !logForm.contact_method || !logForm.outcome}
-              className="btn-primary shadow-lg shadow-indigo-200"
+              className="btn-primary"
             >
               {saving ? 'Saving...' : 'Save Log'}
             </button>
           </div>
         }
       >
-        <form
-          id="log-outreach-form"
-          onSubmit={handleSaveLog}
-          className="space-y-6 pb-2 p-6"
-          style={{ padding: '24px' }}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <form id="log-outreach-form" onSubmit={handleSaveLog} className="space-y-5 p-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="input-label">
-                Type <span className="text-rose-500">*</span>
+                Type <span className="text-system-red">*</span>
               </label>
               <select
-                className="select"
+                className="select w-full"
                 required
                 value={logForm.contact_method}
                 onChange={(e) => setLogForm({ ...logForm, contact_method: e.target.value })}
@@ -512,10 +500,10 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
             </div>
             <div>
               <label className="input-label">
-                Outcome <span className="text-rose-500">*</span>
+                Outcome <span className="text-system-red">*</span>
               </label>
               <select
-                className="select"
+                className="select w-full"
                 required
                 value={logForm.outcome}
                 onChange={(e) => setLogForm({ ...logForm, outcome: e.target.value })}
@@ -533,7 +521,7 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
           <div>
             <label className="input-label">Service Context</label>
             <select
-              className="select"
+              className="select w-full"
               value={logForm.service_id}
               onChange={(e) => setLogForm({ ...logForm, service_id: e.target.value })}
             >
@@ -549,7 +537,7 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
           <div>
             <label className="input-label">Notes</label>
             <textarea
-              className="input bg-amber-50 focus:bg-white min-h-[100px]"
+              className="input min-h-[100px]"
               placeholder="What did you discuss? Any action items?"
               value={logForm.message}
               onChange={(e) => setLogForm({ ...logForm, message: e.target.value })}
@@ -566,27 +554,27 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
             />
           </div>
 
-          {/* Follow Up */}
-          <div className="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-            <label className="flex items-center gap-3 font-medium text-slate-800 dark:text-slate-200 cursor-pointer">
+          {/* Follow-up */}
+          <div className="rounded-xl bg-system-grouped-background/70 p-4 dark:bg-white/[0.03]">
+            <label className="flex cursor-pointer items-center gap-3 text-footnote font-medium text-label">
               <input
                 type="checkbox"
                 checked={logForm.follow_up_needed}
                 onChange={(e) => setLogForm({ ...logForm, follow_up_needed: e.target.checked })}
-                className="rounded text-indigo-600 w-5 h-5 cursor-pointer focus:ring-indigo-500"
+                className="h-4 w-4 cursor-pointer rounded accent-primary-600"
               />
               Require Follow-up Queue Assignment
             </label>
 
             {logForm.follow_up_needed && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in mt-4 pl-8">
+              <div className="mt-4 grid animate-fade-in grid-cols-1 gap-4 pl-7 sm:grid-cols-2">
                 <div>
-                  <label className="input-label text-xs">
-                    Assign To <span className="text-rose-500">*</span>
+                  <label className="input-label">
+                    Assign To <span className="text-system-red">*</span>
                   </label>
                   <select
                     required
-                    className="select bg-white h-10 text-sm"
+                    className="select w-full"
                     value={logForm.assigned_to_user_id}
                     onChange={(e) =>
                       setLogForm({ ...logForm, assigned_to_user_id: e.target.value })
@@ -601,13 +589,13 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
                   </select>
                 </div>
                 <div>
-                  <label className="input-label text-xs">
-                    Due Date <span className="text-rose-500">*</span>
+                  <label className="input-label">
+                    Due Date <span className="text-system-red">*</span>
                   </label>
                   <input
                     type="date"
                     required
-                    className="input bg-white h-10 text-sm"
+                    className="input"
                     value={logForm.due_date}
                     onChange={(e) => setLogForm({ ...logForm, due_date: e.target.value })}
                   />
@@ -616,27 +604,27 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
             )}
           </div>
 
-          <div className="flex flex-col gap-4">
-            {/* Flag Member */}
-            <div className="p-5 bg-rose-50/50 dark:bg-rose-900/10 rounded-xl border border-rose-100 dark:border-rose-900/50">
-              <label className="flex items-center gap-3 font-medium text-rose-800 dark:text-rose-400 cursor-pointer">
+          <div className="flex flex-col gap-3">
+            {/* Flag member */}
+            <div className="rounded-xl bg-system-red/[0.06] p-4">
+              <label className="flex cursor-pointer items-center gap-3 text-footnote font-medium text-rose-700 dark:text-system-red">
                 <input
                   type="checkbox"
                   checked={logForm.add_flag}
                   onChange={(e) => setLogForm({ ...logForm, add_flag: e.target.checked })}
-                  className="rounded text-rose-600 w-5 h-5 cursor-pointer border-rose-300 focus:ring-rose-500"
+                  className="h-4 w-4 cursor-pointer rounded accent-rose-600"
                 />
                 Flag Member Temporarily
               </label>
               {logForm.add_flag && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in mt-4 pl-8">
+                <div className="mt-4 grid animate-fade-in grid-cols-1 gap-4 pl-7 sm:grid-cols-2">
                   <div>
-                    <label className="input-label text-xs text-rose-700 dark:text-rose-400">
-                      Flag Type <span className="text-rose-500">*</span>
+                    <label className="input-label">
+                      Flag Type <span className="text-system-red">*</span>
                     </label>
                     <select
                       required
-                      className="select bg-white border-rose-200 h-10 text-sm"
+                      className="select w-full"
                       value={logForm.flag_reason}
                       onChange={(e) => setLogForm({ ...logForm, flag_reason: e.target.value })}
                     >
@@ -649,12 +637,10 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
                     </select>
                   </div>
                   <div>
-                    <label className="input-label text-xs text-rose-700 dark:text-rose-400">
-                      Expires At
-                    </label>
+                    <label className="input-label">Expires At</label>
                     <input
                       type="date"
-                      className="input bg-white border-rose-200 h-10 text-sm"
+                      className="input"
                       value={logForm.flag_expires_at || ''}
                       onChange={(e) => setLogForm({ ...logForm, flag_expires_at: e.target.value })}
                     />
@@ -663,24 +649,24 @@ export default function LeaderOutreach({ serviceTypes, currentServiceId }) {
               )}
             </div>
 
-            {/* Hall of Fame */}
+            {/* Hall of fame */}
             <div
-              className="p-5 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-900/50 flex items-center justify-between cursor-pointer"
+              className="flex cursor-pointer items-center justify-between rounded-xl bg-system-yellow/[0.12] p-4"
               onClick={() =>
                 setLogForm({ ...logForm, add_to_hall_of_fame: !logForm.add_to_hall_of_fame })
               }
             >
-              <label className="flex items-center gap-3 font-medium text-amber-800 dark:text-amber-400 cursor-pointer pointer-events-none">
+              <label className="pointer-events-none flex cursor-pointer items-center gap-3 text-footnote font-medium text-amber-800 dark:text-system-yellow">
                 <input
                   type="checkbox"
                   checked={logForm.add_to_hall_of_fame}
                   readOnly
-                  className="rounded text-amber-600 w-5 h-5 border-amber-300 focus:ring-amber-500"
+                  className="h-4 w-4 rounded accent-amber-600"
                 />
                 Submit for Recognition
               </label>
               {logForm.add_to_hall_of_fame && (
-                <span className="text-sm font-bold bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-200 px-2.5 py-1 rounded-full animate-scale-in">
+                <span className="animate-scale-in rounded-full bg-system-yellow/25 px-2.5 py-1 text-caption-1 font-semibold tabular-nums text-amber-800 dark:text-system-yellow">
                   +
                   {logForm.contact_method === 'Visitor Follow-up'
                     ? 20

@@ -70,7 +70,7 @@ const calcFinance = (morning, afternoon, tithes, evangelism = 0) => {
 };
 
 const STATUS_COLORS = {
-  draft: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  draft: 'bg-system-fill text-secondary-label dark:bg-white/[0.06] dark:text-tertiary-label',
   submitted: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   rejected: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
@@ -81,7 +81,7 @@ const StatusBadge = ({ status }) => {
   const Icon = STATUS_ICONS[status] || Clock;
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold ${STATUS_COLORS[status] || ''}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-caption-2 font-semibold ${STATUS_COLORS[status] || ''}`}
     >
       <Icon className="w-3 h-3" />
       {status?.charAt(0).toUpperCase() + status?.slice(1)}
@@ -107,10 +107,55 @@ const WORKSPACE_TABS = [
   { key: 'history', label: 'History', icon: History }
 ];
 
+// Literal class strings so Tailwind can compile every tone (dynamic names are invisible to the compiler).
+const TONE = {
+  emerald: {
+    icon: 'text-emerald-500',
+    value: 'text-emerald-600 dark:text-emerald-400',
+    surface: 'border-emerald-200/60 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/10'
+  },
+  sky: {
+    icon: 'text-sky-500',
+    value: 'text-sky-600 dark:text-sky-400',
+    surface: 'border-sky-200/60 dark:border-sky-700 bg-sky-50 dark:bg-sky-900/10'
+  },
+  violet: {
+    icon: 'text-violet-500',
+    value: 'text-violet-600 dark:text-violet-400',
+    surface: 'border-violet-200/60 dark:border-violet-700 bg-violet-50 dark:bg-violet-900/10'
+  },
+  indigo: {
+    icon: 'text-primary-500',
+    value: 'text-primary-600 dark:text-primary-400',
+    surface: 'border-primary-200/60 dark:border-primary-700 bg-primary-50 dark:bg-primary-900/10'
+  },
+  amber: {
+    icon: 'text-amber-500',
+    value: 'text-amber-600 dark:text-amber-400',
+    surface: 'border-amber-200/60 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/10'
+  },
+  rose: {
+    icon: 'text-rose-500',
+    value: 'text-rose-600 dark:text-rose-400',
+    surface: 'border-rose-200/60 dark:border-rose-700 bg-rose-50 dark:bg-rose-900/10'
+  },
+  purple: {
+    icon: 'text-purple-500',
+    value: 'text-purple-600 dark:text-purple-400',
+    surface: 'border-purple-200/60 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/10'
+  },
+  slate: {
+    icon: 'text-system-gray',
+    value: 'text-secondary-label',
+    surface: 'border-separator/60 dark:border-white/[0.08] bg-system-fill dark:bg-white/[0.04]'
+  }
+};
+const tone = (color) => TONE[color] || TONE.slate;
+
 const MiniStat = ({ label, value, color = 'slate' }) => (
   <div className="flex items-center justify-between py-1.5">
-    <span className="text-[10px] font-medium text-slate-400">{label}</span>
-    <span className={`text-xs font-bold text-${color}-600 dark:text-${color}-400`}>{value}</span>
+    <span className="text-caption-2 font-medium text-tertiary-label">{label}</span>
+    <span className={`text-caption-1 font-semibold ${tone(color).value}`}>{value}</span>
   </div>
 );
 
@@ -473,7 +518,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400" />
       </div>
     );
   }
@@ -481,36 +526,39 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Workspace Header */}
-      <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-5 text-white shadow-xl">
+      <div className="card p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors"
-            >
-              <ArrowRight className="w-4 h-4 rotate-180" />
+          <div className="flex min-w-0 items-center gap-3">
+            <button onClick={onBack} className="btn-icon shrink-0" aria-label="Back">
+              <ArrowRight className="h-4 w-4 rotate-180" />
             </button>
-            <div>
+            <div className="min-w-0">
               {record?.record_date ? (
-                <h2 className="text-lg font-bold">{fdate(record.record_date)}</h2>
+                <h2 className="text-headline font-semibold text-label">
+                  {fdate(record.record_date)}
+                </h2>
               ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-white/95">Record Date:</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="text-caption-1 font-semibold text-secondary-label">
+                    Record Date
+                  </label>
                   <input
                     type="date"
                     value={newRecordDate}
                     onChange={(e) => setNewRecordDate(e.target.value)}
-                    className="bg-white/20 border border-white/30 rounded-xl px-3 py-1.5 text-xs font-bold text-white outline-none focus:ring-2 focus:ring-white/50"
+                    className="input h-8 w-auto py-1 text-caption-1"
                   />
                 </div>
               )}
-              <div className="flex items-center gap-2 mt-1">
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <StatusBadge status={record?.status || 'draft'} />
                 {record?.submitted_by_name && (
-                  <span className="text-white/70 text-[10px]">by {record.submitted_by_name}</span>
+                  <span className="text-caption-2 text-tertiary-label">
+                    by {record.submitted_by_name}
+                  </span>
                 )}
                 {lastSaved && (
-                  <span className="text-white/50 text-[10px]">
+                  <span className="text-caption-2 text-tertiary-label">
                     Saved {lastSaved.toLocaleTimeString()}
                   </span>
                 )}
@@ -518,11 +566,8 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={startNewRecord}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" /> New
+            <button onClick={startNewRecord} className="btn-secondary btn-sm">
+              <Plus className="h-3.5 w-3.5" /> New
             </button>
             {(!record?.id ||
               record?.status === 'draft' ||
@@ -532,12 +577,12 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 <button
                   onClick={handleSaveDraft}
                   disabled={saving}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white/20 hover:bg-white/30 transition-colors disabled:opacity-50"
+                  className="btn-secondary btn-sm"
                 >
                   {saving ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <Save className="w-3.5 h-3.5" />
+                    <Save className="h-3.5 w-3.5" />
                   )}
                   Save Draft
                 </button>
@@ -545,50 +590,37 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                   <button
                     onClick={handleSubmitForApproval}
                     disabled={saving}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white text-indigo-600 hover:bg-white/90 transition-colors disabled:opacity-50"
+                    className="btn-primary btn-sm"
                   >
-                    <Send className="w-3.5 h-3.5" /> Submit
+                    <Send className="h-3.5 w-3.5" /> Submit
                   </button>
                 )}
               </>
             )}
             {record?.status === 'submitted' && userRole === 'admin' && (
               <>
-                <button
-                  onClick={handleApprove}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                >
-                  <CheckCheck className="w-3.5 h-3.5" /> Approve
+                <button onClick={handleApprove} className="btn-primary btn-sm">
+                  <CheckCheck className="h-3.5 w-3.5" /> Approve
                 </button>
-                <button
-                  onClick={() => setRejectOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-rose-500 hover:bg-rose-600 transition-colors"
-                >
-                  <Ban className="w-3.5 h-3.5" /> Reject
+                <button onClick={() => setRejectOpen(true)} className="btn-danger btn-sm">
+                  <Ban className="h-3.5 w-3.5" /> Reject
                 </button>
               </>
             )}
             {record?.status === 'approved' && userRole === 'admin' && (
-              <button
-                onClick={handleSendBack}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-amber-500 hover:bg-amber-600 transition-colors"
-              >
-                <ArrowUpCircle className="w-3.5 h-3.5" /> Send back
+              <button onClick={handleSendBack} className="btn-secondary btn-sm">
+                <ArrowUpCircle className="h-3.5 w-3.5" /> Send back
               </button>
             )}
-            <button
-              onClick={handleRecalculate}
-              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors"
-              title="Recalculate tithes"
-            >
-              <RefreshCw className="w-4 h-4" />
+            <button onClick={handleRecalculate} className="btn-icon" title="Recalculate tithes">
+              <RefreshCw className="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
 
       {/* Workflow Indicator */}
-      <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4">
+      <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-4">
         <div className="flex items-center justify-between">
           {WORKFLOW_STEPS.map((step, i) => {
             const done = i < workflowStep;
@@ -597,25 +629,25 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
               <React.Fragment key={step.key}>
                 <div className="flex items-center gap-2">
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-full text-caption-1 font-semibold transition-colors ${
                       done
-                        ? 'bg-emerald-500 text-white'
+                        ? 'bg-system-green text-white'
                         : current
-                          ? 'bg-indigo-500 text-white ring-4 ring-indigo-100 dark:ring-indigo-900/30'
-                          : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                          ? 'bg-primary-600 text-white ring-4 ring-primary-500/15'
+                          : 'bg-system-fill text-tertiary-label'
                     }`}
                   >
                     {done ? <CheckCheck className="w-4 h-4" /> : i + 1}
                   </div>
                   <span
-                    className={`text-[10px] font-semibold hidden md:block ${done ? 'text-emerald-600' : current ? 'text-indigo-600' : 'text-slate-400'}`}
+                    className={`hidden text-caption-2 font-semibold md:block ${done ? 'text-emerald-700 dark:text-system-green' : current ? 'text-primary-700 dark:text-primary-300' : 'text-tertiary-label'}`}
                   >
                     {step.label}
                   </span>
                 </div>
                 {i < WORKFLOW_STEPS.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 mx-2 rounded ${done ? 'bg-emerald-300' : 'bg-slate-200 dark:bg-slate-700'}`}
+                    className={`mx-2 h-0.5 flex-1 rounded ${done ? 'bg-system-green/40' : 'bg-system-gray-4'}`}
                   />
                 )}
               </React.Fragment>
@@ -629,17 +661,13 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
         {/* Left Column - Main Content */}
         <div className="flex-1 min-w-0 space-y-4">
           {/* Tabs */}
-          <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
+          <div className="tab-pills overflow-x-auto">
             {WORKSPACE_TABS.map((tab) => {
               return (
                 <button
                   key={tab.key}
                   onClick={() => handleTabClick(tab.key)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-                    activeTab === tab.key
-                      ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-                  }`}
+                  className={`tab-pill whitespace-nowrap ${activeTab === tab.key ? 'active' : ''}`}
                 >
                   <tab.icon className="w-3.5 h-3.5" />
                   {t(`finance.${tab.key}`, tab.label)}
@@ -649,11 +677,11 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
           </div>
 
           {/* Tab Content */}
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-5 min-h-[400px]">
+          <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-5 min-h-[400px]">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Church Income</h3>
+                <h3 className="text-footnote font-semibold text-label">Church Income</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     {
@@ -683,30 +711,28 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                   ].map((card) => (
                     <div
                       key={card.label}
-                      className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-3"
+                      className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill p-3"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-semibold uppercase text-slate-400">
+                        <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                           {card.label}
                         </span>
-                        <card.icon className={`w-4 h-4 text-${card.color}-500`} />
+                        <card.icon className={`w-4 h-4 ${tone(card.color).icon}`} />
                       </div>
-                      <p className="text-lg font-bold text-slate-900 dark:text-white">
-                        {card.value}
-                      </p>
+                      <p className="text-headline font-semibold text-label">{card.value}</p>
                     </div>
                   ))}
                 </div>
 
-                <div className="rounded-xl border-2 border-dashed border-purple-200 dark:border-purple-700/50 bg-purple-50/50 dark:bg-purple-900/10 p-3">
+                <div className="rounded-xl border border-dashed border-system-purple/30 bg-system-purple/[0.06] p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-purple-500" />
-                      <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
+                      <Sparkles className="w-4 h-4 text-purple-700 dark:text-system-purple" />
+                      <span className="text-caption-1 font-semibold text-purple-700 dark:text-system-purple">
                         Evangelism Offering (Independent)
                       </span>
                     </div>
-                    <span className="text-sm font-bold text-purple-600 dark:text-purple-400">
+                    <span className="text-footnote font-semibold text-purple-700 dark:text-system-purple">
                       {fmt(Number(evangelismOffering) || 0)}
                     </span>
                   </div>
@@ -725,32 +751,32 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                   ].map((card) => (
                     <div
                       key={card.label}
-                      className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-3"
+                      className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill p-3"
                     >
-                      <span className="text-[10px] font-semibold uppercase text-slate-400">
+                      <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                         {card.label}
                       </span>
-                      <p
-                        className={`text-lg font-bold text-${card.color}-600 dark:text-${card.color}-400 mt-1`}
-                      >
+                      <p className={`text-headline font-semibold ${tone(card.color).value} mt-1`}>
                         {card.value}
                       </p>
                     </div>
                   ))}
                 </div>
                 {/* Workflow Progress */}
-                <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-800/30 p-4">
-                  <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-2">
+                <div className="rounded-xl bg-primary-500/[0.07] p-4">
+                  <p className="mb-2 text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
                     Workflow Progress
                   </p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-indigo-200 dark:bg-indigo-800 rounded-full overflow-hidden">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary-500/20">
                       <div
-                        className="h-full bg-indigo-500 rounded-full transition-all"
+                        className="h-full rounded-full bg-primary-600 transition-all"
                         style={{ width: `${(workflowStep / 5) * 100}%` }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-indigo-600">{workflowStep}/5</span>
+                    <span className="text-caption-1 font-semibold tabular-nums text-primary-700 dark:text-primary-300">
+                      {workflowStep}/5
+                    </span>
                   </div>
                 </div>
               </div>
@@ -761,30 +787,30 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2 mb-3">
-                    <DollarSign className="w-4 h-4 text-indigo-500" />
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Church Offerings
-                    </h3>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium">
+                    <DollarSign className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                    <h3 className="text-footnote font-semibold text-label">Church Offerings</h3>
+                    <span className="text-caption-2 px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-700 dark:text-primary-300 font-medium">
                       Affects formula
                     </span>
                   </div>
                   {isEditable ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-4">
+                      <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill p-4">
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
                             <ArrowUpCircle className="w-4 h-4 text-emerald-600" />
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                            <p className="text-caption-1 font-semibold text-label">
                               Morning Offering
                             </p>
-                            <p className="text-[10px] text-slate-400">Sunday morning service</p>
+                            <p className="text-caption-2 text-tertiary-label">
+                              Sunday morning service
+                            </p>
                           </div>
                         </div>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-caption-1 text-tertiary-label">
                             TZS
                           </span>
                           <input
@@ -792,25 +818,27 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                             step="0.01"
                             value={morning}
                             onChange={(e) => setMorning(e.target.value)}
-                            className="w-full pl-12 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                            className="w-full pl-12 pr-3 py-3 rounded-xl border border-black/[0.06] dark:border-white/[0.16] bg-secondary-system-grouped-background text-headline font-semibold text-label focus:ring-2 focus:ring-emerald-500 outline-none"
                             placeholder="0.00"
                           />
                         </div>
                       </div>
-                      <div className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 p-4">
+                      <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill p-4">
                         <div className="flex items-center gap-2 mb-3">
                           <div className="w-8 h-8 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
                             <ArrowUpCircle className="w-4 h-4 text-sky-600" />
                           </div>
                           <div>
-                            <p className="text-xs font-semibold text-slate-900 dark:text-white">
+                            <p className="text-caption-1 font-semibold text-label">
                               Afternoon Offering
                             </p>
-                            <p className="text-[10px] text-slate-400">Sunday afternoon service</p>
+                            <p className="text-caption-2 text-tertiary-label">
+                              Sunday afternoon service
+                            </p>
                           </div>
                         </div>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-caption-1 text-tertiary-label">
                             TZS
                           </span>
                           <input
@@ -818,7 +846,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                             step="0.01"
                             value={afternoon}
                             onChange={(e) => setAfternoon(e.target.value)}
-                            className="w-full pl-12 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-lg font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none"
+                            className="w-full pl-12 pr-3 py-3 rounded-xl border border-black/[0.06] dark:border-white/[0.16] bg-secondary-system-grouped-background text-headline font-semibold text-label focus:ring-2 focus:ring-sky-500 outline-none"
                             placeholder="0.00"
                           />
                         </div>
@@ -826,15 +854,15 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4">
-                        <p className="text-[10px] text-slate-400">Morning</p>
-                        <p className="text-lg font-bold text-slate-900 dark:text-white">
+                      <div className="rounded-xl bg-system-fill p-4">
+                        <p className="text-caption-2 text-tertiary-label">Morning</p>
+                        <p className="text-headline font-semibold text-label">
                           {fmt(calc.morning)}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-slate-50 dark:bg-slate-700/50 p-4">
-                        <p className="text-[10px] text-slate-400">Afternoon</p>
-                        <p className="text-lg font-bold text-slate-900 dark:text-white">
+                      <div className="rounded-xl bg-system-fill p-4">
+                        <p className="text-caption-2 text-tertiary-label">Afternoon</p>
+                        <p className="text-headline font-semibold text-label">
                           {fmt(calc.afternoon)}
                         </p>
                       </div>
@@ -842,36 +870,32 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                   )}
                 </div>
 
-                <div className="border-t border-dashed border-slate-200 dark:border-slate-700 pt-5">
+                <div className="border-t border-dashed border-black/[0.06] dark:border-white/[0.08] pt-5">
                   <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-4 h-4 text-purple-500" />
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Evangelism Offering
-                    </h3>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 font-medium">
+                    <Sparkles className="w-4 h-4 text-purple-700 dark:text-system-purple" />
+                    <h3 className="text-footnote font-semibold text-label">Evangelism Offering</h3>
+                    <span className="text-caption-2 px-2 py-0.5 rounded-full bg-system-purple/15 text-purple-700 dark:text-system-purple font-medium">
                       Independent
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-400 mb-3 ml-6">
+                  <p className="text-caption-2 text-tertiary-label mb-3 ml-6">
                     Recorded separately — not included in mission/bishop/usable formula
                   </p>
                   {isEditable ? (
-                    <div className="rounded-xl border-2 border-dashed border-purple-200 dark:border-purple-700/50 bg-purple-50/50 dark:bg-purple-900/10 p-4">
+                    <div className="rounded-xl border border-dashed border-system-purple/30 bg-system-purple/[0.06] p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 text-purple-600" />
+                        <div className="w-8 h-8 rounded-lg bg-system-purple/15 flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 text-purple-700 dark:text-system-purple" />
                         </div>
                         <div>
-                          <p className="text-xs font-semibold text-slate-900 dark:text-white">
-                            Evangelism Fund
-                          </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="text-caption-1 font-semibold text-label">Evangelism Fund</p>
+                          <p className="text-caption-2 text-tertiary-label">
                             For evangelism activities and outreach
                           </p>
                         </div>
                       </div>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-caption-1 text-tertiary-label">
                           TZS
                         </span>
                         <input
@@ -879,15 +903,15 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                           step="0.01"
                           value={evangelismOffering}
                           onChange={(e) => setEvangelismOffering(e.target.value)}
-                          className="w-full pl-12 pr-3 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-lg font-bold text-purple-700 dark:text-purple-300 focus:ring-2 focus:ring-purple-500 outline-none"
+                          className="w-full pl-12 pr-3 py-3 rounded-xl border border-black/[0.06] dark:border-white/[0.16] bg-secondary-system-grouped-background text-headline font-semibold text-purple-700 dark:text-system-purple focus:ring-2 focus:ring-purple-500 outline-none"
                           placeholder="0.00"
                         />
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-xl bg-purple-50 dark:bg-purple-900/10 p-4 border border-purple-200/60 dark:border-purple-700/30">
-                      <p className="text-[10px] text-slate-400">Evangelism Fund</p>
-                      <p className="text-lg font-bold text-purple-600 dark:text-purple-400">
+                    <div className="rounded-xl bg-purple-50 dark:bg-system-purple/[0.08] p-4 border border-purple-200/60 dark:border-purple-700/30">
+                      <p className="text-caption-2 text-tertiary-label">Evangelism Fund</p>
+                      <p className="text-headline font-semibold text-purple-700 dark:text-system-purple">
                         {fmt(Number(evangelismOffering) || 0)}
                       </p>
                     </div>
@@ -901,31 +925,29 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
               <div className="space-y-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Member Tithes
-                    </h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
+                    <h3 className="text-footnote font-semibold text-label">Member Tithes</h3>
+                    <p className="text-caption-2 text-tertiary-label mt-0.5">
                       Select members and enter their individual tithe amounts
                     </p>
                   </div>
-                  <div className="text-sm font-bold text-violet-600 bg-violet-50 dark:bg-violet-900/20 px-3 py-1.5 rounded-xl">
+                  <div className="text-footnote font-semibold text-violet-600 bg-violet-50 dark:bg-violet-900/20 px-3 py-1.5 rounded-xl">
                     Total: {fmt(totalTitheAmount)}
                   </div>
                 </div>
                 {isEditable && (
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary-label" />
                     <input
                       type="text"
                       value={titheSearch}
                       onChange={(e) => setTitheSearch(e.target.value)}
                       placeholder="Search member name to add..."
-                      className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-footnote"
                     />
                     {titheSearch && (
-                      <div className="absolute z-20 top-full mt-1 w-full max-h-56 overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl">
+                      <div className="absolute z-20 top-full mt-1 w-full max-h-56 overflow-y-auto bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] rounded-xl shadow-card">
                         {searchLoading ? (
-                          <div className="px-3 py-3 text-center text-sm text-slate-400 flex items-center justify-center gap-2">
+                          <div className="px-3 py-3 text-center text-footnote text-tertiary-label flex items-center justify-center gap-2">
                             <Loader2 className="w-4 h-4 animate-spin" /> Searching...
                           </div>
                         ) : filteredTitheMembers.length > 0 ? (
@@ -934,24 +956,22 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                               key={m.id}
                               type="button"
                               onClick={() => addTitheMember(m)}
-                              className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3 border-b border-slate-100 dark:border-slate-700 last:border-0"
+                              className="w-full text-left px-3 py-2.5 text-footnote hover:bg-system-fill flex items-center gap-3 border-b border-separator/60 dark:border-white/[0.08] last:border-0"
                             >
-                              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-xs font-bold text-violet-600 shrink-0">
+                              <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-caption-1 font-semibold text-violet-600 shrink-0">
                                 {(m.full_name || '?').charAt(0)}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-slate-900 dark:text-white truncate">
-                                  {m.full_name}
-                                </p>
-                                <p className="text-[10px] text-slate-400">
+                                <p className="font-medium text-label truncate">{m.full_name}</p>
+                                <p className="text-caption-2 text-tertiary-label">
                                   {m.section_name || 'No section'} · {m.membership_id || ''}
                                 </p>
                               </div>
-                              <Plus className="w-4 h-4 text-slate-400" />
+                              <Plus className="w-4 h-4 text-tertiary-label" />
                             </button>
                           ))
                         ) : (
-                          <div className="px-3 py-3 text-center text-sm text-slate-500">
+                          <div className="px-3 py-3 text-center text-footnote text-secondary-label">
                             No members found matching "{titheSearch}"
                           </div>
                         )}
@@ -961,9 +981,9 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 )}
                 {titheEntries.length === 0 ? (
                   <div className="text-center py-12">
-                    <HandCoins className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm text-slate-400">No tithes recorded yet</p>
-                    <p className="text-[10px] text-slate-300 mt-1">
+                    <HandCoins className="w-10 h-10 mx-auto mb-3 text-tertiary-label" />
+                    <p className="text-footnote text-tertiary-label">No tithes recorded yet</p>
+                    <p className="text-caption-2 text-tertiary-label mt-1">
                       Search and select members above to add tithes
                     </p>
                   </div>
@@ -972,16 +992,16 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                     {titheEntries.map((entry, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700"
+                        className="flex items-center gap-3 p-3 rounded-xl bg-system-fill/30 border border-black/[0.06] dark:border-white/[0.08]"
                       >
-                        <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-xs font-bold text-violet-600 shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-caption-1 font-semibold text-violet-600 shrink-0">
                           {(entry.full_name || '?').charAt(0)}
                         </div>
-                        <span className="text-sm font-medium text-slate-900 dark:text-white truncate flex-1">
+                        <span className="text-footnote font-medium text-label truncate flex-1">
                           {entry.full_name}
                         </span>
                         <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-caption-2 text-tertiary-label">
                             TZS
                           </span>
                           <input
@@ -991,7 +1011,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                             onChange={(e) => updateTitheAmount(idx, e.target.value)}
                             placeholder="0.00"
                             disabled={!isEditable}
-                            className="w-36 pl-10 pr-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-right font-medium"
+                            className="w-36 pl-10 pr-2 py-1.5 rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-footnote text-right font-medium"
                           />
                         </div>
                         {isEditable && (
@@ -1014,37 +1034,34 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Expenses</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
+                    <h3 className="text-footnote font-semibold text-label">Expenses</h3>
+                    <p className="text-caption-2 text-tertiary-label mt-0.5">
                       Record church expenses for this day
                     </p>
                   </div>
                   {isEditable && (
-                    <button
-                      onClick={addExpenseRow}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-                    >
+                    <button onClick={addExpenseRow} className="btn-primary btn-sm">
                       <Plus className="w-3 h-3" /> Add Expense
                     </button>
                   )}
                 </div>
                 {expenses.length === 0 ? (
                   <div className="text-center py-12">
-                    <Receipt className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm text-slate-400">No expenses recorded</p>
+                    <Receipt className="w-10 h-10 mx-auto mb-3 text-tertiary-label" />
+                    <p className="text-footnote text-tertiary-label">No expenses recorded</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {expenses.map((exp, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700"
+                        className="flex items-center gap-2 p-3 rounded-xl bg-system-fill/30 border border-black/[0.06] dark:border-white/[0.08]"
                       >
                         <select
                           value={exp.category}
                           onChange={(e) => updateExpense(idx, 'category', e.target.value)}
                           disabled={!isEditable}
-                          className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium"
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1 font-medium"
                         >
                           <option value="">Category…</option>
                           {EXPENSE_CATEGORIES.map((c) => (
@@ -1059,10 +1076,10 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                           onChange={(e) => updateExpense(idx, 'description', e.target.value)}
                           placeholder="Description"
                           disabled={!isEditable}
-                          className="flex-[2] px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                          className="flex-[2] px-2 py-1.5 rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1"
                         />
                         <div className="relative">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-caption-2 text-tertiary-label">
                             TZS
                           </span>
                           <input
@@ -1072,7 +1089,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                             onChange={(e) => updateExpense(idx, 'amount', e.target.value)}
                             placeholder="0.00"
                             disabled={!isEditable}
-                            className="w-32 pl-10 pr-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-right font-medium"
+                            className="w-32 pl-10 pr-2 py-1.5 rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1 text-right font-medium"
                           />
                         </div>
                         {isEditable && (
@@ -1085,11 +1102,13 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                         )}
                       </div>
                     ))}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
-                      <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                    <div className="flex items-center justify-between pt-2 border-t border-black/[0.06] dark:border-white/[0.08]">
+                      <span className="text-caption-1 font-semibold text-label">
                         Total Expenses
                       </span>
-                      <span className="text-sm font-bold text-rose-600">{fmt(totalExpenses)}</span>
+                      <span className="text-footnote font-semibold text-rose-600">
+                        {fmt(totalExpenses)}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -1099,18 +1118,18 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
             {/* Notes Tab */}
             {activeTab === 'notes' && (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Notes</h3>
+                <h3 className="text-footnote font-semibold text-label">Notes</h3>
                 {isEditable ? (
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Add any notes about this daily record..."
                     rows={8}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm resize-none focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="input w-full resize-none px-4 py-3 text-footnote"
                   />
                 ) : (
-                  <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-4">
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                  <div className="rounded-xl bg-system-fill/30 p-4">
+                    <p className="text-footnote text-secondary-label whitespace-pre-wrap">
                       {notes || 'No notes'}
                     </p>
                   </div>
@@ -1121,10 +1140,10 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
             {/* Receipts Tab */}
             {activeTab === 'receipts' && (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Receipt Uploads
-                </h3>
-                <p className="text-[10px] text-slate-400">Upload receipts for fund allocations</p>
+                <h3 className="text-footnote font-semibold text-label">Receipt Uploads</h3>
+                <p className="text-caption-2 text-tertiary-label">
+                  Upload receipts for fund allocations
+                </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[
                     {
@@ -1146,21 +1165,16 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                       color: 'emerald'
                     }
                   ].map(({ type, label, desc, color }) => (
-                    <div
-                      key={type}
-                      className={`rounded-xl border border-${color}-200/60 dark:border-${color}-700 bg-${color}-50 dark:bg-${color}-900/10 p-4`}
-                    >
-                      <p className="text-xs font-semibold text-slate-900 dark:text-white mb-1">
-                        {label}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mb-3">{desc}</p>
+                    <div key={type} className={`rounded-xl border p-4 ${tone(color).surface}`}>
+                      <p className="text-caption-1 font-semibold text-label mb-1">{label}</p>
+                      <p className="text-caption-2 text-tertiary-label mb-3">{desc}</p>
                       {receipts[type] ? (
                         <div className="flex items-center gap-2">
                           <a
                             href={receipts[type]}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-800 text-xs font-medium text-indigo-600 hover:bg-slate-50 border border-slate-200 dark:border-slate-700"
+                            className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary-system-grouped-background text-caption-1 font-medium text-primary-700 dark:text-primary-300 hover:bg-system-grouped-background/60 border border-black/[0.06] dark:border-white/[0.08]"
                           >
                             <File className="w-3.5 h-3.5" />
                             View Receipt
@@ -1169,7 +1183,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                             <button
                               onClick={() => handleReceiptUpload(type)}
                               disabled={uploadingReceipt === type}
-                              className="p-2 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-600 border border-slate-200 dark:border-slate-700"
+                              className="p-2 rounded-lg bg-secondary-system-grouped-background text-tertiary-label hover:text-secondary-label border border-black/[0.06] dark:border-white/[0.08]"
                             >
                               <Upload
                                 className={`w-3.5 h-3.5 ${uploadingReceipt === type ? 'animate-pulse' : ''}`}
@@ -1181,7 +1195,7 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                         <button
                           onClick={() => handleReceiptUpload(type)}
                           disabled={!!uploadingReceipt}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-white dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 border border-slate-200 dark:border-slate-700"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-secondary-system-grouped-background text-caption-1 font-medium text-secondary-label hover:bg-system-grouped-background/60 border border-black/[0.06] dark:border-white/[0.08]"
                         >
                           {uploadingReceipt === type ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1200,29 +1214,27 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
             {/* History Tab */}
             {activeTab === 'history' && (
               <div className="space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Activity History
-                </h3>
+                <h3 className="text-footnote font-semibold text-label">Activity History</h3>
                 {history.length === 0 ? (
                   <div className="text-center py-12">
-                    <History className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-                    <p className="text-sm text-slate-400">No activity recorded yet</p>
+                    <History className="w-10 h-10 mx-auto mb-3 text-tertiary-label" />
+                    <p className="text-footnote text-tertiary-label">No activity recorded yet</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {history.map((h, i) => (
                       <div
                         key={i}
-                        className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30"
+                        className="flex items-start gap-3 p-3 rounded-xl bg-system-fill/30"
                       >
-                        <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center shrink-0 mt-0.5">
-                          <Clock className="w-3 h-3 text-indigo-600" />
+                        <div className="w-6 h-6 rounded-full bg-primary-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                          <Clock className="w-3 h-3 text-primary-700 dark:text-primary-300" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-slate-900 dark:text-white">
+                          <p className="text-caption-1 font-medium text-label">
                             {h.action || 'Activity'}
                           </p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">
+                          <p className="text-caption-2 text-tertiary-label mt-0.5">
                             {h.user || 'System'} · {h.timestamp ? fdatetime(h.timestamp) : ''}
                           </p>
                         </div>
@@ -1239,11 +1251,12 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
         <div className="w-full lg:w-80 shrink-0">
           <div className="lg:sticky lg:top-4 space-y-4">
             {/* Live Financial Summary */}
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <DollarSign className="w-3.5 h-3.5 text-indigo-500" /> Live Summary
+            <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-card">
+              <h4 className="text-caption-1 font-semibold text-label mb-3 flex items-center gap-2">
+                <DollarSign className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" /> Live
+                Summary
               </h4>
-              <div className="divide-y divide-slate-100 dark:divide-slate-700">
+              <div className="divide-y divide-separator/50 dark:divide-white/[0.06]">
                 <MiniStat label="Morning Offering" value={fmt(calc.morning)} color="emerald" />
                 <MiniStat label="Afternoon Offering" value={fmt(calc.afternoon)} color="sky" />
                 <MiniStat
@@ -1253,10 +1266,8 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 />
                 <div className="py-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">
-                      Total Income
-                    </span>
-                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                    <span className="text-caption-1 font-semibold text-label">Total Income</span>
+                    <span className="text-footnote font-semibold text-primary-700 dark:text-primary-300">
                       {fmt(calc.total)}
                     </span>
                   </div>
@@ -1266,21 +1277,17 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 <MiniStat label="Total Expenses" value={fmt(totalExpenses)} color="rose" />
                 <div className="pt-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">
-                      Usable Funds
-                    </span>
-                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="text-caption-1 font-semibold text-label">Usable Funds</span>
+                    <span className="text-footnote font-semibold text-emerald-600 dark:text-emerald-400">
                       {fmt(calc.usable)}
                     </span>
                   </div>
                 </div>
                 <div className="pt-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white">
-                      Net Balance
-                    </span>
+                    <span className="text-caption-1 font-semibold text-label">Net Balance</span>
                     <span
-                      className={`text-sm font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                      className={`text-footnote font-semibold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
                     >
                       {fmt(netBalance)}
                     </span>
@@ -1288,10 +1295,10 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 </div>
                 <div className="pt-2 border-t border-dashed border-purple-200 dark:border-purple-700/30">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                    <span className="text-caption-2 font-semibold text-purple-700 dark:text-system-purple flex items-center gap-1">
                       <Sparkles className="w-3 h-3" /> Evangelism
                     </span>
-                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                    <span className="text-caption-1 font-semibold text-purple-700 dark:text-system-purple">
                       {fmt(Number(evangelismOffering) || 0)}
                     </span>
                   </div>
@@ -1300,8 +1307,8 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
             </div>
 
             {/* Workflow Status */}
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+            <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-card">
+              <h4 className="text-caption-1 font-semibold text-label mb-3 flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Workflow Status
               </h4>
               <div className="space-y-2">
@@ -1311,18 +1318,18 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                   return (
                     <div key={step.key} className="flex items-center gap-2">
                       <div
-                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold ${
+                        className={`flex h-5 w-5 items-center justify-center rounded-full text-caption-2 font-semibold ${
                           done
-                            ? 'bg-emerald-500 text-white'
+                            ? 'bg-system-green text-white'
                             : current
-                              ? 'bg-indigo-500 text-white'
-                              : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-system-fill text-tertiary-label'
                         }`}
                       >
                         {done ? <CheckCheck className="w-3 h-3" /> : i + 1}
                       </div>
                       <span
-                        className={`text-[10px] font-medium ${done ? 'text-emerald-600 line-through' : current ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}
+                        className={`text-caption-2 font-medium ${done ? 'text-emerald-700 line-through dark:text-system-green' : current ? 'font-semibold text-primary-700 dark:text-primary-300' : 'text-tertiary-label'}`}
                       >
                         {step.label}
                       </span>
@@ -1333,40 +1340,40 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
             </div>
 
             {/* Record Info */}
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-slate-400" /> Record Info
+            <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-card">
+              <h4 className="text-caption-1 font-semibold text-label mb-3 flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-tertiary-label" /> Record Info
               </h4>
-              <div className="space-y-2 text-[10px]">
+              <div className="space-y-2 text-caption-2">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Status</span>
+                  <span className="text-tertiary-label">Status</span>
                   <StatusBadge status={record?.status || 'draft'} />
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Date</span>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                  <span className="text-tertiary-label">Date</span>
+                  <span className="font-medium text-secondary-label">
                     {fdate(record?.record_date)}
                   </span>
                 </div>
                 {record?.submitted_by_name && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Submitted by</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-tertiary-label">Submitted by</span>
+                    <span className="font-medium text-secondary-label">
                       {record.submitted_by_name}
                     </span>
                   </div>
                 )}
                 {record?.submitted_at && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Submitted at</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-tertiary-label">Submitted at</span>
+                    <span className="font-medium text-secondary-label">
                       {fdatetime(record.submitted_at)}
                     </span>
                   </div>
                 )}
                 {record?.approved_at && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Approved at</span>
+                    <span className="text-tertiary-label">Approved at</span>
                     <span className="font-medium text-emerald-600">
                       {fdatetime(record.approved_at)}
                     </span>
@@ -1374,8 +1381,8 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
                 )}
                 {record?.created_at && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Created</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-tertiary-label">Created</span>
+                    <span className="font-medium text-secondary-label">
                       {fdatetime(record.created_at)}
                     </span>
                   </div>
@@ -1393,28 +1400,28 @@ const FinanceWorkspace = ({ recordId, onBack, onNewRecord, showMessage, userRole
           onClick={() => setRejectOpen(false)}
         >
           <div
-            className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-5"
+            className="bg-secondary-system-grouped-background rounded-2xl shadow-card w-full max-w-sm p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Reject Record</h3>
+            <h3 className="text-footnote font-semibold text-label mb-3">Reject Record</h3>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs mb-3"
+              className="w-full px-3 py-2 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1 mb-3"
               rows={3}
               placeholder="Reason for rejection..."
             />
             <div className="flex gap-2">
               <button
                 onClick={() => setRejectOpen(false)}
-                className="flex-1 py-2 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                className="flex-1 py-2 rounded-xl text-caption-1 font-medium bg-system-fill text-secondary-label"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReject}
                 disabled={!rejectReason.trim()}
-                className="flex-1 py-2 rounded-xl text-xs font-semibold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-40"
+                className="btn-danger flex-1"
               >
                 Reject
               </button>

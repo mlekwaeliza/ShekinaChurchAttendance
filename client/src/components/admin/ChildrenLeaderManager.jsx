@@ -97,7 +97,7 @@ const MemberSearchInput = ({ members = [], selected, onSelect }) => {
 
   return (
     <div ref={containerRef} className="relative">
-      <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 z-10" />
+      <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary-label z-10" />
       <input
         ref={inputRef}
         type="text"
@@ -116,13 +116,13 @@ const MemberSearchInput = ({ members = [], selected, onSelect }) => {
           type="button"
           onClick={clearSelection}
           tabIndex={-1}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-tertiary-label hover:text-secondary-label hover:bg-system-fill transition-colors"
         >
           <X className="w-3 h-3" />
         </button>
       )}
       {selected && (
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+        <div className="mt-1.5 flex items-center gap-1.5 text-caption-1 text-emerald-600 dark:text-emerald-400">
           <CheckCircle className="w-3.5 h-3.5 shrink-0" />
           <span>
             <strong>{selected.full_name}</strong> selected
@@ -132,7 +132,7 @@ const MemberSearchInput = ({ members = [], selected, onSelect }) => {
         </div>
       )}
       {open && filtered.length > 0 && (
-        <ul className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto">
+        <ul className="absolute z-50 mt-1 w-full bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.16] rounded-xl shadow-modal overflow-hidden max-h-60 overflow-y-auto">
           {filtered.map((m, i) => (
             <li
               key={m.id}
@@ -141,18 +141,18 @@ const MemberSearchInput = ({ members = [], selected, onSelect }) => {
                 pickMember(m);
               }}
               onMouseEnter={() => setHighlighted(i)}
-              className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer text-sm transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer text-footnote transition-colors ${
                 i === highlighted
                   ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                  : 'text-secondary-label hover:bg-system-fill/50'
               }`}
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-500/15 text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
                 {m.full_name?.charAt(0)?.toUpperCase()}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold truncate leading-tight">{m.full_name}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                <p className="text-caption-2 text-tertiary-label truncate">
                   {[m.phone, m.email].filter(Boolean).join(' · ')}
                 </p>
               </div>
@@ -161,9 +161,8 @@ const MemberSearchInput = ({ members = [], selected, onSelect }) => {
         </ul>
       )}
       {open && query.trim().length > 0 && filtered.length === 0 && (
-        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-xl px-4 py-3 text-sm text-slate-400 dark:text-slate-500 text-center">
-          No members match "
-          <span className="font-medium text-slate-600 dark:text-slate-400">{query}</span>"
+        <div className="absolute z-50 mt-1 w-full bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.16] rounded-xl shadow-card px-4 py-3 text-footnote text-tertiary-label text-center">
+          No members match "<span className="font-medium text-secondary-label">{query}</span>"
         </div>
       )}
     </div>
@@ -372,13 +371,11 @@ export default function ChildrenLeaderManager({ showMessage }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-label flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary-600" />
             {t('children.leadersTitle')}
           </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {t('children.leadersDesc')}
-          </p>
+          <p className="mt-1 text-footnote text-secondary-label">{t('children.leadersDesc')}</p>
         </div>
         <button onClick={openCreateModal} className="btn-primary flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -387,7 +384,12 @@ export default function ChildrenLeaderManager({ showMessage }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard icon={Users} label={t('children.totalLeaders')} value={leaders.length} variant="default" />
+        <StatCard
+          icon={Users}
+          label={t('children.totalLeaders')}
+          value={leaders.length}
+          variant="default"
+        />
         <StatCard
           icon={CheckCircle}
           label={t('children.active')}
@@ -403,7 +405,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
         <input
           type="text"
           placeholder={t('children.searchLeaders')}
@@ -413,39 +415,39 @@ export default function ChildrenLeaderManager({ showMessage }) {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-        <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-          <thead className="bg-slate-50 dark:bg-slate-800/50">
+      <div className="overflow-x-auto rounded-2xl border border-black/[0.06] dark:border-white/[0.08]">
+        <table className="min-w-full divide-y divide-separator/50 dark:divide-white/[0.06]">
+          <thead className="bg-system-fill">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Name
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Username
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Email
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Phone
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Role
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Status
               </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="px-4 py-3 text-right text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+          <tbody className="divide-y divide-separator/50 dark:divide-white/[0.06]">
             {filteredLeaders.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-4 py-12 text-center">
-                  <Users className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
-                  <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                  <Users className="mx-auto h-10 w-10 text-tertiary-label dark:text-secondary-label" />
+                  <p className="mt-2 text-footnote text-secondary-label">
                     {searchTerm
                       ? 'No leaders match your search'
                       : "No children's ministry leaders yet"}
@@ -456,47 +458,47 @@ export default function ChildrenLeaderManager({ showMessage }) {
               filteredLeaders.map((leader) => (
                 <tr
                   key={leader.id}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  className="hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03] transition-colors"
                 >
                   <td className="whitespace-nowrap px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/30">
-                        <span className="text-xs font-bold text-primary-700 dark:text-primary-300">
+                        <span className="text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
                           {leader.full_name?.charAt(0)?.toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      <span className="text-footnote font-medium text-label">
                         {leader.full_name}
                       </span>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                  <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                     {leader.username}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                  <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                     {leader.email || leader.leader_email || '—'}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                  <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                     {leader.phone || '—'}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     {leader.is_head ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-caption-1 font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                         <ShieldCheck className="h-3 w-3" /> Head
                       </span>
                     ) : (
-                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                      <span className="inline-flex items-center rounded-full bg-system-fill px-2.5 py-0.5 text-caption-1 font-medium text-secondary-label dark:bg-white/[0.06] dark:text-tertiary-label">
                         Leader
                       </span>
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     {leader.is_active !== false ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-caption-1 font-medium text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
                         <CheckCircle className="h-3 w-3" /> Active
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-system-fill px-2.5 py-0.5 text-caption-1 font-medium text-secondary-label dark:bg-white/[0.06] dark:text-tertiary-label">
                         <XCircle className="h-3 w-3" /> Inactive
                       </span>
                     )}
@@ -505,14 +507,14 @@ export default function ChildrenLeaderManager({ showMessage }) {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => openEditModal(leader)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors"
+                        className="rounded-lg p-1.5 text-tertiary-label hover:bg-system-fill hover:text-secondary-label dark:hover:bg-white/[0.06] dark:hover:text-tertiary-label transition-colors"
                         title="Edit"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleResetPassword(leader)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors"
+                        className="rounded-lg p-1.5 text-tertiary-label hover:bg-system-fill hover:text-secondary-label dark:hover:bg-white/[0.06] dark:hover:text-tertiary-label transition-colors"
                         title="Reset Password"
                       >
                         <KeyRound className="h-4 w-4" />
@@ -521,13 +523,13 @@ export default function ChildrenLeaderManager({ showMessage }) {
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => handleDelete(leader)}
-                            className="rounded-lg bg-rose-600 px-2 py-1 text-xs font-medium text-white hover:bg-rose-700 transition-colors"
+                            className="rounded-lg bg-rose-600 px-2 py-1 text-caption-1 font-medium text-white hover:bg-rose-700 transition-colors"
                           >
                             Confirm
                           </button>
                           <button
                             onClick={() => setDeleteConfirm(null)}
-                            className="rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                            className="rounded-lg px-2 py-1 text-caption-1 font-medium text-secondary-label hover:bg-system-fill transition-colors"
                           >
                             Cancel
                           </button>
@@ -535,7 +537,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
                       ) : (
                         <button
                           onClick={() => setDeleteConfirm(leader.id)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20 dark:hover:text-rose-400 transition-colors"
+                          className="rounded-lg p-1.5 text-tertiary-label hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20 dark:hover:text-rose-400 transition-colors"
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -551,17 +553,17 @@ export default function ChildrenLeaderManager({ showMessage }) {
       </div>
 
       {createdCredentials && (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 p-5 shadow-sm">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 p-5 shadow-card">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
                 <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                <h3 className="text-footnote font-semibold text-emerald-800 dark:text-emerald-200">
                   {createdCredentials.full_name} — Login Credentials
                 </h3>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
+                <p className="text-caption-1 text-emerald-600 dark:text-emerald-400 mt-0.5">
                   Share these credentials with the leader so they can access their dashboard.
                 </p>
               </div>
@@ -574,19 +576,19 @@ export default function ChildrenLeaderManager({ showMessage }) {
             </button>
           </div>
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+            <div className="rounded-xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-3">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                 Username
               </p>
-              <p className="mt-1 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">
+              <p className="mt-1 text-footnote font-mono font-semibold text-label">
                 {createdCredentials.username}
               </p>
             </div>
-            <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+            <div className="rounded-xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-3">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                 Password
               </p>
-              <p className="mt-1 text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">
+              <p className="mt-1 text-footnote font-mono font-semibold text-label">
                 {createdCredentials.password}
               </p>
             </div>
@@ -599,14 +601,14 @@ export default function ChildrenLeaderManager({ showMessage }) {
                 );
                 showMessage('Credentials copied to clipboard');
               }}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-caption-1 font-medium text-white hover:bg-emerald-700 transition-colors"
             >
               <Copy className="h-3 w-3" />
               Copy Credentials
             </button>
             <button
               onClick={() => setCreatedCredentials(null)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-secondary-system-grouped-background dark:bg-white/[0.06] border border-black/[0.06] dark:border-white/[0.16] px-3 py-1.5 text-caption-1 font-medium text-secondary-label hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.08] transition-colors"
             >
               Dismiss
             </button>
@@ -626,12 +628,12 @@ export default function ChildrenLeaderManager({ showMessage }) {
           }}
         >
           <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-slate-200 p-5 dark:border-slate-700">
+            <div className="flex items-center justify-between border-b border-black/[0.06] p-5 dark:border-white/[0.08]">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-100 dark:bg-primary-900/30">
                   <ShieldCheck className="h-4 w-4 text-primary-600 dark:text-primary-400" />
                 </div>
-                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                <h2 className="text-subheadline font-semibold text-label">
                   {editingLeader ? 'Edit Leader' : "Add Children's Ministry Leader"}
                 </h2>
               </div>
@@ -641,7 +643,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
                   setError('');
                   setSelectedMember(null);
                 }}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+                className="rounded-lg p-1.5 text-tertiary-label hover:bg-system-fill"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -649,16 +651,16 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               {error && (
-                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-footnote text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
                   {error}
                 </div>
               )}
 
               {!editingLeader && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                     Select Member{' '}
-                    <span className="text-slate-400 font-normal">(Optional Auto-fill)</span>
+                    <span className="text-tertiary-label font-normal">(Optional Auto-fill)</span>
                   </label>
                   <MemberSearchInput
                     members={availableMembers}
@@ -669,7 +671,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
               )}
 
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                   Full Name <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -683,11 +685,11 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
               {!editingLeader && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                     Username <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <AtSign className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <AtSign className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary-label" />
                     <input
                       type="text"
                       required
@@ -697,7 +699,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
                       className="input pl-10"
                     />
                   </div>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                  <p className="text-caption-2 text-tertiary-label mt-1">
                     Used for system login. Permanent once set.
                   </p>
                 </div>
@@ -705,7 +707,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                     Email
                   </label>
                   <input
@@ -717,7 +719,7 @@ export default function ChildrenLeaderManager({ showMessage }) {
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                     Phone
                   </label>
                   <input
@@ -734,9 +736,9 @@ export default function ChildrenLeaderManager({ showMessage }) {
                   type="checkbox"
                   checked={formData.is_head}
                   onChange={(e) => setFormData({ ...formData, is_head: e.target.checked })}
-                  className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                  className="h-4 w-4 rounded border-black/[0.12] text-primary-600 focus:ring-primary-500"
                 />
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                <span className="text-footnote font-medium text-secondary-label">
                   Head of Children's Ministry
                 </span>
               </label>

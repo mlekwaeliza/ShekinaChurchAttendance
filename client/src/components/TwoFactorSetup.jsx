@@ -58,12 +58,12 @@ const TwoFactorSetup = ({ onEnabled, onCancel }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
-          <Shield className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-500/[0.12]">
+          <Shield className="h-5 w-5 text-primary-700 dark:text-primary-300" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Two-Factor Authentication</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h3 className="text-headline font-semibold text-label">Two-Factor Authentication</h3>
+          <p className="text-footnote text-secondary-label">
             {step === 'setup' && 'Add an extra layer of security to your account'}
             {step === 'scan' && 'Scan the QR code with your authenticator app'}
             {step === 'verify' && 'Enter the code from your authenticator app'}
@@ -73,16 +73,17 @@ const TwoFactorSetup = ({ onEnabled, onCancel }) => {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-50 dark:bg-rose-900/30 border border-rose-200/60 dark:border-rose-700/60 text-rose-700 dark:text-rose-300 text-sm">
-          <AlertTriangle className="w-4 h-4 shrink-0" />
+        <div className="flex items-center gap-2 rounded-xl bg-system-red/10 px-4 py-3 text-footnote text-rose-700 dark:text-system-red">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
           {error}
         </div>
       )}
 
       {step === 'setup' && (
-        <div className="text-center py-4">
-          <p className="text-sm text-slate-600 dark:text-slate-300 mb-6">
-            Two-factor authentication adds an extra layer of security by requiring a code from your authenticator app in addition to your password.
+        <div className="py-4 text-center">
+          <p className="mb-6 text-footnote leading-relaxed text-secondary-label">
+            Two-factor authentication adds an extra layer of security by requiring a code from your
+            authenticator app in addition to your password.
           </p>
           <button onClick={handleGenerate} disabled={loading} className="btn-primary">
             {loading ? 'Generating...' : 'Set Up 2FA'}
@@ -93,11 +94,15 @@ const TwoFactorSetup = ({ onEnabled, onCancel }) => {
       {step === 'scan' && (
         <div className="space-y-4">
           <div className="flex justify-center">
-            <img src={qrCode} alt="QR Code" className="w-48 h-48 rounded-xl border border-slate-200 dark:border-slate-700" />
+            <img
+              src={qrCode}
+              alt="QR Code"
+              className="h-48 w-48 rounded-xl border border-separator/60 dark:border-white/[0.08]"
+            />
           </div>
           <div className="text-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Or enter this code manually:</p>
-            <code className="text-sm font-mono bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-900 dark:text-slate-100">
+            <p className="mb-2 text-footnote text-secondary-label">Or enter this code manually:</p>
+            <code className="rounded-lg bg-system-fill px-3 py-1.5 font-mono text-footnote text-label">
               {secret}
             </code>
           </div>
@@ -115,7 +120,7 @@ const TwoFactorSetup = ({ onEnabled, onCancel }) => {
               type="text"
               value={token}
               onChange={(e) => setToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="input text-center text-2xl tracking-widest font-mono"
+              className="input text-center font-mono text-2xl tracking-widest"
               placeholder="000000"
               maxLength={6}
               autoFocus
@@ -129,19 +134,30 @@ const TwoFactorSetup = ({ onEnabled, onCancel }) => {
 
       {step === 'backup' && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/30 border border-amber-200/60 dark:border-amber-700/60 text-amber-800 dark:text-amber-300 text-sm">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
+          <div className="flex items-center gap-2 rounded-xl bg-system-orange/10 px-4 py-3 text-footnote text-amber-700 dark:text-system-orange">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
             Save these codes in a safe place. Each can only be used once.
           </div>
           <div className="grid grid-cols-2 gap-2">
             {backupCodes.map((code, i) => (
-              <code key={i} className="text-sm font-mono bg-slate-50 dark:bg-slate-700 px-3 py-2 rounded-lg text-center text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600">
+              <code
+                key={i}
+                className="rounded-lg border border-separator/60 bg-system-grouped-background px-3 py-2 text-center font-mono text-footnote text-label dark:border-white/[0.06]"
+              >
                 {code}
               </code>
             ))}
           </div>
           <button onClick={handleCopyCodes} className="btn-secondary w-full">
-            {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy All Codes</>}
+            {copied ? (
+              <>
+                <Check className="w-4 h-4" /> Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" /> Copy All Codes
+              </>
+            )}
           </button>
           <button onClick={handleDone} className="btn-primary w-full">
             Done
@@ -149,7 +165,10 @@ const TwoFactorSetup = ({ onEnabled, onCancel }) => {
         </div>
       )}
 
-      <button onClick={onCancel} className="text-sm text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 w-full text-center">
+      <button
+        onClick={onCancel}
+        className="w-full text-center text-footnote text-secondary-label transition-colors hover:text-label"
+      >
         Cancel
       </button>
     </div>

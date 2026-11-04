@@ -13,7 +13,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     mountedRef.current = true;
     checkAuth();
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const checkAuth = async () => {
@@ -51,7 +53,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = (data) => {
     if (data && typeof data === 'object') {
-      setUser(prev => ({ ...prev, ...data }));
+      setUser((prev) => ({ ...prev, ...data }));
     }
   };
 
@@ -62,12 +64,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     isAuthenticated: !!user,
-    setUser,
+    setUser
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

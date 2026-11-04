@@ -75,25 +75,25 @@ export const MetricCard = ({
   const diff = showDiff && previousValue != null ? num - prevNum : null;
   const pctDiff = showDiff && prevNum > 0 ? Math.round(((num - prevNum) / prevNum) * 100) : null;
   return (
-    <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm hover:shadow-md transition-all">
+    <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-card hover:shadow-card transition-all">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <span className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
           {label}
         </span>
         {Icon && (
-          <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-slate-700 flex items-center justify-center">
-            <Icon className="w-3.5 h-3.5 text-slate-500" />
+          <div className="w-7 h-7 rounded-lg bg-system-fill flex items-center justify-center">
+            <Icon className="w-3.5 h-3.5 text-secondary-label" />
           </div>
         )}
       </div>
-      <p className="text-xl font-bold text-slate-900 dark:text-white">
+      <p className="text-title-2 font-semibold text-label">
         {suffix === '%' ? R(num) : num.toLocaleString()}
         {suffix}
       </p>
       {diff != null && (
         <div className="flex items-center gap-1.5 mt-1">
           <span
-            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}
+            className={`text-caption-2 font-semibold px-1.5 py-0.5 rounded-full ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}
           >
             {diff >= 0 ? '+' : ''}
             {diff.toLocaleString()}
@@ -101,7 +101,7 @@ export const MetricCard = ({
           </span>
           {pctDiff != null && (
             <span
-              className={`text-[10px] font-medium ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+              className={`text-caption-2 font-medium ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
             >
               ({diff >= 0 ? '+' : ''}
               {pctDiff}%)
@@ -110,7 +110,7 @@ export const MetricCard = ({
         </div>
       )}
       {previousValue != null && showDiff && (
-        <p className="text-[9px] text-slate-400 mt-0.5">
+        <p className="text-caption-2 text-tertiary-label mt-0.5">
           Prev: {prevNum.toLocaleString()}
           {suffix}
         </p>
@@ -148,18 +148,20 @@ export const IntelligenceTable = ({
   }, [data, sortKey, sortDir]);
 
   if (!data.length)
-    return <div className="text-center py-12 text-slate-400 text-sm">{emptyMessage}</div>;
+    return (
+      <div className="text-center py-12 text-tertiary-label text-footnote">{emptyMessage}</div>
+    );
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
-          <tr className="border-b border-slate-200 dark:border-slate-700">
+      <table className="min-w-full text-footnote">
+        <thead className="sticky top-0 bg-secondary-system-grouped-background z-10">
+          <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
             {columns.map((col) => (
               <th
                 key={col.key}
                 onClick={() => col.sortable !== false && handleSort(col.key)}
-                className={`py-2.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.sortable !== false ? 'cursor-pointer hover:text-slate-600' : ''}`}
+                className={`py-2.5 px-3 text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label ${col.align === 'right' ? 'text-right' : 'text-left'} ${col.sortable !== false ? 'cursor-pointer hover:text-secondary-label' : ''}`}
               >
                 <span className="inline-flex items-center gap-1">
                   {col.label}
@@ -180,7 +182,7 @@ export const IntelligenceTable = ({
               key={row.id || i}
               onClick={() => (onRowClick ? onRowClick(row) : null)}
               title={onRowClick ? 'Click to view attendance details' : undefined}
-              className={`border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${onRowClick ? 'cursor-pointer hover:ring-1 hover:ring-indigo-300 dark:hover:ring-indigo-700' : ''}`}
+              className={`border-b border-separator/50 dark:border-white/[0.08] hover:bg-system-fill/30 ${onRowClick ? 'cursor-pointer hover:ring-1 hover:ring-primary-500/40 dark:hover:ring-primary-500/40' : ''}`}
             >
               {columns.map((col) => (
                 <td
@@ -232,7 +234,7 @@ export const InsightCard = ({ insight }) => {
       <div className={`w-7 h-7 rounded-lg ${c.iconBg} flex items-center justify-center shrink-0`}>
         <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
       </div>
-      <p className="text-xs text-slate-700 dark:text-slate-300">
+      <p className="text-caption-1 text-secondary-label">
         {typeof insight.text === 'string' ? insight.text : String(insight.text ?? '')}
       </p>
     </div>

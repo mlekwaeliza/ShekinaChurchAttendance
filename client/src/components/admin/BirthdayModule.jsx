@@ -4,7 +4,16 @@ import { birthdayAPI } from '../../services/api';
 import StatCard from '../ui/StatCard';
 import Badge from '../ui/Badge';
 import EmptyState from '../ui/EmptyState';
-import { Calendar, Cake, Mail, Download, ChevronRight, ChevronDown, Filter, Plus } from 'lucide-react';
+import {
+  Calendar,
+  Cake,
+  Mail,
+  Download,
+  ChevronRight,
+  ChevronDown,
+  Filter,
+  Plus
+} from 'lucide-react';
 import { addDays, formatLocalDate, parseLocalDate, fdate } from '../../utils/date';
 
 const BirthdayModule = () => {
@@ -45,9 +54,22 @@ const BirthdayModule = () => {
   const groupBirthdays = (members) => {
     if (filter === 'fullYear') {
       // Group by month
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const months = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+      ];
       const groups = {};
-      members.forEach(m => {
+      members.forEach((m) => {
         const monthIndex = parseLocalDate(m.date_of_birth).getMonth();
         const monthName = months[monthIndex];
         if (!groups[monthName]) groups[monthName] = [];
@@ -57,7 +79,7 @@ const BirthdayModule = () => {
     } else {
       // Group by specific date
       const groups = {};
-      members.forEach(m => {
+      members.forEach((m) => {
         const date = m.date_of_birth;
         if (!groups[date]) groups[date] = [];
         groups[date].push(m);
@@ -67,7 +89,7 @@ const BirthdayModule = () => {
   };
 
   const toggleMonth = (month) => {
-    setExpandedMonths(prev => ({ ...prev, [month]: !prev[month] }));
+    setExpandedMonths((prev) => ({ ...prev, [month]: !prev[month] }));
   };
 
   const grouped = groupBirthdays(data.members);
@@ -85,62 +107,55 @@ const BirthdayModule = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 p-6 text-white shadow-xl shadow-amber-500/20">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
-        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Hero */}
+      <section className="product-surface px-5 py-6 sm:px-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-              <Cake className="h-5 w-5 text-white" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-system-orange/15 text-amber-700 dark:text-system-orange">
+              <Cake className="h-[18px] w-[18px]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold">{t('birthdays.title')}</h2>
-              <p className="text-sm text-white/80">{t('birthdays.subtitle')}</p>
+              <p className="section-eyebrow">Celebrations</p>
+              <h2 className="text-title-2 font-semibold text-label">{t('birthdays.title')}</h2>
+              <p className="mt-0.5 text-subheadline text-secondary-label">
+                {t('birthdays.subtitle')}
+              </p>
             </div>
           </div>
           <button
             onClick={handleExport}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold text-white shadow-sm backdrop-blur-sm transition-all hover:bg-white/25"
+            className="btn-secondary btn-sm focus-ring self-start sm:self-auto"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-3.5 w-3.5" />
             <span>Export CSV</span>
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <StatCard 
-          icon={Cake} 
-          label="Today" 
-          value={data.stats.today || 0} 
-          variant="primary" 
+        <StatCard icon={Cake} label="Today" value={data.stats.today || 0} variant="primary" />
+        <StatCard
+          icon={Calendar}
+          label="This Week"
+          value={data.stats.thisWeek || 0}
+          variant="info"
         />
-        <StatCard 
-          icon={Calendar} 
-          label="This Week" 
-          value={data.stats.thisWeek || 0} 
-          variant="info" 
-        />
-        <StatCard 
-          icon={Filter} 
-          label="This Month" 
-          value={data.stats.thisMonth || 0} 
-          variant="warning" 
+        <StatCard
+          icon={Filter}
+          label="This Month"
+          value={data.stats.thisMonth || 0}
+          variant="warning"
         />
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl w-fit">
-        {filters.map(f => (
+      <div className="tab-pills w-fit">
+        {filters.map((f) => (
           <button
             key={f.id}
             onClick={() => setFilter(f.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-              filter === f.id 
-                ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' 
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
+            className={`tab-pill ${filter === f.id ? 'active' : ''}`}
           >
             {f.label}
           </button>
@@ -149,60 +164,88 @@ const BirthdayModule = () => {
 
       {loading ? (
         <div className="flex flex-col gap-6">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-3xl animate-pulse" />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-32 animate-pulse rounded-2xl bg-system-fill" />
           ))}
         </div>
       ) : data.members.length === 0 ? (
         <EmptyState
           icon={Cake}
-          title={filter === 'thisWeek' ? "No birthdays this week 🎉" : "No birthdays found"}
-          description={filter === 'thisWeek' ? "Check next month to plan ahead or invite more members." : "Try expanding your filter to see more upcoming birthdays."}
-          action={filter === 'thisWeek' ? {
-            label: "View Next 30 Days",
-            onClick: () => setFilter('next30Days')
-          } : null}
+          title={filter === 'thisWeek' ? 'No birthdays this week 🎉' : 'No birthdays found'}
+          description={
+            filter === 'thisWeek'
+              ? 'Check next month to plan ahead or invite more members.'
+              : 'Try expanding your filter to see more upcoming birthdays.'
+          }
+          action={
+            filter === 'thisWeek'
+              ? {
+                  label: 'View Next 30 Days',
+                  onClick: () => setFilter('next30Days')
+                }
+              : null
+          }
         />
       ) : (
         <div className="space-y-8">
           {Object.entries(grouped).map(([groupKey, members]) => (
             <div key={groupKey} className="space-y-4">
               {filter === 'fullYear' ? (
-                <button 
+                <button
                   onClick={() => toggleMonth(groupKey)}
-                  className="flex items-center gap-3 group w-full text-left"
+                  className="focus-ring flex w-full items-center gap-3 rounded-lg text-left group"
                 >
-                  <div className={`p-1 rounded-lg transition-colors ${expandedMonths[groupKey] ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
-                    {expandedMonths[groupKey] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  <div
+                    className={`rounded-lg p-1 transition-colors ${
+                      expandedMonths[groupKey]
+                        ? 'bg-primary-500/[0.12] text-primary-700 dark:text-primary-300'
+                        : 'bg-system-fill text-secondary-label'
+                    }`}
+                  >
+                    {expandedMonths[groupKey] ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{groupKey}</h3>
-                  <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{members.length} birthdays</span>
+                  <h3 className="text-title-3 font-semibold text-label">{groupKey}</h3>
+                  <div className="h-px flex-1 bg-separator/60 dark:bg-white/[0.08]"></div>
+                  <span className="text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label tabular-nums">
+                    {members.length} birthdays
+                  </span>
                 </button>
               ) : (
                 <div className="flex items-center gap-3">
-                  <h3 className={`text-sm font-bold uppercase tracking-wider ${groupKey === today ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                  <h3
+                    className={`text-footnote font-semibold uppercase tracking-[0.06em] ${
+                      groupKey === today
+                        ? 'text-primary-700 dark:text-primary-300'
+                        : 'text-secondary-label'
+                    }`}
+                  >
                     {fdate(groupKey)}
-                    {groupKey === today && <span className="ml-2 bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 rounded-full text-[10px]">Today</span>}
+                    {groupKey === today && (
+                      <span className="ml-2 rounded-full bg-primary-500/[0.12] px-2 py-0.5 text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
+                        Today
+                      </span>
+                    )}
                   </h3>
-                  <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1"></div>
+                  <div className="h-px flex-1 bg-separator/60 dark:bg-white/[0.08]"></div>
                 </div>
               )}
 
               {(filter !== 'fullYear' || expandedMonths[groupKey]) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {members.map(member => (
-                    <div 
-                      key={member.id} 
-                      className={`group p-5 rounded-3xl bg-white dark:bg-slate-800 border transition-all hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 ${
-                        member.is_today 
-                        ? 'border-indigo-200 dark:border-indigo-800 bg-gradient-to-br from-white to-indigo-50/30 dark:from-slate-800 dark:to-indigo-900/10' 
-                        : 'border-slate-100 dark:border-slate-700'
+                  {members.map((member) => (
+                    <div
+                      key={member.id}
+                      className={`card group p-5 transition-shadow hover:shadow-card-hover ${
+                        member.is_today ? 'ring-1 ring-primary-500/30' : ''
                       }`}
                     >
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center group-hover:bg-indigo-600 transition-colors">
-                          <Cake className={`w-6 h-6 ${member.is_today ? 'text-indigo-600' : 'text-slate-400'} group-hover:text-white`} />
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-[10px] bg-system-orange/15 text-amber-700 dark:text-system-orange">
+                          <Cake className="h-5 w-5" />
                         </div>
                         {member.age && (
                           <Badge variant="success" className="text-xs">
@@ -210,31 +253,35 @@ const BirthdayModule = () => {
                           </Badge>
                         )}
                       </div>
-                      
+
                       <div className="space-y-1 mb-6">
-                        <h4 className="font-bold text-slate-900 dark:text-slate-100">{member.name}</h4>
+                        <h4 className="text-subheadline font-semibold text-label">{member.name}</h4>
                         <div className="flex flex-wrap gap-2">
-                          <Badge variant="ghost" className="text-[10px] py-0">{member.section}</Badge>
-                          <span className="text-[10px] text-slate-400 font-medium">Under {member.leader}</span>
+                          <Badge variant="ghost" className="text-[10px] py-0">
+                            {member.section}
+                          </Badge>
+                          <span className="text-caption-1 font-medium text-secondary-label">
+                            Under {member.leader}
+                          </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 pt-4 border-t border-slate-50 dark:border-slate-700">
-                        <a 
+                      <div className="flex items-center gap-2 border-t border-separator/60 pt-3 dark:border-white/[0.08]">
+                        <a
                           href={`mailto:${member.email || ''}`}
-                          className="p-2 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 transition-all flex-1 flex justify-center items-center gap-2"
+                          className="btn-secondary btn-sm flex-1 justify-center focus-ring"
                           title="Send Message"
                         >
-                          <Mail className="w-4 h-4" />
-                          <span className="text-xs font-bold">Message</span>
+                          <Mail className="h-3.5 w-3.5" />
+                          <span className="text-xs">Message</span>
                         </a>
-                        <button 
+                        <button
                           onClick={() => addToCalendar(member)}
-                          className="p-2 rounded-xl bg-slate-50 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 transition-all flex-1 flex justify-center items-center gap-2"
+                          className="btn-secondary btn-sm flex-1 justify-center focus-ring"
                           title="Add to Calendar"
                         >
-                          <Plus className="w-4 h-4" />
-                          <span className="text-xs font-bold">Remind</span>
+                          <Plus className="h-3.5 w-3.5" />
+                          <span className="text-xs">Remind</span>
                         </button>
                       </div>
                     </div>

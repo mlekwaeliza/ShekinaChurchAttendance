@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  LayoutDashboard, Home, Users, UserCheck, Settings
-} from 'lucide-react';
+import { LayoutDashboard, Home, Users, UserCheck, Settings } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import HCDashboard from './home-cells/HCDashboard';
 import HCList from './home-cells/HCList';
@@ -21,8 +19,9 @@ const HomeCellModule = ({ allMembers: propAllMembers = [] }) => {
   // Fetch the full members list directly so the leaders assignment panel
   // is always populated regardless of parent prop timing or empty arrays.
   useEffect(() => {
-    adminAPI.getMembers()
-      .then(res => setFetchedMembers(res.data || []))
+    adminAPI
+      .getMembers()
+      .then((res) => setFetchedMembers(res.data || []))
       .catch(() => {});
   }, []);
 
@@ -70,7 +69,11 @@ const HomeCellModule = ({ allMembers: propAllMembers = [] }) => {
   };
 
   const handleDeleteCell = async (cell) => {
-    if (!window.confirm(`Are you sure you want to delete ${cell.name}? This will permanently remove all leader and member assignments for this cell.`)) {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete ${cell.name}? This will permanently remove all leader and member assignments for this cell.`
+      )
+    ) {
       return;
     }
     try {
@@ -112,26 +115,11 @@ const HomeCellModule = ({ allMembers: propAllMembers = [] }) => {
           />
         );
       case 'members':
-        return (
-          <HCMembersPage
-            cells={cells}
-            onRefresh={loadCells}
-          />
-        );
+        return <HCMembersPage cells={cells} onRefresh={loadCells} />;
       case 'leaders':
-        return (
-          <HCLeadersPage
-            cells={cells}
-            allLeaders={allMembers}
-          />
-        );
+        return <HCLeadersPage cells={cells} allLeaders={allMembers} />;
       case 'settings':
-        return (
-          <HCSettings
-            cells={cells}
-            onRefresh={loadCells}
-          />
-        );
+        return <HCSettings cells={cells} onRefresh={loadCells} />;
       default:
         return null;
     }
@@ -142,7 +130,7 @@ const HomeCellModule = ({ allMembers: propAllMembers = [] }) => {
     { key: 'cells', label: 'Home Cells', icon: Home },
     { key: 'members', label: 'Members', icon: Users },
     { key: 'leaders', label: 'Cell Leaders', icon: UserCheck },
-    { key: 'settings', label: 'Settings', icon: Settings },
+    { key: 'settings', label: 'Settings', icon: Settings }
   ];
 
   return (
@@ -154,27 +142,21 @@ const HomeCellModule = ({ allMembers: propAllMembers = [] }) => {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
-        {tabs.map(t => (
+      <div className="tab-pills overflow-x-auto">
+        {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-              activeTab === t.key
-                ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm font-bold'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
+            className={`tab-pill whitespace-nowrap ${activeTab === t.key ? 'active' : ''}`}
           >
-            <t.icon className="w-3.5 h-3.5" />
+            <t.icon className="h-3.5 w-3.5" />
             {t.label}
           </button>
         ))}
       </div>
 
       {/* Section Content */}
-      <div>
-        {renderContent()}
-      </div>
+      <div>{renderContent()}</div>
 
       {/* Create/Edit Cell Modal */}
       <HCCreateModal

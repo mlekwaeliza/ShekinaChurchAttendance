@@ -89,7 +89,7 @@ const SectionsTab = ({ data, actions }) => {
     return (
       <th
         onClick={() => handleSortSec(field)}
-        className={`px-3 py-2 text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition-colors whitespace-nowrap ${
+        className={`px-3 py-2 text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label cursor-pointer hover:bg-system-fill/50 dark:hover:bg-white/[0.03] transition-colors whitespace-nowrap ${
           align === 'right' ? 'text-right' : 'text-left'
         }`}
       >
@@ -99,12 +99,12 @@ const SectionsTab = ({ data, actions }) => {
           <span>{label}</span>
           {isSorted ? (
             secSortOrder === 'asc' ? (
-              <ChevronUp className="w-2.5 h-2.5 text-indigo-500" />
+              <ChevronUp className="w-2.5 h-2.5 text-primary-600" />
             ) : (
-              <ChevronDown className="w-2.5 h-2.5 text-indigo-500" />
+              <ChevronDown className="w-2.5 h-2.5 text-primary-600" />
             )
           ) : (
-            <ChevronDown className="w-2.5 h-2.5 text-slate-300 dark:text-slate-600 opacity-40 hover:opacity-100" />
+            <ChevronDown className="w-2.5 h-2.5 text-tertiary-label dark:text-secondary-label opacity-40 hover:opacity-100" />
           )}
         </div>
       </th>
@@ -116,7 +116,7 @@ const SectionsTab = ({ data, actions }) => {
     return (
       <th
         onClick={() => handleSortLead(field)}
-        className={`px-4 py-2 text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-100/50 dark:hover:bg-slate-900/50 transition-colors whitespace-nowrap ${
+        className={`px-4 py-2 text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label cursor-pointer hover:bg-system-fill/50 dark:hover:bg-white/[0.03] transition-colors whitespace-nowrap ${
           align === 'right' ? 'text-right' : 'text-left'
         }`}
       >
@@ -126,12 +126,12 @@ const SectionsTab = ({ data, actions }) => {
           <span>{label}</span>
           {isSorted ? (
             leadSortOrder === 'asc' ? (
-              <ChevronUp className="w-2.5 h-2.5 text-indigo-500" />
+              <ChevronUp className="w-2.5 h-2.5 text-primary-600" />
             ) : (
-              <ChevronDown className="w-2.5 h-2.5 text-indigo-500" />
+              <ChevronDown className="w-2.5 h-2.5 text-primary-600" />
             )
           ) : (
-            <ChevronDown className="w-2.5 h-2.5 text-slate-300 dark:text-slate-600 opacity-40 hover:opacity-100" />
+            <ChevronDown className="w-2.5 h-2.5 text-tertiary-label dark:text-secondary-label opacity-40 hover:opacity-100" />
           )}
         </div>
       </th>
@@ -195,7 +195,7 @@ const SectionsTab = ({ data, actions }) => {
   if (avgHealthScore >= 85) {
     healthStatus = 'Elite';
     healthColor =
-      'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-900/30';
+      'text-primary-700 bg-primary-500/10 dark:bg-primary-500/10 border-primary-500/25 dark:border-primary-500/20';
     healthBadge = 'success';
   } else if (avgHealthScore >= 75) {
     healthStatus = 'Excellent';
@@ -394,7 +394,7 @@ const SectionsTab = ({ data, actions }) => {
     if (value > 0) return { label: `Up ${value}`, className: 'text-emerald-600', icon: ArrowUp };
     if (value < 0)
       return { label: `Down ${Math.abs(value)}`, className: 'text-rose-600', icon: ArrowDown };
-    return { label: 'No change', className: 'text-slate-500', icon: Minus };
+    return { label: 'No change', className: 'text-secondary-label', icon: Minus };
   };
   const sectionStatus = (score, rate, followUpRate) => {
     if (score >= 80 && rate >= 75) return { label: 'Healthy', variant: 'success' };
@@ -541,16 +541,18 @@ const SectionsTab = ({ data, actions }) => {
   };
   const MiniMetric = ({ label, value, suffix = '', tone = 'slate' }) => {
     const toneMap = {
-      slate: 'text-slate-900 dark:text-white',
+      slate: 'text-label',
       green: 'text-emerald-600 dark:text-emerald-400',
       red: 'text-rose-600 dark:text-rose-400',
       amber: 'text-amber-600 dark:text-amber-400',
-      indigo: 'text-indigo-600 dark:text-indigo-400'
+      indigo: 'text-primary-700 dark:text-primary-300'
     };
     return (
-      <div className="rounded-xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 p-3">
-        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-        <p className={`text-lg font-black mt-1 ${toneMap[tone] || toneMap.slate}`}>
+      <div className="rounded-xl border border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.03] p-3">
+        <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+          {label}
+        </p>
+        <p className={`text-lg font-semibold mt-1 ${toneMap[tone] || toneMap.slate}`}>
           {value ?? 0}
           {suffix}
         </p>
@@ -562,7 +564,7 @@ const SectionsTab = ({ data, actions }) => {
     const Icon = movement.icon;
     return (
       <span
-        className={`inline-flex items-center gap-1 text-[10px] font-bold ${movement.className}`}
+        className={`inline-flex items-center gap-1 text-caption-2 font-semibold ${movement.className}`}
       >
         <Icon className="w-3 h-3" />
         {movement.label}
@@ -571,9 +573,9 @@ const SectionsTab = ({ data, actions }) => {
   };
   const renderSectionLeaderRows = (leaders) => (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+      <table className="w-full text-caption-1">
         <thead>
-          <tr className="border-b border-slate-100 dark:border-slate-700">
+          <tr className="border-b border-separator/60 dark:border-white/[0.08]">
             {[
               'Rank',
               'Section Leader',
@@ -587,7 +589,7 @@ const SectionsTab = ({ data, actions }) => {
             ].map((h, i) => (
               <th
                 key={h}
-                className={`py-2 px-2 text-[9px] font-bold uppercase text-slate-400 ${i === 1 || i === 8 ? 'text-left' : 'text-right'} whitespace-nowrap`}
+                className={`py-2 px-2 text-caption-2 font-semibold uppercase text-tertiary-label ${i === 1 || i === 8 ? 'text-left' : 'text-right'} whitespace-nowrap`}
               >
                 {h}
               </th>
@@ -608,12 +610,12 @@ const SectionsTab = ({ data, actions }) => {
             return (
               <tr
                 key={leader.leader_id || leader.leader_name || i}
-                className="border-b border-slate-50 dark:border-slate-700/50"
+                className="border-b border-separator/50 dark:border-white/[0.08]"
               >
-                <td className="py-2 px-2 text-right font-bold text-slate-500">
+                <td className="py-2 px-2 text-right font-semibold text-secondary-label">
                   #{leader.rank || i + 1}
                 </td>
-                <td className="py-2 px-2 font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                <td className="py-2 px-2 font-semibold text-label whitespace-nowrap">
                   {leader.leader_name}
                 </td>
                 <td className="py-2 px-2 text-right text-emerald-600">{leader.active_members}</td>
@@ -630,7 +632,7 @@ const SectionsTab = ({ data, actions }) => {
                     {R(leader.attendance_rate)}%
                   </Badge>
                 </td>
-                <td className="py-2 px-2 text-right font-bold">{R(leader.retention_rate)}%</td>
+                <td className="py-2 px-2 text-right font-semibold">{R(leader.retention_rate)}%</td>
                 <td className="py-2 px-2 text-right">
                   <Badge
                     variant={
@@ -648,13 +650,13 @@ const SectionsTab = ({ data, actions }) => {
                 <td className="py-2 px-2 text-right">
                   <Badge variant={leader.status.variant}>{leader.status.label}</Badge>
                 </td>
-                <td className="py-2 px-2 text-left min-w-[180px] text-slate-500">{aiText}</td>
+                <td className="py-2 px-2 text-left min-w-[180px] text-secondary-label">{aiText}</td>
               </tr>
             );
           })}
           {leaders.length === 0 && (
             <tr>
-              <td colSpan="9" className="py-6 text-center text-slate-400">
+              <td colSpan="9" className="py-6 text-center text-tertiary-label">
                 No section leaders assigned or no leader attendance data found for this section.
               </td>
             </tr>
@@ -667,9 +669,9 @@ const SectionsTab = ({ data, actions }) => {
   return (
     <div className="space-y-6">
       {/* Period Selection Controls */}
-      <div className="p-3 border-b border-slate-100 dark:border-slate-700">
+      <div className="p-3 border-b border-separator/60 dark:border-white/[0.08]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <p className="text-[10px] text-slate-500 font-medium">Period comparison</p>
+          <p className="text-caption-2 text-secondary-label font-medium">Period comparison</p>
           <div className="flex flex-wrap items-center gap-1">
             {[
               { id: 'week', label: 'This Week vs Last Week' },
@@ -681,10 +683,10 @@ const SectionsTab = ({ data, actions }) => {
               <button
                 key={p.id}
                 onClick={() => setSecPeriod(p.id)}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all ${
+                className={`text-caption-2 font-semibold px-3 py-1.5 rounded-lg transition-all ${
                   secPeriod === p.id
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800'
+                    ? 'bg-primary-600 text-white shadow-card'
+                    : 'text-secondary-label hover:bg-system-gray-4 dark:hover:bg-white/[0.04]'
                 }`}
               >
                 {p.label}
@@ -694,53 +696,53 @@ const SectionsTab = ({ data, actions }) => {
         </div>
 
         {secPeriod === 'custom' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-750">
-            <div className="space-y-2 p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-separator/60 dark:border-white/[0.08]">
+            <div className="space-y-2 p-3 rounded-xl bg-system-grouped-background/60 dark:bg-white/[0.03] border border-separator/60 dark:border-white/[0.08]">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Period 1 (Current Period)
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[9px] text-slate-400">Start Date</label>
+                  <label className="text-caption-2 text-tertiary-label">Start Date</label>
                   <input
                     type="date"
                     value={secP1Start}
                     onChange={(e) => setSecP1Start(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 text-slate-900 dark:text-white"
+                    className="w-full text-caption-1 rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-1.5 text-label"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-slate-400">End Date</label>
+                  <label className="text-caption-2 text-tertiary-label">End Date</label>
                   <input
                     type="date"
                     value={secP1End}
                     onChange={(e) => setSecP1End(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 text-slate-900 dark:text-white"
+                    className="w-full text-caption-1 rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-1.5 text-label"
                   />
                 </div>
               </div>
             </div>
-            <div className="space-y-2 p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-800">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="space-y-2 p-3 rounded-xl bg-system-grouped-background/60 dark:bg-white/[0.03] border border-separator/60 dark:border-white/[0.08]">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Period 2 (Comparison Period)
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[9px] text-slate-400">Start Date</label>
+                  <label className="text-caption-2 text-tertiary-label">Start Date</label>
                   <input
                     type="date"
                     value={secP2Start}
                     onChange={(e) => setSecP2Start(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 text-slate-900 dark:text-white"
+                    className="w-full text-caption-1 rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-1.5 text-label"
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] text-slate-400">End Date</label>
+                  <label className="text-caption-2 text-tertiary-label">End Date</label>
                   <input
                     type="date"
                     value={secP2End}
                     onChange={(e) => setSecP2End(e.target.value)}
-                    className="w-full text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1.5 text-slate-900 dark:text-white"
+                    className="w-full text-caption-1 rounded-lg border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-1.5 text-label"
                   />
                 </div>
               </div>
@@ -751,14 +753,14 @@ const SectionsTab = ({ data, actions }) => {
 
       {/* Loaders and error states */}
       {secLoading && (
-        <div className="flex items-center justify-center p-12 text-slate-500 text-xs">
-          <RefreshCw className="w-4 h-4 mr-2 animate-spin text-indigo-500" />
+        <div className="flex items-center justify-center p-12 text-secondary-label text-caption-1">
+          <RefreshCw className="w-4 h-4 mr-2 animate-spin text-primary-600" />
           Loading Section Intelligence & Performance metrics...
         </div>
       )}
 
       {secError && (
-        <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs dark:bg-rose-950/20 dark:border-rose-900/30 dark:text-rose-400">
+        <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-caption-1 dark:bg-rose-950/20 dark:border-rose-900/30 dark:text-rose-400">
           <AlertTriangle className="w-4 h-4 inline mr-2 text-rose-600" />
           {secError}
         </div>
@@ -769,31 +771,31 @@ const SectionsTab = ({ data, actions }) => {
           {/* Key Highlights — 4 primary KPIs, 3 secondary on toggle */}
           <div className="space-y-2">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className={`rounded-2xl border p-4 shadow-sm ${healthColor}`}>
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500/80">
+              <div className={`rounded-2xl border p-4 shadow-card ${healthColor}`}>
+                <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label/80">
                   Roster Health
                 </p>
-                <p className="text-2xl font-black mt-1">
+                <p className="text-2xl font-semibold mt-1">
                   {avgHealthScore}
-                  <span className="text-xs font-semibold">/100</span>
+                  <span className="text-caption-1 font-semibold">/100</span>
                 </p>
                 <div className="mt-2">
                   <Badge variant={healthBadge}>{healthStatus}</Badge>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-caption-2 text-tertiary-label mt-1">
                   Average section performance across all metrics
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4 shadow-card">
+                <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                   Performance Leader
                 </p>
-                <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">
+                <p className="text-subheadline font-semibold text-label truncate mt-1">
                   {bestSection?.name || '—'}
                 </p>
                 <p
-                  className="text-xs mt-0.5"
+                  className="text-caption-1 mt-0.5"
                   style={{ color: bestSection?.performance_score >= 75 ? '#10b981' : '#f59e0b' }}
                 >
                   {bestSection?.performance_score || 0} / 100 score ·{' '}
@@ -801,26 +803,26 @@ const SectionsTab = ({ data, actions }) => {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4 shadow-card">
+                <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                   Growth Leader
                 </p>
-                <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">
+                <p className="text-subheadline font-semibold text-label truncate mt-1">
                   {fastestGrowing?.name || '—'}
                 </p>
-                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">
+                <p className="text-caption-1 text-primary-700 dark:text-primary-300 font-semibold mt-0.5">
                   +{fastestGrowing?.new_members || 0} new members added
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-red-200/60 bg-red-50/50 dark:bg-red-950/15 dark:border-red-900/30 p-4 shadow-sm">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-red-600/80">
+              <div className="rounded-2xl border border-red-200/60 bg-red-50/50 dark:bg-red-950/15 dark:border-red-900/30 p-4 shadow-card">
+                <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-red-600/80">
                   Requires Review
                 </p>
-                <p className="text-base font-bold text-red-900 dark:text-red-400 truncate mt-1">
+                <p className="text-subheadline font-semibold text-red-900 dark:text-red-400 truncate mt-1">
                   {attentionSection?.name || '—'}
                 </p>
-                <p className="text-xs text-red-600 dark:text-red-400/80 mt-0.5">
+                <p className="text-caption-1 text-red-600 dark:text-red-400/80 mt-0.5">
                   {attentionSection?.performance_score || 0} / 100 score ·{' '}
                   {R(attentionSection?.attendance_rate)}% attendance
                 </p>
@@ -829,7 +831,7 @@ const SectionsTab = ({ data, actions }) => {
 
             <button
               onClick={() => setShowExtraKPIs(!showExtraKPIs)}
-              className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+              className="text-caption-2 font-semibold text-primary-700 dark:text-primary-300 hover:underline flex items-center gap-1"
             >
               {showExtraKPIs ? (
                 <ChevronUp className="w-3 h-3" />
@@ -843,39 +845,39 @@ const SectionsTab = ({ data, actions }) => {
 
             {showExtraKPIs && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4 shadow-card">
+                  <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                     Most Improved
                   </p>
-                  <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">
+                  <p className="text-subheadline font-semibold text-label truncate mt-1">
                     {mostImproved?.name || '—'}
                   </p>
                   {mostImproved && (
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                    <p className="text-caption-1 text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
                       +{R((mostImproved.attendance_rate || 0) - (mostImproved.prev_rate || 0))}%
                       rate improvement
                     </p>
                   )}
                 </div>
-                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4 shadow-card">
+                  <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                     Retention Leader
                   </p>
-                  <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">
+                  <p className="text-subheadline font-semibold text-label truncate mt-1">
                     {highestRetention?.name || '—'}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-caption-1 text-secondary-label mt-0.5">
                     {R(highestRetention?.retention_rate)}% active retention
                   </p>
                 </div>
-                <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4 shadow-card">
+                  <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                     Consistency Leader
                   </p>
-                  <p className="text-base font-bold text-slate-950 dark:text-white truncate mt-1">
+                  <p className="text-subheadline font-semibold text-label truncate mt-1">
                     {mostConsistent?.name || '—'}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  <p className="text-caption-1 text-secondary-label mt-0.5">
                     {mostConsistent?.consistency_score}% stability index
                   </p>
                 </div>
@@ -884,22 +886,20 @@ const SectionsTab = ({ data, actions }) => {
           </div>
 
           {/* Decision Support — merged insights + actions */}
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10">
+          <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] shadow-card overflow-hidden">
+            <div className="p-4 border-b border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04]">
               <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4 text-indigo-500" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Decision Support
-                </h3>
-                <span className="text-[10px] text-slate-400 font-medium ml-1">
+                <Brain className="w-4 h-4 text-primary-600" />
+                <h3 className="text-footnote font-semibold text-label">Decision Support</h3>
+                <span className="text-caption-2 text-tertiary-label font-medium ml-1">
                   · {execInsights.length} insights · {actionRecommendations.length} actions
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 mt-0.5">
+              <p className="text-caption-2 text-tertiary-label mt-0.5">
                 AI-powered analysis with prioritized recommendations for leadership action
               </p>
             </div>
-            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+            <div className="divide-y divide-separator/50 dark:divide-white/[0.06]">
               {execInsights.map((ins, i) => {
                 const Icon = ins.icon || Info;
                 const typeClass =
@@ -918,11 +918,11 @@ const SectionsTab = ({ data, actions }) => {
                             ? '#f43f5e'
                             : ins.type === 'success'
                               ? '#10b981'
-                              : '#6366f1'
+                              : '#14a896'
                       }}
                     />
                     <p
-                      className="text-[11px] leading-relaxed text-slate-700 dark:text-slate-300"
+                      className="text-caption-1 leading-relaxed text-secondary-label"
                       dangerouslySetInnerHTML={{
                         __html: escapeHtml(ins.text).replace(
                           /\*\*(.*?)\*\*/g,
@@ -933,7 +933,7 @@ const SectionsTab = ({ data, actions }) => {
                   </div>
                 );
               })}
-              <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
+              <div className="divide-y divide-separator/50 dark:divide-white/[0.06]">
                 {actionRecommendations.map((act, i) => {
                   const borderColor =
                     act.priority === 'high'
@@ -946,25 +946,25 @@ const SectionsTab = ({ data, actions }) => {
                       <div
                         className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${act.priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : act.priority === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'}`}
                       >
-                        <span className="text-[8px] font-black">
+                        <span className="text-caption-2 font-semibold">
                           {act.priority === 'high' ? '!' : act.priority === 'medium' ? '→' : '✓'}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span
-                            className={`text-[8px] font-black uppercase px-1 py-0.5 rounded ${act.priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : act.priority === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}
+                            className={`text-caption-2 font-semibold uppercase px-1 py-0.5 rounded ${act.priority === 'high' ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' : act.priority === 'medium' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-system-fill text-secondary-label dark:bg-white/[0.06] dark:text-tertiary-label'}`}
                           >
                             {act.priority}
                           </span>
-                          <span className="text-[9px] font-semibold text-slate-400 uppercase">
+                          <span className="text-caption-2 font-semibold text-tertiary-label uppercase">
                             {act.category}
                           </span>
-                          <span className="text-[11px] font-bold text-slate-900 dark:text-white">
+                          <span className="text-caption-1 font-semibold text-label">
                             {act.title}
                           </span>
                         </div>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <p className="text-caption-2 text-secondary-label mt-0.5">
                           {act.description}
                         </p>
                       </div>
@@ -976,13 +976,13 @@ const SectionsTab = ({ data, actions }) => {
           </div>
 
           {/* 360-degree Section Performance Dashboard */}
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] shadow-card overflow-hidden">
+            <div className="p-4 border-b border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04] flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="text-footnote font-semibold text-label">
                   360-degree Section Performance Dashboard
                 </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
+                <p className="text-caption-2 text-tertiary-label mt-0.5">
                   Each section contains head leader, section leaders, member intelligence,
                   retention, follow-up, AI insights, and immediate actions.
                 </p>
@@ -990,7 +990,7 @@ const SectionsTab = ({ data, actions }) => {
               <Badge variant="info">{sectionIntelligence.length} Sections Analyzed</Badge>
             </div>
 
-            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+            <div className="divide-y divide-separator/50 dark:divide-white/[0.06]">
               {sectionIntelligence.map((item, idx) => {
                 const { section, headLeader, sectionLeaders, sectionStreaks } = item;
                 const isOpen = expandedSectionId === (section.id || section.name);
@@ -1001,34 +1001,34 @@ const SectionsTab = ({ data, actions }) => {
                   <div
                     key={section.id || section.name}
                     id={`section-card-${section.id || section.name}`}
-                    className="bg-white dark:bg-slate-800 scroll-mt-4"
+                    className="bg-secondary-system-grouped-background scroll-mt-4"
                   >
                     <button
                       type="button"
                       onClick={() => toggleSection(section.id || section.name)}
-                      className="w-full p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-left hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors"
+                      className="w-full p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-left hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03] transition-colors"
                     >
                       <div className="flex items-start gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-black shrink-0">
+                        <div className="w-11 h-11 rounded-xl bg-primary-500/15 dark:bg-primary-500/15 text-primary-700 dark:text-primary-300 flex items-center justify-center font-semibold shrink-0">
                           {section.rank || idx + 1}
                         </div>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-sm font-black text-slate-950 dark:text-white truncate">
+                            <h4 className="text-footnote font-semibold text-label truncate">
                               {section.name}
                             </h4>
                             <Badge variant={item.status.variant}>{item.status.label}</Badge>
                             <span
-                              className={`inline-flex items-center gap-1 text-[10px] font-bold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                              className={`inline-flex items-center gap-1 text-caption-2 font-semibold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
                             >
                               <MovementIcon className="w-3 h-3" />
                               {diff >= 0 ? '+' : ''}
                               {R(diff)}% attendance movement
                             </span>
                           </div>
-                          <p className="text-[10px] text-slate-500 mt-1">
+                          <p className="text-caption-2 text-secondary-label mt-1">
                             Head Leader:{' '}
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">
+                            <span className="font-semibold text-secondary-label">
                               {headLeader?.leader_name || 'Not assigned'}
                             </span>{' '}
                             • {sectionLeaders.length} section leaders • {section.member_count || 0}{' '}
@@ -1106,13 +1106,13 @@ const SectionsTab = ({ data, actions }) => {
                               e.stopPropagation();
                               navigate(`/admin/sections?profile=${section.id}`);
                             }}
-                            className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 text-[10px] font-bold text-indigo-600 dark:text-indigo-300 flex items-center gap-1 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                            className="px-2.5 py-1 rounded-lg bg-primary-500/10 dark:bg-primary-500/15 border border-primary-500/25 dark:border-primary-500/25 text-caption-2 font-semibold text-primary-700 dark:text-primary-300 flex items-center gap-1 hover:bg-primary-500/15 dark:hover:bg-primary-500/15 transition-colors"
                             title="View full section profile"
                           >
                             <Layers className="w-3 h-3" /> View Profile
                           </button>
                         )}
-                        <div className="text-slate-400">
+                        <div className="text-tertiary-label">
                           {isOpen ? (
                             <ChevronUp className="w-5 h-5" />
                           ) : (
@@ -1125,15 +1125,15 @@ const SectionsTab = ({ data, actions }) => {
                     {isOpen && (
                       <div className="px-4 pb-5 space-y-4">
                         {/* Sub-tab navigation */}
-                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700/50 p-0.5 rounded-xl w-fit">
+                        <div className="flex items-center gap-1 bg-system-fill/50 p-0.5 rounded-xl w-fit">
                           {['overview', 'leaders', 'members', 'insights'].map((tab) => (
                             <button
                               key={tab}
                               onClick={() => setSectionSubTab(tab)}
-                              className={`text-[10px] font-bold px-3 py-1.5 rounded-lg capitalize transition-all ${
+                              className={`text-caption-2 font-semibold px-3 py-1.5 rounded-lg capitalize transition-all ${
                                 sectionSubTab === tab
-                                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                                  ? 'bg-secondary-system-grouped-background text-label shadow-card'
+                                  : 'text-secondary-label hover:text-secondary-label dark:hover:text-tertiary-label'
                               }`}
                             >
                               {tab === 'overview' && (
@@ -1166,10 +1166,10 @@ const SectionsTab = ({ data, actions }) => {
 
                         {sectionSubTab === 'overview' && (
                           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                            <div className="rounded-2xl border border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04] p-4">
                               <div className="flex items-center gap-2 mb-3">
-                                <BarChart3 className="w-4 h-4 text-indigo-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                                <BarChart3 className="w-4 h-4 text-primary-600" />
+                                <h5 className="text-caption-1 font-semibold text-label">
                                   Section Statistics
                                 </h5>
                               </div>
@@ -1206,36 +1206,36 @@ const SectionsTab = ({ data, actions }) => {
                               </div>
                             </div>
 
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                            <div className="rounded-2xl border border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04] p-4">
                               <div className="flex items-center gap-2 mb-3">
                                 <Award className="w-4 h-4 text-amber-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                                <h5 className="text-caption-1 font-semibold text-label">
                                   Rankings
                                 </h5>
                               </div>
-                              <div className="space-y-2 text-xs">
+                              <div className="space-y-2 text-caption-1">
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Current Rank</span>
-                                  <span className="font-black">#{section.rank}</span>
+                                  <span className="text-secondary-label">Current Rank</span>
+                                  <span className="font-semibold">#{section.rank}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Previous Rank</span>
-                                  <span className="font-black">
+                                  <span className="text-secondary-label">Previous Rank</span>
+                                  <span className="font-semibold">
                                     #{item.previousRank || section.rank}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Movement</span>
+                                  <span className="text-secondary-label">Movement</span>
                                   {renderRankMovement(section.rank_change || 0)}
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Strongest Leader</span>
+                                  <span className="text-secondary-label">Strongest Leader</span>
                                   <span className="font-semibold text-right">
                                     {item.strongestLeader?.leader_name || '—'}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Needs Coaching</span>
+                                  <span className="text-secondary-label">Needs Coaching</span>
                                   <span className="font-semibold text-right">
                                     {item.weakestLeader?.leader_name || '—'}
                                   </span>
@@ -1243,16 +1243,16 @@ const SectionsTab = ({ data, actions }) => {
                               </div>
                             </div>
 
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                            <div className="rounded-2xl border border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04] p-4">
                               <div className="flex items-center gap-2 mb-3">
                                 <Shield className="w-4 h-4 text-emerald-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                                <h5 className="text-caption-1 font-semibold text-label">
                                   Head Leader
                                 </h5>
                               </div>
                               {headLeader ? (
-                                <div className="space-y-2 text-xs">
-                                  <p className="font-black text-slate-900 dark:text-white">
+                                <div className="space-y-2 text-caption-1">
+                                  <p className="font-semibold text-label">
                                     {headLeader.leader_name}
                                   </p>
                                   <div className="grid grid-cols-2 gap-2">
@@ -1279,14 +1279,16 @@ const SectionsTab = ({ data, actions }) => {
                                   </div>
                                 </div>
                               ) : (
-                                <p className="text-xs text-slate-400">No head leader record</p>
+                                <p className="text-caption-1 text-tertiary-label">
+                                  No head leader record
+                                </p>
                               )}
                             </div>
 
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                            <div className="rounded-2xl border border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04] p-4">
                               <div className="flex items-center gap-2 mb-3">
                                 <UserX className="w-4 h-4 text-rose-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                                <h5 className="text-caption-1 font-semibold text-label">
                                   Absence Intelligence
                                 </h5>
                               </div>
@@ -1320,12 +1322,12 @@ const SectionsTab = ({ data, actions }) => {
 
                         {sectionSubTab === 'leaders' && (
                           <div>
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 overflow-hidden">
-                              <div className="p-3 border-b border-slate-100 dark:border-slate-700">
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                            <div className="rounded-2xl border border-separator/60 dark:border-white/[0.08] bg-secondary-system-grouped-background overflow-hidden">
+                              <div className="p-3 border-b border-separator/60 dark:border-white/[0.08]">
+                                <h5 className="text-caption-1 font-semibold text-label">
                                   Section Leader Performance
                                 </h5>
-                                <p className="text-[10px] text-slate-400 mt-0.5">
+                                <p className="text-caption-2 text-tertiary-label mt-0.5">
                                   Metrics from assigned members, attendance, submissions, and
                                   follow-up records
                                 </p>
@@ -1336,10 +1338,10 @@ const SectionsTab = ({ data, actions }) => {
                         )}
 
                         {sectionSubTab === 'members' && (
-                          <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                          <div className="rounded-2xl border border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04] p-4">
                             <div className="flex items-center gap-2 mb-3">
                               <Heart className="w-4 h-4 text-rose-500" />
-                              <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                              <h5 className="text-caption-1 font-semibold text-label">
                                 Member Intelligence & Follow-up
                               </h5>
                             </div>
@@ -1347,10 +1349,10 @@ const SectionsTab = ({ data, actions }) => {
                               {sectionStreaks.slice(0, 8).map((member) => (
                                 <div
                                   key={member.member_id}
-                                  className="rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3"
+                                  className="rounded-xl bg-secondary-system-grouped-background border border-separator/60 dark:border-white/[0.08] p-3"
                                 >
                                   <div className="flex items-center justify-between gap-2">
-                                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                    <p className="text-caption-1 font-semibold text-label truncate">
                                       {member.full_name}
                                     </p>
                                     <Badge
@@ -1365,10 +1367,10 @@ const SectionsTab = ({ data, actions }) => {
                                       {member.current_streak}w
                                     </Badge>
                                   </div>
-                                  <p className="text-[10px] text-slate-500 mt-1">
+                                  <p className="text-caption-2 text-secondary-label mt-1">
                                     Last absent: {member.last_absent_date || 'Not recorded'}
                                   </p>
-                                  <p className="text-[10px] text-indigo-600 dark:text-indigo-300 mt-1">
+                                  <p className="text-caption-2 text-primary-700 dark:text-primary-300 mt-1">
                                     {member.current_streak >= 3
                                       ? 'Assign visit or pastoral call immediately.'
                                       : 'Leader phone call and prayer request check.'}
@@ -1376,7 +1378,9 @@ const SectionsTab = ({ data, actions }) => {
                                 </div>
                               ))}
                               {sectionStreaks.length === 0 && (
-                                <p className="text-xs text-slate-400">No active absentee streaks</p>
+                                <p className="text-caption-1 text-tertiary-label">
+                                  No active absentee streaks
+                                </p>
                               )}
                             </div>
                           </div>
@@ -1384,18 +1388,16 @@ const SectionsTab = ({ data, actions }) => {
 
                         {sectionSubTab === 'insights' && (
                           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                            <div className="rounded-2xl border border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04] p-4">
                               <div className="flex items-center gap-2 mb-3">
-                                <Brain className="w-4 h-4 text-indigo-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                                <Brain className="w-4 h-4 text-primary-600" />
+                                <h5 className="text-caption-1 font-semibold text-label">
                                   AI Executive Insights
                                 </h5>
                               </div>
-                              <div className="space-y-2 text-[10px] text-slate-600 dark:text-slate-300">
+                              <div className="space-y-2 text-caption-2 text-secondary-label">
                                 <p>
-                                  <span className="font-black text-slate-900 dark:text-white">
-                                    {section.name}
-                                  </span>{' '}
+                                  <span className="font-semibold text-label">{section.name}</span>{' '}
                                   is ranked #{section.rank} with a {item.sectionHealthScore}/100
                                   health score and {R(section.attendance_rate)}% attendance.
                                 </p>
@@ -1417,10 +1419,10 @@ const SectionsTab = ({ data, actions }) => {
                               </div>
                             </div>
 
-                            <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/20 p-4">
+                            <div className="rounded-2xl border border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04] p-4">
                               <div className="flex items-center gap-2 mb-3">
                                 <Target className="w-4 h-4 text-emerald-500" />
-                                <h5 className="text-xs font-black text-slate-900 dark:text-white">
+                                <h5 className="text-caption-1 font-semibold text-label">
                                   Recommended Actions
                                 </h5>
                               </div>
@@ -1428,14 +1430,12 @@ const SectionsTab = ({ data, actions }) => {
                                 {item.recommendations.map((rec, recIdx) => (
                                   <div
                                     key={recIdx}
-                                    className="flex gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-2"
+                                    className="flex gap-2 rounded-xl bg-secondary-system-grouped-background border border-separator/60 dark:border-white/[0.08] p-2"
                                   >
-                                    <span className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center text-[10px] font-black shrink-0">
+                                    <span className="w-5 h-5 rounded-full bg-primary-500/15 dark:bg-primary-500/20 text-primary-700 dark:text-primary-300 flex items-center justify-center text-caption-2 font-semibold shrink-0">
                                       {recIdx + 1}
                                     </span>
-                                    <p className="text-[10px] text-slate-600 dark:text-slate-300">
-                                      {rec}
-                                    </p>
+                                    <p className="text-caption-2 text-secondary-label">{rec}</p>
                                   </div>
                                 ))}
                               </div>
@@ -1451,15 +1451,15 @@ const SectionsTab = ({ data, actions }) => {
           </div>
 
           {/* Roster Rankings Table — core columns by default, toggle for extras */}
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/10">
+          <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] shadow-card overflow-hidden">
+            <div className="p-4 border-b border-separator/60 dark:border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-3 bg-system-grouped-background/60 dark:bg-white/[0.04]">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="text-footnote font-semibold text-label">
                   Roster Rankings & Comparisons
                 </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
+                <p className="text-caption-2 text-tertiary-label mt-0.5">
                   Click column headers to sort.{' '}
-                  <span className="text-indigo-600 dark:text-indigo-400 font-medium">
+                  <span className="text-primary-700 dark:text-primary-300 font-medium">
                     Click any row to expand the full section breakdown above
                   </span>{' '}
                   (members, leaders, AI insights, follow-up).
@@ -1468,7 +1468,7 @@ const SectionsTab = ({ data, actions }) => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowAllColumns(!showAllColumns)}
-                  className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                  className="text-caption-2 font-semibold text-primary-700 dark:text-primary-300 hover:underline flex items-center gap-1"
                 >
                   {showAllColumns ? (
                     <ChevronUp className="w-3 h-3" />
@@ -1478,13 +1478,13 @@ const SectionsTab = ({ data, actions }) => {
                   {showAllColumns ? 'Fewer columns' : 'All columns'}
                 </button>
                 <div className="relative w-full md:w-64">
-                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+                  <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-tertiary-label" />
                   <input
                     type="text"
                     placeholder="Search sections..."
                     value={secSearch}
                     onChange={(e) => setSecSearch(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full pl-9 pr-4 py-2 text-caption-1 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-label focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
               </div>
@@ -1493,8 +1493,8 @@ const SectionsTab = ({ data, actions }) => {
             <div className="overflow-x-auto">
               <table className="min-w-[800px] border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700/80">
-                    <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-500 text-center w-12">
+                  <tr className="bg-system-grouped-background/60 dark:bg-white/[0.03] border-b border-separator/60 dark:border-white/[0.08]">
+                    <th className="px-3 py-2 text-caption-2 font-semibold uppercase text-secondary-label text-center w-12">
                       Rank
                     </th>
                     {renderSortHeader('Section Name', 'name')}
@@ -1519,7 +1519,7 @@ const SectionsTab = ({ data, actions }) => {
                         {renderSortHeader('Y.Growth', 'yearly_growth', 'right')}
                         {renderSortHeader('Consistency %', 'consistency_score', 'right')}
                         {renderSortHeader('Follow-up %', 'follow_up_rate', 'right')}
-                        <th className="px-3 py-2 text-[9px] font-black uppercase text-slate-500 text-right">
+                        <th className="px-3 py-2 text-caption-2 font-semibold uppercase text-secondary-label text-right">
                           Prev Rank
                         </th>
                       </>
@@ -1533,7 +1533,7 @@ const SectionsTab = ({ data, actions }) => {
                     return (
                       <tr
                         key={row.id}
-                        className="border-b border-slate-50 dark:border-slate-750/30 hover:bg-slate-50/40 dark:hover:bg-slate-900/10 cursor-pointer transition-colors"
+                        className="border-b border-separator/50 dark:border-white/[0.08] hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
                         onClick={() => {
                           const secKey = row.id || row.name;
                           if (expandedSectionId !== secKey) {
@@ -1549,26 +1549,26 @@ const SectionsTab = ({ data, actions }) => {
                       >
                         <td className="px-3 py-2.5 text-center">
                           <span
-                            className={`text-[10px] font-black w-6 h-6 inline-flex items-center justify-center rounded-full ${
+                            className={`text-caption-2 font-semibold w-6 h-6 inline-flex items-center justify-center rounded-full ${
                               i === 0
                                 ? 'bg-amber-100 text-amber-800'
                                 : i === 1
-                                  ? 'bg-slate-200 text-slate-700'
+                                  ? 'bg-system-gray-4 text-secondary-label'
                                   : i === 2
                                     ? 'bg-orange-100 text-orange-800'
-                                    : 'text-slate-400'
+                                    : 'text-tertiary-label'
                             }`}
                           >
                             {row.rank}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 font-bold text-slate-900 dark:text-white text-xs whitespace-nowrap">
+                        <td className="px-3 py-2.5 font-semibold text-label text-caption-1 whitespace-nowrap">
                           {row.name}
                         </td>
-                        <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400 text-xs">
+                        <td className="px-3 py-2.5 text-right font-medium text-emerald-600 dark:text-emerald-400 text-caption-1">
                           {row.member_count || 0}
                         </td>
-                        <td className="px-3 py-2.5 text-right whitespace-nowrap text-xs">
+                        <td className="px-3 py-2.5 text-right whitespace-nowrap text-caption-1">
                           <Badge
                             variant={
                               row.attendance_rate >= 80
@@ -1581,10 +1581,10 @@ const SectionsTab = ({ data, actions }) => {
                             {R(row.attendance_rate)}%
                           </Badge>
                         </td>
-                        <td className="px-3 py-2.5 text-right font-bold text-xs text-slate-700 dark:text-slate-300">
+                        <td className="px-3 py-2.5 text-right font-semibold text-caption-1 text-secondary-label">
                           {R(row.retention_rate)}%
                         </td>
-                        <td className="px-3 py-2.5 text-right text-xs">
+                        <td className="px-3 py-2.5 text-right text-caption-1">
                           <Badge
                             variant={
                               row.performance_score >= 80
@@ -1597,71 +1597,71 @@ const SectionsTab = ({ data, actions }) => {
                             {row.performance_score}
                           </Badge>
                         </td>
-                        <td className="px-3 py-2.5 text-right whitespace-nowrap text-xs">
+                        <td className="px-3 py-2.5 text-right whitespace-nowrap text-caption-1">
                           {row.rank_change > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
+                            <span className="inline-flex items-center gap-0.5 text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">
                               <ArrowUp className="w-2.5 h-2.5" /> +{row.rank_change}
                             </span>
                           )}
                           {row.rank_change < 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded">
+                            <span className="inline-flex items-center gap-0.5 text-rose-600 font-semibold bg-rose-50 px-1.5 py-0.5 rounded">
                               <ArrowDown className="w-2.5 h-2.5" /> {row.rank_change}
                             </span>
                           )}
                           {row.rank_change === 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                            <span className="inline-flex items-center gap-0.5 text-tertiary-label bg-system-fill px-1.5 py-0.5 rounded">
                               <Minus className="w-2.5 h-2.5" />
                             </span>
                           )}
                         </td>
                         {showAllColumns && (
                           <>
-                            <td className="px-3 py-2.5 text-right font-medium text-slate-600 dark:text-slate-400 text-xs">
+                            <td className="px-3 py-2.5 text-right font-medium text-secondary-label text-caption-1">
                               {row.registered_members || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-medium text-rose-500 text-xs">
+                            <td className="px-3 py-2.5 text-right font-medium text-rose-500 text-caption-1">
                               {row.inactive_members || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-medium text-amber-600 text-xs">
+                            <td className="px-3 py-2.5 text-right font-medium text-amber-600 text-caption-1">
                               {row.visitors || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-medium text-indigo-500 text-xs">
+                            <td className="px-3 py-2.5 text-right font-medium text-primary-600 text-caption-1">
                               +{row.new_members || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-medium text-emerald-600 text-xs">
+                            <td className="px-3 py-2.5 text-right font-medium text-emerald-600 text-caption-1">
                               {row.total_present?.toLocaleString() || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-medium text-rose-500 text-xs">
+                            <td className="px-3 py-2.5 text-right font-medium text-rose-500 text-caption-1">
                               {row.total_absent?.toLocaleString() || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-medium text-amber-500 text-xs">
+                            <td className="px-3 py-2.5 text-right font-medium text-amber-500 text-caption-1">
                               {row.total_excused || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-medium text-slate-400 text-xs">
+                            <td className="px-3 py-2.5 text-right font-medium text-tertiary-label text-caption-1">
                               {row.prev_rate != null ? `${R(row.prev_rate)}%` : '—'}
                             </td>
                             <td
-                              className={`px-3 py-2.5 text-right font-bold text-xs whitespace-nowrap ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                              className={`px-3 py-2.5 text-right font-semibold text-caption-1 whitespace-nowrap ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
                             >
                               {diff >= 0 ? '+' : ''}
                               {R(diff)}%
                             </td>
-                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">
+                            <td className="px-3 py-2.5 text-right text-caption-1 font-semibold text-secondary-label">
                               +{row.weekly_growth || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">
+                            <td className="px-3 py-2.5 text-right text-caption-1 font-semibold text-secondary-label">
                               +{row.monthly_growth || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600 dark:text-slate-400">
+                            <td className="px-3 py-2.5 text-right text-caption-1 font-semibold text-secondary-label">
                               +{row.yearly_growth || 0}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-bold text-xs text-slate-700 dark:text-slate-300">
+                            <td className="px-3 py-2.5 text-right font-semibold text-caption-1 text-secondary-label">
                               {row.consistency_score}%
                             </td>
-                            <td className="px-3 py-2.5 text-right font-bold text-xs text-indigo-600 dark:text-indigo-400">
+                            <td className="px-3 py-2.5 text-right font-semibold text-caption-1 text-primary-700 dark:text-primary-300">
                               {row.follow_up_rate || 0}%
                             </td>
-                            <td className="px-3 py-2.5 text-right font-semibold text-slate-400 text-xs">
+                            <td className="px-3 py-2.5 text-right font-semibold text-tertiary-label text-caption-1">
                               #{prevRank}
                             </td>
                           </>
@@ -1675,13 +1675,13 @@ const SectionsTab = ({ data, actions }) => {
           </div>
 
           {/* Detailed Follow-up Intelligence Panel */}
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 shadow-sm space-y-4">
-            <div className="border-b border-slate-100 dark:border-slate-750 pb-2 flex justify-between items-center">
+          <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-4 shadow-card space-y-4">
+            <div className="border-b border-separator/60 dark:border-white/[0.08] pb-2 flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 font-sans">
+                <h3 className="text-footnote font-semibold text-label font-sans">
                   Roster Follow-up Intelligence
                 </h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">
+                <p className="text-caption-2 text-tertiary-label mt-0.5">
                   Consecutive absentees grouped by streak duration with specific visitation &
                   counseling actions
                 </p>
@@ -1691,36 +1691,34 @@ const SectionsTab = ({ data, actions }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               {/* 1 Week Streak */}
-              <div className="rounded-xl border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/20 p-3 space-y-3 flex flex-col justify-between">
+              <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill/20 p-3 space-y-3 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                    <span className="text-caption-2 font-semibold text-secondary-label">
                       1 Week Absent
                     </span>
                     <Badge variant="info">{streaks1W.length}</Badge>
                   </div>
-                  <div className="p-2 rounded bg-blue-50/60 dark:bg-blue-950/10 text-[9px] text-blue-700 dark:text-blue-400 font-medium">
+                  <div className="p-2 rounded bg-blue-50/60 dark:bg-blue-950/10 text-caption-2 text-blue-700 dark:text-blue-400 font-medium">
                     Action: Send automated wellness SMS check.
                   </div>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {streaks1W.slice(0, 5).map((m) => (
                       <div
                         key={m.member_id}
-                        className="text-[9px] p-1 border-b border-slate-100 dark:border-slate-850 truncate"
+                        className="text-caption-2 p-1 border-b border-separator/60 dark:border-white/[0.08] truncate"
                       >
-                        <span className="font-bold text-slate-850 dark:text-slate-200">
-                          {m.full_name}
-                        </span>
-                        <span className="text-slate-400 ml-1">({m.section_name})</span>
+                        <span className="font-semibold text-label">{m.full_name}</span>
+                        <span className="text-tertiary-label ml-1">({m.section_name})</span>
                       </div>
                     ))}
                     {streaks1W.length > 5 && (
-                      <p className="text-[8px] text-slate-400 text-center font-bold">
+                      <p className="text-caption-2 text-tertiary-label text-center font-semibold">
                         +{streaks1W.length - 5} more members
                       </p>
                     )}
                     {streaks1W.length === 0 && (
-                      <p className="text-[9px] text-slate-400 text-center py-2">
+                      <p className="text-caption-2 text-tertiary-label text-center py-2">
                         No active streaks
                       </p>
                     )}
@@ -1729,36 +1727,34 @@ const SectionsTab = ({ data, actions }) => {
               </div>
 
               {/* 2 Weeks Streak */}
-              <div className="rounded-xl border border-slate-200/50 dark:border-slate-700/50 bg-slate-50/20 p-3 space-y-3 flex flex-col justify-between">
+              <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill/20 p-3 space-y-3 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                    <span className="text-caption-2 font-semibold text-secondary-label">
                       2 Weeks Absent
                     </span>
                     <Badge variant="warning">{streaks2W.length}</Badge>
                   </div>
-                  <div className="p-2 rounded bg-amber-50/60 dark:bg-amber-950/10 text-[9px] text-amber-700 dark:text-amber-400 font-medium">
+                  <div className="p-2 rounded bg-amber-50/60 dark:bg-amber-950/10 text-caption-2 text-amber-700 dark:text-amber-400 font-medium">
                     Action: Section leader phone call for prayer request intake.
                   </div>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {streaks2W.slice(0, 5).map((m) => (
                       <div
                         key={m.member_id}
-                        className="text-[9px] p-1 border-b border-slate-100 dark:border-slate-850 truncate"
+                        className="text-caption-2 p-1 border-b border-separator/60 dark:border-white/[0.08] truncate"
                       >
-                        <span className="font-bold text-slate-850 dark:text-slate-200">
-                          {m.full_name}
-                        </span>
-                        <span className="text-slate-400 ml-1">({m.section_name})</span>
+                        <span className="font-semibold text-label">{m.full_name}</span>
+                        <span className="text-tertiary-label ml-1">({m.section_name})</span>
                       </div>
                     ))}
                     {streaks2W.length > 5 && (
-                      <p className="text-[8px] text-slate-400 text-center font-bold">
+                      <p className="text-caption-2 text-tertiary-label text-center font-semibold">
                         +{streaks2W.length - 5} more members
                       </p>
                     )}
                     {streaks2W.length === 0 && (
-                      <p className="text-[9px] text-slate-400 text-center py-2">
+                      <p className="text-caption-2 text-tertiary-label text-center py-2">
                         No active streaks
                       </p>
                     )}
@@ -1770,33 +1766,31 @@ const SectionsTab = ({ data, actions }) => {
               <div className="rounded-xl border border-red-200/40 dark:border-red-900/20 bg-red-50/10 p-3 space-y-3 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-red-700 dark:text-red-300">
+                    <span className="text-caption-2 font-semibold text-red-700 dark:text-red-300">
                       3 Weeks Absent
                     </span>
                     <Badge variant="danger">{streaks3W.length}</Badge>
                   </div>
-                  <div className="p-2 rounded bg-rose-50/60 dark:bg-rose-950/10 text-[9px] text-rose-700 dark:text-rose-400 font-medium">
+                  <div className="p-2 rounded bg-rose-50/60 dark:bg-rose-950/10 text-caption-2 text-rose-700 dark:text-rose-400 font-medium">
                     Action: Head Leader visitation assignment; queue pastoral care.
                   </div>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {streaks3W.slice(0, 5).map((m) => (
                       <div
                         key={m.member_id}
-                        className="text-[9px] p-1 border-b border-slate-100 dark:border-slate-850 truncate"
+                        className="text-caption-2 p-1 border-b border-separator/60 dark:border-white/[0.08] truncate"
                       >
-                        <span className="font-bold text-slate-850 dark:text-slate-200">
-                          {m.full_name}
-                        </span>
-                        <span className="text-slate-400 ml-1">({m.section_name})</span>
+                        <span className="font-semibold text-label">{m.full_name}</span>
+                        <span className="text-tertiary-label ml-1">({m.section_name})</span>
                       </div>
                     ))}
                     {streaks3W.length > 5 && (
-                      <p className="text-[8px] text-slate-400 text-center font-bold">
+                      <p className="text-caption-2 text-tertiary-label text-center font-semibold">
                         +{streaks3W.length - 5} more members
                       </p>
                     )}
                     {streaks3W.length === 0 && (
-                      <p className="text-[9px] text-slate-400 text-center py-2">
+                      <p className="text-caption-2 text-tertiary-label text-center py-2">
                         No active streaks
                       </p>
                     )}
@@ -1808,33 +1802,31 @@ const SectionsTab = ({ data, actions }) => {
               <div className="rounded-xl border border-red-300/40 dark:border-red-900/35 bg-red-50/15 p-3 space-y-3 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-red-800 dark:text-red-400">
+                    <span className="text-caption-2 font-semibold text-red-800 dark:text-red-400">
                       1 Month Absent
                     </span>
                     <Badge variant="danger">{streaks1M.length}</Badge>
                   </div>
-                  <div className="p-2 rounded bg-red-100/60 dark:bg-red-950/20 text-[9px] text-red-800 dark:text-red-300 font-medium">
+                  <div className="p-2 rounded bg-red-100/60 dark:bg-red-950/20 text-caption-2 text-red-800 dark:text-red-300 font-medium">
                     Action: Home visit by Sector Pastor; counseling requirement.
                   </div>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {streaks1M.slice(0, 5).map((m) => (
                       <div
                         key={m.member_id}
-                        className="text-[9px] p-1 border-b border-slate-100 dark:border-slate-850 truncate"
+                        className="text-caption-2 p-1 border-b border-separator/60 dark:border-white/[0.08] truncate"
                       >
-                        <span className="font-bold text-slate-850 dark:text-slate-200">
-                          {m.full_name}
-                        </span>
-                        <span className="text-slate-400 ml-1">({m.section_name})</span>
+                        <span className="font-semibold text-label">{m.full_name}</span>
+                        <span className="text-tertiary-label ml-1">({m.section_name})</span>
                       </div>
                     ))}
                     {streaks1M.length > 5 && (
-                      <p className="text-[8px] text-slate-400 text-center font-bold">
+                      <p className="text-caption-2 text-tertiary-label text-center font-semibold">
                         +{streaks1M.length - 5} more members
                       </p>
                     )}
                     {streaks1M.length === 0 && (
-                      <p className="text-[9px] text-slate-400 text-center py-2">
+                      <p className="text-caption-2 text-tertiary-label text-center py-2">
                         No active streaks
                       </p>
                     )}
@@ -1843,36 +1835,34 @@ const SectionsTab = ({ data, actions }) => {
               </div>
 
               {/* 3 Months Streak */}
-              <div className="rounded-xl border border-slate-300 dark:border-slate-650 bg-slate-200/20 p-3 space-y-3 flex flex-col justify-between">
+              <div className="rounded-xl border border-black/[0.12] dark:border-white/[0.08] bg-system-gray-4/20 p-3 space-y-3 flex flex-col justify-between">
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-850 dark:text-slate-200">
+                    <span className="text-caption-2 font-semibold text-label">
                       3 Months+ Inactive
                     </span>
                     <Badge variant="danger">{streaks3M.length}</Badge>
                   </div>
-                  <div className="p-2 rounded bg-slate-200 dark:bg-slate-700 text-[9px] text-slate-800 dark:text-slate-200 font-medium">
+                  <div className="p-2 rounded bg-system-gray-4 text-caption-2 text-label font-medium">
                     Action: Official inactivity review; wellness check visitation.
                   </div>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {streaks3M.slice(0, 5).map((m) => (
                       <div
                         key={m.member_id}
-                        className="text-[9px] p-1 border-b border-slate-100 dark:border-slate-850 truncate"
+                        className="text-caption-2 p-1 border-b border-separator/60 dark:border-white/[0.08] truncate"
                       >
-                        <span className="font-bold text-slate-850 dark:text-slate-200">
-                          {m.full_name}
-                        </span>
-                        <span className="text-slate-400 ml-1">({m.section_name})</span>
+                        <span className="font-semibold text-label">{m.full_name}</span>
+                        <span className="text-tertiary-label ml-1">({m.section_name})</span>
                       </div>
                     ))}
                     {streaks3M.length > 5 && (
-                      <p className="text-[8px] text-slate-400 text-center font-bold">
+                      <p className="text-caption-2 text-tertiary-label text-center font-semibold">
                         +{streaks3M.length - 5} more members
                       </p>
                     )}
                     {streaks3M.length === 0 && (
-                      <p className="text-[9px] text-slate-400 text-center py-2">
+                      <p className="text-caption-2 text-tertiary-label text-center py-2">
                         No inactive streaks
                       </p>
                     )}
@@ -1883,12 +1873,12 @@ const SectionsTab = ({ data, actions }) => {
           </div>
 
           {/* Section Leadership Analytics Table */}
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/10">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] shadow-card overflow-hidden">
+            <div className="p-4 border-b border-separator/60 dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.04]">
+              <h3 className="text-footnote font-semibold text-label">
                 Section Leadership Performance
               </h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">
+              <p className="text-caption-2 text-tertiary-label mt-0.5">
                 Head leader metrics including members managed, submission records, and overall
                 leadership score
               </p>
@@ -1897,7 +1887,7 @@ const SectionsTab = ({ data, actions }) => {
             <div className="overflow-x-auto">
               <table className="min-w-[800px] border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/60 dark:bg-slate-900/40 border-b border-slate-100 dark:border-slate-700/80">
+                  <tr className="bg-system-grouped-background/60 dark:bg-white/[0.03] border-b border-separator/60 dark:border-white/[0.08]">
                     {renderLeadSortHeader('Head Leader', 'leader_name')}
                     {renderLeadSortHeader('Section Managed', 'section_name')}
                     {renderLeadSortHeader('Members Managed', 'members_managed', 'right')}
@@ -1911,21 +1901,21 @@ const SectionsTab = ({ data, actions }) => {
                   {sortedHeadLeaders.map((lh) => (
                     <tr
                       key={lh.leader_id}
-                      className="border-b border-slate-50 dark:border-slate-750/30 hover:bg-slate-50/40 dark:hover:bg-slate-900/10 cursor-pointer transition-colors"
+                      className="border-b border-separator/50 dark:border-white/[0.08] hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-2.5 font-bold text-slate-900 dark:text-white text-xs">
+                      <td className="px-4 py-2.5 font-semibold text-label text-caption-1">
                         {lh.leader_name}
                       </td>
-                      <td className="px-4 py-2.5 font-medium text-slate-500 text-xs">
+                      <td className="px-4 py-2.5 font-medium text-secondary-label text-caption-1">
                         {lh.section_name}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-slate-700 dark:text-slate-350 text-xs">
+                      <td className="px-4 py-2.5 text-right font-medium text-secondary-label dark:text-tertiary-label text-caption-1">
                         {lh.members_managed}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-slate-500 text-xs">
+                      <td className="px-4 py-2.5 text-right font-medium text-secondary-label text-caption-1">
                         {lh.leaders_supervised}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs">
+                      <td className="px-4 py-2.5 text-right text-caption-1">
                         <Badge
                           variant={
                             lh.overall_attendance >= 80
@@ -1938,7 +1928,7 @@ const SectionsTab = ({ data, actions }) => {
                           {R(lh.overall_attendance)}%
                         </Badge>
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs">
+                      <td className="px-4 py-2.5 text-right text-caption-1">
                         <Badge
                           variant={
                             lh.submission_rate >= 90
@@ -1951,7 +1941,7 @@ const SectionsTab = ({ data, actions }) => {
                           {lh.submission_rate}%
                         </Badge>
                       </td>
-                      <td className="px-4 py-2.5 text-right text-xs">
+                      <td className="px-4 py-2.5 text-right text-caption-1">
                         <Badge
                           variant={
                             lh.performance_score >= 80
@@ -1968,7 +1958,10 @@ const SectionsTab = ({ data, actions }) => {
                   ))}
                   {sortedHeadLeaders.length === 0 && (
                     <tr>
-                      <td colSpan="7" className="text-center py-6 text-slate-400 text-xs">
+                      <td
+                        colSpan="7"
+                        className="text-center py-6 text-tertiary-label text-caption-1"
+                      >
                         No section leadership data available
                       </td>
                     </tr>
@@ -1981,8 +1974,8 @@ const SectionsTab = ({ data, actions }) => {
       )}
 
       {!secLoading && !secError && secRankings.length === 0 && (
-        <div className="text-center py-12 text-slate-400 text-sm">
-          <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+        <div className="text-center py-12 text-tertiary-label text-footnote">
+          <Layers className="w-8 h-8 mx-auto mb-2 text-tertiary-label" />
           No section attendance data available for the current period selection.
         </div>
       )}

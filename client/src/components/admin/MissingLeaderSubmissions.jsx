@@ -61,16 +61,16 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
   };
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-      <div className="space-y-5 border-b border-slate-200 p-5 dark:border-slate-700">
+    <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background shadow-card dark:border-white/[0.08]">
+      <div className="space-y-5 border-b border-black/[0.06] p-5 dark:border-white/[0.08]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <ClipboardList className="mt-1 h-5 w-5 shrink-0 text-rose-500" />
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              <h3 className="text-headline font-semibold text-label">
                 Missing Sunday Main Service submissions
               </h3>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-footnote text-secondary-label">
                 Active leaders with no submission for each service date in the last 90 days.
               </p>
             </div>
@@ -79,7 +79,7 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
             type="button"
             onClick={loadSubmissions}
             disabled={loading}
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-black/[0.06] px-3 text-footnote font-semibold text-secondary-label hover:bg-system-grouped-background/60 disabled:opacity-50 dark:border-white/[0.16] dark:text-label dark:hover:bg-white/[0.06]"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </button>
@@ -89,7 +89,7 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
           className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.2fr)_minmax(180px,0.85fr)_minmax(180px,0.85fr)_auto_auto] xl:items-end"
         >
           <label className="block min-w-0">
-            <span className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="mb-1 block text-caption-1 font-semibold text-secondary-label">
               Leader
             </span>
             <select
@@ -107,12 +107,12 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
             </select>
           </label>
           <label className="block min-w-0">
-            <span className="mb-1 flex justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="mb-1 flex justify-between text-caption-1 font-semibold text-secondary-label">
               <span>Date</span>
               {!dateFilter && <span className="font-normal">All dates</span>}
             </span>
             <span className="relative block min-w-0">
-              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
               <input
                 type="date"
                 value={dateFilter}
@@ -123,7 +123,7 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
             </span>
           </label>
           <label className="block min-w-0">
-            <span className="mb-1 block text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <span className="mb-1 block text-caption-1 font-semibold text-secondary-label">
               Section
             </span>
             <select
@@ -142,7 +142,7 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
           </label>
           <button
             type="submit"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 text-footnote font-semibold text-white shadow-card transition-colors hover:bg-primary-700"
           >
             <Search className="h-4 w-4" /> Search
           </button>
@@ -150,7 +150,7 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
             <button
               type="button"
               onClick={clearFilters}
-              className="h-10 cursor-pointer rounded-xl px-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+              className="h-10 cursor-pointer rounded-xl px-3 text-footnote font-semibold text-primary-700 hover:bg-primary-500/10 dark:text-primary-300 dark:hover:bg-primary-500/10"
             >
               Clear filters
             </button>
@@ -159,15 +159,13 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
       </div>
 
       {error ? (
-        <p className="p-6 text-sm text-rose-600 dark:text-rose-400">{error}</p>
+        <p className="p-6 text-footnote text-rose-600 dark:text-rose-400">{error}</p>
       ) : loading ? (
-        <p className="p-6 text-sm text-slate-500 dark:text-slate-400">
-          Loading missing submissions…
-        </p>
+        <p className="p-6 text-footnote text-secondary-label">Loading missing submissions…</p>
       ) : filteredRows.length ? (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/50 dark:text-slate-400">
+          <table className="w-full text-left text-footnote">
+            <thead className="bg-system-fill text-caption-1 uppercase tracking-[0.06em] text-secondary-label dark:bg-white/[0.03] dark:text-tertiary-label">
               <tr>
                 <th className="px-5 py-3">Leader</th>
                 <th className="px-5 py-3">Section</th>
@@ -176,25 +174,25 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
                 <th className="px-5 py-3">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+            <tbody className="divide-y divide-separator/50 dark:divide-white/[0.06]">
               {filteredRows.map((row) => (
                 <tr
                   key={`${row.leader_id}-${row.date}-${row.service_id}`}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                  className="hover:bg-system-fill/30"
                 >
                   <td className="px-5 py-3">
                     <button
                       type="button"
                       onClick={() => onViewLeader(row.leader_id)}
-                      className="font-semibold text-indigo-600 hover:underline dark:text-indigo-400"
+                      className="font-semibold text-primary-700 hover:underline dark:text-primary-300"
                     >
                       {row.leader_name}
                     </button>
                   </td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
+                  <td className="px-5 py-3 text-secondary-label">
                     {row.section_name || 'Unassigned'}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3 font-medium text-slate-800 dark:text-slate-200">
+                  <td className="whitespace-nowrap px-5 py-3 font-medium text-label">
                     {new Date(`${String(row.date || '').slice(0, 10)}T00:00:00`).toLocaleDateString(
                       undefined,
                       {
@@ -204,13 +202,13 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
                       }
                     )}
                   </td>
-                  <td className="px-5 py-3 text-slate-600 dark:text-slate-300">
+                  <td className="px-5 py-3 text-secondary-label">
                     <span className="inline-flex items-center gap-1.5">
-                      <CalendarDays className="h-4 w-4 text-slate-400" /> {row.service_name}
+                      <CalendarDays className="h-4 w-4 text-tertiary-label" /> {row.service_name}
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
+                    <span className="rounded-full bg-rose-100 px-2.5 py-1 text-caption-1 font-semibold text-rose-700 dark:bg-rose-900/40 dark:text-rose-300">
                       Not submitted
                     </span>
                   </td>
@@ -220,7 +218,7 @@ const MissingLeaderSubmissions = ({ leaders = [], sections = [], onViewLeader })
           </table>
         </div>
       ) : (
-        <div className="p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+        <div className="p-10 text-center text-footnote text-secondary-label">
           No missing Sunday Main Service submissions found for these filters.
         </div>
       )}

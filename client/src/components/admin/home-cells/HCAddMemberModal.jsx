@@ -75,18 +75,16 @@ const HCAddMemberModal = ({
       }}
     >
       <div className="modal-content max-w-lg">
-        <div className="flex items-center justify-between border-b border-slate-200 p-5 dark:border-slate-700">
+        <div className="flex items-center justify-between border-b border-black/[0.06] p-5 dark:border-white/[0.08]">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30">
               <UserPlus className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              Assign Cell Member
-            </h2>
+            <h2 className="text-subheadline font-semibold text-label">Assign Cell Member</h2>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+            className="rounded-lg p-1.5 text-tertiary-label hover:bg-system-fill"
           >
             <X className="h-4 w-4" />
           </button>
@@ -94,13 +92,13 @@ const HCAddMemberModal = ({
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {error && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-footnote text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
               {error}
             </div>
           )}
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
               Home Cell <span className="text-rose-500">*</span>
             </label>
             <select
@@ -119,12 +117,12 @@ const HCAddMemberModal = ({
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
               Church Member ID{' '}
-              <span className="text-slate-400">(optional — auto-fills details)</span>
+              <span className="text-tertiary-label">(optional — auto-fills details)</span>
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
               <input
                 list="hc-church-members"
                 className="input pl-9"
@@ -144,7 +142,7 @@ const HCAddMemberModal = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Full Name <span className="text-rose-500">*</span>
               </label>
               <input
@@ -160,7 +158,7 @@ const HCAddMemberModal = ({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Phone
               </label>
               <input
@@ -171,7 +169,7 @@ const HCAddMemberModal = ({
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Email
               </label>
               <input
@@ -183,7 +181,7 @@ const HCAddMemberModal = ({
               />
             </div>
             <div className="col-span-2">
-              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Address
               </label>
               <input

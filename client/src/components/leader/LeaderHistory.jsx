@@ -11,7 +11,7 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
       header: 'Date',
       sortable: true,
       render: (row) => (
-        <span className="font-medium text-slate-900 dark:text-slate-100">
+        <span className="font-medium text-label">
           {parseLocalDate(row.date).toLocaleDateString(undefined, {
             weekday: 'short',
             year: 'numeric',
@@ -26,7 +26,7 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
       header: 'Service',
       sortable: true,
       render: (row) => (
-        <Badge variant={row.service_id === 1 ? 'info' : 'primary'}>
+        <Badge variant={row.service_id === 1 ? 'info' : 'neutral'}>
           {row.service_name || 'Main Service'}
         </Badge>
       )
@@ -39,11 +39,11 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
             sortable: true,
             render: (row) => (
               <div>
-                <span className="font-semibold text-primary-600 dark:text-primary-400">
+                <span className="font-semibold text-primary-700 dark:text-primary-300">
                   {row.leader_name}
                 </span>
                 {row.submitted_by_name && row.submitted_by_name !== row.leader_name && (
-                  <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  <p className="text-caption-2 font-medium text-secondary-label">
                     submitted by {row.submitted_by_name}
                   </p>
                 )}
@@ -56,9 +56,7 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
       accessor: 'submitted_at',
       header: 'Time Submitted',
       render: (row) => (
-        <span className="text-slate-500 dark:text-slate-400">
-          {new Date(row.submitted_at).toLocaleString()}
-        </span>
+        <span className="text-secondary-label">{new Date(row.submitted_at).toLocaleString()}</span>
       )
     },
     {
@@ -66,9 +64,7 @@ const LeaderHistory = ({ history, historyLoading, isHead }) => {
       header: 'Records',
       sortable: true,
       render: (row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
-          {row.records_count}
-        </span>
+        <span className="font-semibold tabular-nums text-label">{row.records_count}</span>
       )
     },
     {

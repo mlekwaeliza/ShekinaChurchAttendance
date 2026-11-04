@@ -395,10 +395,10 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               <button
                 key={t.id}
                 onClick={() => handleTabChange(t.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-caption-1 font-semibold whitespace-nowrap transition-all ${
                   active
-                    ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-primary-600 text-white shadow-card shadow-primary-500/20'
+                    : 'text-secondary-label hover:bg-system-fill'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -413,8 +413,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {isTabActive('profile') && (
         <div className="space-y-6">
           <div className="card p-6">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
-              <Settings className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+            <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
+              <Settings className="w-4.5 h-4.5 text-tertiary-label" />
               Profile Settings
             </h3>
             <div className="space-y-5">
@@ -462,7 +462,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               </div>
 
               {/* Action row */}
-              <div className="flex flex-wrap gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+              <div className="flex flex-wrap gap-3 pt-2 border-t border-separator/60 dark:border-white/[0.08]">
                 <button onClick={triggerProfileUpload} className="btn-secondary">
                   <Camera className="w-4 h-4" />
                   Update Photo
@@ -472,8 +472,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
           </div>
 
           <div className="card p-6">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
-              <ShieldCheck className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+            <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
+              <ShieldCheck className="w-4.5 h-4.5 text-tertiary-label" />
               Two-Factor Authentication
             </h3>
             {twoFactorEnabled ? (
@@ -481,10 +481,10 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200/60 dark:border-emerald-700/60">
                   <div className="w-3 h-3 rounded-full bg-emerald-500" />
                   <div>
-                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                    <p className="text-footnote font-semibold text-emerald-800 dark:text-emerald-300">
                       2FA is enabled
                     </p>
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                    <p className="text-caption-1 text-emerald-600 dark:text-emerald-400">
                       {twoFactorStatus?.backupCodesRemaining || 0} backup codes remaining
                     </p>
                   </div>
@@ -519,7 +519,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               </div>
             ) : (
               <div className="space-y-4">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-footnote text-secondary-label">
                   Protect your account with an authenticator app. After enabling, you'll need a
                   6-digit code from your app to log in.
                 </p>
@@ -537,11 +537,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {isAdmin && isTabActive('people') && (
         <div className="space-y-6">
           <div className="card p-6">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
-              <Key className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+            <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
+              <Key className="w-4.5 h-4.5 text-tertiary-label" />
               Leader Password Reset
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+            <p className="text-footnote text-secondary-label mb-4">
               Create a temporary password that the leader can use to sign in immediately.
             </p>
             <div className="flex gap-3">
@@ -566,12 +566,12 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             </div>
             {resetResult && (
               <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">
+                <p className="text-footnote font-semibold text-amber-800 dark:text-amber-400 mb-2">
                   New Temporary Password
                 </p>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center justify-between bg-secondary-system-grouped-background dark:bg-white/[0.06] px-3 py-2 rounded-lg">
+                    <span className="text-footnote text-secondary-label">
                       Username: <strong>{resetResult.username}</strong>
                     </span>
                     <button
@@ -585,8 +585,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                       )}
                     </button>
                   </div>
-                  <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center justify-between bg-secondary-system-grouped-background dark:bg-white/[0.06] px-3 py-2 rounded-lg">
+                    <span className="text-footnote text-secondary-label">
                       Password: <strong>{resetResult.temp_password}</strong>
                     </span>
                     <button
@@ -602,13 +602,13 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                  Share these credentials securely and ask the leader to change their password
-                  after signing in.
+                <p className="text-caption-1 text-amber-600 dark:text-amber-400 mt-2">
+                  Share these credentials securely and ask the leader to change their password after
+                  signing in.
                 </p>
                 <button
                   onClick={() => setResetResult(null)}
-                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2"
+                  className="text-caption-1 text-secondary-label hover:text-secondary-label dark:hover:text-tertiary-label mt-2"
                 >
                   Dismiss
                 </button>
@@ -617,11 +617,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
           </div>
 
           <div className="card p-6">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+            <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
               <Trophy className="w-4.5 h-4.5 text-amber-500" />
               Recognition & Points Configuration
             </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+            <p className="text-footnote text-secondary-label mb-6">
               Configure how points are awarded to members. These points contribute to the yearly
               leaderboard.
             </p>
@@ -641,7 +641,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                   className="input w-full"
                   placeholder="e.g. 10"
                 />
-                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">
+                <p className="text-caption-2 text-tertiary-label mt-1 uppercase font-semibold">
                   Awarded for "Present" status
                 </p>
               </div>
@@ -656,7 +656,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                   className="input w-full"
                   placeholder="e.g. 5"
                 />
-                <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">
+                <p className="text-caption-2 text-tertiary-label mt-1 uppercase font-semibold">
                   Awarded for "Excused" status
                 </p>
               </div>
@@ -676,7 +676,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex justify-end pt-4 border-t border-separator/60 dark:border-white/[0.08]">
               <button
                 onClick={handleSaveSettings}
                 disabled={settingsLoading}
@@ -692,29 +692,31 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {/* Church Structure Settings */}
       {isAdmin && isTabActive('church-structure') && (
         <div className="card p-6">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+          <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
             <Layers className="w-4.5 h-4.5 text-primary-500" />
             Church Structure Configuration
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          <p className="text-footnote text-secondary-label mb-5">
             Manage section structure parameters, home cell rules, and department hierarchy defaults.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
-              <span className="text-xs font-semibold text-slate-400 uppercase">
+            <div className="p-4 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.03]">
+              <span className="text-caption-1 font-semibold text-tertiary-label uppercase">
                 Active Sections
               </span>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                {sections.length}
+              <p className="text-title-1 font-semibold text-label mt-1">{sections.length}</p>
+              <p className="text-caption-1 text-secondary-label mt-1">
+                Configured in Section Management
               </p>
-              <p className="text-xs text-slate-500 mt-1">Configured in Section Management</p>
             </div>
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30">
-              <span className="text-xs font-semibold text-slate-400 uppercase">Active Leaders</span>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-                {leaders.length}
+            <div className="p-4 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-grouped-background/60 dark:bg-white/[0.03]">
+              <span className="text-caption-1 font-semibold text-tertiary-label uppercase">
+                Active Leaders
+              </span>
+              <p className="text-title-1 font-semibold text-label mt-1">{leaders.length}</p>
+              <p className="text-caption-1 text-secondary-label mt-1">
+                Assigned to Sections & Cells
               </p>
-              <p className="text-xs text-slate-500 mt-1">Assigned to Sections & Cells</p>
             </div>
           </div>
         </div>
@@ -723,25 +725,23 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {/* Attendance & Service Settings */}
       {isAdmin && isTabActive('attendance') && (
         <div className="card p-6">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+          <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
             <Clock className="w-4.5 h-4.5 text-emerald-500" />
             Attendance & Service Settings
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          <p className="text-footnote text-secondary-label mb-5">
             Configure service attendance rules, submission deadline alerts, and automatic correction
             workflows.
           </p>
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-system-fill/40 border border-black/[0.06] dark:border-white/[0.08]">
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  Sunday Service Deadline
-                </p>
-                <p className="text-xs text-slate-500">
+                <p className="text-footnote font-semibold text-label">Sunday Service Deadline</p>
+                <p className="text-caption-1 text-secondary-label">
                   Require leaders to submit attendance within 24 hours
                 </p>
               </div>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full">
+              <span className="text-caption-1 font-semibold text-emerald-600 dark:text-emerald-400 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 rounded-full">
                 Active
               </span>
             </div>
@@ -752,11 +752,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {/* Evangelism Settings */}
       {isAdmin && isTabActive('evangelism') && (
         <div className="card p-6">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+          <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
             <Heart className="w-4.5 h-4.5 text-rose-500" />
             Evangelism & Outreach Settings
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          <p className="text-footnote text-secondary-label mb-5">
             Define monthly soul-winning goals, baptism verification thresholds, and follow-up SLAs.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -775,11 +775,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {/* Finance Settings */}
       {isAdmin && isTabActive('finance') && (
         <div className="card p-6">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+          <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
             <Banknote className="w-4.5 h-4.5 text-cyan-500" />
             Finance & Contribution Settings
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          <p className="text-footnote text-secondary-label mb-5">
             Configure financial reporting categories, tithes/offering rules, and currency formats.
           </p>
           <div className="space-y-4">
@@ -794,11 +794,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {/* Communication Settings */}
       {isAdmin && isTabActive('communication') && (
         <div className="card p-6">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
+          <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
             <Calendar className="w-4.5 h-4.5 text-purple-500" />
             Communication & Announcement Settings
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          <p className="text-footnote text-secondary-label mb-5">
             Configure default announcement expiry periods, mobile push notification defaults, and
             event categories.
           </p>
@@ -812,11 +812,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
       {/* Reporting & Audit Settings */}
       {isAdmin && isTabActive('reporting') && (
         <div className="card p-6">
-          <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-5 flex items-center gap-2">
-            <ShieldCheck className="w-4.5 h-4.5 text-indigo-500" />
+          <h3 className="text-base font-semibold text-label mb-5 flex items-center gap-2">
+            <ShieldCheck className="w-4.5 h-4.5 text-primary-600" />
             Reporting & Audit Log Retention
           </h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          <p className="text-footnote text-secondary-label mb-5">
             Set retention policies for audit logs and executive report export defaults.
           </p>
           <div>
@@ -831,61 +831,69 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
         <div className="space-y-6">
           <div className="card p-6">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Activity className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+              <h3 className="text-base font-semibold text-label flex items-center gap-2">
+                <Activity className="w-4.5 h-4.5 text-tertiary-label" />
                 System Health
               </h3>
               <button
                 onClick={loadSystemHealth}
                 disabled={healthLoading}
-                className="btn-secondary text-sm"
+                className="btn-secondary text-footnote"
               >
                 <RefreshCw className={`w-4 h-4 ${healthLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3 text-center">
-                <Database className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Database</p>
+              <div className="rounded-xl bg-system-fill/30 p-3 text-center">
+                <Database className="w-4 h-4 mx-auto mb-1 text-tertiary-label" />
+                <p className="text-caption-2 uppercase tracking-[0.06em] text-tertiary-label">
+                  Database
+                </p>
                 <p
-                  className={`text-sm font-bold ${healthStatus?.database?.status === 'connected' ? 'text-emerald-600' : 'text-slate-500'}`}
+                  className={`text-footnote font-semibold ${healthStatus?.database?.status === 'connected' ? 'text-emerald-600' : 'text-secondary-label'}`}
                 >
                   {healthStatus?.database?.status === 'connected'
                     ? 'Online'
                     : (healthStatus?.database?.status ?? 'Unknown')}
                 </p>
               </div>
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3 text-center">
-                <ShieldCheck className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Server</p>
+              <div className="rounded-xl bg-system-fill/30 p-3 text-center">
+                <ShieldCheck className="w-4 h-4 mx-auto mb-1 text-tertiary-label" />
+                <p className="text-caption-2 uppercase tracking-[0.06em] text-tertiary-label">
+                  Server
+                </p>
                 <p
-                  className={`text-sm font-bold ${healthStatus?.status === 'ok' ? 'text-emerald-600' : 'text-slate-500'}`}
+                  className={`text-footnote font-semibold ${healthStatus?.status === 'ok' ? 'text-emerald-600' : 'text-secondary-label'}`}
                 >
-                  {healthStatus?.status === 'ok'
-                    ? 'Healthy'
-                    : (healthStatus?.status ?? 'Unknown')}
+                  {healthStatus?.status === 'ok' ? 'Healthy' : (healthStatus?.status ?? 'Unknown')}
                 </p>
               </div>
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3 text-center">
-                <Clock className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Last Backup</p>
+              <div className="rounded-xl bg-system-fill/30 p-3 text-center">
+                <Clock className="w-4 h-4 mx-auto mb-1 text-tertiary-label" />
+                <p className="text-caption-2 uppercase tracking-[0.06em] text-tertiary-label">
+                  Last Backup
+                </p>
                 <p
-                  className={`text-sm font-bold ${backupStatus?.warning ? 'text-amber-600' : 'text-slate-900 dark:text-slate-100'}`}
+                  className={`text-footnote font-semibold ${backupStatus?.warning ? 'text-amber-600' : 'text-label'}`}
                 >
-                  {backupStatus?.last_backup_at ? fdatetime(backupStatus.last_backup_at) : 'Unknown'}
+                  {backupStatus?.last_backup_at
+                    ? fdatetime(backupStatus.last_backup_at)
+                    : 'Unknown'}
                 </p>
               </div>
-              <div className="rounded-xl bg-slate-50 dark:bg-slate-700/30 p-3 text-center">
-                <Activity className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-                <p className="text-[10px] uppercase tracking-wider text-slate-400">Uptime</p>
-                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              <div className="rounded-xl bg-system-fill/30 p-3 text-center">
+                <Activity className="w-4 h-4 mx-auto mb-1 text-tertiary-label" />
+                <p className="text-caption-2 uppercase tracking-[0.06em] text-tertiary-label">
+                  Uptime
+                </p>
+                <p className="text-footnote font-semibold text-label">
                   {healthStatus?.uptime ?? 'Unknown'}
                 </p>
               </div>
             </div>
             {backupStatus?.warning && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-3 flex items-center gap-1.5">
+              <p className="text-caption-1 text-amber-600 dark:text-amber-400 mt-3 flex items-center gap-1.5">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 {backupStatus.warning}
               </p>
@@ -893,8 +901,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
           </div>
           <div className="card p-6">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Users className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+              <h3 className="text-base font-semibold text-label flex items-center gap-2">
+                <Users className="w-4.5 h-4.5 text-tertiary-label" />
                 User Management
               </h3>
               <button
@@ -910,13 +918,13 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                     email: ''
                   });
                 }}
-                className="btn-primary text-sm"
+                className="btn-primary text-footnote"
               >
                 <UserPlus className="w-4 h-4" />
                 Add User
               </button>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+            <p className="text-footnote text-secondary-label mb-4">
               Manage system users and their roles. Create accounts for leaders, pastors,
               evangelists, and accountants.
             </p>
@@ -951,12 +959,12 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             {/* User Reset Result */}
             {userResetResult && (
               <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl">
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-400 mb-2">
+                <p className="text-footnote font-semibold text-amber-800 dark:text-amber-400 mb-2">
                   Credentials
                 </p>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center justify-between bg-secondary-system-grouped-background dark:bg-white/[0.06] px-3 py-2 rounded-lg">
+                    <span className="text-footnote text-secondary-label">
                       Username: <strong>{userResetResult.username}</strong>
                     </span>
                     <button
@@ -970,8 +978,8 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                       )}
                     </button>
                   </div>
-                  <div className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
+                  <div className="flex items-center justify-between bg-secondary-system-grouped-background dark:bg-white/[0.06] px-3 py-2 rounded-lg">
+                    <span className="text-footnote text-secondary-label">
                       Password: <strong>{userResetResult.temp_password}</strong>
                     </span>
                     <button
@@ -988,12 +996,12 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                <p className="text-caption-1 text-amber-600 dark:text-amber-400 mt-2">
                   Share these credentials securely.
                 </p>
                 <button
                   onClick={() => setUserResetResult(null)}
-                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2"
+                  className="text-caption-1 text-secondary-label hover:text-secondary-label dark:hover:text-tertiary-label mt-2"
                 >
                   Dismiss
                 </button>
@@ -1003,31 +1011,31 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             {/* Users Table */}
             {usersLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
-                <span className="ml-2 text-sm text-slate-500">Loading users...</span>
+                <Loader2 className="w-6 h-6 text-tertiary-label animate-spin" />
+                <span className="ml-2 text-footnote text-secondary-label">Loading users...</span>
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="text-center py-8 text-sm text-slate-500 dark:text-slate-400">
+              <div className="text-center py-8 text-footnote text-secondary-label">
                 No users found.
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-footnote">
                   <thead>
-                    <tr className="border-b border-slate-200 dark:border-slate-700">
-                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">
+                    <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                      <th className="text-left py-3 px-3 font-semibold text-secondary-label">
                         User
                       </th>
-                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">
+                      <th className="text-left py-3 px-3 font-semibold text-secondary-label">
                         Role
                       </th>
-                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden sm:table-cell">
+                      <th className="text-left py-3 px-3 font-semibold text-secondary-label hidden sm:table-cell">
                         Section
                       </th>
-                      <th className="text-left py-3 px-3 font-semibold text-slate-600 dark:text-slate-400 hidden md:table-cell">
+                      <th className="text-left py-3 px-3 font-semibold text-secondary-label hidden md:table-cell">
                         Status
                       </th>
-                      <th className="text-right py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">
+                      <th className="text-right py-3 px-3 font-semibold text-secondary-label">
                         Actions
                       </th>
                     </tr>
@@ -1036,7 +1044,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                     {filteredUsers.map((u) => (
                       <tr
                         key={u.id}
-                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                        className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03]"
                       >
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-3">
@@ -1047,41 +1055,37 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                                 className="w-8 h-8 rounded-lg object-cover"
                               />
                             ) : (
-                              <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-xs font-bold text-primary-600 dark:text-primary-400">
+                              <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-caption-1 font-semibold text-primary-600 dark:text-primary-400">
                                 {u.full_name?.charAt(0)}
                               </div>
                             )}
                             <div>
-                              <p className="font-medium text-slate-900 dark:text-slate-100">
-                                {u.full_name}
-                              </p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">
-                                @{u.username}
-                              </p>
+                              <p className="font-medium text-label">{u.full_name}</p>
+                              <p className="text-caption-1 text-secondary-label">@{u.username}</p>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 px-3">
                           <span
-                            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${roleBadgeColor[u.role] || ''}`}
+                            className={`text-caption-1 font-semibold px-2.5 py-1 rounded-full ${roleBadgeColor[u.role] || ''}`}
                           >
                             {roleLabels[u.role] || u.role}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-slate-600 dark:text-slate-400 hidden sm:table-cell">
+                        <td className="py-3 px-3 text-secondary-label hidden sm:table-cell">
                           {u.section_name || '-'}
                         </td>
                         <td className="py-3 px-3 hidden md:table-cell">
                           {u.locked_until ? (
-                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                            <span className="text-caption-1 font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
                               Locked
                             </span>
                           ) : u.totp_enabled ? (
-                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            <span className="text-caption-1 font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                               2FA
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400">Active</span>
+                            <span className="text-caption-1 text-tertiary-label">Active</span>
                           )}
                         </td>
                         <td className="py-3 px-3">
@@ -1089,21 +1093,21 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                             <button
                               onClick={() => handleResetUserPassword(u.id)}
                               title="Reset Password"
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-amber-600"
+                              className="p-1.5 rounded-lg hover:bg-system-fill text-secondary-label hover:text-amber-600"
                             >
                               <Key className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setEditingUser({ ...u })}
                               title="Edit User"
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-primary-600"
+                              className="p-1.5 rounded-lg hover:bg-system-fill text-secondary-label hover:text-primary-600"
                             >
                               <Edit3 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setDeletingUser(u)}
                               title="Delete User"
-                              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-rose-600"
+                              className="p-1.5 rounded-lg hover:bg-system-fill text-secondary-label hover:text-rose-600"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -1115,26 +1119,28 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 </table>
               </div>
             )}
-            <div className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+            <div className="mt-3 text-caption-1 text-tertiary-label">
               {filteredUsers.length} of {users.length} users shown
             </div>
           </div>
 
           <div className="card overflow-hidden">
-            <div className="bg-gradient-to-r from-primary-600 to-primary-700 p-8 text-white">
-              <h3 className="text-lg font-bold mb-2">Data Import</h3>
-              <p className="text-primary-100 text-sm max-w-lg">
+            <div className="border-b border-separator/60 p-6 dark:border-white/[0.08]">
+              <h3 className="mb-2 text-headline font-semibold text-label">Data Import</h3>
+              <p className="max-w-lg text-footnote text-secondary-label">
                 Bulk provision sections, leaders, and members via CSV upload. This will
                 automatically create accounts and set up hierarchies.
               </p>
             </div>
             <div className="p-6">
-              <label className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-all cursor-pointer group">
-                <Upload className="w-10 h-10 text-slate-300 dark:text-slate-600 group-hover:text-primary-500 transition-colors mb-3" />
-                <span className="text-sm font-semibold text-slate-600 dark:text-slate-400 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+              <label className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-black/[0.06] dark:border-white/[0.08] rounded-xl hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50/30 dark:hover:bg-primary-900/10 transition-all cursor-pointer group">
+                <Upload className="w-10 h-10 text-tertiary-label dark:text-secondary-label group-hover:text-primary-500 transition-colors mb-3" />
+                <span className="text-footnote font-semibold text-secondary-label group-hover:text-primary-600 dark:group-hover:text-primary-400">
                   {uploading ? 'Uploading...' : 'Click to upload CSV file'}
                 </span>
-                <span className="text-xs text-slate-400 mt-1">Supports .csv format</span>
+                <span className="text-caption-1 text-tertiary-label mt-1">
+                  Supports .csv format
+                </span>
                 <input
                   type="file"
                   accept=".csv"
@@ -1146,34 +1152,34 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
             </div>
             {uploadResult && (
               <div className="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-xl">
-                <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
+                <p className="text-footnote font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
                   Upload Complete
                 </p>
-                <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-footnote">
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400">Sections:</span>{' '}
+                    <span className="text-secondary-label">Sections:</span>{' '}
                     <strong>{uploadResult.results.sectionsCreated}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400">Leaders:</span>{' '}
+                    <span className="text-secondary-label">Leaders:</span>{' '}
                     <strong>{uploadResult.results.leadersCreated}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 dark:text-slate-400">Members:</span>{' '}
+                    <span className="text-secondary-label">Members:</span>{' '}
                     <strong>{uploadResult.results.membersCreated}</strong>
                   </div>
                 </div>
                 {uploadResult.tempPasswords?.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
-                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
+                    <p className="text-footnote font-semibold text-emerald-800 dark:text-emerald-400 mb-2">
                       New Leader Credentials
                     </p>
                     {uploadResult.tempPasswords.map((cred, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between bg-white dark:bg-slate-700 px-3 py-2 rounded-lg mb-2"
+                        className="flex items-center justify-between bg-secondary-system-grouped-background dark:bg-white/[0.06] px-3 py-2 rounded-lg mb-2"
                       >
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                        <span className="text-footnote text-secondary-label">
                           <strong>{cred.username}</strong>: {cred.password}
                         </span>
                         <button
@@ -1194,10 +1200,10 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 )}
                 {uploadResult.results.errors?.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-700">
-                    <p className="text-sm font-semibold text-rose-700 dark:text-rose-400 mb-1">
+                    <p className="text-footnote font-semibold text-rose-700 dark:text-rose-400 mb-1">
                       Errors ({uploadResult.results.errors.length})
                     </p>
-                    <ul className="text-xs text-rose-600 dark:text-rose-400 space-y-1 max-h-32 overflow-y-auto">
+                    <ul className="text-caption-1 text-rose-600 dark:text-rose-400 space-y-1 max-h-32 overflow-y-auto">
                       {uploadResult.results.errors.map((err, i) => (
                         <li key={i}>{err}</li>
                       ))}
@@ -1206,7 +1212,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 )}
                 <button
                   onClick={() => setUploadResult(null)}
-                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 mt-2"
+                  className="text-caption-1 text-secondary-label hover:text-secondary-label dark:hover:text-tertiary-label mt-2"
                 >
                   Dismiss
                 </button>
@@ -1222,10 +1228,10 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
           <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-headline font-semibold text-label">
                   Two-Factor Authentication
                 </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                <p className="text-footnote text-secondary-label mt-0.5">
                   Scan the QR code with your authenticator app
                 </p>
               </div>
@@ -1262,9 +1268,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
                   <Shield className="w-4.5 h-4.5 text-rose-500" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  Disable 2FA
-                </h3>
+                <h3 className="text-headline font-semibold text-label">Disable 2FA</h3>
               </div>
               <button
                 onClick={() => {
@@ -1278,7 +1282,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               </button>
             </div>
             <div className="modal-body space-y-4">
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-footnote text-secondary-label">
                 Enter your password to confirm disabling two-factor authentication.
               </p>
               <input
@@ -1327,9 +1331,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
                   <UserPlus className="w-4.5 h-4.5 text-primary-500" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  Create New User
-                </h3>
+                <h3 className="text-headline font-semibold text-label">Create New User</h3>
               </div>
               <button
                 onClick={() => setShowCreateUser(false)}
@@ -1462,7 +1464,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                 <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
                   <Edit3 className="w-4.5 h-4.5 text-primary-500" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit User</h3>
+                <h3 className="text-headline font-semibold text-label">Edit User</h3>
               </div>
               <button
                 onClick={() => setEditingUser(null)}
@@ -1514,7 +1516,7 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
                   <option value="accountant">Accountant</option>
                 </select>
               </div>
-              <div className="text-xs text-slate-400 dark:text-slate-500">
+              <div className="text-caption-1 text-tertiary-label">
                 User: @{editingUser.username} | Section: {editingUser.section_name || 'N/A'} |
                 Created: {fdatetime(editingUser.created_at)}
               </div>
@@ -1549,15 +1551,11 @@ const SettingsView = ({ leaders, sections = [], loadCoreData, loadLeaders, showM
               <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
                 <AlertTriangle className="w-7 h-7 text-rose-500" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
-                Delete User?
-              </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
+              <h3 className="text-headline font-semibold text-label mb-2">Delete User?</h3>
+              <p className="text-footnote text-secondary-label mb-8">
                 This will permanently remove{' '}
-                <strong className="text-slate-800 dark:text-slate-200">
-                  {deletingUser.full_name}
-                </strong>{' '}
-                (@{deletingUser.username}).
+                <strong className="text-label">{deletingUser.full_name}</strong> (@
+                {deletingUser.username}).
                 {deletingUser.role === 'leader' && <br />}
                 {deletingUser.role === 'leader' && (
                   <span className="text-rose-600 font-medium">

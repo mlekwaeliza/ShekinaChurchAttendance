@@ -13,59 +13,58 @@ const ConflictResolutionModal = ({ conflicts, onResolve, onClose }) => {
       <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-system-orange/15">
+              <AlertTriangle className="h-5 w-5 text-amber-700 dark:text-system-orange" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Sync Conflicts</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <h3 className="text-headline font-semibold text-label">Sync Conflicts</h3>
+              <p className="text-footnote text-secondary-label">
                 {conflicts.length} record(s) could not be synced
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90">
+          <button
+            onClick={onClose}
+            className="btn-icon btn-ghost -mr-1.5 rounded-lg p-1.5"
+            aria-label="Close"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="modal-body space-y-4">
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            These attendance records were already submitted on the server. Choose how to handle each one.
+          <p className="text-footnote text-secondary-label">
+            These attendance records were already submitted on the server. Choose how to handle each
+            one.
           </p>
 
           {conflicts.map((conflict) => (
             <div
               key={conflict.id}
-              className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50"
+              className="rounded-xl bg-system-grouped-background/70 p-4 dark:bg-white/[0.03]"
             >
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4 text-slate-400" />
-                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {conflict.date}
-                </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">
+              <div className="mb-2 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-tertiary-label" />
+                <span className="text-footnote font-semibold text-label">{conflict.date}</span>
+                <span className="text-caption-1 text-tertiary-label">
                   — queued {formatDate(conflict.timestamp)}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+              <p className="mb-3 text-caption-1 text-secondary-label">
                 {conflict.attendance.length} members marked
               </p>
 
               <div className="flex gap-2">
                 <button
                   onClick={() => onResolve(conflict.id, 'discard')}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold
-                    bg-white dark:bg-slate-600 border-2 border-slate-200 dark:border-slate-500 text-slate-700 dark:text-slate-200
-                    hover:bg-slate-50 dark:hover:bg-slate-500 active:scale-[0.98] transition-all"
+                  className="btn-secondary flex flex-1 items-center justify-center gap-2"
                 >
-                  <Trash2 className="w-4 h-4 text-rose-500" />
+                  <Trash2 className="w-4 h-4 text-rose-700 dark:text-system-red" />
                   Discard
                 </button>
                 <button
                   onClick={() => onResolve(conflict.id, 'overwrite')}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold
-                    bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-glow-sm
-                    hover:from-primary-500 hover:to-primary-400 active:scale-[0.98] transition-all"
+                  className="btn-primary flex flex-1 items-center justify-center gap-2"
                 >
                   <Upload className="w-4 h-4" />
                   Overwrite Server

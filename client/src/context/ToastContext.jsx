@@ -151,21 +151,15 @@ function ToastViewport({ toasts, onDismiss, onPause, onResume }) {
   );
 }
 
-const ICONS = {
-  info: 'ⓘ',
-  success: '✓',
-  warning: '!',
-  error: '✕'
+const STYLES = {
+  base: 'pointer-events-auto w-full max-w-sm rounded-xl border shadow-card backdrop-blur-xl bg-white/95 border-black/[0.08] dark:bg-[#1c1c1e]/95 dark:border-white/[0.1]'
 };
 
-const STYLES = {
-  info: 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100',
-  success:
-    'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100',
-  warning:
-    'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100',
-  error:
-    'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100'
+const ACCENTS = {
+  info: 'bg-system-blue',
+  success: 'bg-system-green',
+  warning: 'bg-system-orange',
+  error: 'bg-system-red'
 };
 
 function ToastCard({ toast, onDismiss, onPause, onResume }) {
@@ -174,15 +168,20 @@ function ToastCard({ toast, onDismiss, onPause, onResume }) {
       role={toast.type === 'error' ? 'alert' : 'status'}
       onMouseEnter={() => onPause(toast.id)}
       onMouseLeave={() => onResume(toast.id)}
-      className={`pointer-events-auto w-full max-w-sm rounded-lg border shadow-lg backdrop-blur-sm transition-all animate-fade-in ${STYLES[toast.type] || STYLES.info}`}
+      className={`${STYLES.base} transition-all animate-fade-in`}
     >
-      <div className="flex items-start gap-3 p-3">
-        <div className="flex-shrink-0 text-lg leading-none" aria-hidden="true">
-          {ICONS[toast.type] || ICONS.info}
-        </div>
+      <div className="flex items-start gap-3 p-3.5">
+        <span
+          aria-hidden="true"
+          className={`mt-0.5 h-5 w-1 shrink-0 rounded-full ${ACCENTS[toast.type] || ACCENTS.info}`}
+        />
         <div className="min-w-0 flex-1">
-          {toast.title && <div className="text-sm font-semibold">{toast.title}</div>}
-          {toast.message && <div className="mt-0.5 text-sm opacity-90">{toast.message}</div>}
+          {toast.title && (
+            <div className="text-footnote font-semibold text-label">{toast.title}</div>
+          )}
+          {toast.message && (
+            <div className="mt-0.5 text-footnote text-secondary-label">{toast.message}</div>
+          )}
           {toast.action && (
             <button
               type="button"
@@ -190,7 +189,7 @@ function ToastCard({ toast, onDismiss, onPause, onResume }) {
                 toast.action.onClick?.();
                 onDismiss(toast.id);
               }}
-              className="mt-2 text-sm font-medium underline underline-offset-2 hover:no-underline"
+              className="mt-2 text-footnote font-medium text-primary-700 hover:text-primary-800 dark:text-primary-300"
             >
               {toast.action.label}
             </button>
@@ -200,9 +199,16 @@ function ToastCard({ toast, onDismiss, onPause, onResume }) {
           type="button"
           onClick={() => onDismiss(toast.id)}
           aria-label="Dismiss notification"
-          className="flex-shrink-0 rounded p-1 opacity-60 hover:opacity-100"
+          className="flex-shrink-0 rounded-md p-1 text-secondary-label transition-colors hover:bg-system-fill hover:text-label"
         >
-          ✕
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path
+              d="M2 2l8 8M10 2l-8 8"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
+          </svg>
         </button>
       </div>
     </div>

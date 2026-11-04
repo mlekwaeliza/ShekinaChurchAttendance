@@ -162,10 +162,8 @@ export default function ChildrenLeaderDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Children's Ministry
-        </h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h1 className="text-title-1 font-semibold text-label">Children's Ministry</h1>
+        <p className="mt-1 text-footnote text-secondary-label">
           Manage your children's ministry classes and attendance
         </p>
       </div>
@@ -219,8 +217,8 @@ export default function ChildrenLeaderDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+              <h3 className="mb-4 text-footnote font-semibold text-label">
                 Weekly Attendance Trend
               </h3>
               {dashboard.weeklyStats?.length > 0 ? (
@@ -260,41 +258,39 @@ export default function ChildrenLeaderDashboard() {
                   </BarChart>
                 </div>
               ) : (
-                <div className="flex h-64 items-center justify-center text-sm text-slate-400">
+                <div className="flex h-64 items-center justify-center text-footnote text-tertiary-label">
                   No attendance data yet
                 </div>
               )}
             </div>
-            <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-              <h3 className="mb-4 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                Attendance Summary
-              </h3>
+            <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+              <h3 className="mb-4 text-footnote font-semibold text-label">Attendance Summary</h3>
               <div className="flex flex-col items-center justify-center py-6">
-                <span className="text-5xl font-bold text-primary-600">
+                <span className="text-5xl font-semibold text-primary-600">
                   {dashboard.stats?.attendanceRate || 0}%
                 </span>
-                <span className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <span className="mt-1 text-footnote text-secondary-label">
                   Weekly attendance rate
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-3 mt-4">
                 <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
-                  <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                  <p className="text-headline font-semibold text-emerald-700 dark:text-emerald-300">
                     {dashboard.stats?.totalPresent || 0}
                   </p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400">Present</p>
+                  <p className="text-caption-1 text-emerald-600 dark:text-emerald-400">Present</p>
                 </div>
                 <div className="rounded-xl bg-rose-50 dark:bg-rose-900/20 p-3 text-center">
-                  <p className="text-lg font-bold text-rose-700 dark:text-rose-300">
+                  <p className="text-headline font-semibold text-rose-700 dark:text-rose-300">
                     {dashboard.stats?.totalAbsent || 0}
                   </p>
-                  <p className="text-xs text-rose-600 dark:text-rose-400">Absent</p>
+                  <p className="text-caption-1 text-rose-600 dark:text-rose-400">Absent</p>
                 </div>
                 <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-3 text-center">
-                  <p className="text-lg font-bold text-amber-700 dark:text-amber-300">
+                  <p className="text-headline font-semibold text-amber-700 dark:text-amber-300">
                     {dashboard.stats?.totalExcused || 0}
                   </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400">Excused</p>
+                  <p className="text-caption-1 text-amber-600 dark:text-amber-400">Excused</p>
                 </div>
               </div>
             </div>
@@ -305,9 +301,7 @@ export default function ChildrenLeaderDashboard() {
       {activeTab === 'children' && (
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Children in Your Ministry
-            </h2>
+            <h2 className="text-lg font-semibold text-label">Children in Your Ministry</h2>
             <select
               value={ageGroupFilter}
               onChange={(e) => setAgeGroupFilter(e.target.value)}
@@ -324,28 +318,28 @@ export default function ChildrenLeaderDashboard() {
           {childrenLoading ? (
             <LoadingSkeleton type="table" />
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead className="bg-slate-50 dark:bg-slate-800/50">
+            <div className="overflow-x-auto rounded-2xl border border-black/[0.06] dark:border-white/[0.08]">
+              <table className="min-w-full divide-y divide-separator/50 dark:divide-white/[0.06]">
+                <thead className="bg-system-fill">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Name
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Age Group
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Class
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Parent/Guardian
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Contact
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-separator/50 dark:divide-white/[0.06]">
                   {children.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="px-4 py-8">
@@ -360,21 +354,21 @@ export default function ChildrenLeaderDashboard() {
                     children.map((child) => (
                       <tr
                         key={child.id}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                        className="hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03] transition-colors"
                       >
-                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100">
+                        <td className="whitespace-nowrap px-4 py-3 text-footnote font-medium text-label">
                           {child.full_name}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                           {child.age_group || '—'}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                           {child.class_name || '—'}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                           {child.parent_guardian_name || '—'}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                           {child.parent_guardian_phone || '—'}
                         </td>
                       </tr>
@@ -390,9 +384,7 @@ export default function ChildrenLeaderDashboard() {
       {activeTab === 'attendance' && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Record Attendance
-            </h2>
+            <h2 className="text-lg font-semibold text-label">Record Attendance</h2>
             <div className="flex items-center gap-3">
               <select
                 value={ageGroupFilter}
@@ -407,9 +399,7 @@ export default function ChildrenLeaderDashboard() {
                 ))}
               </select>
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                  Date:
-                </label>
+                <label className="text-footnote font-medium text-secondary-label">Date:</label>
                 <input
                   type="date"
                   value={selectedDate}
@@ -421,11 +411,9 @@ export default function ChildrenLeaderDashboard() {
           </div>
 
           {classes.length === 0 ? (
-            <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-8 text-center shadow-sm">
-              <CalendarCheck className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                No classes available
-              </p>
+            <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-8 text-center shadow-card">
+              <CalendarCheck className="mx-auto h-10 w-10 text-tertiary-label dark:text-secondary-label" />
+              <p className="mt-2 text-footnote text-secondary-label">No classes available</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -434,24 +422,22 @@ export default function ChildrenLeaderDashboard() {
                 return (
                   <div
                     key={cls.id}
-                    className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 shadow-sm overflow-hidden"
+                    className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] shadow-card overflow-hidden"
                   >
-                    <div className="flex items-center gap-3 border-b border-slate-200/70 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-5 py-3">
+                    <div className="flex items-center gap-3 border-b border-black/[0.06] dark:border-white/[0.08] bg-system-fill px-5 py-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 dark:bg-primary-900/30">
                         <Baby className="h-4 w-4 text-primary-600 dark:text-primary-400" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                          {cls.name}
-                        </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <h3 className="text-footnote font-semibold text-label">{cls.name}</h3>
+                        <p className="text-caption-1 text-secondary-label">
                           {classChildren.length} children
                         </p>
                       </div>
                     </div>
                     <div className="p-4">
                       {classChildren.length === 0 ? (
-                        <p className="text-sm text-slate-400 text-center py-4">
+                        <p className="text-footnote text-tertiary-label text-center py-4">
                           No children in this class
                         </p>
                       ) : (
@@ -461,16 +447,16 @@ export default function ChildrenLeaderDashboard() {
                             return (
                               <div
                                 key={child.id}
-                                className="flex items-center justify-between rounded-xl border border-slate-200/70 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 px-4 py-3"
+                                className="flex items-center justify-between rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-grouped-background/60 px-4 py-3"
                               >
-                                <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                                <span className="text-footnote font-medium text-label">
                                   {child.full_name}
                                 </span>
                                 <div className="flex gap-1.5">
                                   <button
-                                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                                    className={`rounded-lg px-2.5 py-1 text-caption-1 font-semibold transition-all ${
                                       record?.status === 'present'
-                                        ? 'bg-emerald-500 text-white shadow-sm'
+                                        ? 'bg-emerald-500 text-white shadow-card'
                                         : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50'
                                     }`}
                                     onClick={() => recordAttendance(child.id, 'present')}
@@ -478,9 +464,9 @@ export default function ChildrenLeaderDashboard() {
                                     P
                                   </button>
                                   <button
-                                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                                    className={`rounded-lg px-2.5 py-1 text-caption-1 font-semibold transition-all ${
                                       record?.status === 'absent'
-                                        ? 'bg-rose-500 text-white shadow-sm'
+                                        ? 'bg-rose-500 text-white shadow-card'
                                         : 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-300 dark:hover:bg-rose-900/50'
                                     }`}
                                     onClick={() => recordAttendance(child.id, 'absent')}
@@ -488,9 +474,9 @@ export default function ChildrenLeaderDashboard() {
                                     A
                                   </button>
                                   <button
-                                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                                    className={`rounded-lg px-2.5 py-1 text-caption-1 font-semibold transition-all ${
                                       record?.status === 'excused'
-                                        ? 'bg-amber-500 text-white shadow-sm'
+                                        ? 'bg-amber-500 text-white shadow-card'
                                         : 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50'
                                     }`}
                                     onClick={() => recordAttendance(child.id, 'excused')}
@@ -514,31 +500,29 @@ export default function ChildrenLeaderDashboard() {
 
       {activeTab === 'history' && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Submission History
-          </h2>
+          <h2 className="text-lg font-semibold text-label">Submission History</h2>
           {historyLoading ? (
             <LoadingSkeleton type="table" />
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
-              <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead className="bg-slate-50 dark:bg-slate-800/50">
+            <div className="overflow-x-auto rounded-2xl border border-black/[0.06] dark:border-white/[0.08]">
+              <table className="min-w-full divide-y divide-separator/50 dark:divide-white/[0.06]">
+                <thead className="bg-system-fill">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Date
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Class
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Records
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <th className="px-4 py-3 text-left text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                       Submitted At
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-separator/50 dark:divide-white/[0.06]">
                   {history.length === 0 ? (
                     <tr>
                       <td colSpan="4" className="px-4 py-8">
@@ -553,20 +537,20 @@ export default function ChildrenLeaderDashboard() {
                     history.map((record, idx) => (
                       <tr
                         key={idx}
-                        className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                        className="hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03] transition-colors"
                       >
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
+                        <td className="whitespace-nowrap px-4 py-3 text-footnote text-label">
                           {new Date(record.date).toLocaleDateString()}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                           {record.class_name || 'All Classes'}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3">
-                          <span className="inline-flex items-center rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-medium text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
+                          <span className="inline-flex items-center rounded-full bg-primary-100 px-2.5 py-0.5 text-caption-1 font-medium text-primary-800 dark:bg-primary-900/30 dark:text-primary-300">
                             {record.records_count} records
                           </span>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+                        <td className="whitespace-nowrap px-4 py-3 text-footnote text-secondary-label">
                           {new Date(record.created_at).toLocaleString()}
                         </td>
                       </tr>
@@ -581,13 +565,11 @@ export default function ChildrenLeaderDashboard() {
 
       {activeTab === 'trends' && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Attendance Trends
-          </h2>
+          <h2 className="text-lg font-semibold text-label">Attendance Trends</h2>
           {trendsLoading ? (
             <LoadingSkeleton type="chart" />
           ) : (
-            <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
+            <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
               {trends.length > 0 ? (
                 <div className="overflow-x-auto">
                   <BarChart width={800} height={400} data={trends}>

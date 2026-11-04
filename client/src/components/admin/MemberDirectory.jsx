@@ -25,14 +25,14 @@ import { adminAPI } from '../../services/api';
 import MemberDetailsDrawer from '../MemberDetailsDrawer';
 
 const avatarColors = [
-  'from-violet-500 to-purple-600',
-  'from-sky-500 to-blue-600',
-  'from-emerald-500 to-teal-600',
-  'from-amber-500 to-orange-600',
-  'from-rose-500 to-pink-600',
-  'from-indigo-500 to-blue-600',
-  'from-cyan-500 to-teal-600',
-  'from-fuchsia-500 to-pink-600'
+  'bg-violet-500',
+  'bg-system-blue',
+  'bg-system-green',
+  'bg-system-orange',
+  'bg-system-red',
+  'bg-system-indigo',
+  'bg-system-teal',
+  'bg-system-pink'
 ];
 
 // Member search + select component for the assign title modal
@@ -97,8 +97,8 @@ function MemberSearchSelect({ members, selectedId, onChange }) {
         className="input w-full"
       />
       {isLoading && (
-        <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 py-2 animate-fade-in">
-          <div className="px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+        <div className="absolute left-0 right-0 mt-1.5 z-40 rounded-xl border border-separator/60 bg-secondary-system-grouped-background py-2 shadow-lg shadow-black/5 dark:border-white/[0.1] dark:bg-tertiary-system-background animate-fade-in">
+          <div className="px-4 py-2.5 text-sm text-secondary-label flex items-center gap-2">
             <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24">
               <circle
                 className="opacity-25"
@@ -120,7 +120,7 @@ function MemberSearchSelect({ members, selectedId, onChange }) {
         </div>
       )}
       {open && !isLoading && filtered.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
+        <div className="absolute z-50 left-0 right-0 mt-1.5 rounded-xl border border-separator/60 bg-secondary-system-grouped-background max-h-48 overflow-y-auto shadow-lg shadow-black/5 dark:border-white/[0.1] dark:bg-tertiary-system-background animate-fade-in">
           {filtered.map((m) => (
             <button
               key={m.id}
@@ -133,11 +133,11 @@ function MemberSearchSelect({ members, selectedId, onChange }) {
               }}
               className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
                 Number(m.id) === Number(selectedId)
-                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                  ? 'bg-primary-500/[0.12] text-primary-700 dark:text-primary-300'
+                  : 'text-label hover:bg-system-grouped-background/70 dark:hover:bg-white/[0.05]'
               }`}
             >
-              <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+              <span className="w-7 h-7 rounded-lg bg-primary-500/[0.12] text-primary-700 dark:text-primary-300 flex items-center justify-center font-bold text-[10px] shrink-0">
                 {(m.full_name || '')
                   .split(' ')
                   .map((n) => n[0])
@@ -147,7 +147,7 @@ function MemberSearchSelect({ members, selectedId, onChange }) {
               </span>
               <span className="truncate font-medium">{m.full_name}</span>
               {m.section_name && (
-                <span className="text-[10px] text-slate-400 ml-auto shrink-0">
+                <span className="text-[10px] text-tertiary-label ml-auto shrink-0">
                   {m.section_name}
                 </span>
               )}
@@ -156,7 +156,9 @@ function MemberSearchSelect({ members, selectedId, onChange }) {
         </div>
       )}
       {focused && !selectedId && !open && search.trim() && (
-        <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
+        <p className="text-[11px] text-rose-700 dark:text-system-red mt-1">
+          Please select a member from the list
+        </p>
       )}
     </div>
   );
@@ -424,34 +426,34 @@ const MemberDirectory = ({
 
   const sectionColorMap = useMemo(() => {
     const map = {};
-    const gradients = [
+    const tints = [
       {
-        bg: 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700/50',
+        bg: 'bg-violet-500/[0.12] text-violet-700 dark:text-violet-300',
         dot: 'bg-violet-500'
       },
       {
-        bg: 'bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/50',
-        dot: 'bg-sky-500'
+        bg: 'bg-system-blue/[0.12] text-blue-700 dark:text-system-blue',
+        dot: 'bg-system-blue'
       },
       {
-        bg: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50',
-        dot: 'bg-emerald-500'
+        bg: 'bg-system-green/[0.12] text-emerald-700 dark:text-system-green',
+        dot: 'bg-system-green'
       },
       {
-        bg: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50',
-        dot: 'bg-amber-500'
+        bg: 'bg-system-orange/[0.12] text-amber-700 dark:text-system-orange',
+        dot: 'bg-system-orange'
       },
       {
-        bg: 'bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-700/50',
-        dot: 'bg-rose-500'
+        bg: 'bg-system-red/[0.12] text-rose-700 dark:text-system-red',
+        dot: 'bg-system-red'
       },
       {
-        bg: 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700/50',
-        dot: 'bg-indigo-500'
+        bg: 'bg-system-indigo/[0.12] text-primary-700 dark:text-primary-300',
+        dot: 'bg-system-indigo'
       }
     ];
     sections.forEach((s, i) => {
-      map[s.name] = gradients[i % gradients.length];
+      map[s.name] = tints[i % tints.length];
     });
     return map;
   }, [sections]);
@@ -635,26 +637,24 @@ const MemberDirectory = ({
   };
 
   const SortIcon = ({ field }) => {
-    if (sortField !== field)
-      return <span className="ml-1 text-slate-300 dark:text-slate-600">↕</span>;
+    if (sortField !== field) return <span className="ml-1 text-quaternary-label">↕</span>;
     return <span className="ml-1 text-primary-500">{sortDir === 'asc' ? '↑' : '↓'}</span>;
   };
 
   return (
     <div className="space-y-3 animate-fade-in">
       {/* Header Banner */}
-      <div className="product-surface relative overflow-hidden px-4 py-3">
-        <div className="absolute -right-20 -top-24 h-48 w-48 rounded-full bg-primary-100/60 blur-3xl dark:bg-primary-500/10" />
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
+      <div className="product-surface relative px-5 py-4 sm:px-6 sm:py-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-primary-500/[0.12] text-primary-700 dark:text-primary-300">
             <Users className="h-5 w-5" />
           </div>
           <div>
             <p className="section-eyebrow">{t('memberDirectory.subtitle')}</p>
-            <h2 className="mt-0.5 text-lg font-bold text-slate-950 dark:text-white">
+            <h2 className="mt-0.5 text-title-2 font-semibold text-label">
               {t('memberDirectory.title')}
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-footnote text-secondary-label">
               {loading
                 ? t('common.loading')
                 : t('memberDirectory.description', {
@@ -667,74 +667,64 @@ const MemberDirectory = ({
       </div>
 
       <div className="flex w-full flex-wrap items-center justify-end gap-1.5">
-        <button
-          type="button"
-          onClick={exportPDF}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-        >
-          <Download className="w-4 h-4" />
+        <button type="button" onClick={exportPDF} className="btn-secondary btn-sm focus-ring">
+          <Download className="w-3.5 h-3.5" />
           PDF
         </button>
         <button
           type="button"
           onClick={() => adminAPI.exportMembers()}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          className="btn-secondary btn-sm focus-ring"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-3.5 h-3.5" />
           CSV
         </button>
         <button
           type="button"
           onClick={() => setShowBulkEdit(true)}
           disabled={selectedMembers.size === 0}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          className="btn-secondary btn-sm focus-ring"
           title={selectedMembers.size === 0 ? 'Select members to edit' : 'Edit selected members'}
         >
-          <Check className="w-4 h-4" />
+          <Check className="w-3.5 h-3.5" />
           Bulk Edit
         </button>
         <button
           type="button"
           onClick={() => setShowBulkDelete(true)}
           disabled={selectedMembers.size === 0}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 hover:shadow disabled:cursor-not-allowed disabled:opacity-45 dark:border-rose-700/60 dark:bg-rose-900/20 dark:text-rose-200 dark:hover:bg-rose-900/30"
+          className="btn-danger btn-sm focus-ring"
           title={
             selectedMembers.size === 0
               ? 'Select members to remove'
               : 'Move selected members to pending deletion'
           }
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="w-3.5 h-3.5" />
           Bulk Delete
         </button>
         <button
           type="button"
           onClick={() => setShowPendingDeletion(true)}
-          className="relative inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-700 shadow-sm transition-all hover:bg-amber-100 hover:shadow dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-200 dark:hover:bg-amber-900/30"
+          className="btn btn-sm focus-ring bg-system-orange/15 text-amber-700 dark:text-system-orange hover:bg-system-orange/25"
           title="Review members awaiting permanent deletion"
         >
-          <Clock className="w-4 h-4" />
+          <Clock className="w-3.5 h-3.5" />
           Pending
           {pendingDeletionCount > 0 && (
-            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-600 px-1.5 text-xs font-bold text-white dark:bg-amber-300 dark:text-amber-900">
+            <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-system-orange px-1.5 text-xs font-bold text-white dark:bg-system-orange dark:text-white">
               {pendingDeletionCount}
             </span>
           )}
         </button>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="btn-primary group inline-flex h-10 items-center justify-center gap-2 px-3 pr-4 text-sm"
-        >
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/18 ring-1 ring-white/20 transition-colors group-hover:bg-white/24">
-            <UserPlus className="w-4 h-4" />
-          </span>
+        <button type="button" onClick={onAdd} className="btn-primary">
+          <UserPlus className="w-4 h-4" />
           <span className="whitespace-nowrap tracking-tight">Add Member</span>
         </button>
       </div>
 
       {/* Age Group Filter Pills */}
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="tab-pills w-fit max-w-full">
         {[
           { id: 'all', label: 'All Ages' },
           { id: 'children', label: 'Children' },
@@ -748,11 +738,7 @@ const MemberDirectory = ({
               key={ag.id}
               type="button"
               onClick={() => setAgeGroupFilter(ag.id)}
-              className={`rounded-xl px-3 py-1.5 text-xs font-semibold border transition-all whitespace-nowrap shadow-xs ${
-                isActive
-                  ? 'border-primary-600 bg-primary-600 text-white dark:bg-primary-500 dark:border-primary-500 shadow-sm'
-                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-              }`}
+              className={`tab-pill focus-ring ${isActive ? 'active' : ''}`}
             >
               {ag.label}
             </button>
@@ -762,7 +748,7 @@ const MemberDirectory = ({
           <button
             type="button"
             onClick={() => setAgeGroupFilter('all')}
-            className="rounded-xl px-2 py-1.5 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            className="flex items-center justify-center px-2 py-1.5 text-tertiary-label transition-colors hover:text-label"
             title="Clear age group filter"
           >
             <X className="w-3.5 h-3.5" />
@@ -771,10 +757,10 @@ const MemberDirectory = ({
       </div>
 
       {/* Search & Filters */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
+      <div className="card p-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary-label" />
             <input
               type="text"
               value={searchTerm}
@@ -788,8 +774,8 @@ const MemberDirectory = ({
             onClick={() => setShowFilters(!showFilters)}
             className={`h-10 w-full sm:w-auto px-3 rounded-xl border flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
               showFilters || hasActiveFilters
-                ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-600 dark:bg-primary-900/30 dark:text-primary-300'
-                : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                ? 'border-transparent bg-primary-500/[0.12] text-primary-700 dark:text-primary-300'
+                : 'border-separator/70 text-secondary-label hover:bg-system-fill hover:text-label dark:border-white/[0.1]'
             }`}
           >
             <Filter className="w-4 h-4" />
@@ -810,7 +796,7 @@ const MemberDirectory = ({
         </div>
 
         {showFilters && (
-          <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
+          <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-separator/60 dark:border-white/[0.08]">
             <select
               value={sectionFilter}
               onChange={(e) => handleSectionFilterChange(e.target.value)}
@@ -867,7 +853,7 @@ const MemberDirectory = ({
                   setAgeGroupFilter('all');
                   setGenderFilter('all');
                 }}
-                className="flex items-center gap-1 text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 font-medium"
+                className="flex items-center gap-1 text-sm font-medium text-rose-700 dark:text-system-red hover:text-rose-800 dark:hover:text-system-red"
               >
                 <X className="w-3.5 h-3.5" />
                 Clear filters
@@ -878,13 +864,13 @@ const MemberDirectory = ({
       </div>
 
       {sectionFilter && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-700 dark:border-primary-800/60 dark:bg-primary-900/20 dark:text-primary-300">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-primary-500/[0.12] px-4 py-3 text-sm text-primary-700 dark:text-primary-300">
           <span className="font-semibold">Filtered by section:</span>
           <span>{formatSectionLabel(sectionFilter)}</span>
           <button
             type="button"
             onClick={() => handleSectionFilterChange('')}
-            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-slate-800 dark:text-primary-300"
+            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-secondary-system-grouped-background px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm hover:bg-system-fill dark:bg-white/[0.08] dark:text-primary-300"
           >
             <X className="h-3 w-3" />
             Clear
@@ -893,13 +879,13 @@ const MemberDirectory = ({
       )}
 
       {leaderFilter && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-700 dark:border-primary-800/60 dark:bg-primary-900/20 dark:text-primary-300">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-primary-500/[0.12] px-4 py-3 text-sm text-primary-700 dark:text-primary-300">
           <span className="font-semibold">Filtered by leader:</span>
           <span>{leaderFilter}</span>
           <button
             type="button"
             onClick={() => handleLeaderFilterChange('')}
-            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm hover:bg-primary-100 dark:bg-slate-800 dark:text-primary-300"
+            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-secondary-system-grouped-background px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm hover:bg-system-fill dark:bg-white/[0.08] dark:text-primary-300"
           >
             <X className="h-3 w-3" />
             Clear
@@ -907,13 +893,13 @@ const MemberDirectory = ({
         </div>
       )}
       {genderFilter !== 'all' && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-700 dark:border-cyan-800/60 dark:bg-cyan-900/20 dark:text-cyan-300">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-system-teal/[0.12] px-4 py-3 text-sm text-teal-700 dark:text-system-teal">
           <span className="font-semibold">Filtered by gender:</span>
           <span className="capitalize">{genderFilter}</span>
           <button
             type="button"
             onClick={() => setGenderFilter('all')}
-            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-cyan-700 shadow-sm hover:bg-cyan-100 dark:bg-slate-800 dark:text-cyan-300"
+            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-secondary-system-grouped-background px-2.5 py-1 text-xs font-bold text-teal-700 shadow-sm hover:bg-system-fill dark:bg-white/[0.08] dark:text-system-teal"
           >
             <X className="h-3 w-3" />
             Clear
@@ -923,13 +909,13 @@ const MemberDirectory = ({
 
       {/* Bulk selection bar */}
       {selectedMembers.size > 0 && (
-        <div className="flex items-center justify-between bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700/50 rounded-xl px-4 py-2.5">
+        <div className="flex items-center justify-between bg-primary-500/[0.12] rounded-xl px-4 py-2.5">
           <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
             {selectedMembers.size} member{selectedMembers.size > 1 ? 's' : ''} selected
           </span>
           <button
             onClick={() => setSelectedMembers(new Set())}
-            className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-800 font-medium"
+            className="text-sm font-semibold text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
           >
             Clear selection
           </button>
@@ -938,41 +924,38 @@ const MemberDirectory = ({
 
       {/* Table */}
       {loading ? (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div className="card overflow-hidden">
           <div className="space-y-3 p-4">
             {[1, 2, 3, 4, 5].map((item) => (
               <div key={item} className="flex items-center gap-4">
-                <div className="h-4 w-4 animate-pulse rounded border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-700" />
-                <div className="h-8 w-8 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-700" />
-                <div className="h-4 flex-1 animate-pulse rounded bg-slate-100 dark:bg-slate-700" />
-                <div className="hidden h-4 w-28 animate-pulse rounded bg-slate-100 dark:bg-slate-700 sm:block" />
-                <div className="h-4 w-16 animate-pulse rounded bg-slate-100 dark:bg-slate-700" />
+                <div className="h-4 w-4 animate-pulse rounded border border-separator/60 bg-system-fill dark:border-white/[0.08]" />
+                <div className="h-8 w-8 animate-pulse rounded-lg bg-system-fill" />
+                <div className="h-4 flex-1 animate-pulse rounded bg-system-fill" />
+                <div className="hidden h-4 w-28 animate-pulse rounded bg-system-fill sm:block" />
+                <div className="h-4 w-16 animate-pulse rounded bg-system-fill" />
               </div>
             ))}
           </div>
         </div>
       ) : filteredMembers.length > 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 shadow-sm overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+        <div className="card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-separator/60 px-4 py-3 text-sm text-secondary-label dark:border-white/[0.08]">
             <span>
-              Showing{' '}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {filteredMembers.length}
-              </span>{' '}
+              Showing <span className="font-semibold text-label">{filteredMembers.length}</span>{' '}
               matching members
             </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">
+            <span className="text-xs text-tertiary-label">
               Click a row to view the full profile
             </span>
           </div>
           <div className="max-h-[68vh] overflow-auto scrollbar-thin">
             <table className="w-full min-w-[860px]">
-              <thead className="sticky top-0 z-10">
-                <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/80">
+              <thead className="sticky top-0 z-10 bg-secondary-system-grouped-background/95 backdrop-blur-sm">
+                <tr className="border-b border-separator/60 dark:border-white/[0.08]">
                   <th className="w-10 px-4 py-3">
                     <button
                       onClick={toggleSelectAll}
-                      className="w-4 h-4 rounded border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center transition-colors hover:border-primary-400"
+                      className="w-4 h-4 rounded border-2 border-system-gray-3 dark:border-white/[0.25] flex items-center justify-center transition-colors hover:border-primary-400"
                     >
                       {selectedMembers.size > 0 &&
                         selectedMembers.size === filteredMembers.length && (
@@ -980,34 +963,34 @@ const MemberDirectory = ({
                         )}
                     </button>
                   </th>
-                  <th className="w-16 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <th className="w-16 px-4 py-3 text-left text-[11px] font-semibold text-secondary-label">
                     S/N
                   </th>
                   <th
-                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer select-none"
+                    className="px-4 py-3 text-left text-[11px] font-semibold text-secondary-label cursor-pointer select-none"
                     onClick={() => handleSort('full_name')}
                   >
                     {t('table.name')}
                     <SortIcon field="full_name" />
                   </th>
                   <th
-                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 cursor-pointer select-none"
+                    className="px-4 py-3 text-left text-[11px] font-semibold text-secondary-label cursor-pointer select-none"
                     onClick={() => handleSort('section_name')}
                   >
                     {t('table.section')}
                     <SortIcon field="section_name" />
                   </th>
                   <th
-                    className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden lg:table-cell cursor-pointer select-none"
+                    className="px-4 py-3 text-left text-[11px] font-semibold text-secondary-label hidden lg:table-cell cursor-pointer select-none"
                     onClick={() => handleSort('leader_name')}
                   >
                     {t('table.leader')}
                     <SortIcon field="leader_name" />
                   </th>
-                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 hidden md:table-cell">
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-secondary-label hidden md:table-cell">
                     {t('common.phone')}
                   </th>
-                  <th className="sticky right-0 z-20 min-w-[120px] w-32 bg-slate-50/95 px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur-sm dark:bg-slate-800/95 dark:text-slate-400">
+                  <th className="sticky right-0 z-20 min-w-[120px] w-32 bg-secondary-system-grouped-background/95 px-4 py-3 text-right text-[11px] font-semibold text-secondary-label backdrop-blur-sm">
                     {t('table.actions')}
                   </th>
                 </tr>
@@ -1015,8 +998,8 @@ const MemberDirectory = ({
               <tbody>
                 {filteredMembers.map((member, index) => {
                   const sectionStyle = sectionColorMap[member.section_name] || {
-                    bg: 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600',
-                    dot: 'bg-slate-400'
+                    bg: 'bg-system-fill text-secondary-label',
+                    dot: 'bg-system-gray'
                   };
                   const avatarColor = getAvatarColor(member.full_name);
                   const isSelected = selectedMembers.has(member.id);
@@ -1026,8 +1009,8 @@ const MemberDirectory = ({
                     <tr
                       key={member.id}
                       onClick={() => setDetailsMember(member)}
-                      className={`border-b border-slate-50 dark:border-slate-700/50 transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-700/30 cursor-pointer ${
-                        isSelected ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''
+                      className={`border-b border-separator/40 transition-colors hover:bg-system-grouped-background/70 cursor-pointer dark:border-white/[0.06] dark:hover:bg-white/[0.03] ${
+                        isSelected ? 'bg-primary-500/[0.08]' : ''
                       }`}
                     >
                       {/* Checkbox */}
@@ -1040,7 +1023,7 @@ const MemberDirectory = ({
                           className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
                             isSelected
                               ? 'border-primary-500 bg-primary-500'
-                              : 'border-slate-300 dark:border-slate-600 hover:border-primary-400'
+                              : 'border-system-gray-3 dark:border-white/[0.25] hover:border-primary-400'
                           }`}
                         >
                           {isSelected && <Check className="w-3 h-3 text-white" />}
@@ -1048,7 +1031,7 @@ const MemberDirectory = ({
                       </td>
                       {/* Serial Number */}
                       <td className="px-4 py-3">
-                        <span className="inline-flex min-w-[2.25rem] items-center justify-center rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                        <span className="inline-flex min-w-[2.25rem] items-center justify-center rounded-lg bg-system-fill px-2.5 py-1 text-xs font-semibold tabular-nums text-secondary-label">
                           {serialNumber}
                         </span>
                       </td>
@@ -1056,7 +1039,7 @@ const MemberDirectory = ({
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`w-8 h-8 rounded-lg overflow-hidden bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}
+                            className={`w-8 h-8 rounded-lg overflow-hidden ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}
                           >
                             {member.profile_picture ? (
                               <img
@@ -1068,7 +1051,7 @@ const MemberDirectory = ({
                               getInitials(member.full_name)
                             )}
                           </div>
-                          <span className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate max-w-[160px]">
+                          <span className="font-semibold text-sm text-label truncate max-w-[160px]">
                             {member.full_name}
                           </span>
                         </div>
@@ -1076,7 +1059,7 @@ const MemberDirectory = ({
                       {/* Section */}
                       <td className="px-4 py-3">
                         <div
-                          className={`inline-flex max-w-[12rem] items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-semibold shadow-sm ${sectionStyle.bg}`}
+                          className={`inline-flex max-w-[12rem] items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold ${sectionStyle.bg}`}
                         >
                           <span className={`h-2 w-2 shrink-0 rounded-full ${sectionStyle.dot}`} />
                           <span className="truncate leading-tight">
@@ -1084,20 +1067,20 @@ const MemberDirectory = ({
                           </span>
                         </div>
                         {member.leader_name && (
-                          <span className="mt-1 block max-w-[12rem] truncate text-[10px] text-slate-400 lg:hidden">
+                          <span className="mt-1 block max-w-[12rem] truncate text-[10px] text-tertiary-label lg:hidden">
                             Leader: {member.leader_name}
                           </span>
                         )}
                       </td>
                       {/* Leader */}
                       <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="text-sm text-slate-600 dark:text-slate-400 truncate block max-w-[140px]">
+                        <span className="text-sm text-secondary-label truncate block max-w-[140px]">
                           {member.leader_name || '—'}
                         </span>
                       </td>
                       {/* Contact */}
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-2 text-xs text-secondary-label">
                           {member.phone && (
                             <span className="flex items-center gap-1 tabular-nums">
                               <Phone className="w-3 h-3" />
@@ -1105,9 +1088,7 @@ const MemberDirectory = ({
                             </span>
                           )}
                           {!member.phone && (
-                            <span className="text-slate-400 dark:text-slate-500 italic text-xs">
-                              —
-                            </span>
+                            <span className="text-tertiary-label italic text-xs">—</span>
                           )}
                         </div>
                       </td>
@@ -1121,7 +1102,7 @@ const MemberDirectory = ({
                               setTitleAssignMember(member.id);
                               setTitleForm({ title_id: '', appointment_date: '', notes: '' });
                             }}
-                            className="p-2 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors active:scale-90"
+                            className="p-2 rounded-lg text-tertiary-label transition-colors hover:bg-system-yellow/15 hover:text-amber-700 dark:hover:text-system-orange active:scale-90"
                             title="Assign Title"
                           >
                             <Award className="w-5 h-5" />
@@ -1131,7 +1112,7 @@ const MemberDirectory = ({
                               e.stopPropagation();
                               onEdit(member);
                             }}
-                            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors active:scale-90"
+                            className="p-2 rounded-lg text-tertiary-label transition-colors hover:bg-system-fill hover:text-primary-700 dark:hover:text-primary-300 active:scale-90"
                             title="Edit"
                           >
                             <Pencil className="w-5 h-5" />
@@ -1141,7 +1122,7 @@ const MemberDirectory = ({
                               e.stopPropagation();
                               onDelete(member);
                             }}
-                            className="p-2 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors active:scale-90"
+                            className="p-2 rounded-lg text-tertiary-label transition-colors hover:bg-system-red/15 hover:text-rose-700 dark:hover:text-system-red active:scale-90"
                             title="Delete"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -1156,14 +1137,12 @@ const MemberDirectory = ({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
-            <Users className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+        <div className="card flex flex-col items-center justify-center py-20">
+          <div className="w-16 h-16 rounded-2xl bg-system-fill flex items-center justify-center mb-4">
+            <Users className="w-8 h-8 text-tertiary-label" />
           </div>
-          <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
-            No members found
-          </h4>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm text-center">
+          <h4 className="text-title-3 font-semibold text-label mb-1">No members found</h4>
+          <p className="text-footnote text-secondary-label max-w-sm text-center">
             {searchTerm || hasActiveFilters
               ? 'Try adjusting your search or filters.'
               : 'Add your first member to get started.'}
@@ -1218,8 +1197,8 @@ const MemberDirectory = ({
       {titleAssignMember && (
         <div className="modal-overlay" onClick={() => setTitleAssignMember(null)}>
           <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Assign Title</h3>
+            <div className="px-6 py-4 border-b border-separator/60 dark:border-white/[0.08] flex items-center justify-between">
+              <h3 className="text-headline font-semibold text-label">Assign Title</h3>
               <button
                 onClick={() => setTitleAssignMember(null)}
                 className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
@@ -1276,7 +1255,7 @@ const MemberDirectory = ({
                 />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex gap-3">
+            <div className="px-6 py-4 border-t border-separator/60 dark:border-white/[0.08] flex gap-3">
               <button
                 onClick={() => {
                   setTitleAssignMember(null);
@@ -1309,10 +1288,8 @@ const MemberDirectory = ({
       {editingTitleAssignment && (
         <div className="modal-overlay" onClick={() => setEditingTitleAssignment(null)}>
           <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                Edit Assignment
-              </h3>
+            <div className="px-6 py-4 border-b border-separator/60 dark:border-white/[0.08] flex items-center justify-between">
+              <h3 className="text-headline font-semibold text-label">Edit Assignment</h3>
               <button
                 onClick={() => setEditingTitleAssignment(null)}
                 className="btn-icon btn-ghost p-1.5 -mr-1.5 rounded-xl active:scale-90"
@@ -1346,7 +1323,7 @@ const MemberDirectory = ({
                 />
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-slate-100 dark:border-white/5 flex gap-3">
+            <div className="px-6 py-4 border-t border-separator/60 dark:border-white/[0.08] flex gap-3">
               <button
                 onClick={() => setEditingTitleAssignment(null)}
                 className="btn-secondary flex-1"
@@ -1386,9 +1363,9 @@ const MemberDirectory = ({
           }}
         >
           <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                <span className="text-slate-400 font-normal">History:</span>{' '}
+            <div className="px-6 py-4 border-b border-separator/60 dark:border-white/[0.08] flex items-center justify-between">
+              <h3 className="text-headline font-semibold text-label">
+                <span className="text-secondary-label font-normal">History:</span>{' '}
                 {viewHistoryFor.titleName}
               </h3>
               <button
@@ -1400,8 +1377,8 @@ const MemberDirectory = ({
             </div>
             <div className="p-6">
               {titleHistory.length === 0 ? (
-                <div className="flex items-center justify-center py-8 text-slate-400">
-                  <span className="w-5 h-5 border-2 border-slate-300 border-t-primary-500 rounded-full animate-spin mr-3" />
+                <div className="flex items-center justify-center py-8 text-tertiary-label">
+                  <span className="w-5 h-5 border-2 border-separator border-t-primary-500 rounded-full animate-spin mr-3" />
                   Loading history...
                 </div>
               ) : (
@@ -1416,7 +1393,7 @@ const MemberDirectory = ({
                     return (
                       <div
                         key={h.id}
-                        className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5"
+                        className="p-4 rounded-xl bg-system-grouped-background/70 dark:bg-white/[0.03]"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <Badge
@@ -1425,16 +1402,18 @@ const MemberDirectory = ({
                           >
                             {h.action.replace('_', ' ')}
                           </Badge>
-                          <span className="text-[10px] text-slate-400 font-medium">
+                          <span className="text-[10px] text-tertiary-label font-medium">
                             {fdatetime(h.created_at)}
                           </span>
                         </div>
                         {h.old_status && h.new_status && (
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
+                          <p className="text-xs text-secondary-label">
                             Status:{' '}
                             <span
                               className={
-                                h.old_status === 'active' ? 'text-emerald-600' : 'text-slate-500'
+                                h.old_status === 'active'
+                                  ? 'text-emerald-700 dark:text-system-green'
+                                  : 'text-secondary-label'
                               }
                             >
                               {h.old_status}
@@ -1443,8 +1422,8 @@ const MemberDirectory = ({
                             <span
                               className={
                                 h.new_status === 'active'
-                                  ? 'text-emerald-600 font-semibold'
-                                  : 'text-slate-500'
+                                  ? 'text-emerald-700 dark:text-system-green font-semibold'
+                                  : 'text-secondary-label'
                               }
                             >
                               {h.new_status}
@@ -1452,13 +1431,11 @@ const MemberDirectory = ({
                           </p>
                         )}
                         {h.notes && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 italic">
-                            {h.notes}
-                          </p>
+                          <p className="text-xs text-secondary-label mt-1.5 italic">{h.notes}</p>
                         )}
                         {h.changed_by_name && (
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                          <p className="text-[10px] text-tertiary-label mt-1.5 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-system-gray-3 dark:bg-system-gray-4" />
                             by {h.changed_by_name}
                           </p>
                         )}

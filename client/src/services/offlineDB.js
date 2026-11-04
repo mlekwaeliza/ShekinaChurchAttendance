@@ -116,5 +116,8 @@ export async function getAllQueuedRecords() {
 
 export async function getQueuedSubmissionForDate(date, serviceId) {
   const all = await getUnsyncedSubmissions();
-  return all.find(record => record.date === date && (!serviceId || String(record.service_id || '') === String(serviceId)));
+  return all.find(
+    (record) =>
+      record.date === date && (!serviceId || String(record.service_id || '') === String(serviceId))
+  );
 }

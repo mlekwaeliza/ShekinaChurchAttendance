@@ -70,16 +70,13 @@ const BulkEditModal = ({
         aria-modal="true"
         aria-labelledby="bulk-edit-title"
         tabIndex={-1}
-        className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-800"
+        className="w-full max-w-3xl rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background shadow-modal dark:border-white/[0.08]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
           <div className="flex items-center gap-3">
-            <Users className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-            <h3
-              id="bulk-edit-title"
-              className="text-lg font-bold text-slate-900 dark:text-slate-100"
-            >
+            <Users className="w-5 h-5 text-tertiary-label" />
+            <h3 id="bulk-edit-title" className="text-headline font-semibold text-label">
               Bulk Edit Members
             </h3>
           </div>
@@ -99,14 +96,14 @@ const BulkEditModal = ({
           />
 
           {error && (
-            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-footnote font-semibold text-rose-700 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-300">
               {error}
             </div>
           )}
 
           {/* Member Selection */}
-          <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden max-h-72 overflow-y-auto">
-            <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+          <div className="border border-black/[0.06] dark:border-white/[0.08] rounded-xl overflow-hidden max-h-72 overflow-y-auto">
+            <div className="flex items-center gap-2 px-3 py-2 bg-system-fill border-b border-black/[0.06] dark:border-white/[0.08]">
               <input
                 type="checkbox"
                 checked={
@@ -115,14 +112,14 @@ const BulkEditModal = ({
                 onChange={toggleAll}
                 className="w-4 h-4 rounded"
               />
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span className="text-caption-1 font-semibold text-secondary-label">
                 {selectedIds.length} selected
               </span>
             </div>
             {filteredMembers.map((m) => (
               <label
                 key={m.id}
-                className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 border-b border-slate-50 dark:border-slate-700/50 cursor-pointer"
+                className="flex items-center gap-3 px-3 py-2 hover:bg-system-fill/30 border-b border-separator/50 dark:border-white/[0.08] cursor-pointer"
               >
                 <input
                   type="checkbox"
@@ -130,11 +127,11 @@ const BulkEditModal = ({
                   onChange={() => toggleOne(m.id)}
                   className="w-4 h-4 rounded"
                 />
-                <span className="text-sm text-slate-900 dark:text-slate-100">{m.full_name}</span>
-                <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">
+                <span className="text-footnote text-label">{m.full_name}</span>
+                <span className="text-caption-1 text-tertiary-label ml-auto">
                   {m.membership_id}
                 </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500">{m.section_name}</span>
+                <span className="text-caption-1 text-tertiary-label">{m.section_name}</span>
               </label>
             ))}
           </div>

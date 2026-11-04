@@ -276,42 +276,39 @@ const DashboardOverview = ({
 
   const todaysAttendanceSection = (
     <div className="card overflow-hidden">
-      <div className="px-8 py-6 border-b border-slate-100 dark:border-white/5">
+      <div className="border-b border-separator/60 px-5 py-5 sm:px-6 dark:border-white/[0.08]">
         <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0">
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h3 className="flex items-center gap-2 text-title-3 font-semibold text-label">
               {attendanceTitle}
             </h3>
-            <div className="mt-2 flex items-center gap-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Showing:{' '}
-                <span className="text-primary-600 dark:text-primary-400">{showingLabel}</span>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <p className="text-footnote text-secondary-label">
+                Showing <span className="font-medium text-label">{showingLabel}</span>
               </p>
               {selectedServiceId !== 'all' && (
                 <button
                   onClick={() => onAssignDutyRoster(formatLocalDate())}
-                  className="flex items-center gap-1.5 rounded-lg bg-orange-50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-600 transition-colors hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/40"
+                  className="flex items-center gap-1.5 rounded-full bg-system-orange/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 transition-colors hover:bg-system-orange/15 dark:text-system-orange"
                 >
                   <ShieldAlert className="w-3 h-3" />
-                  Service Team
+                  Service team
                 </button>
               )}
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 self-start xl:self-auto">
-            <div className="flex flex-col items-start text-left">
-              <span className="text-left text-[10px] font-bold uppercase tracking-tighter text-slate-400">
-                4-Week Trend
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-secondary-label">
+                4-week trend
               </span>
               {renderSparkline()}
             </div>
             {totalToday > 0 && (
-              <div className="shrink-0 rounded-2xl border border-primary-100 bg-primary-50 px-4 py-2 dark:border-primary-800/30 dark:bg-primary-900/20">
-                <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
-                  {attendanceRate}% Rate
-                </span>
-              </div>
+              <span className="shrink-0 rounded-full bg-primary-500/10 px-3 py-1 text-footnote font-semibold text-primary-700 dark:text-primary-300">
+                {attendanceRate}% rate
+              </span>
             )}
           </div>
         </div>
@@ -336,17 +333,17 @@ const DashboardOverview = ({
           const lastSession = dashboardMetrics?.lastSession;
 
           return (
-            <div className="flex flex-col items-center justify-center py-16 px-8">
-              <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-100 to-primary-50 dark:from-primary-900/30 dark:to-primary-800/20 shadow-lg shadow-primary-500/10">
-                <Zap className="h-8 w-8 text-primary-600 dark:text-primary-400" />
+            <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
+              <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-system-fill">
+                <Zap className="h-6 w-6 text-primary-600 dark:text-primary-400" />
               </div>
 
               {isScheduledToday ? (
                 <>
-                  <p className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                  <p className="mb-2 text-title-3 font-semibold text-label">
                     No attendance records yet
                   </p>
-                  <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <p className="mb-6 max-w-sm text-center text-subheadline leading-6 text-secondary-label">
                     When leaders submit attendance for today&apos;s {serviceLabel}, this overview
                     will update automatically.
                   </p>
@@ -356,12 +353,12 @@ const DashboardOverview = ({
                 </>
               ) : (
                 <>
-                  <p className="mb-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                  <p className="mb-2 text-title-3 font-semibold text-label">
                     No {currentService?.name || 'service'} scheduled today
                   </p>
-                  <p className="mb-6 max-w-sm text-center text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <p className="mb-6 max-w-sm text-center text-subheadline leading-6 text-secondary-label">
                     {currentService?.name || 'This service'} runs on{' '}
-                    <span className="font-bold text-primary-600 dark:text-primary-400">
+                    <span className="font-medium text-primary-700 dark:text-primary-300">
                       {currentService?.default_day || 'N/A'}
                     </span>
                     .
@@ -381,63 +378,46 @@ const DashboardOverview = ({
           );
         })()
       ) : (
-        <div className="grid grid-cols-1 gap-5 px-5 py-6 sm:grid-cols-2 sm:px-8 xl:grid-cols-3">
-          <div className="relative overflow-hidden rounded-2xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50 to-emerald-50/50 p-6 dark:border-emerald-800/30 dark:from-emerald-900/20 dark:to-emerald-900/10">
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-emerald-500/5 blur-2xl -translate-y-8 translate-x-8" />
-            <div className="relative">
-              <div className="mb-3 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                  Present
-                </span>
+        <div className="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6 xl:grid-cols-3">
+          <div className="rounded-xl border border-black/[0.06] bg-system-grouped-background/60 p-5 dark:border-white/[0.06]">
+            <div className="mb-3 flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-system-green/15">
+                <CheckCircle2 className="h-4 w-4 text-emerald-700 dark:text-system-green" />
               </div>
-              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">
-                {todayStats.present}
-              </p>
-              <p className="mt-2 text-[10px] font-semibold text-slate-400">
-                Active attendance today
-              </p>
+              <span className="text-footnote font-medium text-secondary-label">Present</span>
             </div>
+            <p className="text-[2rem] font-semibold leading-none text-label tabular-nums">
+              {todayStats.present}
+            </p>
+            <p className="mt-2 text-[11px] text-secondary-label">Active attendance today</p>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-rose-100/60 bg-gradient-to-br from-rose-50 to-rose-50/50 p-6 dark:border-rose-800/30 dark:from-rose-900/20 dark:to-rose-900/10">
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-rose-500/5 blur-2xl -translate-y-8 translate-x-8" />
-            <div className="relative">
-              <div className="mb-3 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center">
-                  <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400">
-                  Absent
-                </span>
+          <div className="rounded-xl border border-black/[0.06] bg-system-grouped-background/60 p-5 dark:border-white/[0.06]">
+            <div className="mb-3 flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-system-red/15">
+                <XCircle className="h-4 w-4 text-rose-700 dark:text-system-red" />
               </div>
-              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">
-                {todayStats.absent}
-              </p>
-              <p className="mt-2 text-[10px] font-semibold text-slate-400">
-                Review before creating a care follow-up
-              </p>
+              <span className="text-footnote font-medium text-secondary-label">Absent</span>
             </div>
+            <p className="text-[2rem] font-semibold leading-none text-label tabular-nums">
+              {todayStats.absent}
+            </p>
+            <p className="mt-2 text-[11px] text-secondary-label">
+              Review before creating a care follow-up
+            </p>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-amber-100/60 bg-gradient-to-br from-amber-50 to-amber-50/50 p-6 dark:border-amber-800/30 dark:from-amber-900/20 dark:to-amber-900/10">
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full bg-amber-500/5 blur-2xl -translate-y-8 translate-x-8" />
-            <div className="relative">
-              <div className="mb-3 flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <Clock3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">
-                  Excused
-                </span>
+          <div className="rounded-xl border border-black/[0.06] bg-system-grouped-background/60 p-5 dark:border-white/[0.06]">
+            <div className="mb-3 flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-system-orange/15">
+                <Clock3 className="h-4 w-4 text-amber-700 dark:text-system-orange" />
               </div>
-              <p className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">
-                {todayStats.excused}
-              </p>
-              <p className="mt-2 text-[10px] font-semibold text-slate-400">Known in advance</p>
+              <span className="text-footnote font-medium text-secondary-label">Excused</span>
             </div>
+            <p className="text-[2rem] font-semibold leading-none text-label tabular-nums">
+              {todayStats.excused}
+            </p>
+            <p className="mt-2 text-[11px] text-secondary-label">Known in advance</p>
           </div>
         </div>
       )}
@@ -455,27 +435,22 @@ const DashboardOverview = ({
   return (
     <div className="space-y-6 animate-fade-in pb-12">
       <section className="product-surface relative overflow-hidden px-5 py-6 sm:px-7">
-        <div className="absolute inset-y-0 right-0 hidden w-[42%] bg-[radial-gradient(circle_at_80%_20%,rgba(20,168,150,0.14),transparent_65%)] lg:block" />
         <div className="relative flex min-w-0 flex-col justify-between gap-6 lg:flex-row lg:items-center">
           <div className="min-w-0">
             <div className="mb-3 flex items-center gap-2">
               <span className="section-eyebrow">Church command center</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-500">
-                  <span className="absolute inset-0 animate-ping rounded-full bg-emerald-500 opacity-60" />
-                </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-system-green/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-system-green">
+                <span className="h-1.5 w-1.5 rounded-full bg-system-green" />
                 Live
               </span>
             </div>
-            <h2 className="break-words font-display text-2xl font-semibold tracking-[-0.035em] text-slate-950 dark:text-white sm:text-3xl">
+            <h2 className="break-words font-display text-title-1 font-semibold text-label">
               {greeting}, {welcomeName}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+            <p className="mt-2 max-w-2xl text-subheadline leading-6 text-secondary-label">
               Here is the health of your church for{' '}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {showingLabel}
-              </span>
-              . Focus first on the people and ministry areas that need attention.
+              <span className="font-medium text-label">{showingLabel}</span>. Focus first on the
+              people and ministry areas that need attention.
             </p>
           </div>
 
@@ -486,7 +461,7 @@ const DashboardOverview = ({
             <button onClick={handlePresentation} className="btn-secondary btn-sm focus-ring">
               <Presentation className="h-3.5 w-3.5" /> Presentation
             </button>
-            <span className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50 px-3 text-[11px] font-semibold text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+            <span className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-system-fill/70 px-2.5 text-[11px] font-medium text-secondary-label dark:bg-white/[0.06]">
               <Clock3 className="h-3.5 w-3.5" />
               Updated {lastUpdatedStr}
             </span>
@@ -508,25 +483,23 @@ const DashboardOverview = ({
 
       {trendChartData.length >= 2 && (
         <section className="card overflow-hidden">
-          <div className="flex items-center justify-between gap-3 px-6 py-5 border-b border-slate-100 dark:border-white/5">
-            <h3 className="flex items-center gap-3 text-lg font-bold text-slate-900 dark:text-slate-100">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-violet-500 shadow-lg shadow-primary-500/20">
-                <TrendingUp className="w-4.5 h-4.5 text-white" />
+          <div className="flex items-center justify-between gap-3 border-b border-separator/60 px-5 py-4 sm:px-6 dark:border-white/[0.08]">
+            <h3 className="flex items-center gap-3 text-title-3 font-semibold text-label">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-primary-500/[0.12] text-primary-700 dark:text-primary-300">
+                <TrendingUp className="h-[18px] w-[18px]" />
               </div>
               Attendance Trend
             </h3>
             <button
               onClick={() => navigate('/admin/attendance-analytics')}
-              className="btn-sm btn-ghost text-primary-600 dark:text-primary-400"
+              className="btn-sm btn-ghost text-primary-700 dark:text-primary-300"
             >
               Full analytics
             </button>
           </div>
           <div className="p-5">
             <React.Suspense
-              fallback={
-                <div className="h-[260px] animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800" />
-              }
+              fallback={<div className="h-[260px] animate-pulse rounded-xl bg-system-fill" />}
             >
               <TrendAreaChart data={trendChartData} />
             </React.Suspense>
@@ -570,16 +543,16 @@ const DashboardOverview = ({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="card overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-            <h3 className="flex items-center gap-3 text-lg font-bold text-slate-900 dark:text-slate-100">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg shadow-rose-500/20">
-                <Cake className="w-4.5 h-4.5 text-white" />
+          <div className="flex items-center justify-between border-b border-separator/60 px-5 py-4 sm:px-6 dark:border-white/[0.08]">
+            <h3 className="flex items-center gap-3 text-title-3 font-semibold text-label">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-system-red/15 text-rose-700 dark:text-system-red">
+                <Cake className="h-[18px] w-[18px]" />
               </div>
               Next 7 Days
             </h3>
             <button
               onClick={() => navigate('/admin/birthdays')}
-              className="btn-sm btn-ghost text-primary-600 dark:text-primary-400"
+              className="btn-sm btn-ghost text-primary-700 dark:text-primary-300"
             >
               View all
             </button>
@@ -587,9 +560,9 @@ const DashboardOverview = ({
 
           <div className="p-5 space-y-3">
             {upcomingBirthdays.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center text-slate-400">
-                <Cake className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
-                <p className="text-xs">No birthdays in the next 7 days 🎉</p>
+              <div className="flex flex-col items-center justify-center py-6 text-center text-secondary-label">
+                <Cake className="w-8 h-8 text-tertiary-label mb-2" />
+                <p className="text-footnote">No birthdays in the next 7 days</p>
               </div>
             ) : (
               upcomingBirthdays.slice(0, 5).map((member) => {
@@ -622,29 +595,34 @@ const DashboardOverview = ({
                 return (
                   <div
                     key={member.id}
-                    className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3 dark:border-slate-700/50 dark:bg-slate-800/50"
+                    className="flex items-center justify-between rounded-xl border border-separator/50 bg-system-grouped-background/60 p-3 dark:border-white/[0.06]"
                   >
                     <div className="flex items-center gap-3.5">
-                      <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-rose-100 bg-white shadow-sm dark:border-rose-950 dark:bg-slate-800">
-                        <div className="w-full bg-rose-500 py-0.5 text-center text-[9px] font-extrabold uppercase tracking-wider text-white">
+                      <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl border border-separator/50 bg-secondary-system-grouped-background shadow-sm dark:border-white/[0.08] dark:bg-[#2c2c2e]">
+                        <div className="w-full bg-system-red/15 py-0.5 text-center text-[9px] font-bold uppercase tracking-[0.08em] text-rose-700 dark:text-system-red">
                           {monthAbbr}
                         </div>
-                        <div className="flex-1 flex items-center justify-center text-sm font-bold text-slate-800 dark:text-slate-100">
+                        <div className="flex flex-1 items-center justify-center text-subheadline font-semibold text-label tabular-nums">
                           {day}
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <p className="text-subheadline font-semibold text-label">
                           {member.full_name}
                         </p>
-                        <p className="text-xs font-medium text-slate-400">
-                          <span className="text-rose-500 font-semibold">{proximityLabel}</span>
+                        <p className="text-caption-1 font-medium text-secondary-label">
+                          <span className="font-semibold text-rose-700 dark:text-system-red">
+                            {proximityLabel}
+                          </span>
                           {ageLabel} · {member.section_name}
                         </p>
                       </div>
                     </div>
 
-                    <button className="btn-icon btn-ghost p-2 rounded-lg text-slate-400 hover:text-primary-600">
+                    <button
+                      className="btn-icon btn-ghost rounded-lg text-secondary-label hover:text-primary-700 dark:hover:text-primary-300"
+                      aria-label={`Message ${member.full_name}`}
+                    >
                       <MessageSquare className="w-4 h-4" />
                     </button>
                   </div>
@@ -655,13 +633,11 @@ const DashboardOverview = ({
         </div>
 
         <div className="card overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              Sections Overview
-            </h3>
+          <div className="flex items-center justify-between border-b border-separator/60 px-5 py-4 sm:px-6 dark:border-white/[0.08]">
+            <h3 className="text-title-3 font-semibold text-label">Sections Overview</h3>
             <button
               onClick={() => navigate('/admin/sections')}
-              className="btn-sm btn-ghost text-primary-600 dark:text-primary-400"
+              className="btn-sm btn-ghost text-primary-700 dark:text-primary-300"
             >
               Full management
             </button>
@@ -682,27 +658,25 @@ const DashboardOverview = ({
                 <div key={section.id}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {section.name}
-                      </h4>
-                      <p className="text-xs font-medium text-slate-400">
+                      <h4 className="text-footnote font-medium text-label">{section.name}</h4>
+                      <p className="text-caption-1 text-secondary-label">
                         {sectionLeaders.length} leader{sectionLeaders.length !== 1 ? 's' : ''}
                       </p>
                     </div>
-                    <span className="tabular-nums text-lg font-bold text-slate-900 dark:text-slate-100">
+                    <span className="tabular-nums text-lg font-semibold text-label">
                       {sectionMembers.length}
                     </span>
                   </div>
 
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-system-fill/60 dark:bg-white/[0.06]">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-primary-500 to-violet-500 transition-all duration-1000"
+                      className="h-full rounded-full bg-primary-500 transition-all duration-1000"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
 
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-slate-400">
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-caption-2 text-tertiary-label">
                       {percentage.toFixed(0)}% of total
                     </span>
                   </div>

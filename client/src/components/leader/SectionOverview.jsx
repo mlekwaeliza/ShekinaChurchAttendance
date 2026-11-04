@@ -24,9 +24,7 @@ const SectionOverview = ({
       accessor: 'leader_name',
       header: 'Subleader Name',
       sortable: true,
-      render: (row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100">{row.leader_name}</span>
-      )
+      render: (row) => <span className="font-semibold text-label">{row.leader_name}</span>
     },
     {
       id: 'status',
@@ -40,7 +38,7 @@ const SectionOverview = ({
               {row.submitted_on_behalf ? 'Covered' : 'Verified'}
             </Badge>
             {row.submitted_by_name && (
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+              <span className="text-caption-2 font-medium text-secondary-label">
                 by {row.submitted_by_name}
               </span>
             )}
@@ -54,7 +52,7 @@ const SectionOverview = ({
       header: 'Present',
       align: 'center',
       render: (row) => (
-        <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+        <span className="font-semibold text-emerald-700 dark:text-system-green tabular-nums">
           {row.stats.present}
         </span>
       )
@@ -64,7 +62,7 @@ const SectionOverview = ({
       header: 'Absent',
       align: 'center',
       render: (row) => (
-        <span className="font-semibold text-rose-600 dark:text-rose-400 tabular-nums">
+        <span className="font-semibold text-rose-700 dark:text-system-red tabular-nums">
           {row.stats.absent}
         </span>
       )
@@ -74,7 +72,7 @@ const SectionOverview = ({
       header: 'Excused',
       align: 'center',
       render: (row) => (
-        <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+        <span className="font-semibold text-amber-700 dark:text-system-orange tabular-nums">
           {row.stats.excused}
         </span>
       )
@@ -98,39 +96,39 @@ const SectionOverview = ({
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="card p-6 bg-gradient-to-r from-primary-50 to-slate-50 dark:from-primary-900/10 dark:to-slate-800/50 border-primary-100 dark:border-primary-800/50 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="card space-y-4 p-6">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              Section Overview
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            <h3 className="text-title-3 font-semibold text-label">Section Overview</h3>
+            <p className="mt-0.5 text-footnote text-secondary-label">
               Monitoring subleader attendance for '{sectionName}'
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-              <span className="text-[10px] font-black text-slate-400 uppercase px-2">Date</span>
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2 rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background p-1.5 shadow-card dark:border-white/[0.08]">
+              <span className="px-2 text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+                Date
+              </span>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent border-none text-sm font-bold focus:ring-0 p-0 pr-2"
+                className="border-none bg-transparent p-0 pr-2 text-footnote font-semibold text-label focus:ring-0"
               />
             </div>
           </div>
         </div>
 
         {/* Service Selector */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-2 border-t border-separator/60 pt-3 dark:border-white/[0.08]">
           {serviceTypes.map((service) => (
             <button
               key={service.id}
               onClick={() => onServiceChange(service.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-black transition-all duration-200 ${
+              className={`focus-ring rounded-lg px-3.5 py-1.5 text-footnote font-semibold transition-colors ${
                 selectedServiceId === service.id
-                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30 ring-2 ring-primary-500/20'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:border-primary-400'
+                  ? 'bg-primary-500 text-white shadow-segmented'
+                  : 'bg-system-fill text-secondary-label hover:text-label'
               }`}
             >
               {service.name}

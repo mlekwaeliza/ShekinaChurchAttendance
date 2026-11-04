@@ -877,7 +877,13 @@ const useLeaderData = () => {
     };
     window.addEventListener('app:data-changed', handleDataChanged);
     return () => window.removeEventListener('app:data-changed', handleDataChanged);
-  }, [user?.id, loadHistory, loadMissedSubmissions, loadSectionPendingSubmissions, checkSubmission]);
+  }, [
+    user?.id,
+    loadHistory,
+    loadMissedSubmissions,
+    loadSectionPendingSubmissions,
+    checkSubmission
+  ]);
 
   useEffect(() => {
     if (selectedDate !== previousSelectedDateRef.current) {
@@ -985,7 +991,15 @@ const useLeaderData = () => {
         }
       });
     }
-  }, [isOnline, serviceTypes, syncPending, showMessage, loadHistory, loadMissedSubmissions, checkSubmission]);
+  }, [
+    isOnline,
+    serviceTypes,
+    syncPending,
+    showMessage,
+    loadHistory,
+    loadMissedSubmissions,
+    checkSubmission
+  ]);
 
   return {
     // Section info

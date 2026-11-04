@@ -38,7 +38,6 @@ function getWeekStart(date = new Date()) {
   return d.toISOString().split('T')[0];
 }
 
-
 const ReportsView = () => {
   const [year, setYear] = useState(new Date().getFullYear());
   const [data, setData] = useState([]);
@@ -62,7 +61,7 @@ const ReportsView = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <Clock className="w-4 h-4 text-slate-400" />
+        <Clock className="w-4 h-4 text-tertiary-label" />
         <select
           value={year}
           onChange={(e) => setYear(parseInt(e.target.value))}
@@ -74,31 +73,36 @@ const ReportsView = () => {
             </option>
           ))}
         </select>
-        <span className="text-sm text-slate-500">New Members Report</span>
+        <span className="text-footnote text-secondary-label">New Members Report</span>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12 text-slate-400">
+        <div className="flex items-center justify-center py-12 text-tertiary-label">
           <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading...
         </div>
       ) : data.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">No data for {year}</div>
+        <div className="text-center py-12 text-tertiary-label">No data for {year}</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-footnote">
             <thead>
-              <tr className="border-b border-slate-200">
-                <th className="text-left py-3 px-4 font-medium text-slate-600">Month</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-600">Probation</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-600">Graduated</th>
-                <th className="text-right py-3 px-4 font-medium text-slate-600">Permanent</th>
+              <tr className="border-b border-black/[0.06]">
+                <th className="text-left py-3 px-4 font-medium text-secondary-label">Month</th>
+                <th className="text-right py-3 px-4 font-medium text-secondary-label">Probation</th>
+                <th className="text-right py-3 px-4 font-medium text-secondary-label">Graduated</th>
+                <th className="text-right py-3 px-4 font-medium text-secondary-label">Permanent</th>
               </tr>
             </thead>
             <tbody>
               {data.map((row) => (
-                <tr key={row.month} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="py-3 px-4 text-slate-800">{fdate(row.month + '-01')}</td>
-                  <td className="py-3 px-4 text-right text-slate-600">{row.probation || 0}</td>
+                <tr
+                  key={row.month}
+                  className="border-b border-separator/60 hover:bg-system-grouped-background/60"
+                >
+                  <td className="py-3 px-4 text-label">{fdate(row.month + '-01')}</td>
+                  <td className="py-3 px-4 text-right text-secondary-label">
+                    {row.probation || 0}
+                  </td>
                   <td className="py-3 px-4 text-right text-emerald-600 font-medium">
                     {row.graduated || 0}
                   </td>
@@ -282,41 +286,38 @@ const NewMemberLeaderView = () => {
   return (
     <div className="space-y-6">
       {message && (
-        <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm">
+        <div className="flex items-center gap-2 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-footnote">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{message}</span>
         </div>
       )}
 
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 p-6 text-white shadow-xl shadow-purple-500/20">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm shadow-inner">
-              <GraduationCap className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">New Members Department</h1>
-              <p className="text-sm text-white/80 font-medium mt-0.5">
-                Manage probationary, graduated, and permanent members
-              </p>
-            </div>
+      <div className="card flex flex-col justify-between gap-4 p-6 md:flex-row md:items-center">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-500/10">
+            <GraduationCap className="h-5 w-5 text-primary-700 dark:text-primary-300" />
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-purple-700 font-semibold text-sm shadow-lg hover:bg-purple-50 transition-colors"
-          >
-            <UserPlus className="w-4 h-4" /> Add New Member
-          </button>
+          <div>
+            <h1 className="text-title-1 font-semibold tracking-tight text-label">
+              New Members Department
+            </h1>
+            <p className="mt-0.5 text-footnote font-medium text-secondary-label">
+              Manage probationary, graduated, and permanent members
+            </p>
+          </div>
         </div>
+        <button onClick={() => setShowForm(!showForm)} className="btn-primary shrink-0">
+          <UserPlus className="h-4 w-4" /> Add New Member
+        </button>
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit} className="card p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Full Name *
+              </label>
               <input
                 type="text"
                 value={form.full_name}
@@ -331,7 +332,9 @@ const NewMemberLeaderView = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Phone
+              </label>
               <input
                 type="text"
                 value={form.phone}
@@ -341,7 +344,9 @@ const NewMemberLeaderView = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Email
+              </label>
               <input
                 type="email"
                 value={form.email}
@@ -351,7 +356,9 @@ const NewMemberLeaderView = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date Joined</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Date Joined
+              </label>
               <input
                 type="date"
                 value={form.date_joined}
@@ -360,7 +367,9 @@ const NewMemberLeaderView = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Decision Type</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Decision Type
+              </label>
               <select
                 value={form.decision_type}
                 onChange={(e) => setForm({ ...form, decision_type: e.target.value })}
@@ -375,7 +384,7 @@ const NewMemberLeaderView = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 Marital Status
               </label>
               <select
@@ -391,7 +400,9 @@ const NewMemberLeaderView = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date of Birth</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Date of Birth
+              </label>
               <input
                 type="date"
                 value={form.date_of_birth}
@@ -400,7 +411,9 @@ const NewMemberLeaderView = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Occupation</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Occupation
+              </label>
               <input
                 type="text"
                 value={form.occupation}
@@ -410,7 +423,7 @@ const NewMemberLeaderView = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
                 Invitation Source
               </label>
               <select
@@ -428,7 +441,9 @@ const NewMemberLeaderView = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+              <label className="block text-footnote font-medium text-secondary-label mb-1">
+                Notes
+              </label>
               <input
                 type="text"
                 value={form.notes}
@@ -439,7 +454,9 @@ const NewMemberLeaderView = () => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+            <label className="block text-footnote font-medium text-secondary-label mb-1">
+              Address
+            </label>
             <input
               type="text"
               value={form.address}
@@ -459,15 +476,15 @@ const NewMemberLeaderView = () => {
         </form>
       )}
 
-      <div className="flex gap-1 border-b border-slate-200 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 border-b border-black/[0.06] overflow-x-auto scrollbar-none">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
+            className={`px-4 py-2.5 text-footnote font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
               activeTab === tab.key
                 ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                : 'border-transparent text-secondary-label hover:text-secondary-label'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -483,11 +500,13 @@ const NewMemberLeaderView = () => {
       ) : (
         <div className="space-y-3">
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-slate-400">
+            <div className="flex items-center justify-center py-12 text-tertiary-label">
               <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading...
             </div>
           ) : members.length === 0 ? (
-            <div className="text-center py-12 text-slate-400">No {activeTab} members found</div>
+            <div className="text-center py-12 text-tertiary-label">
+              No {activeTab} members found
+            </div>
           ) : (
             members.map((member) => {
               const memberAttendance = attendance[member.id] || {};
@@ -503,7 +522,7 @@ const NewMemberLeaderView = () => {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-sm font-bold">
+                        <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-footnote font-semibold">
                           {member.full_name
                             .split(' ')
                             .map((n) => n[0])
@@ -512,8 +531,8 @@ const NewMemberLeaderView = () => {
                             .toUpperCase()}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-slate-900">{member.full_name}</h3>
-                          <p className="text-xs text-slate-500">
+                          <h3 className="font-semibold text-label">{member.full_name}</h3>
+                          <p className="text-caption-1 text-secondary-label">
                             Joined: {fdatetime(member.date_joined)}
                             {member.decision_type ? ` \u00B7 ${member.decision_type}` : ''}
                           </p>
@@ -523,7 +542,7 @@ const NewMemberLeaderView = () => {
                     <div className="flex items-center gap-3">
                       {activeTab === 'probation' && (
                         <span
-                          className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          className={`text-caption-1 font-medium px-2 py-1 rounded-full ${
                             attendedCount >= 3
                               ? 'bg-emerald-100 text-emerald-700'
                               : 'bg-amber-100 text-amber-700'
@@ -533,73 +552,79 @@ const NewMemberLeaderView = () => {
                         </span>
                       )}
                       {activeTab === 'graduated' && member.section_name && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                        <span className="text-caption-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                           {member.section_name}
                         </span>
                       )}
                       {expanded === member.id ? (
-                        <ChevronUp className="w-4 h-4 text-slate-400" />
+                        <ChevronUp className="w-4 h-4 text-tertiary-label" />
                       ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                        <ChevronDown className="w-4 h-4 text-tertiary-label" />
                       )}
                     </div>
                   </div>
 
                   {expanded === member.id && (
-                    <div className="border-t border-slate-100 px-4 py-4 space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                    <div className="border-t border-separator/60 px-4 py-4 space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-footnote">
                         {member.phone && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Phone className="w-3.5 h-3.5 text-slate-400" /> {member.phone}
+                          <div className="flex items-center gap-2 text-secondary-label">
+                            <Phone className="w-3.5 h-3.5 text-tertiary-label" /> {member.phone}
                           </div>
                         )}
                         {member.email && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <Mail className="w-3.5 h-3.5 text-slate-400" /> {member.email}
+                          <div className="flex items-center gap-2 text-secondary-label">
+                            <Mail className="w-3.5 h-3.5 text-tertiary-label" /> {member.email}
                           </div>
                         )}
                         {member.address && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <MapPin className="w-3.5 h-3.5 text-slate-400" /> {member.address}
+                          <div className="flex items-center gap-2 text-secondary-label">
+                            <MapPin className="w-3.5 h-3.5 text-tertiary-label" /> {member.address}
                           </div>
                         )}
                         {member.marital_status && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <span className="font-semibold text-slate-400 text-xs">Marital:</span>{' '}
+                          <div className="flex items-center gap-2 text-secondary-label">
+                            <span className="font-semibold text-tertiary-label text-caption-1">
+                              Marital:
+                            </span>{' '}
                             {member.marital_status}
                           </div>
                         )}
                         {member.date_of_birth && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <span className="font-semibold text-slate-400 text-xs">DOB:</span>{' '}
+                          <div className="flex items-center gap-2 text-secondary-label">
+                            <span className="font-semibold text-tertiary-label text-caption-1">
+                              DOB:
+                            </span>{' '}
                             {fdate(member.date_of_birth)}
                           </div>
                         )}
                         {member.occupation && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <span className="font-semibold text-slate-400 text-xs">
+                          <div className="flex items-center gap-2 text-secondary-label">
+                            <span className="font-semibold text-tertiary-label text-caption-1">
                               Occupation:
                             </span>{' '}
                             {member.occupation}
                           </div>
                         )}
                         {member.invitation_source && (
-                          <div className="flex items-center gap-2 text-slate-600">
-                            <span className="font-semibold text-slate-400 text-xs">Source:</span>{' '}
+                          <div className="flex items-center gap-2 text-secondary-label">
+                            <span className="font-semibold text-tertiary-label text-caption-1">
+                              Source:
+                            </span>{' '}
                             {member.invitation_source}
                           </div>
                         )}
                       </div>
                       {member.notes && (
-                        <p className="text-sm text-slate-500 flex items-start gap-2">
-                          <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" />{' '}
+                        <p className="text-footnote text-secondary-label flex items-start gap-2">
+                          <FileText className="w-3.5 h-3.5 text-tertiary-label mt-0.5 shrink-0" />{' '}
                           {member.notes}
                         </p>
                       )}
 
                       {activeTab === 'probation' && (
                         <div>
-                          <h4 className="text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
+                          <h4 className="text-footnote font-medium text-secondary-label mb-2 flex items-center gap-2">
                             <Calendar className="w-3.5 h-3.5" /> Weekly Attendance (4 weeks)
                           </h4>
                           <div className="flex flex-wrap gap-2">
@@ -610,10 +635,10 @@ const NewMemberLeaderView = () => {
                                 <button
                                   key={week}
                                   onClick={() => toggleAttendance(member.id, week, att)}
-                                  className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                                  className={`px-3 py-1.5 text-caption-1 rounded-lg border transition-colors ${
                                     att
                                       ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
-                                      : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
+                                      : 'bg-system-fill border-black/[0.06] text-secondary-label hover:bg-system-fill'
                                   }`}
                                 >
                                   {fdate(week)}
@@ -626,13 +651,13 @@ const NewMemberLeaderView = () => {
                             <div className="mt-3 flex gap-2">
                               <button
                                 onClick={() => handleGraduate(member.id)}
-                                className="btn-primary text-xs flex items-center gap-1.5"
+                                className="btn-primary text-caption-1 flex items-center gap-1.5"
                               >
                                 <GraduationCap className="w-3.5 h-3.5" /> Graduate to Section
                               </button>
                               <button
                                 onClick={() => handleMakePermanent(member.id)}
-                                className="btn-secondary text-xs flex items-center gap-1.5"
+                                className="btn-secondary text-caption-1 flex items-center gap-1.5"
                               >
                                 <CheckCircle2 className="w-3.5 h-3.5" /> Mark Permanent
                               </button>
@@ -641,10 +666,10 @@ const NewMemberLeaderView = () => {
                         </div>
                       )}
 
-                      <div className="flex gap-2 pt-2 border-t border-slate-100">
+                      <div className="flex gap-2 pt-2 border-t border-separator/60">
                         <button
                           onClick={() => handleDelete(member.id)}
-                          className="text-xs text-rose-600 hover:text-rose-700 font-medium flex items-center gap-1"
+                          className="text-caption-1 text-rose-600 hover:text-rose-700 font-medium flex items-center gap-1"
                         >
                           <X className="w-3 h-3" /> Remove
                         </button>

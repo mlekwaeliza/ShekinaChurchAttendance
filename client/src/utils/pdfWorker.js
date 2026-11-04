@@ -41,10 +41,9 @@ export function generateReportPdf(payload) {
   return new Promise((resolve, reject) => {
     let worker;
     try {
-      worker = new Worker(
-        new URL('../workers/report-pdf.worker.js', import.meta.url),
-        { type: 'module' }
-      );
+      worker = new Worker(new URL('../workers/report-pdf.worker.js', import.meta.url), {
+        type: 'module'
+      });
     } catch (err) {
       reject(new Error('Could not start PDF worker: ' + (err.message || err)));
       return;

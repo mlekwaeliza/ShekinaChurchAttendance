@@ -33,7 +33,7 @@ import DataTable from '../ui/DataTable';
 import Badge from '../ui/Badge';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 
-const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
+const COLORS = ['#14a896', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
 
 const PastorInsights = () => {
   const [data, setData] = useState({
@@ -92,17 +92,17 @@ const PastorInsights = () => {
   if (loading) {
     return (
       <div className="space-y-6 animate-fade-in">
-        <LoadingSkeleton className="h-24 rounded-3xl" />
+        <LoadingSkeleton className="h-24 rounded-2xl" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <LoadingSkeleton key={i} className="h-32 rounded-3xl" />
+            <LoadingSkeleton key={i} className="h-32 rounded-2xl" />
           ))}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <LoadingSkeleton className="h-[400px] rounded-3xl" />
-          <LoadingSkeleton className="h-[400px] rounded-3xl" />
+          <LoadingSkeleton className="h-[400px] rounded-2xl" />
+          <LoadingSkeleton className="h-[400px] rounded-2xl" />
         </div>
-        <LoadingSkeleton className="h-[500px] rounded-3xl" />
+        <LoadingSkeleton className="h-[500px] rounded-2xl" />
       </div>
     );
   }
@@ -132,7 +132,7 @@ const PastorInsights = () => {
     {
       accessor: 'member_id',
       header: 'Rank',
-      render: (_, idx) => <span className="text-slate-400 font-medium">#{idx + 1}</span>,
+      render: (_, idx) => <span className="text-tertiary-label font-medium">#{idx + 1}</span>,
       sortable: false,
       align: 'center'
     },
@@ -140,9 +140,7 @@ const PastorInsights = () => {
       accessor: 'full_name',
       header: 'Name',
       sortable: true,
-      render: (row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100">{row.full_name}</span>
-      )
+      render: (row) => <span className="font-semibold text-label">{row.full_name}</span>
     },
     { accessor: 'section_name', header: 'Section', sortable: true },
     {
@@ -160,7 +158,7 @@ const PastorInsights = () => {
       render: (row) => (
         <span className="flex items-center justify-center gap-1">
           <Flame className="w-3.5 h-3.5 text-amber-500" />
-          <span className="font-medium text-slate-700 dark:text-slate-300">{row.streak}</span>
+          <span className="font-medium text-secondary-label">{row.streak}</span>
         </span>
       )
     },
@@ -182,9 +180,7 @@ const PastorInsights = () => {
       accessor: 'leader_name',
       header: 'Leader',
       sortable: true,
-      render: (row) => (
-        <span className="font-semibold text-slate-900 dark:text-slate-100">{row.leader_name}</span>
-      )
+      render: (row) => <span className="font-semibold text-label">{row.leader_name}</span>
     },
     { accessor: 'section_name', header: 'Section', sortable: true },
     {
@@ -224,14 +220,13 @@ const PastorInsights = () => {
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md rounded-xl shadow-elevated border border-slate-200 dark:border-slate-700 p-3">
-          <p className="font-semibold text-slate-900 dark:text-slate-100 mb-2">{label}</p>
+        <div className="bg-white/95 dark:bg-white/[0.04] backdrop-blur-md rounded-xl shadow-elevated border border-black/[0.06] dark:border-white/[0.08] p-3">
+          <p className="font-semibold text-label mb-2">{label}</p>
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 mb-1">
               <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                {entry.name}:{' '}
-                <span className="text-slate-900 dark:text-slate-100 font-bold">{entry.value}</span>
+              <span className="text-footnote font-medium text-secondary-label">
+                {entry.name}: <span className="text-label font-semibold">{entry.value}</span>
                 {entry.name.includes('%') || entry.name.toLowerCase().includes('rate') ? '%' : ''}
               </span>
             </div>
@@ -246,19 +241,19 @@ const PastorInsights = () => {
     <div className="space-y-8 animate-fade-in">
       {/* 🚨 Anomalies Alert */}
       {anomalies && anomalies.length > 0 && (
-        <div className="bg-gradient-to-r from-rose-500 to-pink-500 rounded-3xl p-6 shadow-md text-white relative overflow-hidden">
-          <div className="absolute -right-4 -top-4 opacity-10 rotate-12">
-            <ShieldAlert className="w-40 h-40" />
+        <div className="card relative overflow-hidden p-6">
+          <div className="absolute -right-4 -top-4 rotate-12 text-system-red/10">
+            <ShieldAlert className="h-40 w-40" />
           </div>
           <div className="relative z-10 flex items-start gap-4">
-            <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-md">
-              <AlertTriangle className="w-6 h-6 text-white" />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-system-red/10">
+              <AlertTriangle className="h-5 w-5 text-rose-700 dark:text-system-red" />
             </div>
-            <div>
-              <h3 className="text-lg font-bold mb-1">
+            <div className="min-w-0">
+              <h3 className="mb-1 text-headline font-semibold text-label">
                 Attention Required: Attendance Drops Detected
               </h3>
-              <p className="text-white/90 text-sm mb-4">
+              <p className="mb-4 text-footnote text-secondary-label">
                 The following sections have dropped significantly below their 90-day average
                 attendance rate.
               </p>
@@ -266,13 +261,15 @@ const PastorInsights = () => {
                 {anomalies.map((anom, i) => (
                   <div
                     key={i}
-                    className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-2 flex items-center gap-3"
+                    className="flex items-center gap-3 rounded-xl bg-system-red/[0.07] px-4 py-2"
                   >
-                    <span className="font-semibold">{anom.section_name}</span>
-                    <span className="text-white/60">|</span>
-                    <span className="text-sm">Avg: {anom.historical_avg}%</span>
-                    <TrendingUp className="w-4 h-4 text-rose-200 rotate-[135deg]" />
-                    <span className="text-rose-100 font-bold text-sm">
+                    <span className="font-semibold text-label">{anom.section_name}</span>
+                    <span className="text-tertiary-label">|</span>
+                    <span className="text-footnote text-secondary-label">
+                      Avg: {anom.historical_avg}%
+                    </span>
+                    <TrendingUp className="h-4 w-4 rotate-[135deg] text-rose-600 dark:text-system-red" />
+                    <span className="text-footnote font-semibold text-rose-700 dark:text-system-red">
                       Now: {anom.latest_rate}%
                     </span>
                   </div>
@@ -376,7 +373,7 @@ const PastorInsights = () => {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 h-full gap-4">
             <div className="h-full flex flex-col justify-center relative">
-              <h4 className="text-xs font-semibold text-slate-500 absolute top-0 w-full text-center">
+              <h4 className="text-caption-1 font-semibold text-secondary-label absolute top-0 w-full text-center">
                 Gender
               </h4>
               <ResponsiveContainer width="100%" height="85%">
@@ -407,7 +404,7 @@ const PastorInsights = () => {
             </div>
 
             <div className="h-full flex flex-col justify-center relative">
-              <h4 className="text-xs font-semibold text-slate-500 absolute top-0 w-full text-center">
+              <h4 className="text-caption-1 font-semibold text-secondary-label absolute top-0 w-full text-center">
                 Age Groups
               </h4>
               <ResponsiveContainer width="100%" height="85%">
@@ -445,42 +442,36 @@ const PastorInsights = () => {
         <div className="xl:col-span-1 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Flame className="w-5 h-5 text-amber-500" />
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-              Top Perfect Streaks
-            </h3>
+            <h3 className="text-headline font-semibold text-label">Top Perfect Streaks</h3>
           </div>
           <div className="space-y-3">
             {streaks && streaks.length > 0 ? (
               streaks.map((streak, idx) => (
                 <div
                   key={idx}
-                  className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center justify-between hover:border-amber-300 dark:hover:border-amber-700 transition-colors shadow-sm"
+                  className="bg-secondary-system-grouped-background rounded-2xl border border-black/[0.06] dark:border-white/[0.08] p-4 flex items-center justify-between hover:border-amber-300 dark:hover:border-amber-700 transition-colors shadow-card"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-bold flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800/50">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-semibold flex items-center justify-center shrink-0 border border-amber-200 dark:border-amber-800/50">
                       #{idx + 1}
                     </div>
                     <div>
-                      <h4 className="font-semibold text-slate-900 dark:text-slate-100">
-                        {streak.full_name}
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {streak.section_name}
-                      </p>
+                      <h4 className="font-semibold text-label">{streak.full_name}</h4>
+                      <p className="text-caption-1 text-secondary-label">{streak.section_name}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center gap-1 justify-end text-amber-600 dark:text-amber-400 font-bold text-lg">
+                    <div className="flex items-center gap-1 justify-end text-amber-600 dark:text-amber-400 font-semibold text-lg">
                       {streak.current_streak} <Flame className="w-4 h-4 fill-amber-500/20" />
                     </div>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">
+                    <p className="text-caption-2 text-tertiary-label uppercase font-semibold tracking-wider">
                       Weeks
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center text-slate-500 border border-dashed rounded-2xl">
+              <div className="p-8 text-center text-secondary-label border border-dashed rounded-2xl">
                 No active streaks found.
               </div>
             )}
@@ -491,8 +482,8 @@ const PastorInsights = () => {
           {/* ⭐ Engagement Leaderboard */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-indigo-500" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              <Target className="w-5 h-5 text-primary-600" />
+              <h3 className="text-headline font-semibold text-label">
                 Member Engagement Score Tracker
               </h3>
             </div>
@@ -509,9 +500,7 @@ const PastorInsights = () => {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Users className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                Section Leader Dynamics
-              </h3>
+              <h3 className="text-headline font-semibold text-label">Section Leader Dynamics</h3>
             </div>
             <DataTable
               data={leaderTrends}

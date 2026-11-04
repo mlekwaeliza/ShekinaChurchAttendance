@@ -27,11 +27,11 @@ export const SkeletonTableRow = ({ cols = 4, className = '' }) => (
 
 export const SkeletonTable = ({ rows = 5, cols = 4 }) => (
   <div className="card overflow-hidden">
-    <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+    <div className="border-b border-separator/60 px-5 py-4 dark:border-white/[0.08]">
       <div className="skeleton h-10 w-full rounded-xl" />
     </div>
     <table className="min-w-full">
-      <thead className="bg-slate-50/80 dark:bg-slate-700/50">
+      <thead className="bg-system-fill">
         <tr>
           {Array.from({ length: cols }).map((_, i) => (
             <th key={i} className="px-6 py-3.5">
@@ -40,7 +40,7 @@ export const SkeletonTable = ({ rows = 5, cols = 4 }) => (
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+      <tbody className="divide-y divide-separator/50 dark:divide-white/[0.06]">
         {Array.from({ length: rows }).map((_, i) => (
           <SkeletonTableRow key={i} cols={cols} />
         ))}
@@ -62,11 +62,12 @@ export const SkeletonChart = ({ className = '' }) => (
 );
 
 const LoadingSkeleton = ({ type = 'card', count = 1, ...props }) => {
-  const Component = {
-    card: SkeletonCard,
-    table: SkeletonTable,
-    chart: SkeletonChart,
-  }[type] || SkeletonCard;
+  const Component =
+    {
+      card: SkeletonCard,
+      table: SkeletonTable,
+      chart: SkeletonChart
+    }[type] || SkeletonCard;
 
   return (
     <>

@@ -62,7 +62,7 @@ const usePWA = () => {
     isOnline,
     updateAvailable,
     updateApp,
-    dismissUpdate,
+    dismissUpdate
   };
 };
 

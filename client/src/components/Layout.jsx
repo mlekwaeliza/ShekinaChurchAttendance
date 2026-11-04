@@ -229,7 +229,9 @@ const Layout = ({ children, showNav = true }) => {
     admin: [
       {
         section: t('nav.sections.overview', 'OVERVIEW'),
-        items: [{ path: '/admin', label: t('nav.items.dashboard'), icon: LayoutDashboard, exact: true }]
+        items: [
+          { path: '/admin', label: t('nav.items.dashboard'), icon: LayoutDashboard, exact: true }
+        ]
       },
       {
         section: t('nav.sections.ministries'),
@@ -255,16 +257,33 @@ const Layout = ({ children, showNav = true }) => {
       {
         section: t('nav.sections.servicesAttendance'),
         items: [
-          { path: '/admin/attendance-dashboard', label: t('nav.items.attendanceOverview'), icon: BarChart3 },
-          { path: '/admin/attendance-corrections', label: t('nav.items.reviewAttendance'), icon: CheckSquare },
+          {
+            path: '/admin/attendance-dashboard',
+            label: t('nav.items.attendanceOverview'),
+            icon: BarChart3
+          },
+          {
+            path: '/admin/attendance-corrections',
+            label: t('nav.items.reviewAttendance'),
+            icon: CheckSquare
+          },
           { path: '/admin/history', label: t('nav.items.serviceHistory'), icon: Clock },
-          { path: '/admin/attendance-analytics', label: t('nav.items.attendanceInsights'), icon: TrendingUp }
+          {
+            path: '/admin/attendance-analytics',
+            label: t('nav.items.attendanceInsights'),
+            icon: TrendingUp
+          }
         ]
       },
       {
         section: t('nav.sections.outreach'),
         items: [
-          { path: '/admin/evangelism', label: t('nav.items.outreachOverview'), icon: Heart, exact: true },
+          {
+            path: '/admin/evangelism',
+            label: t('nav.items.outreachOverview'),
+            icon: Heart,
+            exact: true
+          },
           {
             path: '/admin/evangelism',
             label: t('nav.items.outreachEvents'),
@@ -315,7 +334,9 @@ const Layout = ({ children, showNav = true }) => {
     leader: [
       {
         section: t('leader.dashboard'),
-        items: [{ path: '/leader', label: t('nav.items.dashboard'), icon: LayoutDashboard, exact: true }]
+        items: [
+          { path: '/leader', label: t('nav.items.dashboard'), icon: LayoutDashboard, exact: true }
+        ]
       },
       {
         section: t('leader.myWork'),
@@ -349,7 +370,9 @@ const Layout = ({ children, showNav = true }) => {
         ? [
             {
               section: t('nav.items.newMembers'),
-              items: [{ path: '/leader/new-members', label: t('nav.items.newMembers'), icon: UserPlus }]
+              items: [
+                { path: '/leader/new-members', label: t('nav.items.newMembers'), icon: UserPlus }
+              ]
             }
           ]
         : []),
@@ -509,27 +532,6 @@ const Layout = ({ children, showNav = true }) => {
     return true;
   };
 
-  const pageTitle = (() => {
-    const path = location.pathname;
-    const search = location.search;
-    // Prefer item with matching search params first
-    for (const group of currentNav) {
-      for (const item of group.items) {
-        const matchPath = item.exact ? path === item.path : path.startsWith(item.path);
-        if (matchPath && item.search && search === item.search) return item.label;
-      }
-    }
-    // Fallback to any matching item
-    for (const group of currentNav) {
-      for (const item of group.items) {
-        const matchPath = item.exact ? path === item.path : path.startsWith(item.path);
-        if (matchPath && !item.search) return item.label;
-      }
-    }
-    if (path.includes('change-password')) return 'Change Password';
-    return 'Dashboard';
-  })();
-
   const roleLabel = {
     admin: 'Administrator',
     leader: user?.is_new_member_leader
@@ -566,11 +568,11 @@ const Layout = ({ children, showNav = true }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-1">
+      <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-3 space-y-0.5">
         {currentNav.map((group, gi) => (
           <div key={gi}>
             {!navCollapsed && <div className="sidebar-section-label">{group.section}</div>}
-            {navCollapsed && gi > 0 && <div className="h-px bg-sidebar-border/20 mx-2 my-3" />}
+            {navCollapsed && gi > 0 && <div className="h-px bg-white/[0.07] mx-2 my-2.5" />}
             {group.items.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
@@ -580,13 +582,11 @@ const Layout = ({ children, showNav = true }) => {
                   to={item.path + (item.search || '')}
                   onClick={() => setMobileOpen(false)}
                   title={navCollapsed ? item.label : undefined}
+                  aria-current={active ? 'page' : undefined}
                   className={`sidebar-nav-item ${active ? 'active' : ''} ${navCollapsed ? 'justify-center px-0' : ''}`}
                 >
                   <Icon className="nav-icon" />
                   {!navCollapsed && <span className="truncate">{item.label}</span>}
-                  {active && !navCollapsed && (
-                    <div className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-accent-400" />
-                  )}
                 </Link>
               );
             })}
@@ -595,7 +595,7 @@ const Layout = ({ children, showNav = true }) => {
       </nav>
 
       {/* Collapse Toggle (desktop only) */}
-      <div className="hidden md:block px-3 py-2 border-t border-sidebar-border/20">
+      <div className="hidden md:block px-3 py-1.5 border-t border-white/[0.06]">
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="sidebar-nav-item w-full justify-center"
@@ -608,7 +608,7 @@ const Layout = ({ children, showNav = true }) => {
 
       {/* User Profile */}
       <div
-        className={`px-3 py-3 border-t border-sidebar-border/20 ${navCollapsed ? 'flex justify-center' : ''}`}
+        className={`px-3 py-2.5 border-t border-white/[0.06] ${navCollapsed ? 'flex justify-center' : ''}`}
       >
         <div
           className={`flex items-center gap-3 ${navCollapsed ? '' : 'p-2 rounded-xl hover:bg-sidebar-hover transition-colors cursor-pointer'}`}
@@ -623,14 +623,14 @@ const Layout = ({ children, showNav = true }) => {
               <img
                 src={`${user.profile_picture}?v=${profileImgKey}`}
                 alt=""
-                className="w-9 h-9 rounded-xl object-cover ring-2 ring-white/10"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-white/10"
               />
             ) : (
-              <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center text-sm font-bold text-white">
+              <div className="w-9 h-9 rounded-full bg-primary-600 flex items-center justify-center text-sm font-semibold text-white">
                 {user?.full_name?.charAt(0)}
               </div>
             )}
-            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-sidebar" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#0b1a2c]" />
           </div>
 
           {!navCollapsed && (
@@ -658,7 +658,7 @@ const Layout = ({ children, showNav = true }) => {
         {/* Profile Dropdown */}
         {profileDropdown && !navCollapsed && (
           <div
-            className="absolute bottom-20 left-3 right-3 z-50 animate-scale-in rounded-xl border border-slate-200 bg-white py-1 shadow-elevated dark:border-white/10 dark:bg-slate-900"
+            className="absolute bottom-20 left-3 right-3 z-50 animate-scale-in rounded-xl border border-white/[0.08] bg-[#101f31] py-1 shadow-popover"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -666,9 +666,9 @@ const Layout = ({ children, showNav = true }) => {
                 navigate(user?.role === 'admin' ? '/admin/settings' : '/change-password');
                 setProfileDropdown(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors dark:text-slate-200 dark:hover:bg-white/5"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-footnote text-white/70 hover:bg-white/[0.06] hover:text-white transition-colors"
             >
-              <Settings className="w-4 h-4 text-slate-400" />
+              <Settings className="w-4 h-4 text-white/40" />
               Settings
             </button>
             <button
@@ -676,15 +676,15 @@ const Layout = ({ children, showNav = true }) => {
                 navigate('/change-password');
                 setProfileDropdown(false);
               }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors dark:text-slate-200 dark:hover:bg-white/5"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-footnote text-white/70 hover:bg-white/[0.06] hover:text-white transition-colors"
             >
-              <Shield className="w-4 h-4 text-slate-400" />
+              <Shield className="w-4 h-4 text-white/40" />
               Change Password
             </button>
-            <div className="my-1 h-px bg-slate-100 dark:bg-white/10" />
+            <div className="my-1 h-px bg-white/[0.08]" />
             <button
               onClick={logout}
-              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors dark:text-rose-400 dark:hover:bg-rose-500/10"
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-footnote text-rose-300 hover:bg-rose-500/10 transition-colors"
             >
               <LogOut className="w-4 h-4" />
               Sign Out
@@ -720,7 +720,7 @@ const Layout = ({ children, showNav = true }) => {
           {/* Mobile Overlay */}
           {mobileOpen && (
             <div
-              className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden"
               onClick={() => setMobileOpen(false)}
             />
           )}
@@ -755,9 +755,8 @@ const Layout = ({ children, showNav = true }) => {
                   <Menu className="w-5 h-5" />
                 </button>
 
-                {/* Page title replaced with Breadcrumbs */}
+                {/* Breadcrumb title */}
                 <div className="min-w-0 flex-1 overflow-hidden">
-                  <p className="section-eyebrow hidden sm:block">{pageTitle}</p>
                   <Breadcrumbs userRole={user?.role} userName={user?.full_name} />
                 </div>
               </div>
@@ -775,17 +774,17 @@ const Layout = ({ children, showNav = true }) => {
                 </button>
                 <button
                   onClick={() => setSearchOpen(true)}
-                  className="focus-ring hidden h-10 min-w-[13rem] items-center gap-2 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 text-slate-500 transition-all hover:border-slate-300 hover:bg-white hover:text-slate-900 sm:inline-flex dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:border-primary-400/40 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="focus-ring hidden h-9 min-w-[12.5rem] items-center gap-2 rounded-lg bg-system-fill/70 px-3 text-secondary-label transition-colors hover:bg-system-fill hover:text-label sm:inline-flex dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
                   title="Search (Ctrl+K)"
                 >
                   <Search className="w-4 h-4" />
-                  <span className="text-xs font-medium">Search anything</span>
-                  <kbd className="ml-auto hidden items-center rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-bold text-slate-400 md:inline-flex dark:border-white/10 dark:bg-slate-900">
-                    Ctrl K
+                  <span className="text-footnote font-medium">Search anything</span>
+                  <kbd className="ml-auto hidden items-center rounded border border-separator/70 bg-system-background px-1.5 py-0.5 text-[10px] font-medium text-secondary-label md:inline-flex dark:border-white/10 dark:bg-white/[0.06]">
+                    ⌘K
                   </kbd>
                 </button>
                 {/* Live time */}
-                <div className="mr-1 hidden items-center gap-2 text-xs text-slate-500 xl:flex dark:text-slate-400">
+                <div className="mr-1 hidden items-center gap-2 text-footnote text-secondary-label xl:flex">
                   <span className="font-medium">
                     {currentTime.toLocaleDateString('en-US', {
                       weekday: 'short',
@@ -793,7 +792,7 @@ const Layout = ({ children, showNav = true }) => {
                       day: 'numeric'
                     })}
                   </span>
-                  <span className="text-slate-300 dark:text-slate-700">•</span>
+                  <span className="text-tertiary-label">·</span>
                   <span className="tabular-nums">
                     {currentTime.toLocaleTimeString('en-US', {
                       hour: '2-digit',
@@ -803,23 +802,15 @@ const Layout = ({ children, showNav = true }) => {
                 </div>
 
                 {/* Online/Offline Status */}
-                <div
-                  className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
-                    isOnline
-                      ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200/60 dark:border-emerald-700/60'
-                      : 'bg-amber-50 dark:bg-amber-900/30 border-amber-200/60 dark:border-amber-700/60'
-                  }`}
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`}
-                  />
+                <div className="hidden sm:flex items-center gap-1.5 rounded-full bg-system-fill/70 px-2.5 py-1 dark:bg-white/[0.06]">
                   <span
-                    className={`text-xs font-semibold ${isOnline ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}
-                  >
+                    className={`h-1.5 w-1.5 rounded-full ${isOnline ? 'bg-system-green' : 'bg-system-orange animate-pulse'}`}
+                  />
+                  <span className="text-[11px] font-medium text-secondary-label">
                     {isOnline ? 'Online' : 'Offline'}
                   </span>
                   {!isOnline && pendingCount > 0 && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-200 dark:bg-amber-700 text-amber-800 dark:text-amber-200 rounded-full">
+                    <span className="text-[10px] font-semibold text-amber-700 dark:text-system-orange">
                       {pendingCount}
                     </span>
                   )}
@@ -830,7 +821,7 @@ const Layout = ({ children, showNav = true }) => {
                   <button
                     onClick={syncPending}
                     disabled={syncing}
-                    className="btn-ghost p-2 relative"
+                    className="header-icon-button relative"
                     title={`Sync ${pendingCount} pending submission(s)`}
                   >
                     <svg
@@ -873,12 +864,12 @@ const Layout = ({ children, showNav = true }) => {
                 {/* Language toggle */}
                 <button
                   onClick={toggleLanguage}
-                  className="header-icon-button focus-ring"
+                  className="header-icon-button w-auto gap-1 px-2"
                   title={t('common.language')}
                   aria-label={t('common.language')}
                 >
                   <Globe className="w-5 h-5" />
-                  <span className="hidden sm:inline ml-1 text-xs font-bold">
+                  <span className="hidden sm:inline text-[11px] font-semibold">
                     {i18n.language?.startsWith('sw') ? 'SW' : 'EN'}
                   </span>
                 </button>
@@ -905,7 +896,7 @@ const Layout = ({ children, showNav = true }) => {
                   className="header-icon-button focus-ring hidden sm:inline-flex"
                   aria-label="Open settings"
                 >
-                  <Settings className="w-5 h-5 text-slate-500" />
+                  <Settings className="w-5 h-5" />
                 </button>
               </div>
             </header>

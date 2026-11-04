@@ -24,13 +24,13 @@ const ChurchCalendar = lazy(() => import('./components/ChurchCalendar.jsx'));
 function LoadingScreen({ message = 'Loading...' }) {
   return (
     <div
-      className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950"
+      className="flex min-h-screen items-center justify-center bg-system-grouped-background"
       role="status"
       aria-live="polite"
     >
       <div className="flex flex-col items-center gap-3">
         <div className="h-8 w-8 animate-spin-slow rounded-full border-2 border-primary-600 border-t-transparent" />
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{message}</p>
+        <p className="text-sm font-medium text-secondary-label">{message}</p>
       </div>
     </div>
   );

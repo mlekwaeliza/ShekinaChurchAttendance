@@ -33,13 +33,19 @@ const LeadershipDirectory = () => {
       if (appointmentTo) params.appointment_to = appointmentTo;
       const res = await adminAPI.getLeadershipDirectory(params);
       const payload = res.data || { directory: [], titles: [], sections: [] };
-      console.log('[LeadershipDirectory] Loaded:', { titlesCount: payload.titles?.length, activeTitles: payload.titles?.filter(t => !!t.is_active).length, sectionsCount: payload.sections?.length });
+      console.log('[LeadershipDirectory] Loaded:', {
+        titlesCount: payload.titles?.length,
+        activeTitles: payload.titles?.filter((t) => !!t.is_active).length,
+        sectionsCount: payload.sections?.length
+      });
       setData(payload);
       setTotalPages(Math.ceil((payload.total || payload.directory?.length || 0) / limit));
     } catch (err) {
       console.error('Failed to load leadership directory:', err);
       alert('Failed to load leadership directory: ' + (err.message || 'Unknown error'));
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Initialize filters from URL on mount
@@ -54,6 +60,7 @@ const LeadershipDirectory = () => {
     if (params.page) setPage(parseInt(params.page));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     loadDirectory();
     // Sync to URL
@@ -66,7 +73,16 @@ const LeadershipDirectory = () => {
     if (appointmentTo) nextParams.set('appointment_to', appointmentTo);
     if (page > 1) nextParams.set('page', String(page));
     setSearchParams(nextParams, { replace: true });
-  }, [titleFilter, statusFilter, sectionFilter, appointmentFrom, appointmentTo, page, setSearchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    titleFilter,
+    statusFilter,
+    sectionFilter,
+    appointmentFrom,
+    appointmentTo,
+    page,
+    setSearchParams
+  ]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -76,7 +92,17 @@ const LeadershipDirectory = () => {
 
   const handleExport = () => {
     if (data.directory.length === 0) return;
-    const headers = ['Name', 'S/N', 'Section', 'Title', 'Status', 'Appointed', 'Phone', 'Email', 'Assigned By'];
+    const headers = [
+      'Name',
+      'S/N',
+      'Section',
+      'Title',
+      'Status',
+      'Appointed',
+      'Phone',
+      'Email',
+      'Assigned By'
+    ];
     const rows = data.directory.map((d) => [
       d.full_name,
       d.membership_id,
@@ -86,9 +112,11 @@ const LeadershipDirectory = () => {
       d.appointment_date ? fdatetime(d.appointment_date) : '—',
       d.phone || '—',
       d.email || '—',
-      d.assigned_by_name || '—',
+      d.assigned_by_name || '—'
     ]);
-    const csv = [headers, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const csv = [headers, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -98,7 +126,10 @@ const LeadershipDirectory = () => {
 
   const exportPDF = async () => {
     if (data.directory.length === 0) return;
-    const [{ default: jsPDF }, autoTableModule] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    const [{ default: jsPDF }, autoTableModule] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable')
+    ]);
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
     const m = 20;
@@ -112,7 +143,11 @@ const LeadershipDirectory = () => {
     doc.text('Leadership Directory', m, 18);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Shekina Church · ${new Date().toLocaleDateString()} · ${data.directory.length} leaders`, m, 28);
+    doc.text(
+      `Shekina Church · ${new Date().toLocaleDateString()} · ${data.directory.length} leaders`,
+      m,
+      28
+    );
     y = 45;
 
     doc.setTextColor(51, 51, 51);
@@ -125,14 +160,14 @@ const LeadershipDirectory = () => {
     doc.line(m, y, pw - m, y);
     y += 5;
 
-    const bodyData = data.directory.map(d => [
+    const bodyData = data.directory.map((d) => [
       d.full_name || 'N/A',
       d.section_name || 'N/A',
       d.title_name || 'N/A',
       (d.title_status || 'active').charAt(0).toUpperCase() + (d.title_status || 'active').slice(1),
       d.appointment_date ? fdatetime(d.appointment_date) : 'N/A',
       d.phone || 'N/A',
-      d.email || 'N/A',
+      d.email || 'N/A'
     ]);
     autoTableModule.default(doc, {
       startY: y,
@@ -141,7 +176,7 @@ const LeadershipDirectory = () => {
       margin: { left: m, right: m },
       styles: { fontSize: 8, cellPadding: 3 },
       headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      alternateRowStyles: { fillColor: [248, 250, 252] }
     });
 
     const pc = doc.internal.getNumberOfPages();
@@ -149,7 +184,11 @@ const LeadershipDirectory = () => {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
-      doc.text(`Page ${i} of ${pc} | Shekina Church Management System`, m, doc.internal.pageSize.getHeight() - 10);
+      doc.text(
+        `Page ${i} of ${pc} | Shekina Church Management System`,
+        m,
+        doc.internal.pageSize.getHeight() - 10
+      );
     }
 
     doc.save(`leadership_directory_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -161,7 +200,7 @@ const LeadershipDirectory = () => {
     emeritus: 'info',
     probationary: 'warning',
     retired: 'neutral',
-    inactive: 'neutral',
+    inactive: 'neutral'
   };
   const STATUS_LABELS = {
     active: 'Active',
@@ -169,7 +208,7 @@ const LeadershipDirectory = () => {
     emeritus: 'Emeritus',
     probationary: 'Probationary',
     retired: 'Retired',
-    inactive: 'Inactive',
+    inactive: 'Inactive'
   };
 
   // Assign leader modal state
@@ -184,20 +223,31 @@ const LeadershipDirectory = () => {
   const [assignSaving, setAssignSaving] = useState(false);
   const [allMembers, setAllMembers] = useState([]);
   const assignRef = useRef(null);
-  const assignSelectedMember = useMemo(() => allMembers.find((m) => Number(m.id) === Number(selectedMemberId)), [allMembers, selectedMemberId]);
+  const assignSelectedMember = useMemo(
+    () => allMembers.find((m) => Number(m.id) === Number(selectedMemberId)),
+    [allMembers, selectedMemberId]
+  );
 
   // Load all members for the assign modal
   useEffect(() => {
     if (showAssignModal && allMembers.length === 0) {
-      adminAPI.getMembers({ limit: 5000 })
+      adminAPI
+        .getMembers({ limit: 5000 })
         .then((res) => setAllMembers(res.data || []))
-        .catch((err) => { console.error('Failed to load members for assign modal:', err); alert('Failed to load members: ' + err.message); });
+        .catch((err) => {
+          console.error('Failed to load members for assign modal:', err);
+          alert('Failed to load members: ' + err.message);
+        });
     }
   }, [showAssignModal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (assignRef.current && !assignRef.current.contains(e.target)) { setShowMemberDropdown(false); setAssignFocused(false); if (!selectedMemberId) setAssignSearch(''); }
+      if (assignRef.current && !assignRef.current.contains(e.target)) {
+        setShowMemberDropdown(false);
+        setAssignFocused(false);
+        if (!selectedMemberId) setAssignSearch('');
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -220,7 +270,7 @@ const LeadershipDirectory = () => {
     try {
       await adminAPI.assignMemberTitle(selectedMemberId, parseInt(selectedTitleId), {
         appointment_date: appointmentDate || null,
-        notes: assignNotes || null,
+        notes: assignNotes || null
       });
       setShowAssignModal(false);
       setAssignSearch('');
@@ -245,53 +295,77 @@ const LeadershipDirectory = () => {
       accessor: 'title_name',
       header: 'Title',
       sortable: true,
-      render: (row) => <Badge variant="info" className="text-[11px] px-2 py-0.5">{row.title_name}</Badge>,
+      render: (row) => (
+        <Badge variant="info" className="text-caption-1 px-2 py-0.5">
+          {row.title_name}
+        </Badge>
+      )
     },
     {
       accessor: 'title_status',
       header: 'Status',
       sortable: true,
       render: (row) => (
-        <Badge variant={STATUS_VARIANTS[row.title_status] || 'neutral'} className="text-[11px] px-2 py-0.5">
+        <Badge
+          variant={STATUS_VARIANTS[row.title_status] || 'neutral'}
+          className="text-caption-1 px-2 py-0.5"
+        >
           {STATUS_LABELS[row.title_status] || row.title_status || 'Active'}
         </Badge>
-      ),
+      )
     },
-    { accessor: 'appointment_date', header: 'Appointed', sortable: true, render: (row) => row.appointment_date ? fdatetime(row.appointment_date) : '—' },
+    {
+      accessor: 'appointment_date',
+      header: 'Appointed',
+      sortable: true,
+      render: (row) => (row.appointment_date ? fdatetime(row.appointment_date) : '—')
+    },
     { accessor: 'phone', header: 'Phone' },
     { accessor: 'email', header: 'Email' },
-    { accessor: 'assigned_by_name', header: 'Assigned By', sortable: true },
+    { accessor: 'assigned_by_name', header: 'Assigned By', sortable: true }
   ];
 
-  const hasAnyFilters = titleFilter || statusFilter || sectionFilter || search.trim() || appointmentFrom || appointmentTo;
+  const hasAnyFilters =
+    titleFilter ||
+    statusFilter ||
+    sectionFilter ||
+    search.trim() ||
+    appointmentFrom ||
+    appointmentTo;
 
   return (
     <div>
-      {/* Gradient Banner */}
-      <div className="gradient-banner mb-6 overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-white/5 blur-3xl -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 w-48 h-48 rounded-full bg-white/5 blur-3xl translate-y-24" />
-        <div className="absolute top-10 left-10 w-32 h-32 rounded-full bg-white/[0.03] blur-2xl" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-5">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20 shadow-lg">
-              <Award className="w-6 h-6 text-white" />
+      {/* Directory Banner */}
+      <div className="card mb-6 p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-500/10">
+              <Award className="h-5 w-5 text-primary-700 dark:text-primary-300" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Leadership Directory</h1>
-              <p className="text-sm text-white/80">View all members with leadership roles across the congregation</p>
+              <h1 className="text-title-2 font-semibold text-label">Leadership Directory</h1>
+              <p className="mt-0.5 text-footnote text-secondary-label">
+                View all members with leadership roles across the congregation
+              </p>
             </div>
           </div>
-          {/* Stat cards */}
           {!loading && (
-            <div className="flex gap-4">
-              <div className="px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-sm ring-1 ring-white/10">
-                <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wider">Total Leaders</p>
-                <p className="text-2xl font-bold text-white mt-0.5">{totalLeaders}</p>
+            <div className="flex gap-3">
+              <div className="rounded-xl bg-system-fill px-4 py-2.5">
+                <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+                  Total Leaders
+                </p>
+                <p className="mt-0.5 text-title-1 font-semibold tabular-nums text-label">
+                  {totalLeaders}
+                </p>
               </div>
-              <div className="px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-sm ring-1 ring-white/10">
-                <p className="text-[10px] font-semibold text-white/60 uppercase tracking-wider">Active</p>
-                <p className="text-2xl font-bold text-emerald-300 mt-0.5">{activeLeaders}</p>
+              <div className="rounded-xl bg-system-fill px-4 py-2.5">
+                <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+                  Active
+                </p>
+                <p className="mt-0.5 text-title-1 font-semibold tabular-nums text-emerald-700 dark:text-system-green">
+                  {activeLeaders}
+                </p>
               </div>
             </div>
           )}
@@ -299,11 +373,11 @@ const LeadershipDirectory = () => {
       </div>
 
       {/* Filters Toolbar */}
-      <div className="card-glass mb-6">
+      <div className="card mb-6">
         <form onSubmit={handleSearch}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary-label pointer-events-none" />
               <input
                 type="text"
                 className="input pl-9 h-10"
@@ -313,15 +387,25 @@ const LeadershipDirectory = () => {
               />
             </div>
             <div>
-              <select className="select h-10" value={titleFilter} onChange={(e) => setTitleFilter(e.target.value)}>
+              <select
+                className="select h-10"
+                value={titleFilter}
+                onChange={(e) => setTitleFilter(e.target.value)}
+              >
                 <option value="">All Titles</option>
                 {data.titles.map((t) => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
                 ))}
               </select>
             </div>
             <div>
-              <select className="select h-10" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <select
+                className="select h-10"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
                 <option value="">All Statuses</option>
                 <option value="active">Active</option>
                 <option value="on_leave">On Leave</option>
@@ -332,10 +416,16 @@ const LeadershipDirectory = () => {
               </select>
             </div>
             <div>
-              <select className="select h-10" value={sectionFilter} onChange={(e) => setSectionFilter(e.target.value)}>
+              <select
+                className="select h-10"
+                value={sectionFilter}
+                onChange={(e) => setSectionFilter(e.target.value)}
+              >
                 <option value="">All Sections</option>
                 {data.sections?.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -355,7 +445,20 @@ const LeadershipDirectory = () => {
                 onChange={(e) => setAppointmentTo(e.target.value)}
               />
               {hasAnyFilters && (
-                <button type="button" onClick={() => { setTitleFilter(''); setStatusFilter(''); setSectionFilter(''); setAppointmentFrom(''); setAppointmentTo(''); setSearch(''); setPage(1); }} className="btn-icon btn-secondary shrink-0 active:scale-90" title="Clear filters">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTitleFilter('');
+                    setStatusFilter('');
+                    setSectionFilter('');
+                    setAppointmentFrom('');
+                    setAppointmentTo('');
+                    setSearch('');
+                    setPage(1);
+                  }}
+                  className="btn-icon btn-secondary shrink-0 active:scale-90"
+                  title="Clear filters"
+                >
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -364,12 +467,17 @@ const LeadershipDirectory = () => {
         </form>
 
         {/* Toolbar Footer with count & actions */}
-        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-100 dark:border-white/5">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
+        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-separator/60 dark:border-white/5">
+          <div className="flex items-center gap-2 text-caption-1 text-tertiary-label">
             <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-            {loading ? 'Loading...' : `${totalLeaders} leader${totalLeaders !== 1 ? 's' : ''} found`}
+            {loading
+              ? 'Loading...'
+              : `${totalLeaders} leader${totalLeaders !== 1 ? 's' : ''} found`}
           </div>
-          <button onClick={() => setShowAssignModal(true)} className="btn-sm btn-primary ml-auto active:scale-[0.97]">
+          <button
+            onClick={() => setShowAssignModal(true)}
+            className="btn-sm btn-primary ml-auto active:scale-[0.97]"
+          >
             <Plus className="w-3.5 h-3.5" /> Assign Leader
           </button>
           {totalLeaders > 0 && (
@@ -387,16 +495,16 @@ const LeadershipDirectory = () => {
 
       {/* Table or Loading/Empty States */}
       {loading ? (
-        <div className="card-glass divide-y divide-slate-100 dark:divide-white/5 overflow-hidden">
+        <div className="card divide-y divide-separator/50 dark:divide-white/[0.08] overflow-hidden">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex items-center gap-4 p-4 animate-pulse">
-              <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700" />
+              <div className="w-8 h-8 rounded-lg bg-system-gray-4" />
               <div className="flex-1 space-y-2">
-                <div className="h-3.5 bg-slate-200 dark:bg-slate-700 rounded w-1/3" />
-                <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-1/4" />
+                <div className="h-3.5 bg-system-gray-4 rounded w-1/3" />
+                <div className="h-3 bg-system-fill rounded w-1/4" />
               </div>
-              <div className="h-6 w-16 rounded-full bg-slate-200 dark:bg-slate-700" />
-              <div className="h-6 w-16 rounded-full bg-slate-100 dark:bg-slate-800" />
+              <div className="h-6 w-16 rounded-full bg-system-gray-4" />
+              <div className="h-6 w-16 rounded-full bg-system-fill" />
             </div>
           ))}
         </div>
@@ -410,15 +518,18 @@ const LeadershipDirectory = () => {
           emptyDescription="Assign titles to members from the Members page."
         />
       ) : (
-        <div className="card-glass flex flex-col items-center justify-center py-16 px-6">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 ring-1 ring-slate-200 dark:ring-slate-700">
-            <Users className="w-8 h-8 text-slate-400" />
+        <div className="card flex flex-col items-center justify-center py-16 px-6">
+          <div className="w-16 h-16 rounded-2xl bg-system-fill flex items-center justify-center mb-4 ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
+            <Users className="w-8 h-8 text-tertiary-label" />
           </div>
-          <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">No leaders assigned yet</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 text-center max-w-sm">
+          <h3 className="text-headline font-semibold text-label mb-1">No leaders assigned yet</h3>
+          <p className="text-footnote text-secondary-label mb-6 text-center max-w-sm">
             Create titles in the <strong>Titles</strong> section, then assign them to members here.
           </p>
-          <button onClick={() => setShowAssignModal(true)} className="btn-primary active:scale-[0.97]">
+          <button
+            onClick={() => setShowAssignModal(true)}
+            className="btn-primary active:scale-[0.97]"
+          >
             <Plus className="w-4 h-4" /> Assign Your First Leader
           </button>
         </div>
@@ -444,10 +555,10 @@ const LeadershipDirectory = () => {
                 <button
                   key={p}
                   onClick={() => setPage(p)}
-                  className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all active:scale-[0.92] ${
+                  className={`w-9 h-9 rounded-xl text-footnote font-semibold transition-all active:scale-[0.92] ${
                     p === page
-                      ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      ? 'bg-primary-600 text-white shadow-card shadow-primary-500/20'
+                      : 'text-secondary-label hover:bg-system-fill'
                   }`}
                 >
                   {p}
@@ -467,32 +578,72 @@ const LeadershipDirectory = () => {
       )}
 
       {/* Assign Leader Modal */}
-      <Modal isOpen={showAssignModal} onClose={() => setShowAssignModal(false)} title="Assign Leadership Title" subtitle="Search and select a member to assign a leadership role">
+      <Modal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        title="Assign Leadership Title"
+        subtitle="Search and select a member to assign a leadership role"
+      >
         <form onSubmit={handleAssignLeader}>
           <div className="space-y-4">
-             <div className="relative" ref={assignRef}>
-               <label className="input-label">Member</label>
-               <input
-                 required
-                 type="text"
-                 value={assignFocused ? assignSearch : (assignSelectedMember ? assignSelectedMember.full_name : assignSearch)}
-                 onChange={(e) => { setAssignSearch(e.target.value); setShowMemberDropdown(true); if (selectedMemberId) setSelectedMemberId(null); }}
-                 onFocus={() => { setAssignFocused(true); setShowMemberDropdown(true); }}
-                 onBlur={() => { setTimeout(() => { setAssignFocused(false); if (!selectedMemberId) setAssignSearch(''); }, 200); }}
-                 placeholder={allMembers.length === 0 ? "Loading members..." : "Search member name..."}
-                 disabled={allMembers.length === 0}
-                 className="input w-full"
-               />
-               {allMembers.length === 0 && (
-                 <div className="absolute left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 py-2 animate-fade-in">
-                   <div className="px-4 py-2.5 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                     <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
-                     Loading members...
-                   </div>
-                 </div>
-               )}
+            <div className="relative" ref={assignRef}>
+              <label className="input-label">Member</label>
+              <input
+                required
+                type="text"
+                value={
+                  assignFocused
+                    ? assignSearch
+                    : assignSelectedMember
+                      ? assignSelectedMember.full_name
+                      : assignSearch
+                }
+                onChange={(e) => {
+                  setAssignSearch(e.target.value);
+                  setShowMemberDropdown(true);
+                  if (selectedMemberId) setSelectedMemberId(null);
+                }}
+                onFocus={() => {
+                  setAssignFocused(true);
+                  setShowMemberDropdown(true);
+                }}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setAssignFocused(false);
+                    if (!selectedMemberId) setAssignSearch('');
+                  }, 200);
+                }}
+                placeholder={
+                  allMembers.length === 0 ? 'Loading members...' : 'Search member name...'
+                }
+                disabled={allMembers.length === 0}
+                className="input w-full"
+              />
+              {allMembers.length === 0 && (
+                <div className="absolute left-0 right-0 mt-1.5 bg-secondary-system-grouped-background rounded-xl border border-black/[0.06] dark:border-white/[0.08] shadow-card py-2 animate-fade-in">
+                  <div className="px-4 py-2.5 text-footnote text-secondary-label flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4 text-primary-600" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Loading members...
+                  </div>
+                </div>
+              )}
               {showMemberDropdown && assignMemberList.length > 0 && (
-                <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-lg shadow-slate-900/10 max-h-48 overflow-y-auto animate-fade-in">
+                <div className="absolute z-50 left-0 right-0 mt-1.5 bg-secondary-system-grouped-background rounded-xl border border-black/[0.06] dark:border-white/[0.08] shadow-card max-h-48 overflow-y-auto animate-fade-in">
                   {assignMemberList.map((m) => (
                     <button
                       key={m.id}
@@ -503,60 +654,123 @@ const LeadershipDirectory = () => {
                         setAssignFocused(false);
                         setShowMemberDropdown(false);
                       }}
-                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2.5 transition-colors ${
+                      className={`w-full text-left px-4 py-2.5 text-footnote flex items-center gap-2.5 transition-colors ${
                         Number(m.id) === Number(selectedMemberId)
                           ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                          : 'text-secondary-label hover:bg-system-fill/50'
                       }`}
                     >
-                      <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-bold text-[10px] shrink-0">
-                        {(m.full_name || '').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                      <span className="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 flex items-center justify-center font-semibold text-caption-2 shrink-0">
+                        {(m.full_name || '')
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)
+                          .toUpperCase()}
                       </span>
                       <span className="truncate font-medium">{m.full_name}</span>
-                      {m.section_name && <span className="text-[10px] text-slate-400 ml-auto shrink-0">{m.section_name}</span>}
+                      {m.section_name && (
+                        <span className="text-caption-2 text-tertiary-label ml-auto shrink-0">
+                          {m.section_name}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
               )}
               {assignFocused && !selectedMemberId && !showMemberDropdown && assignSearch.trim() && (
-                <p className="text-[11px] text-rose-500 mt-1">Please select a member from the list</p>
+                <p className="text-caption-1 text-rose-500 mt-1">
+                  Please select a member from the list
+                </p>
               )}
             </div>
-              <div>
-                <label className="input-label">Title</label>
-                <select required className="select h-10 w-full" value={selectedTitleId} onChange={(e) => setSelectedTitleId(e.target.value)} disabled={loading || !data.titles || data.titles.length === 0}>
-                  <option value="">Select a title...</option>
-                  {loading || !data.titles || data.titles.length === 0 ? (
-                    <option value="" disabled>Loading titles...</option>
-                  ) : (
-                    data.titles.filter((t) => !!t.is_active).map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+            <div>
+              <label className="input-label">Title</label>
+              <select
+                required
+                className="select h-10 w-full"
+                value={selectedTitleId}
+                onChange={(e) => setSelectedTitleId(e.target.value)}
+                disabled={loading || !data.titles || data.titles.length === 0}
+              >
+                <option value="">Select a title...</option>
+                {loading || !data.titles || data.titles.length === 0 ? (
+                  <option value="" disabled>
+                    Loading titles...
+                  </option>
+                ) : (
+                  data.titles
+                    .filter((t) => !!t.is_active)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))
-                  )}
-                </select>
-                {(loading || !data.titles || data.titles.length === 0) && (
-                  <p className="text-[11px] text-slate-400 mt-1">Loading available titles...</p>
                 )}
-                {!loading && data.titles && data.titles.length > 0 && data.titles.filter((t) => !!t.is_active).length === 0 && (
-                  <p className="text-[11px] text-amber-500 mt-1">No active titles available. Create one in Titles section.</p>
+              </select>
+              {(loading || !data.titles || data.titles.length === 0) && (
+                <p className="text-caption-1 text-tertiary-label mt-1">
+                  Loading available titles...
+                </p>
+              )}
+              {!loading &&
+                data.titles &&
+                data.titles.length > 0 &&
+                data.titles.filter((t) => !!t.is_active).length === 0 && (
+                  <p className="text-caption-1 text-amber-500 mt-1">
+                    No active titles available. Create one in Titles section.
+                  </p>
                 )}
-
-              </div>
+            </div>
             <div>
               <label className="input-label">Appointment Date</label>
-              <input type="date" className="input h-10 w-full" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} />
+              <input
+                type="date"
+                className="input h-10 w-full"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+              />
             </div>
             <div>
               <label className="input-label">Notes</label>
-              <textarea className="input w-full" rows={3} value={assignNotes} onChange={(e) => setAssignNotes(e.target.value)} placeholder="Reason, term, etc." />
+              <textarea
+                className="input w-full"
+                rows={3}
+                value={assignNotes}
+                onChange={(e) => setAssignNotes(e.target.value)}
+                placeholder="Reason, term, etc."
+              />
             </div>
           </div>
-          <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100 dark:border-white/5">
-            <button type="button" onClick={() => { setShowAssignModal(false); setAssignSearch(''); setAssignFocused(false); setSelectedMemberId(null); setSelectedTitleId(''); setAppointmentDate(''); setAssignNotes(''); }} className="btn-secondary flex-1 active:scale-[0.97]">Cancel</button>
-            <button type="submit" disabled={!selectedMemberId || !selectedTitleId || assignSaving} className="btn-primary flex-1 active:scale-[0.97]">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-separator/60 dark:border-white/5">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAssignModal(false);
+                setAssignSearch('');
+                setAssignFocused(false);
+                setSelectedMemberId(null);
+                setSelectedTitleId('');
+                setAppointmentDate('');
+                setAssignNotes('');
+              }}
+              className="btn-secondary flex-1 active:scale-[0.97]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedMemberId || !selectedTitleId || assignSaving}
+              className="btn-primary flex-1 active:scale-[0.97]"
+            >
               {assignSaving ? (
-                <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Assigning...</span>
-              ) : 'Assign'}
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />{' '}
+                  Assigning...
+                </span>
+              ) : (
+                'Assign'
+              )}
             </button>
           </div>
         </form>

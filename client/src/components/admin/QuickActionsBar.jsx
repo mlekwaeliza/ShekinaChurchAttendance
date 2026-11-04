@@ -20,45 +20,46 @@ const QuickActionsBar = ({
       label: 'View attendance',
       icon: MousePointer2,
       onClick: onMarkAttendance,
-      style: 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300'
+      style: 'bg-primary-500/[0.12] text-primary-700 dark:text-primary-300'
     },
     {
       label: 'Add visitor',
       icon: UserPlus,
       onClick: onAddMember,
-      style: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+      style: 'bg-system-green/15 text-emerald-700 dark:text-system-green'
     },
     {
       label: 'Announcement',
       icon: Megaphone,
       onClick: onSendAnnouncement,
-      style: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300'
+      style: 'bg-system-blue/15 text-blue-700 dark:text-system-blue'
     },
     {
       label: 'Follow-ups',
       icon: CalendarCheck,
       onClick: onViewFollowUps,
-      style: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+      style: 'bg-system-orange/15 text-amber-700 dark:text-system-orange'
     }
   ];
 
   return (
     <section className="grid gap-4 xl:grid-cols-2">
-      <div className="product-surface flex min-w-0 max-w-full items-center gap-2 p-2">
-        <div className="flex shrink-0 items-center gap-1.5 px-2 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400">
+      <div className="product-surface flex min-w-0 max-w-full items-center gap-3 p-2 pl-4">
+        <div className="flex shrink-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-secondary-label">
           <Clock className="h-3.5 w-3.5" />
           Service
         </div>
-        <div className="grid min-w-0 flex-1 grid-flow-col auto-cols-fr gap-1">
+        <div className="grid min-w-0 flex-1 grid-flow-col auto-cols-fr gap-1 rounded-[10px] bg-system-fill/70 p-1 dark:bg-white/[0.06]">
           {dashboardServiceTypes.map((service) => (
             <button
               type="button"
               key={service.id}
               onClick={() => onServiceChange(service.id)}
-              className={`focus-ring min-w-0 truncate rounded-lg px-2 py-2 text-center text-[11px] font-bold transition-colors ${
+              aria-pressed={selectedServiceId === service.id}
+              className={`focus-ring min-w-0 truncate rounded-lg px-2 py-1.5 text-center text-[11px] font-semibold transition-colors ${
                 selectedServiceId === service.id
-                  ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white'
+                  ? 'bg-secondary-system-grouped-background text-label shadow-segmented dark:bg-white/[0.14]'
+                  : 'text-secondary-label hover:text-label'
               }`}
             >
               {service.name === 'Main Service' ? 'Main' : service.name.split(' ')[0]}
@@ -67,10 +68,11 @@ const QuickActionsBar = ({
           <button
             type="button"
             onClick={() => onServiceChange('all')}
-            className={`focus-ring min-w-0 truncate rounded-lg px-2 py-2 text-center text-[11px] font-bold transition-colors ${
+            aria-pressed={selectedServiceId === 'all'}
+            className={`focus-ring min-w-0 truncate rounded-lg px-2 py-1.5 text-center text-[11px] font-semibold transition-colors ${
               selectedServiceId === 'all'
-                ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white'
+                ? 'bg-secondary-system-grouped-background text-label shadow-segmented dark:bg-white/[0.14]'
+                : 'text-secondary-label hover:text-label'
             }`}
           >
             All
@@ -84,14 +86,14 @@ const QuickActionsBar = ({
             type="button"
             key={label}
             onClick={onClick}
-            className="product-surface focus-ring group flex min-h-[4.5rem] min-w-0 items-center gap-3 overflow-hidden px-3 py-2.5 text-left transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card-hover dark:hover:border-white/20"
+            className="product-surface focus-ring flex min-h-[4.5rem] min-w-0 items-center gap-3 overflow-hidden px-3 py-2.5 text-left transition-shadow duration-200 hover:shadow-card-hover"
           >
             <span
-              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${style}`}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${style}`}
             >
               <Icon className="h-4 w-4" />
             </span>
-            <span className="block min-w-0 flex-1 whitespace-normal break-words text-xs font-bold leading-4 text-slate-700 dark:text-slate-200 sm:text-[13px]">
+            <span className="block min-w-0 flex-1 whitespace-normal break-words text-subheadline font-semibold leading-4 text-label">
               {label}
             </span>
           </button>

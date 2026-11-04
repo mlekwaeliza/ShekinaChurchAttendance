@@ -90,35 +90,30 @@ const HomeCellMembers = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {message && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200">
+        <div className="rounded-xl bg-system-green/10 px-4 py-3 text-footnote font-medium text-emerald-700 dark:text-system-green">
           {message}
         </div>
       )}
 
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 p-6 text-white shadow-xl shadow-emerald-500/20">
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-            <Home className="h-5 w-5" />
+      <section className="card p-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-system-green/15">
+            <Home className="h-5 w-5 text-emerald-700 dark:text-system-green" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">Home Cell Members</h2>
-            <p className="text-sm text-white/80">
+            <h2 className="text-title-2 font-semibold text-label">Home Cell Members</h2>
+            <p className="text-footnote text-secondary-label">
               Manage the members in your assigned Tuesday home cells.
             </p>
           </div>
         </div>
-      </div>
+      </section>
 
       {cells.length > 0 && (
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
-        >
+        <form onSubmit={handleSubmit} className="card p-5">
           <div className="mb-4 flex items-center gap-2">
-            <UserPlus className="h-4 w-4 text-emerald-600" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              Add Cell Member
-            </h3>
+            <UserPlus className="h-4 w-4 text-emerald-700 dark:text-system-green" />
+            <h3 className="text-headline font-semibold text-label">Add Cell Member</h3>
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <select
@@ -173,7 +168,7 @@ const HomeCellMembers = () => {
           <button
             disabled={saving}
             type="submit"
-            className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+            className="btn-primary mt-4 flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
             {saving ? 'Saving...' : 'Add Member'}
@@ -183,36 +178,31 @@ const HomeCellMembers = () => {
 
       {loading ? (
         <div className="flex justify-center py-16">
-          <div className="h-8 w-8 animate-spin-slow rounded-full border-2 border-emerald-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin-slow rounded-full border-2 border-primary-500 border-t-transparent" />
         </div>
       ) : cells.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 p-10 text-center text-slate-500 dark:border-slate-700 dark:text-slate-400">
+        <div className="rounded-2xl border border-dashed border-separator/70 p-10 text-center text-footnote text-secondary-label dark:border-white/[0.12]">
           You have not been assigned to a home cell yet.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {groupedMembers.map((cell) => (
-            <section
-              key={cell.id}
-              className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
-            >
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {cell.name}
-              </h3>
-              <p className="mb-4 mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <section key={cell.id} className="card p-5">
+              <h3 className="text-headline font-semibold text-label">{cell.name}</h3>
+              <p className="mb-4 mt-1 text-footnote text-secondary-label">
                 {cell.members.length} members
               </p>
               <div className="space-y-2">
                 {cell.members.map((member) => (
                   <div
                     key={member.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/30"
+                    className="flex items-center justify-between gap-3 rounded-xl bg-system-grouped-background/70 p-3 dark:bg-white/[0.03]"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      <p className="truncate text-footnote font-semibold text-label">
                         {member.full_name}
                       </p>
-                      <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                      <p className="truncate text-caption-1 text-secondary-label">
                         {member.church_membership_id
                           ? `Church ID: ${member.church_membership_id}`
                           : member.phone || 'No phone'}
@@ -221,14 +211,15 @@ const HomeCellMembers = () => {
                     <button
                       disabled={saving}
                       onClick={() => removeMember(member.id)}
-                      className="h-9 w-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-rose-500 disabled:opacity-60 dark:hover:bg-slate-800"
+                      aria-label={`Remove ${member.full_name}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-tertiary-label transition-colors hover:bg-system-red/10 hover:text-rose-700 disabled:opacity-60 dark:hover:text-system-red"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
                 {cell.members.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                  <div className="rounded-xl border border-dashed border-separator/70 p-5 text-center text-footnote text-secondary-label dark:border-white/[0.12]">
                     No members added yet.
                   </div>
                 )}

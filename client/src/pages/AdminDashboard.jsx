@@ -408,7 +408,9 @@ const AdminDashboard = () => {
             role="status"
             aria-live="polite"
           >
-            <span className="text-sm font-medium text-slate-500">Loading section...</span>
+            <span className="text-footnote font-medium text-secondary-label">
+              Loading section...
+            </span>
           </div>
         }
       >
@@ -463,10 +465,10 @@ const AdminDashboard = () => {
               <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
                 <ShieldAlert className="w-7 h-7 text-rose-500" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Remove Leader?</h3>
-              <p className="text-sm text-slate-500 mb-8">
+              <h3 className="text-headline font-semibold text-label mb-2">Remove Leader?</h3>
+              <p className="text-footnote text-secondary-label mb-8">
                 Are you sure you want to remove{' '}
-                <strong className="text-slate-800">{data.deletingLeader.full_name}</strong>?
+                <strong className="text-label">{data.deletingLeader.full_name}</strong>?
                 <br />
                 <small className="text-amber-600 font-medium mt-1 inline-block">
                   Their login account will be kept but their children leader role will be removed.
@@ -500,10 +502,10 @@ const AdminDashboard = () => {
               <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
                 <AlertTriangle className="w-7 h-7 text-rose-500" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Member?</h3>
-              <p className="text-sm text-slate-500 mb-8">
+              <h3 className="text-headline font-semibold text-label mb-2">Delete Member?</h3>
+              <p className="text-footnote text-secondary-label mb-8">
                 This action cannot be undone. Are you sure you want to remove{' '}
-                <strong className="text-slate-800">{deletingMember.full_name}</strong>?
+                <strong className="text-label">{deletingMember.full_name}</strong>?
               </p>
               <div className="flex gap-3">
                 <button

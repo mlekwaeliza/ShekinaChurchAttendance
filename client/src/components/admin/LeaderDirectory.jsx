@@ -30,87 +30,60 @@ const buildWhatsAppGreeting = (fullName) => {
 
 const sectionStyles = [
   {
-    gradient: 'from-violet-500 to-purple-600',
-    bg: 'bg-violet-50 dark:bg-violet-900/20',
-    border: 'border-violet-200 dark:border-violet-700/50',
+    tint: 'bg-violet-500/[0.12]',
+    deep: 'bg-violet-500',
     text: 'text-violet-700 dark:text-violet-300',
-    dot: 'bg-violet-500',
-    shadow: 'shadow-violet-500/10',
-    bar: 'from-violet-500 to-purple-600'
+    dot: 'bg-violet-500'
   },
   {
-    gradient: 'from-sky-500 to-blue-600',
-    bg: 'bg-sky-50 dark:bg-sky-900/20',
-    border: 'border-sky-200 dark:border-sky-700/50',
-    text: 'text-sky-700 dark:text-sky-300',
-    dot: 'bg-sky-500',
-    shadow: 'shadow-sky-500/10',
-    bar: 'from-sky-500 to-blue-600'
+    tint: 'bg-system-indigo/[0.12]',
+    deep: 'bg-system-indigo',
+    text: 'text-primary-700 dark:text-primary-300',
+    dot: 'bg-system-indigo'
   },
   {
-    gradient: 'from-emerald-500 to-teal-600',
-    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
-    border: 'border-emerald-200 dark:border-emerald-700/50',
-    text: 'text-emerald-700 dark:text-emerald-300',
-    dot: 'bg-emerald-500',
-    shadow: 'shadow-emerald-500/10',
-    bar: 'from-emerald-500 to-teal-600'
+    tint: 'bg-system-green/[0.12]',
+    deep: 'bg-system-green',
+    text: 'text-emerald-700 dark:text-system-green',
+    dot: 'bg-system-green'
   },
   {
-    gradient: 'from-amber-500 to-orange-600',
-    bg: 'bg-amber-50 dark:bg-amber-900/20',
-    border: 'border-amber-200 dark:border-amber-700/50',
-    text: 'text-amber-700 dark:text-amber-300',
-    dot: 'bg-amber-500',
-    shadow: 'shadow-amber-500/10',
-    bar: 'from-amber-500 to-orange-600'
+    tint: 'bg-system-orange/[0.12]',
+    deep: 'bg-system-orange',
+    text: 'text-amber-700 dark:text-system-orange',
+    dot: 'bg-system-orange'
   },
   {
-    gradient: 'from-rose-500 to-pink-600',
-    bg: 'bg-rose-50 dark:bg-rose-900/20',
-    border: 'border-rose-200 dark:border-rose-700/50',
-    text: 'text-rose-700 dark:text-rose-300',
-    dot: 'bg-rose-500',
-    shadow: 'shadow-rose-500/10',
-    bar: 'from-rose-500 to-pink-600'
+    tint: 'bg-system-red/[0.12]',
+    deep: 'bg-system-red',
+    text: 'text-rose-700 dark:text-system-red',
+    dot: 'bg-system-red'
   },
   {
-    gradient: 'from-indigo-500 to-blue-600',
-    bg: 'bg-indigo-50 dark:bg-indigo-900/20',
-    border: 'border-indigo-200 dark:border-indigo-700/50',
-    text: 'text-indigo-700 dark:text-indigo-300',
-    dot: 'bg-indigo-500',
-    shadow: 'shadow-indigo-500/10',
-    bar: 'from-indigo-500 to-blue-600'
+    tint: 'bg-system-purple/[0.12]',
+    deep: 'bg-system-purple',
+    text: 'text-purple-700 dark:text-system-purple',
+    dot: 'bg-system-purple'
   },
   {
-    gradient: 'from-cyan-500 to-teal-600',
-    bg: 'bg-cyan-50 dark:bg-cyan-900/20',
-    border: 'border-cyan-200 dark:border-cyan-700/50',
-    text: 'text-cyan-700 dark:text-cyan-300',
-    dot: 'bg-cyan-500',
-    shadow: 'shadow-cyan-500/10',
-    bar: 'from-cyan-500 to-teal-600'
+    tint: 'bg-system-teal/[0.12]',
+    deep: 'bg-system-teal',
+    text: 'text-teal-700 dark:text-system-teal',
+    dot: 'bg-system-teal'
   },
   {
-    gradient: 'from-fuchsia-500 to-pink-600',
-    bg: 'bg-fuchsia-50 dark:bg-fuchsia-900/20',
-    border: 'border-fuchsia-200 dark:border-fuchsia-700/50',
-    text: 'text-fuchsia-700 dark:text-fuchsia-300',
-    dot: 'bg-fuchsia-500',
-    shadow: 'shadow-fuchsia-500/10',
-    bar: 'from-fuchsia-500 to-pink-600'
+    tint: 'bg-system-pink/[0.12]',
+    deep: 'bg-system-pink',
+    text: 'text-pink-700 dark:text-system-pink',
+    dot: 'bg-system-pink'
   }
 ];
 
 const fallbackStyle = {
-  gradient: 'from-slate-400 to-slate-500',
-  bg: 'bg-slate-50 dark:bg-slate-900/20',
-  border: 'border-slate-200 dark:border-slate-700/50',
-  text: 'text-slate-600 dark:text-slate-400',
-  dot: 'bg-slate-400',
-  shadow: 'shadow-slate-500/10',
-  bar: 'from-slate-400 to-slate-500'
+  tint: 'bg-system-fill',
+  deep: 'bg-system-gray',
+  text: 'text-secondary-label',
+  dot: 'bg-system-gray'
 };
 
 const LeaderDirectory = ({
@@ -227,45 +200,40 @@ const LeaderDirectory = ({
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-700 via-slate-800 to-zinc-900 p-6 text-white shadow-xl shadow-slate-500/20">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
-        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-              <UserCog className="h-5 w-5 text-white" />
+      <div className="product-surface relative px-5 py-5 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-primary-500/[0.12] text-primary-700 dark:text-primary-300">
+              <UserCog className="h-5 w-5" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold">Leaders</h2>
-              <p className="text-sm text-white/80">
+            <div className="min-w-0">
+              <h2 className="text-title-2 font-semibold text-label">Leaders</h2>
+              <p className="text-footnote text-secondary-label">
                 {leadersLoading
                   ? 'Loading leaders...'
                   : `${totalLeaders} leaders · ${totalSections} sections`}
               </p>
             </div>
           </div>
-          <button
-            onClick={onAdd}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-semibold text-white shadow-sm backdrop-blur-sm transition-all hover:bg-white/25"
-          >
-            <Plus className="h-4 w-4" />
+          <button type="button" onClick={onAdd} className="btn-primary btn-sm focus-ring shrink-0">
+            <Plus className="h-3.5 w-3.5" />
             Add Leader
           </button>
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
+      <div className="tab-pills w-fit max-w-full">
         <button
           type="button"
           onClick={() => setActiveView('directory')}
-          className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeView === 'directory' ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'border-transparent text-slate-500'}`}
+          className={`tab-pill focus-ring ${activeView === 'directory' ? 'active' : ''}`}
         >
           Leader Directory
         </button>
         <button
           type="button"
           onClick={() => setActiveView('missing')}
-          className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeView === 'missing' ? 'border-rose-500 text-rose-600 dark:text-rose-400' : 'border-transparent text-slate-500'}`}
+          className={`tab-pill focus-ring ${activeView === 'missing' ? 'active' : ''}`}
         >
           Missing Submissions
         </button>
@@ -279,305 +247,306 @@ const LeaderDirectory = ({
         />
       ) : (
         <>
-      {/* Search */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, username, or section..."
-              className="input pl-10 h-10 rounded-xl w-full"
-            />
-          </div>
-          {sectionFilter && (
-            <button
-              onClick={() => setSectionFilter('')}
-              className="flex items-center gap-1 text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 font-medium whitespace-nowrap"
-            >
-              Clear filter
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Section Groups */}
-      {sectionOrder.length > 0 ? (
-        <div className="space-y-6">
-          {sectionOrder.map((sectionName) => {
-            const sectionLeaders = leadersBySection[sectionName];
-            const sectionIdx = sections?.findIndex((s) => s.name === sectionName) ?? -1;
-            const style =
-              sectionIdx >= 0 ? sectionStyles[sectionIdx % sectionStyles.length] : fallbackStyle;
-            const isCollapsed = collapsedSections.has(sectionName);
-            const headLeader = sectionLeaders.find((l) => l.is_head === 1);
-
-            return (
-              <div key={sectionName}>
-                {/* Section Header */}
+          {/* Search */}
+          <div className="card p-3">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary-label" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by name, username, or section..."
+                  className="input pl-10 h-10 rounded-xl w-full"
+                />
+              </div>
+              {sectionFilter && (
                 <button
-                  onClick={() => toggleSection(sectionName)}
-                  className={`w-full flex items-center justify-between px-5 py-3.5 rounded-xl border ${style.border} ${style.bg} hover:shadow-md transition-all group`}
+                  onClick={() => setSectionFilter('')}
+                  className="flex items-center gap-1 text-sm font-medium text-rose-700 dark:text-system-red hover:text-rose-800 dark:hover:text-system-red whitespace-nowrap"
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-lg bg-gradient-to-br ${style.gradient} flex items-center justify-center text-white shadow-sm ${style.shadow}`}
-                    >
-                      <Layers className="w-4 h-4" />
-                    </div>
-                    <div className="text-left">
-                      <h3 className={`font-bold text-sm ${style.text}`}>{sectionName}</h3>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {sectionLeaders.length} leader{sectionLeaders.length !== 1 ? 's' : ''}
-                        {headLeader && (
-                          <span className="ml-1.5 text-slate-400 dark:text-slate-500">
-                            · Head: {headLeader.full_name}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {sectionIdx >= 0 && sections?.[sectionIdx] && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/sections?profile=${sections[sectionIdx].id}`);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-white/80 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs flex items-center gap-1 transition-all"
-                        title="View Section Profile"
-                      >
-                        <Layers className="w-3 h-3 text-violet-500" /> View Section
-                      </button>
-                    )}
-                    {isCollapsed ? (
-                      <ChevronDown className={`w-4 h-4 ${style.text} transition-transform`} />
-                    ) : (
-                      <ChevronUp className={`w-4 h-4 ${style.text} transition-transform`} />
-                    )}
-                  </div>
+                  Clear filter
                 </button>
+              )}
+            </div>
+          </div>
 
-                {/* Leader Cards */}
-                {!isCollapsed && (
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {sectionLeaders.map((leader) => (
-                      <div
-                        key={leader.id}
-                        className="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200/60 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-                      >
-                        {/* Top accent bar */}
-                        <div className={`h-1 bg-gradient-to-r ${style.bar}`} />
+          {/* Section Groups */}
+          {sectionOrder.length > 0 ? (
+            <div className="space-y-6">
+              {sectionOrder.map((sectionName) => {
+                const sectionLeaders = leadersBySection[sectionName];
+                const sectionIdx = sections?.findIndex((s) => s.name === sectionName) ?? -1;
+                const style =
+                  sectionIdx >= 0
+                    ? sectionStyles[sectionIdx % sectionStyles.length]
+                    : fallbackStyle;
+                const isCollapsed = collapsedSections.has(sectionName);
+                const headLeader = sectionLeaders.find((l) => l.is_head === 1);
 
-                        <div className="p-4">
-                          {/* Avatar & Name */}
-                          <div className="flex items-start gap-3 mb-3">
-                            <div
-                              className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br text-lg font-bold text-white shadow-sm ${style.gradient} ${style.shadow}`}
-                            >
-                              {leader.profile_picture ? (
-                                <img
-                                  src={leader.profile_picture}
-                                  alt={leader.full_name || 'Leader'}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                leader.full_name?.charAt(0)
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => onViewAnalytics(leader.id)}
-                                  className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left"
-                                  title="View Profile"
-                                >
-                                  {leader.full_name}
-                                </button>
-                                {leader.is_head === 1 && (
-                                  <span className="flex items-center gap-0.5 shrink-0 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50">
-                                    <Shield className="w-2.5 h-2.5 text-amber-500" />
-                                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                                      Head
-                                    </span>
-                                  </span>
+                return (
+                  <div key={sectionName}>
+                    {/* Section Header */}
+                    <button
+                      onClick={() => toggleSection(sectionName)}
+                      className="group flex w-full items-center justify-between rounded-xl bg-system-grouped-background/70 px-5 py-3.5 transition-colors hover:bg-system-grouped-background dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-9 w-9 items-center justify-center rounded-[10px] ${style.tint} ${style.text}`}
+                        >
+                          <Layers className="h-[18px] w-[18px]" />
+                        </div>
+                        <div className="text-left">
+                          <h3 className={`text-subheadline font-semibold ${style.text}`}>
+                            {sectionName}
+                          </h3>
+                          <p className="text-caption-1 text-secondary-label">
+                            {sectionLeaders.length} leader{sectionLeaders.length !== 1 ? 's' : ''}
+                            {headLeader && (
+                              <span className="ml-1.5 text-tertiary-label">
+                                · Head: {headLeader.full_name}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {sectionIdx >= 0 && sections?.[sectionIdx] && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/sections?profile=${sections[sectionIdx].id}`);
+                            }}
+                            className="focus-ring flex items-center gap-1 rounded-lg border border-separator/60 bg-secondary-system-grouped-background px-2.5 py-1 text-[11px] font-semibold text-label shadow-xs transition-all hover:bg-system-fill dark:border-white/[0.08]"
+                            title="View Section Profile"
+                          >
+                            <Layers className="w-3 h-3 text-primary-500" /> View Section
+                          </button>
+                        )}
+                        {isCollapsed ? (
+                          <ChevronDown className={`w-4 h-4 ${style.text} transition-transform`} />
+                        ) : (
+                          <ChevronUp className={`w-4 h-4 ${style.text} transition-transform`} />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Leader Cards */}
+                    {!isCollapsed && (
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {sectionLeaders.map((leader) => (
+                          <div
+                            key={leader.id}
+                            className="group relative card overflow-hidden p-4 hover:shadow-card-hover transition-all duration-200"
+                          >
+                            {/* Avatar & Name */}
+                            <div className="flex items-start gap-3 mb-3">
+                              <div
+                                className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-lg font-bold text-white ${style.deep}`}
+                              >
+                                {leader.profile_picture ? (
+                                  <img
+                                    src={leader.profile_picture}
+                                    alt={leader.full_name || 'Leader'}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  leader.full_name?.charAt(0)
                                 )}
                               </div>
-                              <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">
-                                @{leader.username}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Stats & Members */}
-                          <div className="flex items-center justify-between mb-3 px-1">
-                            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-                              <Users className="w-3.5 h-3.5" />
-                              <span>{membersByLeader[leader.id]?.length || 0} Members</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => onViewMembers(leader)}
-                                className={`text-xs font-bold ${style.text} hover:underline decoration-2 underline-offset-4`}
-                              >
-                                View Members
-                              </button>
-                              {membersByLeader[leader.id]?.length > 0 && (
-                                <button
-                                  onClick={() => toggleLeaderRoster(leader.id)}
-                                  className={`text-xs font-bold ${style.text} hover:underline decoration-2 underline-offset-4`}
-                                >
-                                  {expandedLeaderRosters.has(leader.id)
-                                    ? 'Hide Roster'
-                                    : 'View Roster'}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Expandable Roster */}
-                          {expandedLeaderRosters.has(leader.id) && membersByLeader[leader.id] && (
-                            <div className="mb-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-2 max-h-40 overflow-y-auto border border-slate-100 dark:border-slate-700/50 scrollbar-thin">
-                              <div className="grid grid-cols-1 gap-1">
-                                {membersByLeader[leader.id].map((m) => (
-                                  <div
-                                    key={m.id}
-                                    className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors group/member"
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => onViewAnalytics(leader.id)}
+                                    className="font-semibold text-sm text-label truncate hover:text-primary-700 dark:hover:text-primary-300 transition-colors text-left"
+                                    title="View Profile"
                                   >
-                                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">
-                                      {m.full_name}
+                                    {leader.full_name}
+                                  </button>
+                                  {leader.is_head === 1 && (
+                                    <span className="flex items-center gap-0.5 shrink-0 rounded-full bg-system-orange/15 px-1.5 py-0.5">
+                                      <Shield className="w-2.5 h-2.5 text-amber-700 dark:text-system-orange" />
+                                      <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-system-orange">
+                                        Head
+                                      </span>
                                     </span>
-                                    <span className="text-[10px] text-slate-400 font-mono opacity-0 group-hover/member:opacity-100 transition-opacity">
-                                      #{m.membership_id}
-                                    </span>
-                                  </div>
-                                ))}
+                                  )}
+                                </div>
+                                <p className="text-xs text-tertiary-label font-mono mt-0.5">
+                                  @{leader.username}
+                                </p>
                               </div>
                             </div>
-                          )}
 
-                          {/* Contact */}
-                          <div className="space-y-1.5 mb-3">
-                            {leader.phone && (
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex min-w-0 items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                  <Phone className="w-3 h-3 shrink-0" />
-                                  <span className="truncate">{leader.phone}</span>
-                                </div>
-                                {toWhatsAppNumber(leader.phone) && (
+                            {/* Stats & Members */}
+                            <div className="flex items-center justify-between mb-3 px-1">
+                              <div className="flex items-center gap-1.5 text-xs font-medium text-secondary-label">
+                                <Users className="w-3.5 h-3.5" />
+                                <span className="tabular-nums">
+                                  {membersByLeader[leader.id]?.length || 0} Members
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => onViewMembers(leader)}
+                                  className={`text-xs font-semibold ${style.text} hover:underline decoration-2 underline-offset-4`}
+                                >
+                                  View Members
+                                </button>
+                                {membersByLeader[leader.id]?.length > 0 && (
                                   <button
-                                    type="button"
-                                    onClick={() =>
-                                      openWhatsAppChat(
-                                        leader.phone,
-                                        buildWhatsAppGreeting(leader.full_name)
-                                      )
-                                    }
-                                    className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 transition-all hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
-                                    title="Chat on WhatsApp"
+                                    onClick={() => toggleLeaderRoster(leader.id)}
+                                    className={`text-xs font-semibold ${style.text} hover:underline decoration-2 underline-offset-4`}
                                   >
-                                    <MessageCircle className="w-3 h-3" />
-                                    WhatsApp
+                                    {expandedLeaderRosters.has(leader.id)
+                                      ? 'Hide Roster'
+                                      : 'View Roster'}
                                   </button>
                                 )}
                               </div>
-                            )}
-                            {leader.email && (
-                              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                <AtSign className="w-3 h-3 shrink-0" />
-                                <span className="truncate">{leader.email}</span>
+                            </div>
+
+                            {/* Expandable Roster */}
+                            {expandedLeaderRosters.has(leader.id) && membersByLeader[leader.id] && (
+                              <div className="mb-4 rounded-xl bg-system-grouped-background/70 p-2 max-h-40 overflow-y-auto border border-separator/40 dark:border-white/[0.06] dark:bg-white/[0.03] scrollbar-thin">
+                                <div className="grid grid-cols-1 gap-1">
+                                  {membersByLeader[leader.id].map((m) => (
+                                    <div
+                                      key={m.id}
+                                      className="flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors hover:bg-secondary-system-grouped-background dark:hover:bg-white/[0.06] group/member"
+                                    >
+                                      <span className="text-xs font-medium text-label truncate">
+                                        {m.full_name}
+                                      </span>
+                                      <span className="text-[10px] text-tertiary-label font-mono opacity-0 group-hover/member:opacity-100 transition-opacity">
+                                        #{m.membership_id}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
-                          </div>
 
-                          {/* Actions */}
-                          <div className="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100 dark:border-slate-700">
-                            <button
-                              onClick={() => onViewAnalytics(leader.id)}
-                              className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium ${style.text} ${style.bg} hover:shadow-sm transition-all`}
-                            >
-                              <Eye className="w-3 h-3" />
-                              View Profile
-                            </button>
-                            <button
-                              onClick={() => onViewMembers(leader)}
-                              className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold ${style.text} ${style.bg} hover:shadow-sm transition-all`}
-                            >
-                              <Users className="w-3 h-3" />
-                              View Members
-                            </button>
-                            <div className="col-span-2 flex items-center justify-end gap-1">
+                            {/* Contact */}
+                            <div className="space-y-1.5 mb-3">
+                              {leader.phone && (
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex min-w-0 items-center gap-2 text-xs text-secondary-label">
+                                    <Phone className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{leader.phone}</span>
+                                  </div>
+                                  {toWhatsAppNumber(leader.phone) && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openWhatsAppChat(
+                                          leader.phone,
+                                          buildWhatsAppGreeting(leader.full_name)
+                                        )
+                                      }
+                                      className="flex shrink-0 items-center gap-1 rounded-lg bg-system-green/15 px-2 py-1 text-[11px] font-semibold text-emerald-700 transition-all hover:bg-system-green/25 dark:text-system-green"
+                                      title="Chat on WhatsApp"
+                                    >
+                                      <MessageCircle className="w-3 h-3" />
+                                      WhatsApp
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                              {leader.email && (
+                                <div className="flex items-center gap-2 text-xs text-secondary-label">
+                                  <AtSign className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{leader.email}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-separator/60 dark:border-white/[0.08]">
                               <button
-                                onClick={() => onEdit(leader)}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                                title="Edit"
+                                onClick={() => onViewAnalytics(leader.id)}
+                                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 ${style.text} ${style.tint}`}
                               >
-                                <Pencil className="w-3.5 h-3.5" />
+                                <Eye className="w-3 h-3" />
+                                View Profile
                               </button>
                               <button
-                                onClick={() => onDelete(leader)}
-                                className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-900/30 text-slate-400 hover:text-rose-500 transition-colors"
-                                title="Delete"
+                                onClick={() => onViewMembers(leader)}
+                                className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80 ${style.text} ${style.tint}`}
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Users className="w-3 h-3" />
+                                View Members
                               </button>
+                              <div className="col-span-2 flex items-center justify-end gap-1">
+                                <button
+                                  onClick={() => onEdit(leader)}
+                                  className="p-1.5 rounded-lg text-tertiary-label transition-colors hover:bg-system-fill hover:text-label"
+                                  title="Edit"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => onDelete(leader)}
+                                  className="p-1.5 rounded-lg text-tertiary-label transition-colors hover:bg-system-red/15 hover:text-rose-700 dark:hover:text-system-red"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
                           </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Unassigned Section Members */}
+                    {!isCollapsed && unassignedMembersBySection[sectionName]?.length > 0 && (
+                      <div className="mt-4 p-4 rounded-2xl border border-system-orange/20 bg-system-orange/10 dark:bg-system-orange/[0.06]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Users className="w-4 h-4 text-amber-700 dark:text-system-orange" />
+                          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-system-orange">
+                            Section Members (Unassigned to Leader)
+                          </h4>
+                          <span className="px-1.5 py-0.5 rounded-full bg-system-orange/15 text-[10px] font-bold text-amber-700 dark:text-system-orange">
+                            {unassignedMembersBySection[sectionName].length}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                          {unassignedMembersBySection[sectionName].map((m) => (
+                            <div
+                              key={m.id}
+                              className="bg-secondary-system-grouped-background dark:bg-white/[0.06] p-2 rounded-lg text-center"
+                            >
+                              <p className="text-[11px] font-semibold text-label truncate">
+                                {m.full_name}
+                              </p>
+                              <p className="text-[9px] text-tertiary-label font-mono">
+                                #{m.membership_id}
+                              </p>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                )}
-
-                {/* Unassigned Section Members */}
-                {!isCollapsed && unassignedMembersBySection[sectionName]?.length > 0 && (
-                  <div className="mt-4 p-4 bg-amber-50/50 dark:bg-amber-900/10 rounded-2xl border border-amber-100/50 dark:border-amber-900/30">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Users className="w-4 h-4 text-amber-600 dark:text-amber-500" />
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                        Section Members (Unassigned to Leader)
-                      </h4>
-                      <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 text-[10px] font-bold">
-                        {unassignedMembersBySection[sectionName].length}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                      {unassignedMembersBySection[sectionName].map((m) => (
-                        <div
-                          key={m.id}
-                          className="bg-white dark:bg-slate-800 p-2 rounded-lg border border-amber-100 dark:border-amber-900/40 text-center"
-                        >
-                          <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">
-                            {m.full_name}
-                          </p>
-                          <p className="text-[9px] text-slate-400 font-mono">#{m.membership_id}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                );
+              })}
+            </div>
+          ) : (
+            <div className="card flex flex-col items-center justify-center py-20">
+              <div className="w-16 h-16 rounded-2xl bg-system-fill flex items-center justify-center mb-4">
+                <UserCog className="w-8 h-8 text-tertiary-label" />
               </div>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-xl border border-dashed border-slate-300 dark:border-slate-600">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4">
-            <UserCog className="w-8 h-8 text-slate-400 dark:text-slate-500" />
-          </div>
-          <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
-            No leaders found
-          </h4>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm text-center">
-            {searchTerm || sectionFilter
-              ? 'Try adjusting your search.'
-              : 'Add your first leader to get started.'}
-          </p>
-        </div>
-      )}
+              <h4 className="text-title-3 font-semibold text-label mb-1">No leaders found</h4>
+              <p className="text-footnote text-secondary-label max-w-sm text-center">
+                {searchTerm || sectionFilter
+                  ? 'Try adjusting your search.'
+                  : 'Add your first leader to get started.'}
+              </p>
+            </div>
+          )}
         </>
       )}
     </div>

@@ -20,16 +20,11 @@ const emptyForm = (year) => ({
 });
 
 const typeStyles = {
-  service:
-    'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800',
-  training:
-    'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/20 dark:text-sky-300 dark:border-sky-800',
-  outreach:
-    'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800',
-  conference:
-    'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800',
-  meeting:
-    'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+  service: 'bg-system-green/15 text-emerald-700 dark:text-system-green',
+  training: 'bg-system-blue/15 text-blue-700 dark:text-system-blue',
+  outreach: 'bg-system-orange/15 text-amber-700 dark:text-system-orange',
+  conference: 'bg-system-purple/15 text-purple-700 dark:text-system-purple',
+  meeting: 'bg-system-fill text-secondary-label'
 };
 
 const ChurchCalendar = () => {
@@ -117,34 +112,32 @@ const ChurchCalendar = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {message && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200">
+        <div className="rounded-xl bg-system-green/10 px-4 py-3 text-footnote font-medium text-emerald-700 dark:text-system-green">
           {message}
         </div>
       )}
 
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 p-6 text-white shadow-xl shadow-blue-500/20">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-            <CalendarDays className="h-5 w-5 text-white" />
+      <div className="card flex flex-col justify-between gap-4 p-6 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-system-blue/15">
+            <CalendarDays className="h-5 w-5 text-blue-700 dark:text-system-blue" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">Church Calendar</h2>
-            <p className="text-sm text-white/80">
+            <h2 className="text-title-2 font-semibold text-label">Church Calendar</h2>
+            <p className="text-footnote text-secondary-label">
               Yearly events, role assignments, and ministry responsibilities.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <label className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
             Year
           </label>
           <select
             value={year}
             onChange={(event) => setYear(Number(event.target.value))}
-            className="select h-10 w-32"
+            className="select h-9 w-28"
           >
             {[currentYear - 1, currentYear, currentYear + 1, currentYear + 2].map((option) => (
               <option key={option} value={option}>
@@ -156,15 +149,10 @@ const ChurchCalendar = () => {
       </div>
 
       {isAdmin && (
-        <form
-          onSubmit={saveEvent}
-          className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
-        >
+        <form onSubmit={saveEvent} className="card p-5">
           <div className="mb-4 flex items-center gap-2">
-            <Plus className="h-4 w-4 text-sky-600" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              Add Calendar Event
-            </h3>
+            <Plus className="h-4 w-4 text-blue-700 dark:text-system-blue" />
+            <h3 className="text-headline font-semibold text-label">Add Calendar Event</h3>
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
             <input
@@ -229,7 +217,7 @@ const ChurchCalendar = () => {
             <button
               disabled={saving}
               type="submit"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-700 disabled:opacity-60"
+              className="btn-primary flex h-11 items-center justify-center gap-2"
             >
               <Save className="h-4 w-4" />
               {saving ? 'Saving...' : 'Save Event'}
@@ -240,25 +228,20 @@ const ChurchCalendar = () => {
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         {groupedEvents.map((group) => (
-          <section
-            key={group.month}
-            className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800"
-          >
+          <section key={group.month} className="card p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {group.month}
-              </h3>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500 dark:bg-slate-700 dark:text-slate-300">
+              <h3 className="text-headline font-semibold text-label">{group.month}</h3>
+              <span className="rounded-full bg-system-fill px-2.5 py-1 text-caption-1 font-semibold text-secondary-label">
                 {group.events.length} event{group.events.length === 1 ? '' : 's'}
               </span>
             </div>
 
             {loading ? (
-              <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400">
+              <div className="rounded-xl border border-dashed border-separator/70 p-6 text-center text-footnote font-medium text-secondary-label dark:border-white/[0.12]">
                 Loading calendar...
               </div>
             ) : group.events.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400">
+              <div className="rounded-xl border border-dashed border-separator/70 p-6 text-center text-footnote font-medium text-secondary-label dark:border-white/[0.12]">
                 No events planned.
               </div>
             ) : (
@@ -266,17 +249,17 @@ const ChurchCalendar = () => {
                 {group.events.map((event) => (
                   <article
                     key={event.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/30"
+                    className="rounded-xl bg-system-grouped-background/70 p-4 dark:bg-white/[0.03]"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="mb-2 flex flex-wrap items-center gap-2">
                           <span
-                            className={`rounded-full border px-2.5 py-1 text-xs font-bold ${typeStyles[event.event_type] || typeStyles.meeting}`}
+                            className={`rounded-full px-2.5 py-1 text-caption-1 font-semibold capitalize ${typeStyles[event.event_type] || typeStyles.meeting}`}
                           >
                             {event.event_type}
                           </span>
-                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                          <span className="text-caption-1 font-semibold text-secondary-label">
                             {new Date(`${event.event_date}T12:00:00`).toLocaleDateString('en-US', {
                               weekday: 'short',
                               month: 'short',
@@ -284,48 +267,47 @@ const ChurchCalendar = () => {
                             })}
                           </span>
                         </div>
-                        <h4 className="font-bold text-slate-900 dark:text-slate-100 break-words">
-                          {event.title}
-                        </h4>
+                        <h4 className="break-words font-semibold text-label">{event.title}</h4>
                       </div>
                       {isAdmin && (
                         <button
                           disabled={saving}
                           onClick={() => deleteEvent(event.id)}
-                          className="h-9 w-9 flex items-center justify-center shrink-0 rounded-lg p-0 text-slate-400 hover:bg-white hover:text-rose-500 disabled:opacity-60 dark:hover:bg-slate-800"
+                          aria-label={`Delete ${event.title}`}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg p-0 text-tertiary-label transition-colors hover:bg-system-red/10 hover:text-rose-700 disabled:opacity-60 dark:hover:text-system-red"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       )}
                     </div>
 
-                    <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-slate-600 dark:text-slate-300 md:grid-cols-2">
+                    <div className="mt-3 grid grid-cols-1 gap-2 text-footnote text-secondary-label md:grid-cols-2">
                       {event.event_time && (
                         <span className="inline-flex items-center gap-2">
-                          <Clock3 className="h-4 w-4 text-slate-400" />
+                          <Clock3 className="h-4 w-4 text-tertiary-label" />
                           {event.event_time}
                         </span>
                       )}
                       {event.location && (
                         <span className="inline-flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-slate-400" />
+                          <MapPin className="h-4 w-4 text-tertiary-label" />
                           {event.location}
                         </span>
                       )}
                       {(event.role_title || event.assigned_to) && (
                         <span className="inline-flex items-center gap-2 md:col-span-2">
-                          <UsersRound className="h-4 w-4 text-slate-400" />
+                          <UsersRound className="h-4 w-4 text-tertiary-label" />
                           {[event.role_title, event.assigned_to].filter(Boolean).join(' - ')}
                         </span>
                       )}
                       {event.section_name && (
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        <span className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                           {event.section_name}
                         </span>
                       )}
                     </div>
                     {event.notes && (
-                      <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                      <p className="mt-3 text-footnote leading-relaxed text-secondary-label">
                         {event.notes}
                       </p>
                     )}

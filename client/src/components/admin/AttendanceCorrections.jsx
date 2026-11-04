@@ -129,22 +129,19 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-attendance-title"
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-800"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-secondary-system-grouped-background shadow-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-700 dark:bg-slate-800">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-black/[0.06] bg-secondary-system-grouped-background px-6 py-4 dark:border-white/[0.08]">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300">
               <Edit3 className="h-5 w-5" />
             </div>
             <div>
-              <h2
-                id="edit-attendance-title"
-                className="text-base font-bold text-slate-900 dark:text-slate-100"
-              >
+              <h2 id="edit-attendance-title" className="text-subheadline font-semibold text-label">
                 {t('attendance.corrections.editTitle')}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-caption-1 text-secondary-label">
                 {record.member_name} &middot; {fdate(record.date)}
               </p>
             </div>
@@ -153,56 +150,56 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+            className="rounded-lg p-1.5 text-tertiary-label transition-colors hover:bg-system-fill hover:text-secondary-label dark:hover:bg-white/[0.06] dark:hover:text-label"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 p-6">
-          <div className="grid grid-cols-2 gap-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-900/30">
+          <div className="grid grid-cols-2 gap-4 rounded-xl bg-system-fill p-4 dark:bg-white/[0.03]">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                 Section
               </p>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <p className="text-footnote font-semibold text-secondary-label">
                 {record.section_name || '—'}
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                 Service
               </p>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <p className="text-footnote font-semibold text-secondary-label">
                 {record.service_name || '—'}
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                 Leader
               </p>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <p className="text-footnote font-semibold text-secondary-label">
                 {record.leader_name || '—'}
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                 Submitted by
               </p>
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <p className="text-footnote font-semibold text-secondary-label">
                 {record.submitted_by_name || '—'}
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                 Membership ID
               </p>
-              <p className="text-sm font-mono text-slate-700 dark:text-slate-200">
+              <p className="text-footnote font-mono text-secondary-label">
                 {record.membership_id || '—'}
               </p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
                 Current status
               </p>
               <div className="mt-1">
@@ -212,7 +209,7 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            <p className="mb-2 text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
               New Status
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -224,14 +221,14 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
                     key={key}
                     type="button"
                     onClick={() => setStatus(key)}
-                    className={`flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition-all ${
+                    className={`flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-2.5 text-footnote font-semibold transition-all ${
                       active
                         ? key === 'present'
                           ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200'
                           : key === 'absent'
                             ? 'border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200'
                             : 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                        : 'border-black/[0.06] bg-secondary-system-grouped-background text-secondary-label hover:border-black/[0.12] dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-tertiary-label'
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -245,10 +242,10 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
           <div>
             <label
               htmlFor="edit-reason"
-              className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+              className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label"
             >
               Reason for correction{' '}
-              <span className="font-normal normal-case text-slate-400">
+              <span className="font-normal normal-case text-tertiary-label">
                 (optional, max 500 chars)
               </span>
             </label>
@@ -261,17 +258,19 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
               placeholder="e.g. Member was actually present but leader marked absent in error."
               className="input w-full resize-none"
             />
-            <p className="mt-1 text-right text-[10px] text-slate-400">{reason.length}/500</p>
+            <p className="mt-1 text-right text-caption-2 text-tertiary-label">
+              {reason.length}/500
+            </p>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-900/30">
-            <p className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <div className="rounded-xl border border-black/[0.06] bg-system-grouped-background/70 p-4 dark:border-white/[0.08] dark:bg-white/[0.03]">
+            <p className="mb-3 flex items-center gap-2 text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
               <Clock className="h-3.5 w-3.5" /> Edit History
             </p>
             {loadingHistory ? (
-              <p className="text-xs text-slate-400">Loading history...</p>
+              <p className="text-caption-1 text-tertiary-label">Loading history...</p>
             ) : history.length === 0 ? (
-              <p className="text-xs italic text-slate-400">No prior corrections.</p>
+              <p className="text-caption-1 italic text-tertiary-label">No prior corrections.</p>
             ) : (
               <ul className="space-y-2">
                 {history.map((entry) => {
@@ -280,28 +279,29 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
                   return (
                     <li
                       key={entry.id}
-                      className="rounded-lg border border-slate-200 bg-white p-2.5 text-xs dark:border-slate-700 dark:bg-slate-800"
+                      className="rounded-lg border border-black/[0.06] bg-secondary-system-grouped-background p-2.5 text-caption-1 dark:border-white/[0.08]"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        <span className="font-semibold text-secondary-label">
                           {entry.editor_name || `User #${entry.editor_id || 'system'}`}
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-caption-2 text-tertiary-label">
                           {fdatetime(entry.created_at)}
                         </span>
                       </div>
-                      <div className="mt-1 grid grid-cols-2 gap-2 text-slate-500 dark:text-slate-400">
+                      <div className="mt-1 grid grid-cols-2 gap-2 text-secondary-label">
                         <div>
-                          <span className="text-[10px] uppercase">From:</span>{' '}
+                          <span className="text-caption-2 uppercase">From:</span>{' '}
                           {oldVal?.status || '—'}
                         </div>
                         <div>
-                          <span className="text-[10px] uppercase">To:</span> {newVal?.status || '—'}
+                          <span className="text-caption-2 uppercase">To:</span>{' '}
+                          {newVal?.status || '—'}
                         </div>
                       </div>
                       {newVal?.reason && (
-                        <p className="mt-1 text-slate-500 dark:text-slate-400">
-                          <span className="text-[10px] uppercase">Reason:</span> {newVal.reason}
+                        <p className="mt-1 text-secondary-label">
+                          <span className="text-caption-2 uppercase">Reason:</span> {newVal.reason}
                         </p>
                       )}
                     </li>
@@ -311,18 +311,18 @@ const EditAttendanceModal = ({ record, onClose, onSaved, showMessage }) => {
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-4 dark:border-slate-700">
+          <div className="flex items-center justify-end gap-2 border-t border-black/[0.06] pt-4 dark:border-white/[0.08]">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background px-4 py-2 text-footnote font-semibold text-secondary-label transition-colors hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:text-label dark:hover:bg-white/[0.06]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-700 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2 text-footnote font-semibold text-white shadow-card transition-all hover:bg-primary-700 disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save Correction'}
             </button>
@@ -447,20 +447,20 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
         ref={modalRef}
         role="dialog"
         aria-modal="true"
-        className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl dark:bg-slate-800"
+        className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-secondary-system-grouped-background shadow-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-6 py-4 dark:border-slate-700 dark:bg-slate-800">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-black/[0.06] bg-secondary-system-grouped-background px-6 py-4 dark:border-white/[0.08]">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300">
               <ClipboardList className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-subheadline font-semibold text-label">
                 Mark Attendance — {leader.leader_name}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-caption-1 text-secondary-label">
                 {leader.section_name} &middot; {date} &middot;{' '}
                 {dataInfo?.leader?.section_name || ''}
               </p>
@@ -470,7 +470,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+            className="rounded-lg p-1.5 text-tertiary-label transition-colors hover:bg-system-fill hover:text-secondary-label dark:hover:bg-white/[0.06] dark:hover:text-label"
           >
             <X className="h-4 w-4" />
           </button>
@@ -478,7 +478,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
 
         <div className="p-6 space-y-5">
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-slate-400 text-sm">
+            <div className="flex items-center justify-center py-12 text-tertiary-label text-footnote">
               <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
               Loading members...
             </div>
@@ -486,11 +486,11 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
             <>
               {/* Progress + Summary */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                <div className="rounded-xl bg-system-grouped-background/30 p-4">
+                  <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label mb-2">
                     Attendance Progress
                   </p>
-                  <div className="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div className="w-full h-3 bg-system-gray-4 rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                       style={{
@@ -498,7 +498,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
                       }}
                     />
                   </div>
-                  <p className="text-xs text-slate-500 mt-1.5 font-semibold">
+                  <p className="text-caption-1 text-secondary-label mt-1.5 font-semibold">
                     {recordedCount} / {expectedCount} members recorded
                     {recordedCount < expectedCount && (
                       <span className="text-amber-600 ml-1">
@@ -507,25 +507,23 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
                     )}
                   </p>
                 </div>
-                <div className="rounded-xl bg-slate-50 dark:bg-slate-900/30 p-4">
+                <div className="rounded-xl bg-system-grouped-background/30 p-4">
                   <div className="grid grid-cols-4 gap-3 text-center">
                     <div>
-                      <p className="text-lg font-black text-emerald-600">{summary.present}</p>
-                      <p className="text-[9px] uppercase text-slate-400">Present</p>
+                      <p className="text-lg font-semibold text-emerald-600">{summary.present}</p>
+                      <p className="text-caption-2 uppercase text-tertiary-label">Present</p>
                     </div>
                     <div>
-                      <p className="text-lg font-black text-rose-600">{summary.absent}</p>
-                      <p className="text-[9px] uppercase text-slate-400">Absent</p>
+                      <p className="text-lg font-semibold text-rose-600">{summary.absent}</p>
+                      <p className="text-caption-2 uppercase text-tertiary-label">Absent</p>
                     </div>
                     <div>
-                      <p className="text-lg font-black text-amber-600">{summary.excused}</p>
-                      <p className="text-[9px] uppercase text-slate-400">Excused</p>
+                      <p className="text-lg font-semibold text-amber-600">{summary.excused}</p>
+                      <p className="text-caption-2 uppercase text-tertiary-label">Excused</p>
                     </div>
                     <div>
-                      <p className="text-lg font-black text-slate-900 dark:text-white">
-                        {summary.total}
-                      </p>
-                      <p className="text-[9px] uppercase text-slate-400">Total</p>
+                      <p className="text-lg font-semibold text-label">{summary.total}</p>
+                      <p className="text-caption-2 uppercase text-tertiary-label">Total</p>
                     </div>
                   </div>
                 </div>
@@ -534,26 +532,26 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
               {/* Search + Bulk Actions */}
               <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                 <div className="relative flex-1 max-w-xs">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-tertiary-label" />
                   <input
                     value={memberSearch}
                     onChange={(e) => setMemberSearch(e.target.value)}
                     placeholder="Search members..."
-                    className="input h-9 w-full pl-9 text-xs"
+                    className="input h-9 w-full pl-9 text-caption-1"
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-slate-400 font-semibold">
+                  <span className="text-caption-2 text-tertiary-label font-semibold">
                     {selectedIds.size} selected
                   </span>
                   <button
                     type="button"
                     onClick={toggleSelectAll}
-                    className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                    className="text-caption-2 font-semibold text-primary-700 dark:text-primary-300 hover:underline"
                   >
                     {selectedIds.size === filteredMembers.length ? 'Deselect all' : 'Select all'}
                   </button>
-                  <div className="w-px h-5 bg-slate-200 dark:bg-slate-700" />
+                  <div className="w-px h-5 bg-system-gray-4" />
                   {[
                     {
                       key: 'present',
@@ -581,7 +579,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
                         type="button"
                         onClick={() => bulkSetStatus(act.key)}
                         disabled={selectedIds.size === 0}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed ${act.cls}`}
+                        className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-caption-2 font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed ${act.cls}`}
                       >
                         <Icon className="w-3 h-3" />
                         {act.label}
@@ -592,11 +590,11 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
               </div>
 
               {/* Members Table */}
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] overflow-hidden">
                 <div className="max-h-[320px] overflow-x-auto overflow-y-auto">
-                  <table className="min-w-[600px] text-xs">
-                    <thead className="bg-slate-50 dark:bg-slate-900/40 sticky top-0">
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
+                  <table className="min-w-[600px] text-caption-1">
+                    <thead className="bg-system-grouped-background/40 sticky top-0">
+                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
                         <th className="w-10 px-3 py-2 text-left">
                           <input
                             type="checkbox"
@@ -605,27 +603,27 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
                               selectedIds.size === filteredMembers.length
                             }
                             onChange={toggleSelectAll}
-                            className="rounded border-slate-300"
+                            className="rounded border-black/[0.12]"
                           />
                         </th>
-                        <th className="px-3 py-2 text-left text-[9px] font-bold uppercase text-slate-500">
+                        <th className="px-3 py-2 text-left text-caption-2 font-semibold uppercase text-secondary-label">
                           Member
                         </th>
-                        <th className="px-3 py-2 text-left text-[9px] font-bold uppercase text-slate-500">
+                        <th className="px-3 py-2 text-left text-caption-2 font-semibold uppercase text-secondary-label">
                           Membership ID
                         </th>
-                        <th className="px-3 py-2 text-center text-[9px] font-bold uppercase text-slate-500">
+                        <th className="px-3 py-2 text-center text-caption-2 font-semibold uppercase text-secondary-label">
                           Current Status
                         </th>
-                        <th className="px-3 py-2 text-center text-[9px] font-bold uppercase text-slate-500">
+                        <th className="px-3 py-2 text-center text-caption-2 font-semibold uppercase text-secondary-label">
                           Action
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                    <tbody className="divide-y divide-separator/50 dark:divide-white/[0.06]">
                       {filteredMembers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-3 py-8 text-center text-slate-400">
+                          <td colSpan={5} className="px-3 py-8 text-center text-tertiary-label">
                             No members found.
                           </td>
                         </tr>
@@ -633,33 +631,33 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
                         filteredMembers.map((m) => (
                           <tr
                             key={m.member_id}
-                            className={`hover:bg-slate-50/50 dark:hover:bg-slate-900/30 [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${m.status ? 'bg-slate-50/30' : 'bg-amber-50/20 dark:bg-amber-900/5'}`}
+                            className={`hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03] [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${m.status ? 'bg-system-fill/30' : 'bg-amber-50/20 dark:bg-amber-900/5'}`}
                           >
                             <td className="px-3 py-2">
                               <input
                                 type="checkbox"
                                 checked={selectedIds.has(m.member_id)}
                                 onChange={() => toggleSelect(m.member_id)}
-                                className="rounded border-slate-300"
+                                className="rounded border-black/[0.12]"
                               />
                             </td>
-                            <td className="px-3 py-2 font-medium text-slate-900 dark:text-white whitespace-nowrap">
+                            <td className="px-3 py-2 font-medium text-label whitespace-nowrap">
                               {m.full_name}
                             </td>
-                            <td className="px-3 py-2 font-mono text-slate-400">
+                            <td className="px-3 py-2 font-mono text-tertiary-label">
                               {m.membership_id || '—'}
                             </td>
                             <td className="px-3 py-2 text-center">
                               {m.status ? (
                                 <StatusBadge status={m.status} />
                               ) : (
-                                <span className="text-[10px] text-amber-600 font-semibold">
+                                <span className="text-caption-2 text-amber-600 font-semibold">
                                   Not set
                                 </span>
                               )}
                             </td>
                             <td className="px-3 py-2 text-center">
-                              <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 dark:bg-slate-700 p-0.5">
+                              <div className="inline-flex items-center gap-1 rounded-lg bg-system-fill p-0.5">
                                 {Object.entries(STATUS_META).map(([key, meta]) => {
                                   const Icon = meta.icon;
                                   const active = m.status === key;
@@ -668,7 +666,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
                                       key={key}
                                       type="button"
                                       onClick={() => setMemberStatus(m.member_id, key)}
-                                      className={`p-1 rounded-md transition-all ${active ? (key === 'present' ? 'bg-emerald-500 text-white' : key === 'absent' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white') : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+                                      className={`p-1 rounded-md transition-all ${active ? (key === 'present' ? 'bg-emerald-500 text-white' : key === 'absent' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white') : 'text-tertiary-label hover:text-secondary-label dark:hover:text-tertiary-label'}`}
                                       title={meta.label}
                                     >
                                       <Icon className="w-3.5 h-3.5" />
@@ -687,13 +685,13 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
 
               {/* Correction Reason */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                   Administrative Correction Reason
                 </label>
                 <select
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  className="input h-9 w-full max-w-xs text-xs"
+                  className="input h-9 w-full max-w-xs text-caption-1"
                 >
                   {CORRECTION_REASONS.map((r) => (
                     <option key={r} value={r}>
@@ -701,34 +699,34 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-400 mt-1">
+                <p className="text-caption-2 text-tertiary-label mt-1">
                   This reason will be logged in the audit trail for every corrected record.
                 </p>
               </div>
 
               {/* Audit Summary */}
-              <div className="rounded-xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-4">
+              <div className="rounded-xl bg-primary-500/10 dark:bg-primary-500/[0.07] border border-primary-500/20 dark:border-primary-500/20 p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Info className="w-4 h-4 text-indigo-500" />
-                  <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
+                  <Info className="w-4 h-4 text-primary-600" />
+                  <span className="text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
                     Correction Audit
                   </span>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-[10px] text-indigo-600 dark:text-indigo-400">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-caption-2 text-primary-700 dark:text-primary-300">
                   <div>
-                    <span className="text-indigo-400">Original Leader:</span>{' '}
+                    <span className="text-primary-400">Original Leader:</span>{' '}
                     <span className="font-semibold">{leader.leader_name}</span>
                   </div>
                   <div>
-                    <span className="text-indigo-400">Correction Reason:</span>{' '}
+                    <span className="text-primary-400">Correction Reason:</span>{' '}
                     <span className="font-semibold">{reason}</span>
                   </div>
                   <div>
-                    <span className="text-indigo-400">Records:</span>{' '}
+                    <span className="text-primary-400">Records:</span>{' '}
                     <span className="font-semibold">{summary.total} members</span>
                   </div>
                   <div>
-                    <span className="text-indigo-400">Date:</span>{' '}
+                    <span className="text-primary-400">Date:</span>{' '}
                     <span className="font-semibold">{date}</span>
                   </div>
                 </div>
@@ -738,11 +736,11 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-slate-200 bg-white px-6 py-4 dark:border-slate-700 dark:bg-slate-800">
+        <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-black/[0.06] bg-secondary-system-grouped-background px-6 py-4 dark:border-white/[0.08]">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background px-4 py-2 text-footnote font-semibold text-secondary-label transition-colors hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:text-label dark:hover:bg-white/[0.06]"
           >
             Cancel
           </button>
@@ -750,7 +748,7 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
             type="button"
             onClick={handleSubmit}
             disabled={saving || !allHaveStatus || loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-primary-700 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2 text-footnote font-semibold text-white shadow-card transition-all hover:bg-primary-700 disabled:opacity-50"
           >
             {saving ? (
               <>
@@ -995,7 +993,7 @@ const AttendanceCorrections = ({ showMessage }) => {
         header: 'Date',
         sortable: true,
         render: (row) => (
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-200 tabular-nums">
+          <span className="text-footnote font-medium text-secondary-label tabular-nums">
             {fdate(row.date)}
           </span>
         )
@@ -1005,10 +1003,8 @@ const AttendanceCorrections = ({ showMessage }) => {
         header: 'Member',
         render: (row) => (
           <div>
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-              {row.member_name}
-            </p>
-            <p className="text-[10px] font-mono text-slate-400">{row.membership_id}</p>
+            <p className="text-footnote font-semibold text-label">{row.member_name}</p>
+            <p className="text-caption-2 font-mono text-tertiary-label">{row.membership_id}</p>
           </div>
         )
       },
@@ -1016,18 +1012,14 @@ const AttendanceCorrections = ({ showMessage }) => {
         accessor: 'section_name',
         header: 'Section',
         render: (row) => (
-          <span className="text-sm text-slate-600 dark:text-slate-300">
-            {row.section_name || '—'}
-          </span>
+          <span className="text-footnote text-secondary-label">{row.section_name || '—'}</span>
         )
       },
       {
         accessor: 'service_name',
         header: 'Service',
         render: (row) => (
-          <span className="text-sm text-slate-600 dark:text-slate-300">
-            {row.service_name || '—'}
-          </span>
+          <span className="text-footnote text-secondary-label">{row.service_name || '—'}</span>
         )
       },
       {
@@ -1039,7 +1031,7 @@ const AttendanceCorrections = ({ showMessage }) => {
         accessor: 'submitted_by_name',
         header: 'Submitted by',
         render: (row) => (
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-caption-1 text-secondary-label">
             {row.submitted_by_name || '—'}
           </span>
         )
@@ -1048,7 +1040,7 @@ const AttendanceCorrections = ({ showMessage }) => {
         accessor: 'submitted_at',
         header: 'When',
         render: (row) => (
-          <span className="text-xs text-slate-400">
+          <span className="text-caption-1 text-tertiary-label">
             {row.submitted_at ? fdatetime(row.submitted_at) : '—'}
           </span>
         )
@@ -1063,7 +1055,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               e.stopPropagation();
               setEditing(row);
             }}
-            className="inline-flex items-center gap-1 rounded-lg bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-200 dark:hover:bg-primary-900/50"
+            className="inline-flex items-center gap-1 rounded-lg bg-primary-50 px-2.5 py-1 text-caption-1 font-semibold text-primary-700 transition-colors hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-200 dark:hover:bg-primary-900/50"
           >
             <Edit3 className="h-3 w-3" /> Edit
           </button>
@@ -1131,37 +1123,27 @@ const AttendanceCorrections = ({ showMessage }) => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-700 to-violet-700 p-6 text-white shadow-xl shadow-indigo-500/20">
-        <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-white/5 -translate-y-32 translate-x-32" />
-        <div className="absolute bottom-0 left-1/4 h-48 w-48 rounded-full bg-white/5 translate-y-24" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-              <Edit3 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">Attendance Corrections</h2>
-              <p className="text-sm text-white/80">
-                Audit and fix attendance records submitted by leaders
-              </p>
-            </div>
-          </div>
+      <div className="card flex items-center gap-3 p-6">
+        <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-primary-500/10">
+          <Edit3 className="h-5 w-5 text-primary-700 dark:text-primary-300" />
+        </div>
+        <div>
+          <h2 className="text-title-2 font-semibold text-label">Attendance Corrections</h2>
+          <p className="mt-0.5 text-footnote text-secondary-label">
+            Audit and fix attendance records submitted by leaders
+          </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
+      <div className="tab-pills overflow-x-auto">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-              activeTab === tab.id
-                ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
+            className={`tab-pill whitespace-nowrap ${activeTab === tab.id ? 'active' : ''}`}
           >
-            <tab.icon className="w-4 h-4" />
+            <tab.icon className="h-4 w-4" />
             {tab.label}
           </button>
         ))}
@@ -1170,10 +1152,10 @@ const AttendanceCorrections = ({ showMessage }) => {
       {/* ── Tab 1: Edit Attendance (existing functionality) ── */}
       {activeTab === 'edit' && (
         <>
-          <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background p-4 shadow-card dark:border-white/[0.08]">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative flex-1" ref={searchRef}>
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-tertiary-label" />
                 <input
                   value={filters.q}
                   onChange={(e) => {
@@ -1200,7 +1182,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                       setShowMemberDropdown(false);
                       loadFirstPage(next);
                     }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-tertiary-label transition-colors hover:bg-system-fill hover:text-secondary-label dark:hover:bg-white/[0.06] dark:hover:text-label"
                     title="Clear search"
                     aria-label="Clear search"
                   >
@@ -1208,22 +1190,20 @@ const AttendanceCorrections = ({ showMessage }) => {
                   </button>
                 )}
                 {showMemberDropdown && memberSuggestions.length > 0 && (
-                  <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800 max-h-60 overflow-y-auto">
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background shadow-lg dark:border-white/[0.08] max-h-60 overflow-y-auto">
                     {memberSuggestions.map((m) => (
                       <button
                         key={m.id}
                         type="button"
                         onClick={() => selectMember(m)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700/50 last:border-0"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left text-caption-1 hover:bg-system-fill/50 border-b border-separator/60 dark:border-white/[0.08] last:border-0"
                       >
-                        <div className="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold shrink-0 text-[10px]">
+                        <div className="w-7 h-7 rounded-full bg-primary-500/15 dark:bg-primary-500/15 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold shrink-0 text-caption-2">
                           {m.full_name?.charAt(0) || '?'}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-                            {m.full_name}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
+                          <p className="font-semibold text-label truncate">{m.full_name}</p>
+                          <p className="text-caption-2 text-tertiary-label">
                             {m.membership_id}
                             {m.section_name ? ` · ${m.section_name}` : ''}
                           </p>
@@ -1235,7 +1215,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               </div>
               <div className="flex items-center gap-2">
                 {loading && (
-                  <span className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-blue-50 px-3 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                  <span className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-blue-50 px-3 text-caption-1 font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
                     <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                     Searching…
                   </span>
@@ -1243,7 +1223,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                 <button
                   type="button"
                   onClick={() => setShowFilters((s) => !s)}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background px-3 text-footnote font-semibold text-secondary-label transition-colors hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:text-label dark:hover:bg-white/[0.06]"
                 >
                   <Filter className="h-4 w-4" />
                   {showFilters ? 'Hide Filters' : 'More Filters'}
@@ -1251,7 +1231,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                 <button
                   type="button"
                   onClick={() => load()}
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background text-secondary-label transition-colors hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:text-tertiary-label dark:hover:bg-white/[0.06]"
                   aria-label="Refresh"
                   title="Refresh"
                 >
@@ -1260,9 +1240,9 @@ const AttendanceCorrections = ({ showMessage }) => {
               </div>
             </div>
 
-            <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-slate-200 pt-3 dark:border-slate-700">
+            <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-black/[0.06] pt-3 dark:border-white/[0.08]">
               <div className="min-w-[140px] flex-1">
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <label className="mb-1 block text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                   From
                 </label>
                 <input
@@ -1278,7 +1258,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                 />
               </div>
               <div className="min-w-[140px] flex-1">
-                <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                <label className="mb-1 block text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                   To
                 </label>
                 <input
@@ -1296,7 +1276,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               <button
                 type="button"
                 onClick={handleApplyFilters}
-                className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white shadow-sm hover:bg-primary-700"
+                className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary-600 px-3 text-caption-1 font-semibold text-white shadow-card hover:bg-primary-700"
                 title="Apply filters"
               >
                 <Calendar className="h-3.5 w-3.5" /> Apply
@@ -1305,7 +1285,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                 <button
                   type="button"
                   onClick={handleClearDates}
-                  className="inline-flex h-9 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="inline-flex h-9 items-center gap-1 rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background px-3 text-caption-1 font-semibold text-secondary-label hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:text-tertiary-label dark:hover:bg-white/[0.06]"
                   title="Clear date range"
                 >
                   <X className="h-3.5 w-3.5" /> Clear dates
@@ -1314,7 +1294,7 @@ const AttendanceCorrections = ({ showMessage }) => {
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <span className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                 Quick range
               </span>
               {['today', 'yesterday', 'last7', 'last30', 'thisMonth', 'lastMonth'].map((id) => {
@@ -1332,10 +1312,10 @@ const AttendanceCorrections = ({ showMessage }) => {
                     key={id}
                     type="button"
                     onClick={() => handleDatePreset(id)}
-                    className={`inline-flex h-7 items-center rounded-full border px-3 text-xs font-semibold transition-colors ${
+                    className={`inline-flex h-7 items-center rounded-full border px-3 text-caption-1 font-semibold transition-colors ${
                       isActive
-                        ? 'border-blue-600 bg-blue-600 text-white shadow-sm'
-                        : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/30 dark:hover:text-blue-200'
+                        ? 'border-blue-600 bg-blue-600 text-white shadow-card'
+                        : 'border-black/[0.06] bg-secondary-system-grouped-background text-secondary-label hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-tertiary-label dark:hover:border-blue-500 dark:hover:bg-blue-900/30 dark:hover:text-blue-200'
                     }`}
                   >
                     {labels[id]}
@@ -1343,16 +1323,16 @@ const AttendanceCorrections = ({ showMessage }) => {
                 );
               })}
               {activePreset === 'custom' && (
-                <span className="ml-1 inline-flex h-7 items-center rounded-full bg-amber-50 px-3 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+                <span className="ml-1 inline-flex h-7 items-center rounded-full bg-amber-50 px-3 text-caption-1 font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
                   Custom range
                 </span>
               )}
             </div>
 
             {showFilters && (
-              <div className="mt-3 grid grid-cols-1 gap-3 border-t border-slate-200 pt-3 sm:grid-cols-4 dark:border-slate-700">
+              <div className="mt-3 grid grid-cols-1 gap-3 border-t border-black/[0.06] pt-3 sm:grid-cols-4 dark:border-white/[0.08]">
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="mb-1 block text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                     From
                   </label>
                   <input
@@ -1363,7 +1343,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="mb-1 block text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                     To
                   </label>
                   <input
@@ -1374,7 +1354,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  <label className="mb-1 block text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label">
                     Status
                   </label>
                   <select
@@ -1392,14 +1372,14 @@ const AttendanceCorrections = ({ showMessage }) => {
                   <button
                     type="button"
                     onClick={handleApplyFilters}
-                    className="inline-flex h-9 flex-1 items-center justify-center rounded-xl bg-primary-600 px-3 text-sm font-semibold text-white hover:bg-primary-700"
+                    className="inline-flex h-9 flex-1 items-center justify-center rounded-xl bg-primary-600 px-3 text-footnote font-semibold text-white hover:bg-primary-700"
                   >
                     Apply
                   </button>
                   <button
                     type="button"
                     onClick={handleClearFilters}
-                    className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                    className="inline-flex h-9 items-center justify-center rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background px-3 text-footnote font-semibold text-secondary-label hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:text-label dark:hover:bg-white/[0.06]"
                   >
                     Clear
                   </button>
@@ -1408,9 +1388,9 @@ const AttendanceCorrections = ({ showMessage }) => {
             )}
           </div>
 
-          <div className="rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background shadow-card dark:border-white/[0.08]">
+            <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3 dark:border-white/[0.08]">
+              <p className="text-caption-1 text-secondary-label">
                 {loading
                   ? 'Loading…'
                   : total === 0
@@ -1421,7 +1401,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                 <button
                   type="button"
                   onClick={handleClearFilters}
-                  className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="inline-flex items-center gap-1 text-caption-1 font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   title="Clear all filters"
                 >
                   <X className="h-3 w-3" /> Reset all filters
@@ -1429,25 +1409,25 @@ const AttendanceCorrections = ({ showMessage }) => {
               )}
             </div>
             <div className="overflow-x-auto max-h-[460px] overflow-y-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
-                <thead className="bg-slate-50 dark:bg-slate-900/40">
+              <table className="min-w-full divide-y divide-separator/50 text-footnote dark:divide-white/[0.06]">
+                <thead className="bg-system-grouped-background/40">
                   <tr>
                     {columns.map((c) => (
                       <th
                         key={c.header}
-                        className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500"
+                        className="px-4 py-2 text-left text-caption-2 font-semibold uppercase tracking-[0.06em] text-secondary-label"
                       >
                         {c.header}
                       </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                <tbody className="divide-y divide-separator/50 dark:divide-white/[0.06]">
                   {loading ? (
                     <tr>
                       <td
                         colSpan={columns.length}
-                        className="px-4 py-12 text-center text-sm text-slate-400"
+                        className="px-4 py-12 text-center text-footnote text-tertiary-label"
                       >
                         Loading...
                       </td>
@@ -1455,10 +1435,10 @@ const AttendanceCorrections = ({ showMessage }) => {
                   ) : records.length === 0 ? (
                     <tr>
                       <td colSpan={columns.length} className="px-4 py-12 text-center">
-                        <div className="flex flex-col items-center gap-2 text-slate-400">
+                        <div className="flex flex-col items-center gap-2 text-tertiary-label">
                           <Users className="h-8 w-8" />
-                          <p className="text-sm font-semibold">No attendance records found</p>
-                          <p className="text-xs">
+                          <p className="text-footnote font-semibold">No attendance records found</p>
+                          <p className="text-caption-1">
                             {filters.q || hasDateFilter || filters.status
                               ? 'No records match the current filters.'
                               : 'Try adjusting your filters or date range.'}
@@ -1467,7 +1447,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                             <button
                               type="button"
                               onClick={handleClearFilters}
-                              className="mt-2 inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                              className="mt-2 inline-flex h-8 items-center gap-1 rounded-lg border border-black/[0.06] bg-secondary-system-grouped-background px-3 text-caption-1 font-semibold text-secondary-label hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:text-label dark:hover:bg-white/[0.06]"
                             >
                               <X className="h-3.5 w-3.5" /> Reset all filters
                             </button>
@@ -1479,7 +1459,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                     records.map((row) => (
                       <tr
                         key={row.id}
-                        className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 [content-visibility:auto] [contain-intrinsic-size:auto_44px]"
+                        className="hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03] [content-visibility:auto] [contain-intrinsic-size:auto_44px]"
                       >
                         {columns.map((c) => (
                           <td key={c.header} className="px-4 py-2.5 align-middle">
@@ -1492,8 +1472,8 @@ const AttendanceCorrections = ({ showMessage }) => {
                 </tbody>
               </table>
             </div>
-            <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex flex-col gap-3 border-t border-black/[0.06] px-4 py-3 dark:border-white/[0.08] sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-caption-1 text-secondary-label">
                 <label htmlFor="corrections-page-size" className="font-semibold">
                   Rows
                 </label>
@@ -1501,7 +1481,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                   id="corrections-page-size"
                   value={pageSize}
                   onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                  className="input h-8 text-xs"
+                  className="input h-8 text-caption-1"
                 >
                   {[25, 50, 100, 200].map((size) => (
                     <option key={size} value={size}>
@@ -1519,14 +1499,14 @@ const AttendanceCorrections = ({ showMessage }) => {
                   onClick={() => handlePageChange(page - 1)}
                   disabled={loading || page <= 1}
                   aria-label="Previous page"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/[0.06] bg-secondary-system-grouped-background text-secondary-label transition-colors hover:bg-system-grouped-background/60 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/[0.08] dark:text-tertiary-label dark:hover:bg-white/[0.06]"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 {pageNumbers.map((p, i, arr) => (
                   <span key={p} className="inline-flex items-center gap-1">
                     {i > 0 && p - arr[i - 1] > 1 && (
-                      <span className="px-1 text-xs text-slate-400">…</span>
+                      <span className="px-1 text-caption-1 text-tertiary-label">…</span>
                     )}
                     <button
                       type="button"
@@ -1534,10 +1514,10 @@ const AttendanceCorrections = ({ showMessage }) => {
                       disabled={loading}
                       aria-label={`Page ${p}`}
                       aria-current={p === page ? 'page' : undefined}
-                      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-bold transition-colors ${
+                      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-caption-1 font-semibold transition-colors ${
                         p === page
-                          ? 'bg-primary-600 text-white shadow-sm'
-                          : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                          ? 'bg-primary-600 text-white shadow-card'
+                          : 'border border-black/[0.06] bg-secondary-system-grouped-background text-secondary-label hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-tertiary-label dark:hover:bg-white/[0.06]'
                       }`}
                     >
                       {p}
@@ -1549,7 +1529,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                   onClick={() => handlePageChange(page + 1)}
                   disabled={loading || page >= totalPages}
                   aria-label="Next page"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/[0.06] bg-secondary-system-grouped-background text-secondary-label transition-colors hover:bg-system-grouped-background/60 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/[0.08] dark:text-tertiary-label dark:hover:bg-white/[0.06]"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -1575,24 +1555,24 @@ const AttendanceCorrections = ({ showMessage }) => {
       {activeTab === 'missing' && (
         <div className="space-y-4">
           {/* Date + Service Selector */}
-          <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+          <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background p-4 shadow-card dark:border-white/[0.08]">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-slate-400" />
+                <Calendar className="w-4 h-4 text-tertiary-label" />
                 <input
                   type="date"
                   value={mlsDate}
                   onChange={(e) => setMlsDate(e.target.value)}
-                  className="input h-9 text-xs cursor-pointer"
+                  className="input h-9 text-caption-1 cursor-pointer"
                   onClick={(e) => e.currentTarget.showPicker?.()}
                 />
               </div>
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-slate-400" />
+                <BarChart3 className="w-4 h-4 text-tertiary-label" />
                 <select
                   value={mlsServiceId}
                   onChange={(e) => setMlsServiceId(Number(e.target.value))}
-                  className="input h-9 text-xs"
+                  className="input h-9 text-caption-1"
                 >
                   {(mlsServices.length > 0
                     ? mlsServices
@@ -1610,7 +1590,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               <button
                 type="button"
                 onClick={loadMissingSubmissions}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary-600 px-4 h-9 text-xs font-semibold text-white shadow-sm hover:bg-primary-700"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary-600 px-4 h-9 text-caption-1 font-semibold text-white shadow-card hover:bg-primary-700"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${mlsLoading ? 'animate-spin' : ''}`} /> Load
               </button>
@@ -1618,7 +1598,7 @@ const AttendanceCorrections = ({ showMessage }) => {
           </div>
 
           {mlsLoading ? (
-            <div className="flex items-center justify-center py-16 text-slate-400 text-sm">
+            <div className="flex items-center justify-center py-16 text-tertiary-label text-footnote">
               <RefreshCw className="w-5 h-5 mr-2 animate-spin" /> Loading submissions...
             </div>
           ) : mlsData ? (
@@ -1638,15 +1618,15 @@ const AttendanceCorrections = ({ showMessage }) => {
                   return (
                     <div
                       key={card.label}
-                      className={`rounded-xl border p-4 ${variantMap[card.variant] || 'bg-slate-50 border-slate-200 text-slate-700'}`}
+                      className={`rounded-xl border p-4 ${variantMap[card.variant] || 'bg-system-fill border-black/[0.06] text-secondary-label'}`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+                        <span className="text-caption-2 font-semibold uppercase tracking-[0.06em] opacity-70">
                           {card.label}
                         </span>
                         <Icon className="w-4 h-4 opacity-60" />
                       </div>
-                      <p className="text-2xl font-black">{card.count}</p>
+                      <p className="text-2xl font-semibold">{card.count}</p>
                     </div>
                   );
                 })}
@@ -1655,7 +1635,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               {/* Leaders List */}
               <div className="space-y-2">
                 {mlsData.leaders.filter((l) => l.status !== 'submitted').length === 0 ? (
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-10 text-center text-slate-400 text-sm">
+                  <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] p-10 text-center text-tertiary-label text-footnote">
                     {mlsData.leaders.length === 0
                       ? 'No leaders found for this date.'
                       : 'All leaders have submitted attendance for this date.'}
@@ -1666,27 +1646,27 @@ const AttendanceCorrections = ({ showMessage }) => {
                     .map((leader) => (
                       <div
                         key={leader.leader_id}
-                        className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow"
+                        className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4 shadow-card hover:shadow-card transition-shadow"
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-start gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-primary-500/15 dark:bg-primary-500/15 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold shrink-0">
                               {leader.leader_name?.charAt(0) || '?'}
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                                <h4 className="text-footnote font-semibold text-label truncate">
                                   {leader.leader_name}
                                 </h4>
                                 <SubmissionStatusBadge status={leader.status} />
                               </div>
-                              <p className="text-[11px] text-slate-500 mt-0.5">
+                              <p className="text-caption-1 text-secondary-label mt-0.5">
                                 {leader.section_name}
                                 <span className="mx-1.5">&middot;</span>
                                 {leader.service_name}
                                 <span className="mx-1.5">&middot;</span>
                                 Expected:{' '}
-                                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                <span className="font-semibold text-secondary-label">
                                   {leader.expected_members}
                                 </span>
                                 <span className="mx-1.5">/</span>
@@ -1702,7 +1682,7 @@ const AttendanceCorrections = ({ showMessage }) => {
                           <button
                             type="button"
                             onClick={() => setBulkLeader(leader)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-50 px-3.5 py-2 text-xs font-semibold text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-200 dark:hover:bg-primary-900/50 shrink-0"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-50 px-3.5 py-2 text-caption-1 font-semibold text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-200 dark:hover:bg-primary-900/50 shrink-0"
                           >
                             <ClipboardList className="w-3.5 h-3.5" /> Mark Attendance
                           </button>
@@ -1713,7 +1693,7 @@ const AttendanceCorrections = ({ showMessage }) => {
               </div>
             </>
           ) : (
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-10 text-center text-slate-400 text-sm">
+            <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] p-10 text-center text-tertiary-label text-footnote">
               Select a date and service, then click "Load" to view submission status.
             </div>
           )}

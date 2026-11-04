@@ -11,7 +11,7 @@ const PastorEngagement = () => {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState(() => ({
     start: formatLocalDate(addDays(new Date(), -30)),
-    end: formatLocalDate(),
+    end: formatLocalDate()
   }));
 
   useEffect(() => {
@@ -59,42 +59,62 @@ const PastorEngagement = () => {
     );
   }
 
-  const avgScore = scores.length > 0
-    ? Math.round(scores.reduce((sum, s) => sum + s.engagement_score, 0) / scores.length)
-    : 0;
+  const avgScore =
+    scores.length > 0
+      ? Math.round(scores.reduce((sum, s) => sum + s.engagement_score, 0) / scores.length)
+      : 0;
 
-  const activeLeaders = scores.filter(s => s.total_outreach > 0 || s.followups_completed > 0).length;
+  const activeLeaders = scores.filter(
+    (s) => s.total_outreach > 0 || s.followups_completed > 0
+  ).length;
 
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Leader Engagement</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track how active your leaders are with outreach and follow-ups</p>
+          <h2 className="text-title-1 font-semibold text-label">Leader Engagement</h2>
+          <p className="text-footnote text-secondary-label mt-1">
+            Track how active your leaders are with outreach and follow-ups
+          </p>
         </div>
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-          <Calendar className="w-4 h-4 text-slate-400" />
+        <div className="flex items-center gap-2 bg-secondary-system-grouped-background dark:bg-white/[0.04] px-3 py-2 rounded-xl border border-black/[0.06] dark:border-white/[0.08] shadow-card">
+          <Calendar className="w-4 h-4 text-tertiary-label" />
           <input
             type="date"
             value={dateRange.start}
-            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-            className="bg-transparent border-none p-0 focus:ring-0 text-sm text-slate-700 dark:text-slate-300"
+            onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
+            className="bg-transparent border-none p-0 focus:ring-0 text-footnote text-secondary-label"
           />
-          <span className="text-slate-300 dark:text-slate-600 text-sm">to</span>
+          <span className="text-tertiary-label dark:text-secondary-label text-footnote">to</span>
           <input
             type="date"
             value={dateRange.end}
-            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-            className="bg-transparent border-none p-0 focus:ring-0 text-sm text-slate-700 dark:text-slate-300"
+            onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
+            className="bg-transparent border-none p-0 focus:ring-0 text-footnote text-secondary-label"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard icon={Award} label="Avg Engagement" value={`${avgScore}%`} variant={scoreVariant(avgScore)} />
+        <StatCard
+          icon={Award}
+          label="Avg Engagement"
+          value={`${avgScore}%`}
+          variant={scoreVariant(avgScore)}
+        />
         <StatCard icon={Users} label="Active Leaders" value={activeLeaders} variant="info" />
-        <StatCard icon={MessageSquare} label="Total Outreach" value={scores.reduce((s, l) => s + l.total_outreach, 0)} variant="success" />
-        <StatCard icon={CheckCircle} label="Follow-ups Done" value={scores.reduce((s, l) => s + l.followups_completed, 0)} variant="warning" />
+        <StatCard
+          icon={MessageSquare}
+          label="Total Outreach"
+          value={scores.reduce((s, l) => s + l.total_outreach, 0)}
+          variant="success"
+        />
+        <StatCard
+          icon={CheckCircle}
+          label="Follow-ups Done"
+          value={scores.reduce((s, l) => s + l.followups_completed, 0)}
+          variant="warning"
+        />
       </div>
 
       <div className="card">
@@ -104,7 +124,7 @@ const PastorEngagement = () => {
               accessor: 'leader_name',
               header: 'Leader',
               sortable: true,
-              render: (row) => <span className="font-semibold text-slate-900 dark:text-white">{row.leader_name}</span>
+              render: (row) => <span className="font-semibold text-label">{row.leader_name}</span>
             },
             {
               accessor: 'section_name',
@@ -119,8 +139,14 @@ const PastorEngagement = () => {
               align: 'center',
               render: (row) => (
                 <div className="flex flex-col items-center">
-                  <span className={`text-lg font-bold ${scoreColor(row.engagement_score)}`}>{row.engagement_score}%</span>
-                  <Badge variant={scoreVariant(row.engagement_score)} className="text-xs">{scoreLabel(row.engagement_score)}</Badge>
+                  <span
+                    className={`text-headline font-semibold ${scoreColor(row.engagement_score)}`}
+                  >
+                    {row.engagement_score}%
+                  </span>
+                  <Badge variant={scoreVariant(row.engagement_score)} className="text-caption-1">
+                    {scoreLabel(row.engagement_score)}
+                  </Badge>
                 </div>
               )
             },
@@ -129,7 +155,9 @@ const PastorEngagement = () => {
               header: 'Submissions',
               sortable: true,
               align: 'center',
-              render: (row) => <span className="text-sm text-slate-600 dark:text-slate-400">{row.submissions}</span>
+              render: (row) => (
+                <span className="text-footnote text-secondary-label">{row.submissions}</span>
+              )
             },
             {
               accessor: 'members_contacted',
@@ -137,9 +165,7 @@ const PastorEngagement = () => {
               sortable: true,
               align: 'center',
               render: (row) => (
-                <span className="text-sm text-slate-600 dark:text-slate-400">
-                  {row.members_contacted}
-                </span>
+                <span className="text-footnote text-secondary-label">{row.members_contacted}</span>
               )
             },
             {
@@ -148,7 +174,7 @@ const PastorEngagement = () => {
               sortable: true,
               align: 'center',
               render: (row) => (
-                <span className="inline-flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1 text-footnote text-secondary-label">
                   <MessageSquare className="w-3.5 h-3.5" />
                   {row.total_outreach}
                 </span>
@@ -160,7 +186,7 @@ const PastorEngagement = () => {
               sortable: true,
               align: 'center',
               render: (row) => (
-                <span className="text-sm text-slate-600 dark:text-slate-400">
+                <span className="text-footnote text-secondary-label">
                   {row.followups_completed}/{row.total_followups}
                 </span>
               )
@@ -170,8 +196,12 @@ const PastorEngagement = () => {
               header: 'Section Rate',
               sortable: true,
               align: 'center',
-              render: (row) => <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{row.section_attendance_rate}%</span>
-            },
+              render: (row) => (
+                <span className="text-footnote font-medium text-secondary-label">
+                  {row.section_attendance_rate}%
+                </span>
+              )
+            }
           ]}
           data={scores}
           searchable={true}

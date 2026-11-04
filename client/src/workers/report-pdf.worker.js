@@ -16,7 +16,9 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 function safeFilename(s) {
-  return String(s || '').replace(/[^a-z0-9-]/gi, '_').toLowerCase();
+  return String(s || '')
+    .replace(/[^a-z0-9-]/gi, '_')
+    .toLowerCase();
 }
 
 function buildAttendanceReport(p) {
@@ -59,8 +61,8 @@ function buildAttendanceReport(p) {
       ['Present', stats.present ?? 0],
       ['Absent', stats.absent ?? 0],
       ['Excused', stats.excused ?? 0],
-      ['Total records', (stats.present ?? 0) + (stats.absent ?? 0) + (stats.excused ?? 0)],
-    ],
+      ['Total records', (stats.present ?? 0) + (stats.absent ?? 0) + (stats.excused ?? 0)]
+    ]
   });
 
   // Leader breakdown table
@@ -72,8 +74,10 @@ function buildAttendanceReport(p) {
       leader.leader_name || 'Unassigned',
       leader.section_name || '',
       leader.submissions_count ?? 0,
-      present, absent, excused,
-      present + absent + excused,
+      present,
+      absent,
+      excused,
+      present + absent + excused
     ];
   });
 
@@ -95,7 +99,7 @@ function buildAttendanceReport(p) {
       3: { halign: 'right' },
       4: { halign: 'right' },
       5: { halign: 'right' },
-      6: { halign: 'right' },
+      6: { halign: 'right' }
     },
     head: [['Leader', 'Section', 'Logs', 'Present', 'Absent', 'Excused', 'Total']],
     body: leaderRows.length > 0 ? leaderRows : [['No leader rows found', '', '', '', '', '', '']],
@@ -103,8 +107,10 @@ function buildAttendanceReport(p) {
       const pageNumber = doc.internal.getNumberOfPages();
       doc.setFontSize(8);
       doc.setTextColor(100, 116, 139);
-      doc.text(`Page ${pageNumber}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 22, { align: 'right' });
-    },
+      doc.text(`Page ${pageNumber}`, pageWidth - margin, doc.internal.pageSize.getHeight() - 22, {
+        align: 'right'
+      });
+    }
   });
 
   const filename = `attendance-report-${safeFilename(serviceLabel)}-${safeFilename(filterValue)}.pdf`;
@@ -113,9 +119,15 @@ function buildAttendanceReport(p) {
 
 function buildPastorReport(p) {
   const {
-    form, reportSummary, summaryMetrics, sectionBreakdown,
-    prioritizedMembers, generatedOn, formatLocalDate,
-    sanitizeFilename, numberOrZero
+    form,
+    reportSummary,
+    summaryMetrics,
+    sectionBreakdown,
+    prioritizedMembers,
+    generatedOn,
+    formatLocalDate,
+    sanitizeFilename,
+    numberOrZero
   } = p;
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -177,14 +189,17 @@ function buildPastorReport(p) {
     body: [
       ['Latest attendance day', summaryMetrics.latestDateLabel],
       ['Average attendance', `${summaryMetrics.averageAttendance}%`],
-      ['Submission rate', `${summaryMetrics.submissionRate}% (${summaryMetrics.leadersSubmitted}/${summaryMetrics.totalLeaders})`],
+      [
+        'Submission rate',
+        `${summaryMetrics.submissionRate}% (${summaryMetrics.leadersSubmitted}/${summaryMetrics.totalLeaders})`
+      ],
       ['Tracked sections', String(summaryMetrics.trackedSections)],
       ['Members needing attention', String(prioritizedMembers.length)],
-      ['Trend delta', `${reportSummary.trendDelta > 0 ? '+' : ''}${reportSummary.trendDelta}%`],
+      ['Trend delta', `${reportSummary.trendDelta > 0 ? '+' : ''}${reportSummary.trendDelta}%`]
     ],
     margin: { left: margin, right: margin },
     styles: { fontSize: 10, cellPadding: 8, textColor: [30, 41, 59] },
-    headStyles: { fillColor: [37, 99, 235] },
+    headStyles: { fillColor: [37, 99, 235] }
   });
   cursorY = doc.lastAutoTable.finalY + 26;
 
@@ -203,11 +218,11 @@ function buildPastorReport(p) {
         section.section_name,
         `${numberOrZero(section.attendance_rate)}%`,
         String(numberOrZero(section.present)),
-        String(numberOrZero(section.total)),
+        String(numberOrZero(section.total))
       ]),
       margin: { left: margin, right: margin },
       styles: { fontSize: 10, cellPadding: 7 },
-      headStyles: { fillColor: [79, 70, 229] },
+      headStyles: { fillColor: [79, 70, 229] }
     });
     cursorY = doc.lastAutoTable.finalY + 26;
   }
@@ -223,11 +238,11 @@ function buildPastorReport(p) {
         leader.section_name,
         `${numberOrZero(leader.attendance_rate)}%`,
         String(numberOrZero(leader.reporting_days)),
-        String(numberOrZero(leader.total_records)),
+        String(numberOrZero(leader.total_records))
       ]),
       margin: { left: margin, right: margin },
       styles: { fontSize: 9, cellPadding: 7 },
-      headStyles: { fillColor: [13, 148, 136] },
+      headStyles: { fillColor: [13, 148, 136] }
     });
     cursorY = doc.lastAutoTable.finalY + 26;
   }
@@ -242,11 +257,11 @@ function buildPastorReport(p) {
         member.full_name,
         member.section_name,
         member.leader_name,
-        String(numberOrZero(member.absence_count)),
+        String(numberOrZero(member.absence_count))
       ]),
       margin: { left: margin, right: margin },
       styles: { fontSize: 9, cellPadding: 7 },
-      headStyles: { fillColor: [225, 29, 72] },
+      headStyles: { fillColor: [225, 29, 72] }
     });
   }
 
@@ -256,9 +271,12 @@ function buildPastorReport(p) {
 
 function build(payload) {
   switch (payload.report) {
-    case 'attendance': return buildAttendanceReport(payload);
-    case 'pastor':     return buildPastorReport(payload);
-    default: throw new Error(`Unknown report type: ${payload.report}`);
+    case 'attendance':
+      return buildAttendanceReport(payload);
+    case 'pastor':
+      return buildPastorReport(payload);
+    default:
+      throw new Error(`Unknown report type: ${payload.report}`);
   }
 }
 
@@ -270,10 +288,7 @@ self.addEventListener('message', async (event) => {
     // we can post back to the main thread without copying.
     const ab = doc.output('arraybuffer');
     const bytes = new Uint8Array(ab);
-    self.postMessage(
-      { id, ok: true, pdf: bytes, filename },
-      [bytes.buffer]
-    );
+    self.postMessage({ id, ok: true, pdf: bytes, filename }, [bytes.buffer]);
   } catch (err) {
     self.postMessage({ id, ok: false, error: err.message || String(err) });
   }

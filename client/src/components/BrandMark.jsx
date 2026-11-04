@@ -8,10 +8,8 @@ const BrandMark = ({ compact = false, inverse = false, className = '' }) => (
     </div>
     {!compact && (
       <div className="min-w-0">
-        <p className={`brand-mark-name ${inverse ? 'text-white' : 'text-slate-950 dark:text-white'}`}>
-          Shekina
-        </p>
-        <p className={`brand-mark-kicker ${inverse ? 'text-white/50' : 'text-slate-400 dark:text-slate-500'}`}>
+        <p className={`brand-mark-name ${inverse ? 'text-white' : 'text-label'}`}>Shekina</p>
+        <p className={`brand-mark-kicker ${inverse ? 'text-white/70' : 'text-secondary-label'}`}>
           Church Operations
         </p>
       </div>

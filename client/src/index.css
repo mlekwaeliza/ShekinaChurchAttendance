@@ -10,6 +10,108 @@
 
 /* ===== Base Layer ===== */
 @layer base {
+  /* ===== Apple semantic tokens =====
+   * Apple's dynamic system colors (HIG › Color › Dynamic system colors),
+   * declared once per appearance. tailwind.config.js maps each one to a
+   * utility: bg-system-background, text-secondary-label, border-separator…
+   *
+   * Values are RGB channels rather than hex so Tailwind can append an alpha
+   * (bg-secondary-system-grouped-background/80). Colors Apple defines as translucent
+   * (labels, separators, fills) are pre-composited against systemBackground —
+   * the surface they normally sit on — so opacity modifiers keep working.
+   */
+  :root {
+    /* Backgrounds — system set, then grouped set */
+    --system-background: 255 255 255; /* #FFFFFF */
+    --secondary-system-background: 242 242 247; /* #F2F2F7 */
+    --tertiary-system-background: 255 255 255; /* #FFFFFF */
+    --system-grouped-background: 242 242 247; /* #F2F2F7 */
+    --secondary-system-grouped-background: 255 255 255; /* #FFFFFF */
+    --tertiary-system-grouped-background: 242 242 247; /* #F2F2F7 */
+
+    /* Foreground content */
+    --label: 0 0 0; /* #000000 */
+    --secondary-label: 110 110 115; /* AA on white: 5.1:1 */
+    --tertiary-label: 138 138 143; /* de-emphasized but still readable */
+    --quaternary-label: 220 220 221; /* rgba(60,60,67,.18) on white */
+    --placeholder-text: 197 197 199; /* rgba(60,60,67,.3) on white */
+
+    /* Separators */
+    --separator: 198 198 201; /* rgba(60,60,67,.29) on white */
+    --opaque-separator: 198 198 200; /* #C6C6C8 */
+
+    /* Fills */
+    --system-fill: 228 228 230; /* rgba(120,120,128,.2) on white */
+    --secondary-system-fill: 233 233 235; /* rgba(120,120,128,.16) */
+    --tertiary-system-fill: 239 239 240; /* rgba(120,120,128,.12) */
+    --quaternary-system-fill: 244 244 245; /* rgba(120,120,128,.08) */
+
+    /* System accent colors */
+    --system-red: 255 59 48;
+    --system-orange: 255 149 0;
+    --system-yellow: 255 204 0;
+    --system-green: 52 199 89;
+    --system-mint: 0 199 190;
+    --system-teal: 48 176 199;
+    --system-cyan: 50 173 230;
+    --system-blue: 0 122 255;
+    --system-indigo: 88 86 214;
+    --system-purple: 175 82 222;
+    --system-pink: 255 45 85;
+    --system-brown: 162 132 94;
+
+    /* Gray scale */
+    --system-gray: 142 142 147; /* #8E8E93 */
+    --system-gray-2: 174 174 178; /* #AEAEB2 */
+    --system-gray-3: 199 199 204; /* #C7C7CC */
+    --system-gray-4: 209 209 214; /* #D1D1D6 */
+    --system-gray-5: 229 229 234; /* #E5E5EA */
+    --system-gray-6: 242 242 247; /* #F2F2F7 */
+  }
+
+  .dark {
+    --system-background: 0 0 0; /* #000000 */
+    --secondary-system-background: 28 28 30; /* #1C1C1E */
+    --tertiary-system-background: 44 44 46; /* #2C2C2E */
+    --system-grouped-background: 0 0 0; /* #000000 */
+    --secondary-system-grouped-background: 28 28 30; /* #1C1C1E */
+    --tertiary-system-grouped-background: 44 44 46; /* #2C2C2E */
+
+    --label: 255 255 255; /* #FFFFFF */
+    --secondary-label: 166 166 171; /* AA on #1C1C1E: 7.2:1 */
+    --tertiary-label: 142 142 147; /* AA on #1C1C1E: 5.3:1 */
+    --quaternary-label: 38 38 39; /* rgba(235,235,245,.16) on black */
+    --placeholder-text: 71 71 74; /* rgba(235,235,245,.3) on black */
+
+    --separator: 50 50 53; /* rgba(84,84,88,.6) on black */
+    --opaque-separator: 56 56 58; /* #38383A */
+
+    --system-fill: 43 43 46; /* rgba(120,120,128,.36) on black */
+    --secondary-system-fill: 38 38 41; /* rgba(120,120,128,.32) */
+    --tertiary-system-fill: 29 29 31; /* rgba(120,120,128,.24) */
+    --quaternary-system-fill: 22 22 23; /* rgba(120,120,128,.18) */
+
+    --system-red: 255 69 58;
+    --system-orange: 255 159 10;
+    --system-yellow: 255 214 10;
+    --system-green: 48 209 88;
+    --system-mint: 99 230 226;
+    --system-teal: 64 200 224;
+    --system-cyan: 100 210 255;
+    --system-blue: 10 132 255;
+    --system-indigo: 94 92 230;
+    --system-purple: 191 90 242;
+    --system-pink: 255 55 95;
+    --system-brown: 172 142 104;
+
+    --system-gray: 142 142 147; /* #8E8E93 */
+    --system-gray-2: 99 99 102; /* #636366 */
+    --system-gray-3: 72 72 74; /* #48484A */
+    --system-gray-4: 58 58 60; /* #3A3A3C */
+    --system-gray-5: 44 44 46; /* #2C2C2E */
+    --system-gray-6: 28 28 30; /* #1C1C1E */
+  }
+
   html {
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
@@ -24,8 +126,11 @@
   }
 
   body {
-    @apply font-sans text-slate-700 dark:text-slate-300;
-    background: #f4f7f8;
+    @apply font-sans text-label;
+    /* SF Pro's 16 pt tracking step. Text that uses a text-* utility takes
+       that step's tracking instead; this covers unstyled body copy. */
+    letter-spacing: -0.02em;
+    background-color: rgb(var(--system-grouped-background));
     min-width: 320px;
     overflow-x: hidden;
     overflow-x: clip;
@@ -54,8 +159,7 @@
   }
 
   .dark body {
-    background: linear-gradient(180deg, #07111f 0%, #0a1626 42%, #0c1a2c 100%);
-    color: #d8e2f0;
+    background-color: rgb(var(--system-grouped-background));
   }
 
   h1,
@@ -64,7 +168,9 @@
   h4,
   h5,
   h6 {
-    @apply font-display tracking-tight text-slate-900 dark:text-slate-100;
+    /* Tracking comes from the text-* size utility, which follows SF Pro's
+       size-specific table. A fixed tracking-tight would fight that. */
+    @apply font-display text-label;
   }
 
   /* Tabular numbers for metrics */
@@ -77,30 +183,26 @@
 @layer components {
   /* --- Cards --- */
   .card {
-    @apply bg-white dark:bg-slate-900/80 dark:backdrop-blur-xl rounded-2xl border border-slate-200/70 dark:border-white/10 shadow-card transition-shadow duration-300;
-  }
-
-  .card-glass {
-    @apply bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/20 dark:border-white/10 shadow-card;
+    @apply bg-secondary-system-grouped-background rounded-2xl border border-black/[0.06] shadow-card transition-shadow duration-300 dark:border-white/[0.08];
   }
 
   .card-stat {
-    @apply bg-white dark:bg-slate-900/80 dark:backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-card p-6 relative overflow-hidden transition-all duration-300;
+    @apply bg-secondary-system-grouped-background rounded-2xl border border-black/[0.06] shadow-card p-5 sm:p-6 relative overflow-hidden transition-all duration-200 dark:border-white/[0.08];
   }
   .card-stat:hover {
     @apply shadow-card-hover;
   }
 
   .card-stat .card-stat-icon {
-    @apply w-10 h-10 rounded-xl flex items-center justify-center;
+    @apply w-9 h-9 rounded-[10px] flex items-center justify-center;
   }
 
   .card-stat .card-stat-label {
-    @apply text-label uppercase text-slate-400 dark:text-slate-500 mt-3;
+    @apply text-footnote font-medium text-secondary-label;
   }
 
   .card-stat .card-stat-value {
-    @apply text-metric-lg text-slate-900 dark:text-slate-100 mt-1 tabular-nums;
+    @apply text-metric-lg text-label mt-2 tabular-nums;
   }
 
   .card-stat .card-stat-trend {
@@ -115,212 +217,219 @@
            active:scale-[0.98];
   }
 
+  /* Apple's filled control: one solid tint, one darker pressed state, no
+     gradient or colored glow. The tint is the product's brand color. */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 font-semibold text-sm rounded-xl px-4 py-2.5
            transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
            active:scale-[0.98]
-           bg-gradient-to-br from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800
-           shadow-lg shadow-primary-500/20 hover:shadow-xl hover:shadow-primary-500/30
-           dark:shadow-primary-500/10;
+           bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800
+           shadow-[0_1px_2px_rgba(16,24,40,0.08)]
+           focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/25;
   }
 
+  /* Apple's gray control: a system fill rather than a bordered white card. */
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 font-semibold text-sm rounded-xl px-4 py-2.5
            transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
            active:scale-[0.98]
-           bg-white dark:bg-slate-800/80 dark:backdrop-blur-xl text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 
-           hover:bg-slate-50 dark:hover:bg-slate-700/80
-           hover:border-slate-300 dark:hover:border-primary-500/40 
-           active:bg-slate-100 dark:active:bg-slate-700
-           shadow-sm hover:shadow-md;
+           bg-system-fill text-label hover:bg-system-gray-4 active:bg-system-gray-4
+           focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/20;
   }
 
   .btn-danger {
     @apply inline-flex items-center justify-center gap-2 font-semibold text-sm rounded-xl px-4 py-2.5
            transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
            active:scale-[0.98]
-           bg-gradient-to-br from-rose-600 to-rose-700 text-white hover:from-rose-700 hover:to-rose-800
-           shadow-lg shadow-rose-500/20 hover:shadow-xl hover:shadow-rose-500/30;
+           bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800
+           shadow-[0_1px_2px_rgba(16,24,40,0.08)]
+           focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-rose-500/25;
   }
 
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 font-semibold text-sm rounded-xl px-4 py-2.5
            transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
            active:scale-[0.98]
-           bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-slate-100;
+           bg-transparent text-secondary-label hover:bg-system-fill hover:text-label
+           focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/20;
   }
 
   .btn-sm {
-    @apply text-xs px-3 py-2 rounded-lg;
+    @apply text-xs px-3 py-1.5 rounded-lg;
   }
 
   .btn-lg {
-    @apply text-base px-6 py-3;
+    @apply text-base px-5 py-3;
   }
 
   .btn-icon {
     @apply inline-flex items-center justify-center gap-2 font-semibold text-sm rounded-xl
            transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
-           active:scale-[0.98] p-2.5 aspect-square;
+           active:scale-[0.98] p-2 aspect-square;
   }
 
   /* --- Inputs --- */
   .input {
-    @apply w-full px-3.5 py-2.5 text-sm bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-white/10 rounded-xl
-           text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500
-           focus:outline-none focus:border-primary-500 focus:shadow-input-focus focus:ring-4 focus:ring-primary-500/10
-           transition-all duration-200;
+    @apply w-full px-3.5 py-2.5 text-sm bg-system-background border border-separator/70 rounded-xl
+           text-label placeholder:text-placeholder-text
+           transition-[border-color,box-shadow] duration-200
+           focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/15
+           dark:border-white/[0.1] dark:bg-tertiary-system-background;
   }
 
   .input-label {
-    @apply block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5;
+    @apply block text-footnote font-semibold text-secondary-label mb-2;
   }
 
   .select {
-    @apply w-full px-3.5 py-2.5 text-sm bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-white/10 rounded-xl
-           text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500
-           focus:outline-none focus:border-primary-500 focus:shadow-input-focus focus:ring-4 focus:ring-primary-500/10
-           transition-all duration-200
+    @apply w-full px-3.5 py-2.5 text-sm bg-system-background border border-separator/70 rounded-xl
+           text-label placeholder:text-placeholder-text
+           transition-[border-color,box-shadow] duration-200
+           focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/15
+           dark:border-white/[0.1] dark:bg-tertiary-system-background
            appearance-none bg-no-repeat pr-10 cursor-pointer;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238e8e93' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
     background-size: 1.25rem 1.25rem;
     background-position: right 0.5rem center;
   }
 
-  /* --- Badge --- */
+  /* --- Badge ---
+   * Apple status chips are tinted capsules: a low-alpha wash of the accent
+   * with full-strength text. No borders, no drop shadows. */
   .badge {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full;
   }
 
   .badge-success {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full
-           bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 
-           border border-emerald-200/60 dark:border-emerald-700/60
-           shadow-sm shadow-emerald-500/5;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full
+           bg-system-green/15 text-emerald-700 dark:text-system-green;
   }
 
   .badge-warning {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full
-           bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 
-           border border-amber-200/60 dark:border-amber-700/60
-           shadow-sm shadow-amber-500/5;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full
+           bg-system-orange/15 text-amber-700 dark:text-system-orange;
   }
 
   .badge-danger {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full
-           bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 
-           border border-rose-200/60 dark:border-rose-700/60
-           shadow-sm shadow-rose-500/5;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full
+           bg-system-red/15 text-rose-700 dark:text-system-red;
   }
 
   .badge-info {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full
-           bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 
-           border border-primary-200/60 dark:border-primary-700/60
-           shadow-sm shadow-primary-500/5;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full
+           bg-primary-500/[0.12] text-primary-700 dark:text-primary-300;
   }
 
   .badge-neutral {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full
-           bg-slate-100 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 
-           border border-slate-200/60 dark:border-slate-600/60
-           shadow-sm;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full
+           bg-system-fill text-secondary-label;
   }
 
-  /* --- Table --- */
+  /* --- Table ---
+   * Hairline separators instead of heavy dividers, sentence-case headers,
+   * and tabular figures so money and attendance columns align. */
   .table-container {
-    @apply bg-white dark:bg-slate-900/80 dark:backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-card overflow-hidden transition-shadow duration-300;
+    @apply bg-secondary-system-grouped-background rounded-2xl border border-black/[0.06] shadow-card overflow-hidden transition-shadow duration-300 dark:border-white/[0.08];
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 
   .table-container table {
-    @apply min-w-full divide-y divide-slate-100 dark:divide-white/5;
+    @apply min-w-full divide-y divide-separator/60 dark:divide-white/[0.08];
   }
 
   .table-container thead {
-    @apply bg-slate-50/80 dark:bg-white/[0.03];
+    @apply bg-system-grouped-background/60 dark:bg-white/[0.02];
   }
 
   .table-container th {
-    @apply px-3 sm:px-6 py-3.5 text-left text-label uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold whitespace-nowrap;
+    @apply px-3 sm:px-6 py-3 text-left text-footnote font-semibold text-secondary-label whitespace-nowrap;
   }
 
   .table-container tbody {
-    @apply divide-y divide-slate-50 dark:divide-white/5;
+    @apply divide-y divide-separator/50 dark:divide-white/[0.08];
   }
 
   .table-container td {
-    @apply px-3 sm:px-6 py-4 text-sm;
+    @apply px-3 sm:px-6 py-3.5 text-sm text-label;
+    font-variant-numeric: tabular-nums;
   }
 
   .table-container tbody tr {
-    @apply transition-all duration-150 hover:bg-slate-50/50 dark:hover:bg-white/[0.02];
+    @apply transition-colors duration-150 hover:bg-system-grouped-background/70 dark:hover:bg-white/[0.03];
   }
 
-  /* --- Sidebar --- */
+  /* --- Sidebar ---
+   * A quiet, permanently dark navy rail. Selection is a filled row with a
+   * tinted icon, the way a macOS source list reads. */
   .sidebar {
-    @apply fixed left-0 top-0 bottom-0 bg-sidebar z-50 flex flex-col shadow-sidebar
-           transition-all duration-350 ease-in-out;
-    background: radial-gradient(circle at 18% 0%, rgba(20, 168, 150, 0.16), transparent 26rem),
-      linear-gradient(180deg, #0a1628 0%, #0c1a2e 58%, #08121f 100%);
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    @apply fixed left-0 top-0 bottom-0 z-50 flex flex-col shadow-sidebar
+           transition-all duration-350 ease-apple;
+    background: #0a1628;
+    border-right: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   .sidebar-nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-           text-sidebar-text/65 hover:text-white hover:bg-white/[0.07]
-           transition-all duration-200 cursor-pointer relative;
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-footnote font-medium
+           text-white/60 hover:text-white/95 hover:bg-white/[0.06]
+           transition-colors duration-150 cursor-pointer relative;
   }
 
   .sidebar-nav-item.active {
-    @apply bg-white/[0.11] text-white shadow-none;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+    @apply bg-white/[0.1] text-white font-semibold;
   }
 
   .sidebar-nav-item .nav-icon {
-    @apply w-5 h-5 shrink-0;
+    @apply w-[18px] h-[18px] shrink-0 text-white/45 transition-colors duration-150;
+  }
+
+  .sidebar-nav-item:hover .nav-icon {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .sidebar-nav-item.active .nav-icon {
+    color: #6ee7d2;
   }
 
   .sidebar-section-label {
-    @apply text-[10px] font-bold uppercase tracking-[0.18em] text-sidebar-muted/55 px-3 mt-5 mb-1.5;
+    @apply text-[10px] font-semibold uppercase tracking-[0.08em] text-white/30 px-3 mt-6 mb-1.5 first:mt-0;
   }
 
   /* --- Header --- */
   .app-header {
-    @apply h-header bg-white/85 dark:bg-slate-950/75 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/10
+    @apply h-header bg-system-background/85 dark:bg-system-background/70 backdrop-blur-xl border-b border-separator/60 dark:border-white/[0.08]
            flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 sticky top-0 z-40;
   }
 
   /* --- Tab Pills --- */
   .tab-pills {
-    @apply flex gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl;
+    @apply flex gap-1 p-1 bg-system-fill/80 dark:bg-white/[0.06] rounded-xl;
   }
 
   .tab-pill {
-    @apply px-3 sm:px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200
-           text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap;
+    @apply px-3 sm:px-4 py-1.5 text-footnote font-medium rounded-[9px] transition-all duration-150
+           text-secondary-label hover:text-label whitespace-nowrap;
   }
 
   .tab-pill.active {
-    @apply bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-card;
+    @apply bg-secondary-system-grouped-background dark:bg-system-gray-4 text-label shadow-segmented;
   }
 
   /* --- Modal Overlay --- */
   .modal-overlay {
-    @apply fixed inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-md flex items-center justify-center overflow-y-auto z-[100] p-2 sm:p-4;
+    @apply fixed inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-sm flex items-center justify-center overflow-y-auto z-[100] p-2 sm:p-4;
   }
 
   .modal-content {
-    @apply bg-white dark:bg-slate-900/95 dark:backdrop-blur-2xl rounded-2xl shadow-modal w-full max-h-[90vh] max-h-[calc(100dvh-1rem)] overflow-hidden flex flex-col animate-scale-in my-auto border dark:border-white/5;
+    @apply bg-secondary-system-grouped-background rounded-[1.25rem] shadow-modal w-full max-h-[90vh] max-h-[calc(100dvh-1rem)] overflow-hidden flex flex-col animate-scale-in my-auto border border-black/[0.08] dark:border-white/[0.1];
   }
 
   .modal-header {
-    @apply flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-white/5 shrink-0;
+    @apply flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-separator/60 dark:border-white/[0.08] shrink-0;
   }
 
   .modal-header h2 {
-    @apply text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug;
+    @apply text-headline font-semibold text-label leading-snug;
   }
 
   .modal-body {
@@ -329,18 +438,18 @@
   }
 
   .modal-footer {
-    @apply flex flex-wrap items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-4 border-t border-slate-100 dark:border-white/5 shrink-0;
+    @apply flex flex-wrap items-center justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3.5 border-t border-separator/60 dark:border-white/[0.08] shrink-0;
   }
 
   /* --- Toast / Alert --- */
   .toast-success {
     @apply flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium animate-fade-in-down
-           bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-700/60 shadow-lg shadow-emerald-500/10;
+           bg-system-green/[0.12] text-emerald-800 dark:text-emerald-300 border border-system-green/25 shadow-lg shadow-black/5;
   }
 
   /* --- Skeleton --- */
   .skeleton {
-    @apply bg-slate-200/60 dark:bg-slate-700 rounded-lg animate-skeleton;
+    @apply bg-system-fill rounded-lg animate-skeleton;
   }
 
   /* --- Empty State --- */
@@ -349,11 +458,11 @@
   }
 
   .empty-state-title {
-    @apply text-base font-semibold text-slate-500 dark:text-slate-400 mb-2;
+    @apply text-callout font-semibold text-label mb-1.5;
   }
 
   .empty-state-desc {
-    @apply text-sm text-slate-400 dark:text-slate-500 max-w-sm leading-relaxed;
+    @apply text-footnote text-secondary-label max-w-sm leading-relaxed;
   }
 }
 
@@ -367,16 +476,18 @@
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-slate-200 dark:bg-slate-600 rounded-full;
+    @apply rounded-full bg-system-gray-3 dark:bg-system-gray-4;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-300 dark:bg-slate-500;
+    @apply bg-system-gray-2 dark:bg-system-gray-3;
   }
 
   /* Hide scrollbar but keep scroll */
+  .scrollbar-none::-webkit-scrollbar,
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  .scrollbar-none,
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -388,44 +499,61 @@
   width: 6px;
   height: 6px;
 }
+
+/* ===== Recharts theming =====
+ * Chart chrome (grid, ticks) is themed per appearance here so any chart in
+ * the app inherits the right colors without per-chart logic. */
+.dark svg .recharts-cartesian-grid line {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.dark svg .recharts-cartesian-axis-tick text {
+  fill: #8e8e93;
+}
+
+.dark .recharts-default-tooltip {
+  background-color: #1c1c1e !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f2f2f7 !important;
+}
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #c7c7cc;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #3a3a3c;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #aeaeb2;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #48484a;
 }
 
 /* Modern dark-mode surface polish for existing utility-heavy views */
 .dark .shadow-card,
 .dark .shadow-sm {
   box-shadow:
-    0 18px 50px rgba(0, 0, 0, 0.22),
-    0 1px 0 rgba(255, 255, 255, 0.03) inset;
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 1px 1px rgba(0, 0, 0, 0.2);
 }
 
 .dark .bg-white {
-  background-color: #111827;
+  background-color: #1c1c1e;
 }
 
 .dark .bg-slate-800 {
-  background-color: #111827;
+  background-color: #2c2c2e;
 }
 
 .dark .bg-slate-900\/30 {
-  background-color: rgba(15, 23, 42, 0.72);
+  background-color: rgba(28, 28, 30, 0.72);
 }
 
 .dark .bg-slate-50 {
-  background-color: rgba(15, 23, 42, 0.5);
+  background-color: rgba(44, 44, 46, 0.5);
 }
 
 .dark .border-slate-700,
@@ -435,24 +563,20 @@
 }
 
 .dark .sidebar {
-  background: radial-gradient(circle at 18% 0%, rgba(20, 168, 150, 0.15), transparent 26rem),
-    linear-gradient(180deg, #07111f 0%, #0a1628 52%, #07101d 100%);
+  background: #070f1b;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .dark .sidebar-nav-item.active {
   background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
 .dark .sidebar-nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.06);
 }
 
 .dark .app-header {
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04),
-    0 14px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .dark .input,
@@ -462,28 +586,15 @@
 
 .dark .input:focus,
 .dark .select:focus {
-  box-shadow:
-    0 0 0 3px rgba(99, 102, 241, 0.22),
-    0 0 0 1px rgba(129, 140, 248, 0.45);
-}
-
-/* Gradient banner modern style */
-.gradient-banner {
-  @apply relative overflow-hidden rounded-[1.5rem] p-6 shadow-xl;
-  background: linear-gradient(135deg, #0a1628 0%, #11324a 54%, #0d897b 140%);
-}
-
-.dark .gradient-banner {
-  background: linear-gradient(135deg, #07111f 0%, #11324a 58%, #0f6d64 140%);
-  box-shadow: 0 18px 48px rgba(2, 12, 24, 0.34);
+  box-shadow: 0 0 0 3px rgba(20, 168, 150, 0.2);
 }
 
 /* ===== Shekina product identity ===== */
 .brand-mark-symbol {
-  @apply relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-white;
+  @apply relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white;
   background: linear-gradient(145deg, #14a896 0%, #0d897b 100%);
   box-shadow:
-    0 10px 24px rgba(13, 137, 123, 0.28),
+    0 6px 16px rgba(13, 137, 123, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
@@ -503,31 +614,29 @@
 }
 
 .app-canvas {
-  background: radial-gradient(circle at 93% 3%, rgba(20, 168, 150, 0.08), transparent 25rem),
-    radial-gradient(circle at 24% 100%, rgba(242, 184, 75, 0.07), transparent 28rem), #f4f7f8;
+  background: rgb(var(--system-grouped-background));
 }
 
 .dark .app-canvas {
-  background: radial-gradient(circle at 92% 2%, rgba(20, 168, 150, 0.09), transparent 25rem),
-    radial-gradient(circle at 20% 100%, rgba(242, 184, 75, 0.035), transparent 28rem), #07111f;
+  background: rgb(var(--system-grouped-background));
 }
 
 .product-surface {
-  @apply rounded-[1.25rem] border border-slate-200/70 bg-white shadow-card dark:border-white/10 dark:bg-slate-900/80;
+  @apply rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background shadow-card dark:border-white/[0.08];
 }
 
 .header-icon-button {
-  @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-500 shadow-sm
-         transition-all hover:-translate-y-px hover:border-slate-300 hover:text-slate-950 hover:shadow-md
-         dark:border-white/10 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-primary-400/40 dark:hover:text-white;
+  @apply inline-flex h-9 w-9 items-center justify-center rounded-lg text-secondary-label
+         transition-colors duration-150 hover:bg-system-fill hover:text-label
+         focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/20;
 }
 
 .section-eyebrow {
-  @apply text-[10px] font-extrabold uppercase tracking-[0.2em] text-primary-700 dark:text-primary-300;
+  @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-secondary-label;
 }
 
 .focus-ring {
-  @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/20 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950;
+  @apply focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary-500/20 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black;
 }
 
 /* ===== Mobile-first layout shell (100dvh with vh fallback) ===== */
@@ -566,13 +675,6 @@
   .btn-icon {
     height: 44px;
     width: 44px;
-  }
-}
-
-/* ===== Small-screen container polish ===== */
-@media (max-width: 639px) {
-  .gradient-banner {
-    @apply p-4;
   }
 }
 

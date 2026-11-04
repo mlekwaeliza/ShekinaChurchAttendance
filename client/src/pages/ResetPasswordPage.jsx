@@ -55,27 +55,25 @@ const ResetPasswordPage = () => {
 
   return (
     <main className="app-canvas flex min-h-screen items-center justify-center p-4">
-      <section className="w-full max-w-md rounded-3xl border border-slate-200/70 bg-white p-7 shadow-[0_24px_70px_rgba(10,22,40,0.14)] dark:border-white/10 dark:bg-slate-950 sm:p-9">
+      <section className="w-full max-w-md rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background p-7 shadow-elevated dark:border-white/[0.08] sm:p-9">
         <BrandMark className="mb-10" />
         <div className="mb-7">
-          <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300">
+          <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-500/[0.12] text-primary-700 dark:text-primary-300">
             <KeyRound className="h-5 w-5" />
           </div>
           <p className="section-eyebrow">Secure password reset</p>
-          <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.035em] text-slate-950 dark:text-white">
-            Choose a new password
-          </h1>
-          <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-slate-400">
+          <h1 className="mt-2 text-title-1 font-semibold text-label">Choose a new password</h1>
+          <p className="mt-3 text-subheadline leading-relaxed text-secondary-label">
             Use a password with at least eight characters. This link can only be used once.
           </p>
         </div>
 
         {message.text && (
           <div
-            className={`mb-5 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm ${
+            className={`mb-5 flex items-start gap-3 rounded-2xl px-4 py-3 text-footnote ${
               message.type === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200'
-                : 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-200'
+                ? 'bg-system-green/10 text-emerald-700 dark:text-system-green'
+                : 'bg-system-red/10 text-rose-700 dark:text-system-red'
             }`}
             role="status"
           >
@@ -112,7 +110,7 @@ const ResetPasswordPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword((visible) => !visible)}
-                  className="focus-ring absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="focus-ring absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-tertiary-label hover:bg-system-fill hover:text-label"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -146,7 +144,7 @@ const ResetPasswordPage = () => {
 
         <Link
           to="/login"
-          className="mt-6 block text-center text-sm font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400"
+          className="mt-6 block text-center text-footnote font-semibold text-primary-700 hover:text-primary-800 dark:text-primary-300"
         >
           Back to sign in
         </Link>

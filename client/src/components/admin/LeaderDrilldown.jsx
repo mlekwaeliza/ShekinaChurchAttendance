@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip
 } from 'recharts';
 
 const LeaderDrilldown = ({ drilldownData, onClose }) => {
@@ -18,9 +18,7 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
   useEffect(() => {
     if (drilldownData && drilldownData.data) {
       const leaderName = drilldownData.data.leader.full_name;
-      setCrumbs([
-        { label: leaderName, path: '/admin/leaders', icon: 'UserCog' }
-      ]);
+      setCrumbs([{ label: leaderName, path: '/admin/leaders', icon: 'UserCog' }]);
     }
   }, [drilldownData, setCrumbs]);
 
@@ -28,7 +26,7 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
 
   if (drilldownData.loading) {
     return (
-      <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[150] animate-fade-in">
+      <div className="animate-fade-in bg-black/30 dark:bg-black/60 backdrop-blur-sm fixed inset-0 z-[150] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-2 border-primary-500 border-t-transparent rounded-full animate-spin-slow" />
           <p className="text-white font-medium">Loading dashboard...</p>
@@ -40,39 +38,36 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
   const { leader, roster, trends, history } = drilldownData.data;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[150] flex justify-center pt-8 pb-8 px-4 overflow-hidden animate-fade-in">
-      <div className="bg-white dark:bg-slate-800 w-full max-w-6xl rounded-2xl shadow-modal overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-sm z-[150] flex justify-center pt-8 pb-8 px-4 overflow-hidden animate-fade-in">
+      <div className="bg-secondary-system-grouped-background w-full max-w-6xl rounded-[1.25rem] shadow-modal border border-black/[0.08] dark:border-white/[0.1] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary-700 to-primary-800 px-8 py-6 flex justify-between items-start text-white shrink-0">
-          <div>
-            <p className="text-primary-200 text-xs font-semibold uppercase tracking-wider mb-1">
-              Leader Analytics
-            </p>
-            <h2 className="text-2xl font-bold">{leader.full_name}</h2>
-            <div className="flex items-center gap-4 mt-2.5 text-primary-100 text-sm">
+        <div className="flex items-start justify-between gap-4 border-b border-separator/60 px-6 py-5 sm:px-8 dark:border-white/[0.08] shrink-0">
+          <div className="min-w-0">
+            <p className="section-eyebrow">Leader Analytics</p>
+            <h2 className="mt-0.5 truncate text-title-2 font-semibold text-label">
+              {leader.full_name}
+            </h2>
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-footnote text-secondary-label">
               <span className="flex items-center gap-1.5">
-                <FolderOpen className="w-3.5 h-3.5" />
+                <FolderOpen className="h-3.5 w-3.5" />
                 {leader.section_name}
               </span>
               {leader.phone && (
                 <span className="flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" />
+                  <Phone className="h-3.5 w-3.5" />
                   {leader.phone}
                 </span>
               )}
               {leader.email && (
                 <span className="flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5" />
+                  <Mail className="h-3.5 w-3.5" />
                   {leader.email}
                 </span>
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-          >
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="btn-icon btn-ghost text-secondary-label focus-ring">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -83,20 +78,22 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
             <div className="space-y-6">
               {/* Quick Stats */}
               <div className="card p-5">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary-500" />
+                <h4 className="mb-4 flex items-center gap-2 text-subheadline font-semibold text-label">
+                  <TrendingUp className="h-4 w-4 text-primary-700 dark:text-primary-300" />
                   Quick Stats
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Members</p>
-                    <p className="text-2xl font-bold text-primary-600 dark:text-primary-400 tabular-nums">
+                  <div className="bg-system-grouped-background/60 dark:bg-white/[0.03] p-4 rounded-xl border border-separator/50 dark:border-white/[0.06]">
+                    <p className="mb-1 text-caption-1 font-medium text-secondary-label">Members</p>
+                    <p className="text-title-3 font-semibold text-primary-700 dark:text-primary-300 tabular-nums">
                       {roster.length}
                     </p>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">Submissions</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <div className="bg-system-grouped-background/60 dark:bg-white/[0.03] p-4 rounded-xl border border-separator/50 dark:border-white/[0.06]">
+                    <p className="mb-1 text-caption-1 font-medium text-secondary-label">
+                      Submissions
+                    </p>
+                    <p className="text-title-3 font-semibold text-label tabular-nums">
                       {history.length}
                     </p>
                   </div>
@@ -105,9 +102,9 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
 
               {/* Roster */}
               <div className="card flex flex-col" style={{ maxHeight: '450px' }}>
-                <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 shrink-0">
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-emerald-500" />
+                <div className="px-5 py-4 border-b border-separator/60 dark:border-white/[0.08] shrink-0">
+                  <h4 className="flex items-center gap-2 text-subheadline font-semibold text-label">
+                    <Users className="h-4 w-4 text-emerald-700 dark:text-system-green" />
                     Member Roster
                   </h4>
                 </div>
@@ -115,16 +112,16 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
                   {roster.map((m) => (
                     <div
                       key={m.id}
-                      className="px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                      className="px-3 py-2.5 rounded-lg transition-colors hover:bg-system-grouped-background/70 dark:hover:bg-white/[0.03]"
                     >
-                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{m.full_name}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                      <p className="text-subheadline font-medium text-label">{m.full_name}</p>
+                      <p className="text-caption-1 text-tertiary-label font-mono mt-0.5">
                         {m.membership_id}
                       </p>
                     </div>
                   ))}
                   {roster.length === 0 && (
-                    <p className="text-center text-sm text-slate-400 dark:text-slate-500 py-8">
+                    <p className="text-footnote text-secondary-label py-8 text-center">
                       No members assigned
                     </p>
                   )}
@@ -136,8 +133,8 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
             <div className="lg:col-span-2 space-y-6">
               {/* Trend Chart */}
               <div className="card p-5">
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-sky-500" />
+                <h4 className="mb-4 flex items-center gap-2 text-subheadline font-semibold text-label">
+                  <TrendingUp className="h-4 w-4 text-blue-700 dark:text-system-blue" />
                   90-Day Engagement Trend
                 </h4>
                 <div className="h-[300px]">
@@ -146,38 +143,39 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
                       <AreaChart data={trends} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="drillPresent" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#059669" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#14a896" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#14a896" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#c7c7cc" />
                         <XAxis
                           dataKey="date"
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fill: '#94a3b8', fontSize: 11 }}
+                          tick={{ fill: '#8e8e93', fontSize: 11 }}
                           dy={8}
                           minTickGap={20}
                         />
                         <YAxis
                           axisLine={false}
                           tickLine={false}
-                          tick={{ fill: '#94a3b8', fontSize: 11 }}
+                          tick={{ fill: '#8e8e93', fontSize: 11 }}
                           allowDecimals={false}
                         />
                         <Tooltip
                           contentStyle={{
                             borderRadius: '12px',
-                            border: '1px solid #e2e8f0',
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+                            border: '1px solid rgba(0,0,0,0.06)',
+                            boxShadow: '0 8px 28px rgba(16,24,40,0.12)',
                             padding: '10px 14px',
+                            fontSize: 12
                           }}
                         />
                         <Area
                           type="monotone"
                           dataKey="present_count"
                           name="Present"
-                          stroke="#059669"
+                          stroke="#14a896"
                           strokeWidth={2.5}
                           fillOpacity={1}
                           fill="url(#drillPresent)"
@@ -187,14 +185,14 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
                           type="monotone"
                           dataKey="absent_count"
                           name="Absent"
-                          stroke="#E11D48"
+                          stroke="#ff3b30"
                           strokeWidth={1.5}
                           fillOpacity={0}
                         />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="h-full flex items-center justify-center text-sm text-slate-400 dark:text-slate-500">
+                    <div className="h-full flex items-center justify-center text-footnote text-secondary-label">
                       No trend data available
                     </div>
                   )}
@@ -203,9 +201,9 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
 
               {/* Submission History */}
               <div className="table-container">
-                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-                  <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-amber-500" />
+                <div className="px-6 py-4 border-b border-separator/60 dark:border-white/[0.08]">
+                  <h4 className="flex items-center gap-2 text-subheadline font-semibold text-label">
+                    <FileText className="h-4 w-4 text-amber-700 dark:text-system-orange" />
                     Past Submissions
                   </h4>
                 </div>
@@ -222,12 +220,12 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
                       history.map((log, i) => (
                         <tr key={i}>
                           <td>
-                            <span className="font-semibold text-slate-900 dark:text-slate-100">{fdate(log.date)}</span>
+                            <span className="font-semibold text-label">{fdate(log.date)}</span>
                           </td>
                           <td className="text-center">
                             <span className="badge-info font-mono">{log.records_count}</span>
                           </td>
-                          <td className="text-center text-slate-500 dark:text-slate-400 text-xs tabular-nums">
+                          <td className="text-center text-caption-1 text-secondary-label tabular-nums">
                             {fdatetime(log.submitted_at)}
                           </td>
                         </tr>
@@ -235,7 +233,7 @@ const LeaderDrilldown = ({ drilldownData, onClose }) => {
                     ) : (
                       <tr>
                         <td colSpan={3}>
-                          <p className="text-center text-sm text-slate-400 py-8">
+                          <p className="text-footnote text-secondary-label py-8 text-center">
                             No submissions logged yet.
                           </p>
                         </td>

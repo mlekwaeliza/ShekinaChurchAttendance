@@ -4,65 +4,79 @@ import { Trophy, Award, Crown, ArrowUpRight } from 'lucide-react';
 const HallOfFamePreview = ({ topMembers = [], onViewAll }) => {
   const getBadgeStyle = (index) => {
     switch (index) {
-      case 0: return { bg: 'bg-amber-100 dark:bg-amber-900/40', text: 'text-amber-600 dark:text-amber-400', icon: Crown };
-      case 1: return { bg: 'bg-slate-100 dark:bg-slate-700', text: 'text-slate-600 dark:text-slate-400', icon: Award };
-      case 2: return { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-600 dark:text-orange-400', icon: Award };
-      default: return { bg: 'bg-slate-50 dark:bg-slate-800', text: 'text-slate-500', icon: Award };
+      case 0:
+        return {
+          bg: 'bg-system-yellow/15 text-amber-700 dark:text-system-yellow',
+          icon: Crown
+        };
+      case 1:
+        return { bg: 'bg-system-fill text-secondary-label', icon: Award };
+      case 2:
+        return {
+          bg: 'bg-system-orange/15 text-amber-700 dark:text-system-orange',
+          icon: Award
+        };
+      default:
+        return { bg: 'bg-system-fill text-secondary-label', icon: Award };
     }
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200/60 dark:border-slate-700 shadow-sm p-6 relative overflow-hidden h-full flex flex-col">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full -translate-y-16 translate-x-16" />
-
-      <div className="relative -mx-6 -mt-6 mb-5 overflow-hidden bg-gradient-to-r from-amber-400 via-yellow-500 to-orange-400 px-5 py-3.5 text-white shadow-lg shadow-amber-500/20">
-        <div className="absolute top-0 right-0 h-20 w-20 rounded-full bg-white/10 -translate-y-10 translate-x-10" />
-        <div className="absolute bottom-0 left-1/3 h-14 w-14 rounded-full bg-white/10 translate-y-7" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-              <Trophy className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold leading-tight">Recognition 2026</h3>
-              <p className="text-[10px] uppercase tracking-wider text-white/80">Season standings</p>
-            </div>
+    <div className="card relative flex h-full flex-col overflow-hidden p-5 sm:p-6">
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-system-yellow/15 text-amber-700 dark:text-system-yellow">
+            <Trophy className="h-[18px] w-[18px]" />
           </div>
-          <button
-            onClick={onViewAll}
-            className="rounded-lg bg-white/20 p-1.5 text-white backdrop-blur-sm transition-colors hover:bg-white/30"
-            title="Points earned from attendance, service, giving. Winners announced Dec 31."
-          >
-            <ArrowUpRight className="h-3.5 w-3.5" />
-          </button>
+          <div className="min-w-0">
+            <h3 className="text-title-3 font-semibold text-label">Recognition 2026</h3>
+            <p className="text-footnote text-secondary-label">Season standings</p>
+          </div>
         </div>
+        <button
+          onClick={onViewAll}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-secondary-label transition-colors hover:bg-system-fill hover:text-label"
+          title="Points earned from attendance, service, giving. Winners announced Dec 31."
+          aria-label="Open full recognition standings"
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
       </div>
 
-      <div className="space-y-4 relative z-10 flex-1 flex flex-col justify-center">
+      <div className="relative z-10 flex flex-1 flex-col justify-center space-y-3">
         {topMembers.length === 0 ? (
-          <div className="text-center py-6 text-slate-400 text-sm italic">
-            Season competition starting soon...
+          <div className="py-6 text-center text-footnote text-secondary-label">
+            Season competition starting soon…
           </div>
         ) : (
           topMembers.slice(0, 3).map((m, idx) => {
             const badge = getBadgeStyle(idx);
             return (
-              <div key={m.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-700/20 border border-slate-100 dark:border-slate-700/50">
+              <div
+                key={m.id}
+                className="flex items-center justify-between rounded-xl border border-separator/50 bg-system-grouped-background/60 p-3 dark:border-white/[0.06]"
+              >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl ${badge.bg} flex items-center justify-center relative`}>
-                    <badge.icon className={`w-5 h-5 ${badge.text}`} />
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-50 dark:border-slate-700 text-[10px] font-black flex items-center justify-center">
+                  <div
+                    className={`relative flex h-10 w-10 items-center justify-center rounded-[10px] ${badge.bg}`}
+                  >
+                    <badge.icon className="h-5 w-5" />
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-secondary-system-grouped-background text-[10px] font-semibold text-label ring-2 ring-system-grouped-background dark:bg-secondary-system-grouped-background">
                       {idx + 1}
                     </span>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{m.full_name}</p>
-                    <p className="text-[10px] font-black uppercase tracking-tighter text-slate-400">{m.section_name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-subheadline font-semibold text-label">
+                      {m.full_name}
+                    </p>
+                    <p className="truncate text-caption-1 text-secondary-label">{m.section_name}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-black text-violet-600 dark:text-violet-400">{m.points}</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">Points</p>
+                  <p className="text-subheadline font-semibold text-label tabular-nums">
+                    {m.points}
+                  </p>
+                  <p className="text-caption-2 text-tertiary-label">Points</p>
                 </div>
               </div>
             );
@@ -70,8 +84,8 @@ const HallOfFamePreview = ({ topMembers = [], onViewAll }) => {
         )}
       </div>
 
-      <div className="mt-6 pt-4 border-t border-slate-50 dark:border-slate-700/50">
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium text-center">
+      <div className="mt-6 border-t border-separator/60 pt-4 dark:border-white/[0.06]">
+        <p className="text-center text-caption-1 text-tertiary-label">
           Points update after every service check-in.
         </p>
       </div>

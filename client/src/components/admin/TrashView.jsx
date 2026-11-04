@@ -18,14 +18,15 @@ import {
 const asArray = (v) => (Array.isArray(v) ? v : []);
 const R = (v) => Math.round(Number(v) || 0);
 
-
 const StatCard = ({ label, value, icon: Icon, color }) => (
-  <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3">
+  <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-3">
     <div className={`w-7 h-7 rounded-lg flex items-center justify-center mb-1.5 ${color}`}>
       <Icon className="w-3.5 h-3.5" />
     </div>
-    <p className="text-lg font-black text-slate-900 dark:text-white">{value}</p>
-    <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+    <p className="text-lg font-semibold text-label">{value}</p>
+    <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
+      {label}
+    </p>
   </div>
 );
 
@@ -117,7 +118,7 @@ const TrashView = () => {
       {/* Message */}
       {message && (
         <div
-          className={`rounded-xl px-4 py-2.5 text-xs font-semibold ${message.type === 'error' ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-300 dark:border-rose-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-800'}`}
+          className={`rounded-xl px-4 py-2.5 text-caption-1 font-semibold ${message.type === 'error' ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-300 dark:border-rose-800' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-800'}`}
         >
           {message.text}
         </div>
@@ -126,10 +127,10 @@ const TrashView = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Trash2 className="w-5 h-5 text-slate-500" /> Trash
+          <h1 className="text-headline font-semibold text-label flex items-center gap-2">
+            <Trash2 className="w-5 h-5 text-secondary-label" /> Trash
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-caption-1 text-secondary-label mt-0.5">
             Soft-deleted members. Restore them or permanently delete them. Permanently deleted
             members cannot be recovered.
           </p>
@@ -138,7 +139,7 @@ const TrashView = () => {
           <button
             onClick={() => setConfirmEmpty(true)}
             disabled={actionLoading === 'empty'}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800 dark:hover:bg-rose-900/40 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption-1 font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800 dark:hover:bg-rose-900/40 transition-colors"
           >
             {actionLoading === 'empty' ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -157,7 +158,7 @@ const TrashView = () => {
             label="In Trash"
             value={members.length}
             icon={Users}
-            color="text-slate-600 bg-slate-50 dark:bg-slate-900/30"
+            color="text-secondary-label bg-system-grouped-background/30"
           />
           <StatCard
             label="Attendance Records"
@@ -177,12 +178,12 @@ const TrashView = () => {
       {/* Search */}
       {members.length > 0 && (
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-tertiary-label" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search deleted members by name, ID, phone, section..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+            className="w-full pl-9 pr-3 py-2 rounded-xl text-caption-1 border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-label focus:outline-none focus:ring-2 focus:ring-primary-500/30"
           />
         </div>
       )}
@@ -190,21 +191,21 @@ const TrashView = () => {
       {/* List */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+          <Loader2 className="w-8 h-8 animate-spin text-tertiary-label" />
         </div>
       ) : members.length === 0 ? (
         <div className="text-center py-20">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-system-fill flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-8 h-8 text-emerald-400" />
           </div>
-          <p className="text-sm font-bold text-slate-600 dark:text-slate-400">Trash is empty</p>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-footnote font-semibold text-secondary-label">Trash is empty</p>
+          <p className="text-caption-1 text-tertiary-label mt-1">
             No deleted members to show. When you delete a member, they'll appear here.
           </p>
         </div>
       ) : filteredMembers.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-sm text-slate-400">No members match your search.</p>
+          <p className="text-footnote text-tertiary-label">No members match your search.</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -214,12 +215,12 @@ const TrashView = () => {
             return (
               <div
                 key={m.id}
-                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+                className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-3 hover:border-black/[0.12] dark:hover:border-white/[0.16] transition-colors"
               >
                 <div className="flex flex-wrap items-start gap-3">
                   {/* Avatar */}
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${isOld ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700'}`}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-footnote font-semibold shrink-0 ${isOld ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400' : 'bg-system-fill text-secondary-label dark:bg-white/[0.06]'}`}
                   >
                     {m.full_name?.charAt(0) || '?'}
                   </div>
@@ -227,22 +228,26 @@ const TrashView = () => {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      <p className="text-footnote font-semibold text-label truncate">
                         {m.full_name}
                       </p>
-                      <span className="text-[10px] text-slate-400 font-mono">
+                      <span className="text-caption-2 text-tertiary-label font-mono">
                         #{m.membership_id}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
                       {m.section_name && (
-                        <span className="text-[10px] text-slate-500">{m.section_name}</span>
+                        <span className="text-caption-2 text-secondary-label">
+                          {m.section_name}
+                        </span>
                       )}
                       {m.leader_name && (
-                        <span className="text-[10px] text-slate-400">Leader: {m.leader_name}</span>
+                        <span className="text-caption-2 text-tertiary-label">
+                          Leader: {m.leader_name}
+                        </span>
                       )}
                       {m.phone && (
-                        <span className="text-[10px] text-slate-400 inline-flex items-center gap-0.5">
+                        <span className="text-caption-2 text-tertiary-label inline-flex items-center gap-0.5">
                           <Phone className="w-2.5 h-2.5" />
                           {m.phone}
                         </span>
@@ -250,16 +255,16 @@ const TrashView = () => {
                     </div>
                     <div className="flex items-center gap-3 mt-1">
                       <span
-                        className={`text-[10px] font-bold inline-flex items-center gap-0.5 ${isOld ? 'text-rose-600' : 'text-slate-400'}`}
+                        className={`text-caption-2 font-semibold inline-flex items-center gap-0.5 ${isOld ? 'text-rose-600' : 'text-tertiary-label'}`}
                       >
                         <Clock className="w-2.5 h-2.5" />
                         {days} day{days !== 1 ? 's' : ''} ago
                       </span>
-                      <span className="text-[10px] text-slate-400">
+                      <span className="text-caption-2 text-tertiary-label">
                         Deleted: {fdatetime(m.soft_deleted_at)}
                       </span>
                       {R(m.attendance_count) > 0 && (
-                        <span className="text-[10px] text-amber-500 inline-flex items-center gap-0.5">
+                        <span className="text-caption-2 text-amber-500 inline-flex items-center gap-0.5">
                           <Award className="w-2.5 h-2.5" />
                           {m.attendance_count} records
                         </span>
@@ -272,7 +277,7 @@ const TrashView = () => {
                     <button
                       onClick={() => handleRestore(m.id, m.full_name)}
                       disabled={actionLoading === m.id}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40 transition-colors border border-emerald-200 dark:border-emerald-800"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-caption-1 font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-900/40 transition-colors border border-emerald-200 dark:border-emerald-800"
                       title="Restore member"
                     >
                       {actionLoading === m.id ? (
@@ -285,7 +290,7 @@ const TrashView = () => {
                     <button
                       onClick={() => setConfirmDelete(m)}
                       disabled={actionLoading === `del-${m.id}`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-900/40 transition-colors border border-rose-200 dark:border-rose-800"
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-caption-1 font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-900/40 transition-colors border border-rose-200 dark:border-rose-800"
                       title="Delete permanently"
                     >
                       {actionLoading === `del-${m.id}` ? (
@@ -310,7 +315,7 @@ const TrashView = () => {
           onClick={() => setConfirmDelete(null)}
         >
           <div
-            className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full"
+            className="bg-secondary-system-grouped-background rounded-2xl shadow-card max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-5">
@@ -319,22 +324,20 @@ const TrashView = () => {
                   <AlertTriangle className="w-5 h-5 text-rose-600" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-footnote font-semibold text-label">
                     Permanently delete member?
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-caption-1 text-secondary-label mt-1">
                     You are about to <strong className="text-rose-600">permanently delete</strong>{' '}
-                    <strong className="text-slate-700 dark:text-slate-300">
-                      {confirmDelete.full_name}
-                    </strong>
-                    . This action <strong>cannot be undone</strong>. All attendance records,
+                    <strong className="text-secondary-label">{confirmDelete.full_name}</strong>.
+                    This action <strong>cannot be undone</strong>. All attendance records,
                     follow-ups, and history for this member will be lost forever.
                   </p>
                 </div>
               </div>
               {R(confirmDelete.attendance_count) > 0 && (
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-2.5 mb-4">
-                  <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold">
+                  <p className="text-caption-1 text-amber-700 dark:text-amber-300 font-semibold">
                     Warning: This member has {confirmDelete.attendance_count} attendance records
                     that will be permanently lost.
                   </p>
@@ -343,14 +346,14 @@ const TrashView = () => {
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => setConfirmDelete(null)}
-                  className="text-xs font-bold px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  className="text-caption-1 font-semibold px-4 py-2 rounded-lg text-secondary-label hover:bg-system-fill transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handlePermanentDelete(confirmDelete.id)}
                   disabled={actionLoading === `del-${confirmDelete.id}`}
-                  className="text-xs font-bold px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+                  className="text-caption-1 font-semibold px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
                 >
                   {actionLoading === `del-${confirmDelete.id}` ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -372,7 +375,7 @@ const TrashView = () => {
           onClick={() => setConfirmEmpty(false)}
         >
           <div
-            className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-md w-full"
+            className="bg-secondary-system-grouped-background rounded-2xl shadow-card max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-5">
@@ -381,8 +384,8 @@ const TrashView = () => {
                   <AlertTriangle className="w-5 h-5 text-rose-600" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Empty trash?</h3>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <h3 className="text-footnote font-semibold text-label">Empty trash?</h3>
+                  <p className="text-caption-1 text-secondary-label mt-1">
                     You are about to{' '}
                     <strong className="text-rose-600">
                       permanently delete {members.length} member(s)
@@ -395,14 +398,14 @@ const TrashView = () => {
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => setConfirmEmpty(false)}
-                  className="text-xs font-bold px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  className="text-caption-1 font-semibold px-4 py-2 rounded-lg text-secondary-label hover:bg-system-fill transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleEmptyTrash}
                   disabled={actionLoading === 'empty'}
-                  className="text-xs font-bold px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+                  className="text-caption-1 font-semibold px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
                 >
                   {actionLoading === 'empty' ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

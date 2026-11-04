@@ -1,36 +1,26 @@
 import React from 'react';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 
+// Tinted icon wells, the way iOS tints a symbol against a 15% wash of the
+// same color. No accent bars, no background blobs: the number is the hero.
 const colorMap = {
   default: {
-    accent: 'bg-primary-500',
-    icon: 'bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300',
-    wash: 'bg-primary-500/5'
+    icon: 'bg-primary-500/[0.12] text-primary-700 dark:text-primary-300'
   },
   success: {
-    accent: 'bg-emerald-500',
-    icon: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
-    wash: 'bg-emerald-500/5'
+    icon: 'bg-system-green/15 text-emerald-700 dark:text-system-green'
   },
   warning: {
-    accent: 'bg-amber-500',
-    icon: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
-    wash: 'bg-amber-500/5'
+    icon: 'bg-system-orange/15 text-amber-700 dark:text-system-orange'
   },
   danger: {
-    accent: 'bg-rose-500',
-    icon: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
-    wash: 'bg-rose-500/5'
+    icon: 'bg-system-red/15 text-rose-700 dark:text-system-red'
   },
   info: {
-    accent: 'bg-sky-500',
-    icon: 'bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300',
-    wash: 'bg-sky-500/5'
+    icon: 'bg-system-blue/15 text-blue-700 dark:text-system-blue'
   },
   rose: {
-    accent: 'bg-rose-500',
-    icon: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
-    wash: 'bg-rose-500/5'
+    icon: 'bg-system-red/15 text-rose-700 dark:text-system-red'
   }
 };
 
@@ -51,54 +41,46 @@ const StatCard = ({
   return (
     <Wrapper
       {...(onClick ? { type: 'button', onClick } : {})}
-      className={`product-surface focus-ring group relative w-full overflow-hidden p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-card-hover dark:hover:border-white/20 sm:p-6 ${className}`}
+      className={`product-surface focus-ring group w-full p-5 text-left transition-shadow duration-200 hover:shadow-card-hover sm:p-6 ${className}`}
     >
-      <span className={`absolute inset-x-0 top-0 h-[3px] ${colors.accent}`} />
-      <span
-        className={`absolute -right-9 -top-9 h-28 w-28 rounded-full ${colors.wash} transition-transform duration-300 group-hover:scale-110`}
-      />
-
-      <div className="relative min-w-0">
-        <p className="break-words text-[11px] font-bold uppercase leading-5 tracking-[0.14em] text-slate-400 dark:text-slate-500">
+      <div className="flex items-start justify-between gap-4">
+        <p className="min-w-0 break-words text-footnote font-medium leading-5 text-secondary-label">
           {label}
         </p>
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <p className="font-display text-[2.25rem] font-semibold leading-none tracking-[-0.04em] text-slate-950 dark:text-white tabular-nums">
-            {value}
-          </p>
-          {Icon && (
-            <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${colors.icon}`}
-            >
-              <Icon className="h-5 w-5" strokeWidth={2} />
-            </div>
-          )}
-        </div>
+        {Icon && (
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${colors.icon}`}
+          >
+            <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+          </div>
+        )}
       </div>
 
+      <p className="mt-2.5 font-display text-[2.25rem] font-semibold leading-none tracking-[-0.025em] text-label tabular-nums">
+        {value}
+      </p>
+
       {(trendDirection || trendLabel) && (
-        <div className="relative mt-4 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs font-semibold">
+        <div className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs font-medium">
           {trendDirection === 'up' && (
-            <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-700 dark:text-system-green" />
           )}
           {trendDirection === 'down' && (
-            <ArrowDownRight className="h-3.5 w-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+            <ArrowDownRight className="h-3.5 w-3.5 shrink-0 text-rose-700 dark:text-system-red" />
           )}
           {trendDirection && (
             <span
               className={
                 trendDirection === 'up'
-                  ? 'shrink-0 text-emerald-700 dark:text-emerald-400'
-                  : 'shrink-0 text-rose-700 dark:text-rose-400'
+                  ? 'shrink-0 text-emerald-700 dark:text-system-green'
+                  : 'shrink-0 text-rose-700 dark:text-system-red'
               }
             >
               {Number(Math.abs(trend).toFixed(1))}%
             </span>
           )}
           {trendLabel && (
-            <span className="min-w-0 break-words font-medium text-slate-400 dark:text-slate-500">
-              {trendLabel}
-            </span>
+            <span className="min-w-0 break-words text-secondary-label">{trendLabel}</span>
           )}
         </div>
       )}

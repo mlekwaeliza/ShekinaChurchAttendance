@@ -13,7 +13,7 @@ const REPORT_TEMPLATES = {
       includeSectionBreakdown: true,
       includeLeaderPerformance: true,
       includeAtRiskMembers: true,
-      includeActionItems: true,
+      includeActionItems: true
     }
   },
   leadership: {
@@ -25,7 +25,7 @@ const REPORT_TEMPLATES = {
       includeSectionBreakdown: true,
       includeLeaderPerformance: true,
       includeAtRiskMembers: false,
-      includeActionItems: true,
+      includeActionItems: true
     }
   },
   pastoralCare: {
@@ -37,7 +37,7 @@ const REPORT_TEMPLATES = {
       includeSectionBreakdown: false,
       includeLeaderPerformance: false,
       includeAtRiskMembers: true,
-      includeActionItems: true,
+      includeActionItems: true
     }
   }
 };
@@ -74,7 +74,7 @@ function buildInitialState(templateKey) {
     includeSectionBreakdown: template.defaults.includeSectionBreakdown,
     includeLeaderPerformance: template.defaults.includeLeaderPerformance,
     includeAtRiskMembers: template.defaults.includeAtRiskMembers,
-    includeActionItems: template.defaults.includeActionItems,
+    includeActionItems: template.defaults.includeActionItems
   };
 }
 
@@ -90,7 +90,7 @@ const ReportBuilderModal = ({ isOpen, onClose, dateRange, onGenerate, loading = 
   const selectedTemplate = useMemo(() => REPORT_TEMPLATES[form.reportType], [form.reportType]);
 
   const applyTemplate = (templateKey) => {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       ...buildInitialState(templateKey),
       preparedBy: prev.preparedBy
@@ -135,17 +135,21 @@ const ReportBuilderModal = ({ isOpen, onClose, dateRange, onGenerate, loading = 
                 onClick={() => applyTemplate(key)}
                 className={`text-left rounded-2xl border px-4 py-4 transition-all ${
                   isActive
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-sm'
-                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-card'
+                    : 'border-black/[0.06] dark:border-white/[0.08] hover:border-black/[0.12] dark:hover:border-white/[0.16]'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isActive ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300'}`}>
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${isActive ? 'bg-primary-600 text-white' : 'bg-system-fill text-secondary-label'}`}
+                  >
                     <Icon className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="font-semibold text-slate-900 dark:text-slate-100">{template.label}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{template.description}</div>
+                    <div className="font-semibold text-label">{template.label}</div>
+                    <div className="text-caption-1 text-secondary-label mt-0.5">
+                      {template.description}
+                    </div>
                   </div>
                 </div>
               </button>
@@ -160,7 +164,7 @@ const ReportBuilderModal = ({ isOpen, onClose, dateRange, onGenerate, loading = 
               <input
                 type="text"
                 value={form.title}
-                onChange={(e) => setForm(prev => ({ ...prev, title: e.target.value }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
                 className="input"
                 placeholder="Monthly ministry health report"
               />
@@ -170,20 +174,18 @@ const ReportBuilderModal = ({ isOpen, onClose, dateRange, onGenerate, loading = 
               <input
                 type="text"
                 value={form.preparedBy}
-                onChange={(e) => setForm(prev => ({ ...prev, preparedBy: e.target.value }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, preparedBy: e.target.value }))}
                 className="input"
                 placeholder="Senior Pastor"
               />
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/40">
-            <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+          <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] p-4 bg-system-grouped-background/40">
+            <div className="text-footnote font-semibold text-label mb-3">
               {selectedTemplate.label} template
             </div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">
-              {selectedTemplate.description}
-            </div>
+            <div className="text-footnote text-secondary-label">{selectedTemplate.description}</div>
           </div>
         </div>
 
@@ -191,17 +193,17 @@ const ReportBuilderModal = ({ isOpen, onClose, dateRange, onGenerate, loading = 
           {CHECKBOXES.map((item) => (
             <label
               key={item.key}
-              className="flex items-start gap-3 rounded-2xl border border-slate-200 dark:border-slate-700 px-4 py-3 cursor-pointer"
+              className="flex items-start gap-3 rounded-2xl border border-black/[0.06] dark:border-white/[0.08] px-4 py-3 cursor-pointer"
             >
               <input
                 type="checkbox"
                 checked={form[item.key]}
-                onChange={(e) => setForm(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                onChange={(e) => setForm((prev) => ({ ...prev, [item.key]: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-black/[0.12] text-primary-600 focus:ring-primary-500"
               />
               <div>
-                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{item.label}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{item.description}</div>
+                <div className="text-footnote font-medium text-label">{item.label}</div>
+                <div className="text-caption-1 text-secondary-label mt-0.5">{item.description}</div>
               </div>
             </label>
           ))}

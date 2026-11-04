@@ -48,18 +48,28 @@ const today = () => {
 };
 
 const STATUS_COLORS = {
-  draft: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  draft: 'bg-system-fill text-secondary-label dark:bg-white/[0.06] dark:text-tertiary-label',
   submitted: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   approved: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   rejected: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
 };
 const STATUS_ICONS = { draft: Clock, submitted: Send, approved: CheckCircle2, rejected: XCircle };
 
+// Literal class strings so Tailwind can compile every tone (dynamic names are invisible to the compiler).
+const CARD_TONE = {
+  emerald: { icon: 'text-emerald-500', value: 'text-emerald-600 dark:text-emerald-400' },
+  amber: { icon: 'text-amber-500', value: 'text-amber-600 dark:text-amber-400' },
+  indigo: { icon: 'text-primary-500', value: 'text-primary-600 dark:text-primary-400' },
+  rose: { icon: 'text-rose-500', value: 'text-rose-600 dark:text-rose-400' },
+  slate: { icon: 'text-system-gray', value: 'text-secondary-label' }
+};
+const cardTone = (color) => CARD_TONE[color] || CARD_TONE.slate;
+
 const StatusBadge = ({ status }) => {
   const Icon = STATUS_ICONS[status] || Clock;
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLORS[status] || ''}`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption-2 font-semibold ${STATUS_COLORS[status] || ''}`}
     >
       <Icon className="w-3 h-3" />
       {status?.charAt(0).toUpperCase() + status?.slice(1)}
@@ -360,24 +370,20 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 p-6 text-white shadow-xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold">Accountant Dashboard</h2>
-            <p className="text-white/80 text-sm">Daily records, tithes, expenses &amp; reports</p>
-          </div>
-          <button
-            onClick={createNew}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-indigo-600 font-semibold text-sm hover:bg-white/90 transition-colors shadow-lg"
-          >
-            <Plus className="w-4 h-4" /> New Daily Record
-          </button>
+      <div className="card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-title-2 font-semibold text-label">Accountant Dashboard</h2>
+          <p className="mt-0.5 text-footnote text-secondary-label">
+            Daily records, tithes, expenses &amp; reports
+          </p>
         </div>
+        <button onClick={createNew} className="btn-primary shrink-0">
+          <Plus className="h-4 w-4" /> New Daily Record
+        </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1.5 overflow-x-auto">
+      <div className="tab-pills overflow-x-auto">
         {[
           { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { key: 'records', label: 'Daily Records', icon: FileText },
@@ -393,15 +399,11 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
           <button
             key={t.key}
             onClick={() => setActiveTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-              activeTab === t.key
-                ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
+            className={`tab-pill whitespace-nowrap ${activeTab === t.key ? 'active' : ''}`}
           >
-            <t.icon className="w-3.5 h-3.5" /> {t.label}
+            <t.icon className="h-3.5 w-3.5" /> {t.label}
             {t.badge > 0 && (
-              <span className="ml-1 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+              <span className="ml-1 bg-amber-500 text-white text-caption-2 font-semibold px-1.5 py-0.5 rounded-full">
                 {t.badge}
               </span>
             )}
@@ -430,28 +432,28 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
           ].map((card) => (
             <div
               key={card.label}
-              className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4"
+              className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-semibold uppercase text-slate-400">
+                <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                   {card.label}
                 </span>
-                <card.icon className={`w-4 h-4 text-${card.color}-500`} />
+                <card.icon className={`w-4 h-4 ${cardTone(card.color).icon}`} />
               </div>
-              <p className="text-xl font-bold text-slate-900 dark:text-white">{card.value}</p>
+              <p className="text-title-2 font-semibold text-label">{card.value}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* Daily Records Tab */}
+      {/* Daily Records Tag */}
       {activeTab === 'records' && (
         <div className="space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+              className="px-3 py-1.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1"
             >
               <option value="">All Status</option>
               <option value="draft">Draft</option>
@@ -463,7 +465,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
               type="date"
               value={searchDate}
               onChange={(e) => setSearchDate(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+              className="px-3 py-1.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1"
             />
             {(filterStatus || searchDate) && (
               <button
@@ -471,7 +473,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                   setFilterStatus('');
                   setSearchDate('');
                 }}
-                className="text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5"
+                className="text-caption-1 text-secondary-label hover:text-secondary-label px-2 py-1.5"
               >
                 Clear
               </button>
@@ -479,23 +481,23 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
             <div className="flex-1" />
             <button
               onClick={exportPDF}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption-1 font-medium bg-system-fill text-secondary-label hover:bg-system-gray-4 transition-colors"
             >
               <Download className="w-3 h-3" /> Download PDF
             </button>
             <button
               onClick={exportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption-1 font-medium bg-system-fill text-secondary-label hover:bg-system-gray-4 transition-colors"
             >
               <Download className="w-3 h-3" /> Export CSV
             </button>
           </div>
 
-          <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 overflow-hidden shadow-sm">
+          <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] overflow-hidden shadow-card">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 dark:bg-slate-800">
-                  <tr className="border-b border-slate-200 dark:border-slate-700">
+              <table className="min-w-full text-footnote">
+                <thead className="bg-system-fill">
+                  <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
                     {[
                       'Date',
                       'Status',
@@ -509,7 +511,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                     ].map((h) => (
                       <th
                         key={h}
-                        className={`py-3 px-4 text-[10px] font-semibold uppercase text-slate-400 ${h === '' ? 'text-right' : h === 'Date' ? 'text-left' : 'text-right'}`}
+                        className={`py-3 px-4 text-caption-2 font-semibold uppercase text-tertiary-label ${h === '' ? 'text-right' : h === 'Date' ? 'text-left' : 'text-right'}`}
                       >
                         {h}
                       </th>
@@ -520,17 +522,17 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                   {loading ? (
                     <tr>
                       <td colSpan={9} className="py-16 text-center">
-                        <Loader2 className="w-5 h-5 animate-spin text-indigo-500 mx-auto" />
+                        <Loader2 className="w-5 h-5 animate-spin text-primary-600 mx-auto" />
                       </td>
                     </tr>
                   ) : filteredRecords.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-16 text-center">
-                        <FileText className="w-10 h-10 mx-auto mb-3 text-slate-300" />
-                        <p className="text-sm text-slate-400">No records found</p>
+                        <FileText className="w-10 h-10 mx-auto mb-3 text-tertiary-label" />
+                        <p className="text-footnote text-tertiary-label">No records found</p>
                         <button
                           onClick={createNew}
-                          className="mt-3 text-xs text-indigo-600 hover:underline font-medium"
+                          className="mt-3 text-caption-1 text-primary-700 hover:underline font-medium"
                         >
                           Create your first daily record
                         </button>
@@ -540,10 +542,10 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                     filteredRecords.map((r) => (
                       <tr
                         key={r.id}
-                        className="border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
+                        className="border-b border-separator/50 dark:border-white/[0.08] hover:bg-system-fill/30 cursor-pointer"
                         onClick={() => openRecord(r.id)}
                       >
-                        <td className="py-3 px-4 text-left font-medium text-slate-900 dark:text-white">
+                        <td className="py-3 px-4 text-left font-medium text-label">
                           {fdate(r.record_date)}
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -558,13 +560,13 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                         <td className="py-3 px-4 text-right text-violet-600">
                           {fmt(r.auto_tithes ?? r.total_tithes)}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">
+                        <td className="py-3 px-4 text-right font-semibold text-label">
                           {fmt(r.total_income)}
                         </td>
                         <td className="py-3 px-4 text-right text-rose-500">
                           {fmt(r.total_expenses || 0)}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold text-emerald-600">
+                        <td className="py-3 px-4 text-right font-semibold text-emerald-600">
                           {fmt(r.usable_church_funds)}
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -573,7 +575,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                               e.stopPropagation();
                               openRecord(r.id);
                             }}
-                            className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-500"
+                            className="p-1.5 rounded-lg hover:bg-primary-500/10 dark:hover:bg-primary-500/10 text-primary-600"
                             title="Open"
                           >
                             {r.status === 'draft' ? (
@@ -593,21 +595,21 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
         </div>
       )}
 
-      {/* Approvals Tab */}
+      {/* Approvals Tag */}
       {activeTab === 'approvals' && (
         <div className="space-y-3">
           {pendingRecords.length === 0 ? (
-            <div className="rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-12 text-center">
+            <div className="rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-12 text-center">
               <CheckCircle2 className="w-10 h-10 mx-auto mb-3 text-emerald-400" />
-              <p className="text-sm font-medium text-slate-900 dark:text-white">All caught up!</p>
-              <p className="text-xs text-slate-400 mt-1">No records pending approval</p>
+              <p className="text-footnote font-medium text-label">All caught up!</p>
+              <p className="text-caption-1 text-tertiary-label mt-1">No records pending approval</p>
             </div>
           ) : (
             <div className="space-y-2">
               {pendingRecords.map((r) => (
                 <div
                   key={r.id}
-                  className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  className="rounded-xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-4 hover:shadow-card transition-shadow cursor-pointer"
                   onClick={() => openRecord(r.id)}
                 >
                   <div className="flex items-center justify-between">
@@ -616,18 +618,20 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                         <Send className="w-5 h-5 text-amber-500" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        <p className="text-footnote font-semibold text-label">
                           {fdate(r.record_date)}
                         </p>
-                        <p className="text-[10px] text-slate-400">
+                        <p className="text-caption-2 text-tertiary-label">
                           by {r.submitted_by_name || 'Unknown'} ·{' '}
                           {r.submitted_at ? fdatetime(r.submitted_at) : ''}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <p className="text-sm font-bold text-emerald-600">{fmt(r.total_income)}</p>
-                      <Eye className="w-4 h-4 text-slate-400" />
+                      <p className="text-footnote font-semibold text-emerald-600">
+                        {fmt(r.total_income)}
+                      </p>
+                      <Eye className="w-4 h-4 text-tertiary-label" />
                     </div>
                   </div>
                 </div>
@@ -637,7 +641,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
         </div>
       )}
 
-      {/* Reports Tab */}
+      {/* Reports Tag */}
       {activeTab === 'reports' && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 flex-wrap">
@@ -645,24 +649,24 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
               type="date"
               value={rptFrom}
               onChange={(e) => setRptFrom(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+              className="px-3 py-1.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1"
             />
-            <span className="text-xs text-slate-400">to</span>
+            <span className="text-caption-1 text-tertiary-label">to</span>
             <input
               type="date"
               value={rptTo}
               onChange={(e) => setRptTo(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+              className="px-3 py-1.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1"
             />
             <button
               onClick={exportPDF}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption-1 font-medium bg-system-fill text-secondary-label hover:bg-system-gray-4 transition-colors"
             >
               <Download className="w-3 h-3" /> PDF
             </button>
             <button
               onClick={exportCSV}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption-1 font-medium bg-system-fill text-secondary-label hover:bg-system-gray-4 transition-colors"
             >
               <Download className="w-3 h-3" /> CSV
             </button>
@@ -686,15 +690,15 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                 ].map((card) => (
                   <div
                     key={card.label}
-                    className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4"
+                    className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-semibold uppercase text-slate-400">
+                      <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                         {card.label}
                       </span>
-                      <card.icon className="w-4 h-4 text-slate-400" />
+                      <card.icon className="w-4 h-4 text-tertiary-label" />
                     </div>
-                    <p className="text-lg font-bold text-slate-900 dark:text-white">{card.value}</p>
+                    <p className="text-headline font-semibold text-label">{card.value}</p>
                   </div>
                 ))}
               </div>
@@ -711,33 +715,31 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                 ].map((card) => (
                   <div
                     key={card.label}
-                    className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4"
+                    className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4"
                   >
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">
+                    <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                       {card.label}
                     </span>
-                    <p
-                      className={`text-lg font-bold text-${card.color}-600 dark:text-${card.color}-400 mt-1`}
-                    >
+                    <p className={`text-headline font-semibold ${cardTone(card.color).value} mt-1`}>
                       {card.value}
                     </p>
                   </div>
                 ))}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                  <span className="text-[10px] font-semibold uppercase text-slate-400">
+                <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4">
+                  <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                     Usable Church Funds
                   </span>
-                  <p className="text-lg font-bold text-emerald-600 mt-1">
+                  <p className="text-headline font-semibold text-emerald-600 mt-1">
                     {fmt(summary.total_usable)}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
-                  <span className="text-[10px] font-semibold uppercase text-slate-400">
+                <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4">
+                  <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                     Net Balance
                   </span>
-                  <p className="text-lg font-bold text-emerald-600 mt-1">
+                  <p className="text-headline font-semibold text-emerald-600 mt-1">
                     {fmt(summary.total_usable - summary.total_expenses)}
                   </p>
                 </div>
@@ -745,24 +747,24 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
             </>
           ) : (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+              <Loader2 className="w-5 h-5 animate-spin text-primary-600" />
             </div>
           )}
         </div>
       )}
 
-      {/* Contributions Tab */}
+      {/* Contributions Tag */}
       {activeTab === 'contributions' && (
-        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+        <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4">
           <ContributionsView allMembers={allMembers} showMessage={showMessage} />
         </div>
       )}
 
-      {/* Dashboard Tab */}
+      {/* Dashboard Tag */}
       {activeTab === 'dashboard' &&
         (dbLoading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+            <Loader2 className="w-8 h-8 animate-spin text-tertiary-label" />
           </div>
         ) : (
           <div className="space-y-6">
@@ -853,15 +855,15 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
               ].map((card, i) => (
                 <div
                   key={i}
-                  className={`rounded-2xl border ${card.border} bg-white dark:bg-slate-800 ${card.darkBorder} p-4 shadow-sm`}
+                  className={`rounded-2xl border ${card.border} bg-secondary-system-grouped-background dark:bg-white/[0.04] ${card.darkBorder} p-4 shadow-card`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                    <span className="text-caption-1 font-medium text-secondary-label uppercase tracking-[0.06em]">
                       {card.label}
                     </span>
                     <card.icon className={`w-4 h-4 ${card.iconColor}`} />
                   </div>
-                  <p className={`text-2xl font-bold ${card.textColor} ${card.darkText}`}>
+                  <p className={`text-title-1 font-semibold ${card.textColor} ${card.darkText}`}>
                     {card.value}
                   </p>
                 </div>
@@ -921,7 +923,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                 total
               }));
               const CHART_COLORS = [
-                '#6366f1',
+                '#14a896',
                 '#10b981',
                 '#f59e0b',
                 '#ef4444',
@@ -936,9 +938,9 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
               return (
                 <div className="space-y-6">
                   {monthlyData.length > 0 && (
-                    <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                      <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-indigo-500" />
+                    <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+                      <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-primary-600" />
                         Monthly Income Trend
                       </h3>
                       <ResponsiveContainer width="100%" height={260}>
@@ -948,8 +950,8 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                         >
                           <defs>
                             <linearGradient id="mi" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                              <stop offset="5%" stopColor="#14a896" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#14a896" stopOpacity={0} />
                             </linearGradient>
                             <linearGradient id="mt" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
@@ -980,7 +982,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                           <Area
                             type="monotone"
                             dataKey="Income"
-                            stroke="#6366f1"
+                            stroke="#14a896"
                             fill="url(#mi)"
                             strokeWidth={2}
                             dot={{ r: 3 }}
@@ -1008,8 +1010,8 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {expenseData.length > 0 && (
-                      <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                        <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                      <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+                        <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
                           <TrendingDown className="w-4 h-4 text-rose-500" />
                           Expense Breakdown
                         </h3>
@@ -1041,8 +1043,8 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                     )}
 
                     {contribTypeData.length > 0 && (
-                      <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                        <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                      <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+                        <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
                           <HandCoins className="w-4 h-4 text-violet-500" />
                           Contributions by Type
                         </h3>
@@ -1079,23 +1081,21 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Recent Daily Records Card */}
-              <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
-                  Recent Daily Finance Records
-                </h3>
+              <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4">Recent Daily Finance Records</h3>
                 <div className="overflow-x-auto">
-                  <table className="min-w-[560px] text-sm">
+                  <table className="min-w-[560px] text-footnote">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700 text-left">
-                        <th className="py-2 px-2 font-semibold text-slate-600">Date</th>
-                        <th className="py-2 px-2 font-semibold text-slate-600">Status</th>
-                        <th className="py-2 px-2 text-right font-semibold text-slate-600">
+                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08] text-left">
+                        <th className="py-2 px-2 font-semibold text-secondary-label">Date</th>
+                        <th className="py-2 px-2 font-semibold text-secondary-label">Status</th>
+                        <th className="py-2 px-2 text-right font-semibold text-secondary-label">
                           Income
                         </th>
-                        <th className="py-2 px-2 text-right font-semibold text-slate-600">
+                        <th className="py-2 px-2 text-right font-semibold text-secondary-label">
                           Expenses
                         </th>
-                        <th className="py-2 px-2 text-right font-semibold text-slate-600">
+                        <th className="py-2 px-2 text-right font-semibold text-secondary-label">
                           Net Usable
                         </th>
                       </tr>
@@ -1104,10 +1104,10 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                       {dbData.finance.slice(0, 5).map((r) => (
                         <tr
                           key={r.id}
-                          className="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+                          className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-fill/50 cursor-pointer"
                           onClick={() => openRecord(r.id)}
                         >
-                          <td className="py-2.5 px-2 text-slate-900 dark:text-white font-medium">
+                          <td className="py-2.5 px-2 text-label font-medium">
                             {fdate(r.record_date)}
                           </td>
                           <td className="py-2.5 px-2">
@@ -1119,14 +1119,14 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                           <td className="py-2.5 px-2 text-right text-rose-500">
                             TZS {Number(r.total_expenses || 0).toLocaleString()}
                           </td>
-                          <td className="py-2.5 px-2 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                          <td className="py-2.5 px-2 text-right font-semibold text-primary-700 dark:text-primary-300">
                             TZS {Number(r.usable_church_funds || 0).toLocaleString()}
                           </td>
                         </tr>
                       ))}
                       {dbData.finance.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="text-center py-8 text-slate-400">
+                          <td colSpan={5} className="text-center py-8 text-tertiary-label">
                             No daily records yet this month
                           </td>
                         </tr>
@@ -1137,47 +1137,50 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
               </div>
 
               {/* Recent Expenses Card */}
-              <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
-                  Recent Expenses
-                </h3>
+              <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4">Recent Expenses</h3>
                 <div className="overflow-x-auto">
-                  <table className="min-w-[480px] text-sm">
+                  <table className="min-w-[480px] text-footnote">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700 text-left">
-                        <th className="py-2 px-2 font-semibold text-slate-600">Date</th>
-                        <th className="py-2 px-2 font-semibold text-slate-600">Category</th>
-                        <th className="py-2 px-2 font-semibold text-slate-600">Description</th>
-                        <th className="py-2 px-2 text-right font-semibold text-slate-600">
+                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08] text-left">
+                        <th className="py-2 px-2 font-semibold text-secondary-label">Date</th>
+                        <th className="py-2 px-2 font-semibold text-secondary-label">Category</th>
+                        <th className="py-2 px-2 font-semibold text-secondary-label">
+                          Description
+                        </th>
+                        <th className="py-2 px-2 text-right font-semibold text-secondary-label">
                           Amount
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {allExpenses.slice(0, 5).map((e) => (
-                        <tr key={e.id} className="border-b border-slate-100 dark:border-slate-700">
-                          <td className="py-2.5 px-2 text-slate-500 whitespace-nowrap">
+                        <tr
+                          key={e.id}
+                          className="border-b border-separator/60 dark:border-white/[0.08]"
+                        >
+                          <td className="py-2.5 px-2 text-secondary-label whitespace-nowrap">
                             {fdate(e.date)}
                           </td>
                           <td className="py-2.5 px-2">
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 font-semibold">
+                            <span className="text-caption-1 px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 font-semibold">
                               {e.category}
                             </span>
                           </td>
                           <td
-                            className="py-2.5 px-2 text-slate-600 dark:text-slate-300 max-w-[150px] truncate"
+                            className="py-2.5 px-2 text-secondary-label max-w-[150px] truncate"
                             title={e.description}
                           >
                             {e.description || '-'}
                           </td>
-                          <td className="py-2.5 px-2 text-right font-bold text-rose-600">
+                          <td className="py-2.5 px-2 text-right font-semibold text-rose-600">
                             TZS {Number(e.amount || 0).toLocaleString()}
                           </td>
                         </tr>
                       ))}
                       {allExpenses.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="text-center py-8 text-slate-400">
+                          <td colSpan={4} className="text-center py-8 text-tertiary-label">
                             No expenses yet this month
                           </td>
                         </tr>
@@ -1189,8 +1192,8 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
+              <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4">
                   All Contributions by Type (This Month)
                 </h3>
                 {(() => {
@@ -1202,7 +1205,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                   const totalContributions = allContributionTotal;
 
                   return Object.keys(contributionsByType).length === 0 ? (
-                    <p className="text-slate-400 text-sm py-8 text-center">
+                    <p className="text-tertiary-label text-footnote py-8 text-center">
                       No contributions this month
                     </p>
                   ) : (
@@ -1210,21 +1213,19 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                       {Object.entries(contributionsByType).map(([type, total]) => (
                         <div
                           key={type}
-                          className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700 last:border-0"
+                          className="flex items-center justify-between py-2 border-b border-separator/60 dark:border-white/[0.08] last:border-0"
                         >
-                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                          <span className="text-footnote font-medium text-secondary-label">
                             {type}
                           </span>
-                          <span className="text-sm font-bold text-emerald-600">
+                          <span className="text-footnote font-semibold text-emerald-600">
                             TZS {total.toLocaleString()}
                           </span>
                         </div>
                       ))}
-                      <div className="flex items-center justify-between py-2 pt-3 border-t-2 border-slate-200 dark:border-slate-600">
-                        <span className="text-sm font-bold text-slate-900 dark:text-white">
-                          Total
-                        </span>
-                        <span className="text-sm font-bold text-emerald-600">
+                      <div className="flex items-center justify-between py-2 pt-3 border-t-2 border-black/[0.06] dark:border-white/[0.16]">
+                        <span className="text-footnote font-semibold text-label">Total</span>
+                        <span className="text-footnote font-semibold text-emerald-600">
                           TZS {totalContributions.toLocaleString()}
                         </span>
                       </div>
@@ -1233,29 +1234,32 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                 })()}
               </div>
 
-              <div className="rounded-2xl border border-slate-200/70 bg-white dark:bg-slate-800 dark:border-slate-700 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4">
-                  Recent Contributions
-                </h3>
+              <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background dark:border-white/[0.08] p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4">Recent Contributions</h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-footnote">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-2 px-2 font-semibold text-slate-600">Member</th>
-                        <th className="text-left py-2 px-2 font-semibold text-slate-600">Type</th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-600">
+                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                        <th className="text-left py-2 px-2 font-semibold text-secondary-label">
+                          Member
+                        </th>
+                        <th className="text-left py-2 px-2 font-semibold text-secondary-label">
+                          Type
+                        </th>
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                           Amount
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {dbData.memberContributions.slice(0, 10).map((c) => (
-                        <tr key={c.id} className="border-b border-slate-100 dark:border-slate-700">
-                          <td className="py-2 px-2 text-slate-900 dark:text-white">
-                            {c.full_name || 'Unknown'}
-                          </td>
+                        <tr
+                          key={c.id}
+                          className="border-b border-separator/60 dark:border-white/[0.08]"
+                        >
+                          <td className="py-2 px-2 text-label">{c.full_name || 'Unknown'}</td>
                           <td className="py-2 px-2">
-                            <span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                            <span className="text-caption-1 px-1.5 py-0.5 rounded-full bg-primary-500/15 text-primary-700">
                               {c.contribution_type_name}
                             </span>
                           </td>
@@ -1266,7 +1270,7 @@ const FinanceView = ({ showMessage, userRole = 'admin' }) => {
                       ))}
                       {dbData.memberContributions.length === 0 && (
                         <tr>
-                          <td colSpan={3} className="text-center py-8 text-slate-400">
+                          <td colSpan={3} className="text-center py-8 text-tertiary-label">
                             No contributions yet this month
                           </td>
                         </tr>

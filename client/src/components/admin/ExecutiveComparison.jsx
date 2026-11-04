@@ -69,39 +69,45 @@ const CHIP = {
   warning: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   danger: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400',
   info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  neutral: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  neutral: 'bg-system-fill text-secondary-label dark:bg-white/[0.06] dark:text-tertiary-label',
   violet: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400'
 };
 
 const Badge = ({ children, variant = 'neutral' }) => (
   <span
-    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${CHIP[variant] || CHIP.neutral}`}
+    className={`inline-flex items-center px-2 py-0.5 rounded-full text-caption-2 font-semibold ${CHIP[variant] || CHIP.neutral}`}
   >
     {children}
   </span>
 );
 
+const STATUS_TONE = {
+  above_target: {
+    chip: 'success',
+    icon: 'text-emerald-500',
+    value: 'text-emerald-600 dark:text-emerald-400'
+  },
+  on_target: { chip: 'info', icon: 'text-blue-500', value: 'text-blue-600 dark:text-blue-400' },
+  below_target: {
+    chip: 'warning',
+    icon: 'text-amber-500',
+    value: 'text-amber-600 dark:text-amber-400'
+  },
+  below: { chip: 'danger', icon: 'text-rose-500', value: 'text-rose-600 dark:text-rose-400' }
+};
+
 const KpiCard = ({ label, value, prev, diff, pctChg, status, icon: Icon }) => {
-  const statusColor =
-    status === 'above_target'
-      ? 'emerald'
-      : status === 'on_target'
-        ? 'blue'
-        : status === 'below_target'
-          ? 'amber'
-          : 'rose';
+  const tone = STATUS_TONE[status] || STATUS_TONE.below;
   return (
-    <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4 shadow-card hover:shadow-card transition-shadow">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase text-slate-400 tracking-wider">
+        <span className="text-caption-2 font-semibold uppercase text-tertiary-label tracking-wider">
           {label}
         </span>
-        {Icon && <Icon className={`w-4 h-4 text-${statusColor}-500`} />}
+        {Icon && <Icon className={`w-4 h-4 ${tone.icon}`} />}
       </div>
-      <p className={`text-xl font-bold text-${statusColor}-600 dark:text-${statusColor}-400`}>
-        {value}
-      </p>
-      <div className="flex items-center gap-2 mt-1.5 text-[10px]">
+      <p className={`text-title-2 font-semibold ${tone.value}`}>{value}</p>
+      <div className="flex items-center gap-2 mt-1.5 text-caption-2">
         {diff !== undefined && (
           <span
             className={`flex items-center gap-0.5 font-semibold ${diff >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
@@ -110,8 +116,8 @@ const KpiCard = ({ label, value, prev, diff, pctChg, status, icon: Icon }) => {
             {R(diff)} ({pctChg || '0%'})
           </span>
         )}
-        {prev !== undefined && <span className="text-slate-400">prev: {prev}</span>}
-        {status && <Badge variant={statusColor}>{status.replace('_', ' ')}</Badge>}
+        {prev !== undefined && <span className="text-tertiary-label">prev: {prev}</span>}
+        {status && <Badge variant={tone.chip}>{status.replace('_', ' ')}</Badge>}
       </div>
     </div>
   );
@@ -335,20 +341,20 @@ const ExecutiveComparison = () => {
   return (
     <div className="space-y-4">
       {/* ── Compact Filter Bar ─────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 flex-wrap rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 p-3 shadow-sm">
+      <div className="flex items-center gap-2 flex-wrap rounded-2xl bg-secondary-system-grouped-background border border-black/[0.06] dark:border-white/[0.08] p-3 shadow-card">
         <div className="flex items-center gap-1.5">
-          <Filter className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <Filter className="w-3.5 h-3.5 text-tertiary-label" />
+          <span className="text-caption-1 font-semibold uppercase tracking-[0.06em] text-tertiary-label">
             Compare
           </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex flex-col">
-            <label className="text-[9px] font-medium text-slate-400 mb-0.5">Entity</label>
+            <label className="text-caption-2 font-medium text-tertiary-label mb-0.5">Entity</label>
             <select
               value={mode}
               onChange={(e) => setMode(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill px-2.5 py-1.5 text-caption-1 font-medium text-secondary-label focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             >
               {MODES.map((m) => (
                 <option key={m.key} value={m.key}>
@@ -358,11 +364,11 @@ const ExecutiveComparison = () => {
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-[9px] font-medium text-slate-400 mb-0.5">Period</label>
+            <label className="text-caption-2 font-medium text-tertiary-label mb-0.5">Period</label>
             <select
               value={periodType}
               onChange={(e) => setPeriodType(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill px-2.5 py-1.5 text-caption-1 font-medium text-secondary-label focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             >
               <option value="week">Weekly</option>
               <option value="month">Monthly</option>
@@ -371,11 +377,13 @@ const ExecutiveComparison = () => {
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-[9px] font-medium text-slate-400 mb-0.5">Compare Last</label>
+            <label className="text-caption-2 font-medium text-tertiary-label mb-0.5">
+              Compare Last
+            </label>
             <select
               value={periodCount}
               onChange={(e) => setPeriodCount(Number(e.target.value))}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill px-2.5 py-1.5 text-caption-1 font-medium text-secondary-label focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             >
               {[2, 3, 4, 6, 12].map((n) => (
                 <option key={n} value={n}>
@@ -385,11 +393,11 @@ const ExecutiveComparison = () => {
             </select>
           </div>
           <div className="flex flex-col">
-            <label className="text-[9px] font-medium text-slate-400 mb-0.5">View</label>
+            <label className="text-caption-2 font-medium text-tertiary-label mb-0.5">View</label>
             <select
               value={view}
               onChange={(e) => setView(e.target.value)}
-              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/50 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-system-fill px-2.5 py-1.5 text-caption-1 font-medium text-secondary-label focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             >
               {VIEWS.map((v) => (
                 <option key={v.key} value={v.key}>
@@ -402,7 +410,7 @@ const ExecutiveComparison = () => {
         <div className="flex-1" />
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-caption-1 font-medium text-secondary-label hover:text-secondary-label dark:hover:text-tertiary-label border border-black/[0.06] dark:border-white/[0.08] hover:bg-system-fill/50 transition-colors"
         >
           <Printer className="w-3.5 h-3.5" /> Print
         </button>
@@ -417,7 +425,7 @@ const ExecutiveComparison = () => {
       {error && (
         <div className="rounded-2xl bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-700 p-6 text-center">
           <AlertCircle className="w-10 h-10 mx-auto mb-2 text-rose-400" />
-          <p className="text-sm font-medium text-rose-700 dark:text-rose-300">{error}</p>
+          <p className="text-footnote font-medium text-rose-700 dark:text-rose-300">{error}</p>
         </div>
       )}
 
@@ -488,35 +496,37 @@ const ExecutiveComparison = () => {
               </div>
 
               {/* Executive Comparison Table */}
-              <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-blue-500" />
                   Executive Comparison Table
                 </h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-caption-1">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-2 px-3 font-semibold text-slate-500">Metric</th>
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500">
+                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                        <th className="text-left py-2 px-3 font-semibold text-secondary-label">
+                          Metric
+                        </th>
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label">
                           Current
                         </th>
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label">
                           Previous
                         </th>
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label">
                           Average
                         </th>
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label">
                           Highest
                         </th>
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label">
                           Lowest
                         </th>
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label">
                           Difference
                         </th>
-                        <th className="text-center py-2 px-3 font-semibold text-slate-500">
+                        <th className="text-center py-2 px-3 font-semibold text-secondary-label">
                           Trend
                         </th>
                       </tr>
@@ -548,18 +558,18 @@ const ExecutiveComparison = () => {
                         return (
                           <tr
                             key={row.key}
-                            className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                            className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-fill/30"
                           >
-                            <td className="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">
+                            <td className="py-2.5 px-3 font-medium text-secondary-label">
                               {row.label}
                             </td>
-                            <td className="py-2.5 px-3 text-right font-bold text-slate-900 dark:text-white">
+                            <td className="py-2.5 px-3 text-right font-semibold text-label">
                               {row.fmt(current)}
                             </td>
-                            <td className="py-2.5 px-3 text-right text-slate-500">
+                            <td className="py-2.5 px-3 text-right text-secondary-label">
                               {row.fmt(previous)}
                             </td>
-                            <td className="py-2.5 px-3 text-right text-slate-600 dark:text-slate-400">
+                            <td className="py-2.5 px-3 text-right text-secondary-label">
                               {row.fmt(Math.round(avg))}
                             </td>
                             <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">
@@ -586,7 +596,7 @@ const ExecutiveComparison = () => {
                                   )}
                                 </span>
                               ) : (
-                                <Minus className="w-3.5 h-3.5 text-slate-300 mx-auto" />
+                                <Minus className="w-3.5 h-3.5 text-tertiary-label mx-auto" />
                               )}
                             </td>
                           </tr>
@@ -599,8 +609,8 @@ const ExecutiveComparison = () => {
 
               {/* Section / Leader / Department / Member Tables */}
               {mode !== 'overall' && (
-                <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                  <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-blue-500" />
                     {mode === 'sections'
                       ? 'Section'
@@ -613,23 +623,25 @@ const ExecutiveComparison = () => {
                   </h3>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="relative flex-1 max-w-xs">
-                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-tertiary-label" />
                       <input
                         type="text"
                         placeholder="Search..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs"
+                        className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background text-caption-1"
                       />
                     </div>
                   </div>
                   <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-white dark:bg-slate-800">
-                        <tr className="border-b border-slate-200 dark:border-slate-700">
-                          <th className="text-left py-2 px-2 font-semibold text-slate-500">#</th>
+                    <table className="w-full text-caption-1">
+                      <thead className="sticky top-0 bg-secondary-system-grouped-background">
+                        <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                          <th className="text-left py-2 px-2 font-semibold text-secondary-label">
+                            #
+                          </th>
                           <th
-                            className="text-left py-2 px-2 font-semibold text-slate-500 cursor-pointer"
+                            className="text-left py-2 px-2 font-semibold text-secondary-label cursor-pointer"
                             onClick={() => activeSort('name')}
                           >
                             Name
@@ -637,18 +649,18 @@ const ExecutiveComparison = () => {
                           {dataPeriods.map((p) => (
                             <th
                               key={p.id}
-                              className="text-right py-2 px-2 font-semibold text-slate-500"
+                              className="text-right py-2 px-2 font-semibold text-secondary-label"
                             >
                               {p.label}
                             </th>
                           ))}
                           <th
-                            className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer"
+                            className="text-right py-2 px-2 font-semibold text-secondary-label cursor-pointer"
                             onClick={() => activeSort('attendance_rate')}
                           >
                             Avg Rate
                           </th>
-                          <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                          <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                             Status
                           </th>
                         </tr>
@@ -713,21 +725,21 @@ const ExecutiveComparison = () => {
                             return (
                               <tr
                                 key={entity.id || i}
-                                className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                                className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-fill/30"
                               >
-                                <td className="py-2 px-2 text-slate-400">{i + 1}</td>
-                                <td className="py-2 px-2 font-medium text-slate-700 dark:text-slate-300">
+                                <td className="py-2 px-2 text-tertiary-label">{i + 1}</td>
+                                <td className="py-2 px-2 font-medium text-secondary-label">
                                   {name}
                                 </td>
                                 {rates.map((r, j) => (
                                   <td
                                     key={j}
-                                    className="py-2 px-2 text-right font-semibold text-slate-900 dark:text-white"
+                                    className="py-2 px-2 text-right font-semibold text-label"
                                   >
                                     {pct(r)}
                                   </td>
                                 ))}
-                                <td className="py-2 px-2 text-right font-bold text-indigo-600">
+                                <td className="py-2 px-2 text-right font-semibold text-primary-700">
                                   {pct(avgRate)}
                                 </td>
                                 <td className="py-2 px-2 text-right">
@@ -752,7 +764,7 @@ const ExecutiveComparison = () => {
                                 : 'memberEngagement'
                         ]?.length === 0 && (
                           <tr>
-                            <td colSpan={10} className="py-8 text-center text-slate-400">
+                            <td colSpan={10} className="py-8 text-center text-tertiary-label">
                               No data available for this period
                             </td>
                           </tr>
@@ -768,33 +780,33 @@ const ExecutiveComparison = () => {
           {/* ── MATRIX VIEW ──────────────────────────────────────────────── */}
           {view === 'matrix' && (
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-indigo-500" />
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-primary-600" />
                   Full Comparison Matrix — {dataPeriods.length} Periods
                 </h3>
                 <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                  <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-2 px-2 font-semibold text-slate-500 sticky left-0 bg-white dark:bg-slate-800 z-20">
+                  <table className="w-full text-caption-1">
+                    <thead className="sticky top-0 bg-secondary-system-grouped-background z-10">
+                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                        <th className="text-left py-2 px-2 font-semibold text-secondary-label sticky left-0 bg-secondary-system-grouped-background z-20">
                           Metric
                         </th>
                         {dataPeriods.map((p) => (
                           <th
                             key={p.id}
-                            className="text-right py-2 px-3 font-semibold text-slate-500 min-w-[90px]"
+                            className="text-right py-2 px-3 font-semibold text-secondary-label min-w-[90px]"
                           >
                             {p.label}
                           </th>
                         ))}
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500 min-w-[70px]">
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label min-w-[70px]">
                           Avg
                         </th>
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500 min-w-[70px]">
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label min-w-[70px]">
                           Best
                         </th>
-                        <th className="text-right py-2 px-3 font-semibold text-slate-500 min-w-[70px]">
+                        <th className="text-right py-2 px-3 font-semibold text-secondary-label min-w-[70px]">
                           Worst
                         </th>
                       </tr>
@@ -828,9 +840,9 @@ const ExecutiveComparison = () => {
                         return (
                           <tr
                             key={row.key}
-                            className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                            className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-fill/30"
                           >
-                            <td className="py-1.5 px-2 font-medium text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-800">
+                            <td className="py-1.5 px-2 font-medium text-secondary-label sticky left-0 bg-secondary-system-grouped-background">
                               {row.label}
                             </td>
                             {vals.map((v, i) => (
@@ -841,19 +853,19 @@ const ExecutiveComparison = () => {
                                     ? 'text-emerald-600'
                                     : Number(v) === worst && nums.some((n) => n !== worst)
                                       ? 'text-rose-600'
-                                      : 'text-slate-900 dark:text-white'
+                                      : 'text-label'
                                 }`}
                               >
                                 {row.fmt(v)}
                               </td>
                             ))}
-                            <td className="py-1.5 px-3 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                            <td className="py-1.5 px-3 text-right font-semibold text-primary-700 dark:text-primary-300">
                               {row.fmt(avg)}
                             </td>
-                            <td className="py-1.5 px-3 text-right font-bold text-emerald-600">
+                            <td className="py-1.5 px-3 text-right font-semibold text-emerald-600">
                               {row.fmt(best)}
                             </td>
-                            <td className="py-1.5 px-3 text-right font-bold text-rose-600">
+                            <td className="py-1.5 px-3 text-right font-semibold text-rose-600">
                               {row.fmt(worst)}
                             </td>
                           </tr>
@@ -913,8 +925,8 @@ const ExecutiveComparison = () => {
                   };
                   const c = colors[type];
                   return (
-                    <div key={type} className={`rounded-2xl border ${c.bg} p-4 shadow-sm`}>
-                      <h4 className="text-xs font-semibold uppercase text-slate-500 mb-3 flex items-center gap-1.5">
+                    <div key={type} className={`rounded-2xl border ${c.bg} p-4 shadow-card`}>
+                      <h4 className="text-caption-1 font-semibold uppercase text-secondary-label mb-3 flex items-center gap-1.5">
                         {type === 'best' ? (
                           <Award className={`w-3.5 h-3.5 ${c.icon}`} />
                         ) : type === 'worst' ? (
@@ -928,11 +940,11 @@ const ExecutiveComparison = () => {
                       </h4>
                       <ol className="space-y-1.5">
                         {top.map((e, i) => (
-                          <li key={i} className="flex items-center justify-between text-xs">
-                            <span className="font-medium text-slate-700 dark:text-slate-300">
+                          <li key={i} className="flex items-center justify-between text-caption-1">
+                            <span className="font-medium text-secondary-label">
                               {e.name || e.leader_name}
                             </span>
-                            <span className="font-bold text-slate-900 dark:text-white ml-2">
+                            <span className="font-semibold text-label ml-2">
                               {pct(e.attendance_rate)}
                             </span>
                           </li>
@@ -944,9 +956,9 @@ const ExecutiveComparison = () => {
               </div>
 
               {/* Full Entity Rankings Table */}
-              <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-indigo-500" />
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-primary-600" />
                   {mode === 'sections'
                     ? 'Section'
                     : mode === 'leaders'
@@ -957,50 +969,56 @@ const ExecutiveComparison = () => {
                   Rankings
                 </h3>
                 <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-                  <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-white dark:bg-slate-800">
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-2 px-2 font-semibold text-slate-500">Rank</th>
-                        <th className="text-left py-2 px-2 font-semibold text-slate-500">Name</th>
+                  <table className="w-full text-caption-1">
+                    <thead className="sticky top-0 bg-secondary-system-grouped-background">
+                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                        <th className="text-left py-2 px-2 font-semibold text-secondary-label">
+                          Rank
+                        </th>
+                        <th className="text-left py-2 px-2 font-semibold text-secondary-label">
+                          Name
+                        </th>
                         {mode === 'members' ? (
-                          <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                          <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                             P / A / E
                           </th>
                         ) : (
                           <th
-                            className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer"
+                            className="text-right py-2 px-2 font-semibold text-secondary-label cursor-pointer"
                             onClick={() => activeSort('attendance_rate')}
                           >
                             Rate
                           </th>
                         )}
                         <th
-                          className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer"
+                          className="text-right py-2 px-2 font-semibold text-secondary-label cursor-pointer"
                           onClick={() => activeSort('members')}
                         >
                           Members
                         </th>
                         {mode !== 'members' && (
                           <th
-                            className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer"
+                            className="text-right py-2 px-2 font-semibold text-secondary-label cursor-pointer"
                             onClick={() => activeSort('present')}
                           >
                             Present
                           </th>
                         )}
                         <th
-                          className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer"
+                          className="text-right py-2 px-2 font-semibold text-secondary-label cursor-pointer"
                           onClick={() => activeSort('submission_rate')}
                         >
                           Submit %
                         </th>
                         <th
-                          className="text-right py-2 px-2 font-semibold text-slate-500 cursor-pointer"
+                          className="text-right py-2 px-2 font-semibold text-secondary-label cursor-pointer"
                           onClick={() => activeSort('follow_up_completion')}
                         >
                           Follow-up
                         </th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500">Trend</th>
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
+                          Trend
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1031,7 +1049,7 @@ const ExecutiveComparison = () => {
                           return (
                             <tr
                               key={entity.id || i}
-                              className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer"
+                              className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-fill/30 cursor-pointer"
                               onClick={() => {
                                 isSection &&
                                   setExpandedSection(
@@ -1041,56 +1059,56 @@ const ExecutiveComparison = () => {
                             >
                               <td className="py-2 px-2">
                                 <span
-                                  className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold ${
+                                  className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-caption-2 font-semibold ${
                                     i === 0
                                       ? 'bg-amber-100 text-amber-700'
                                       : i === 1
-                                        ? 'bg-slate-100 text-slate-600'
+                                        ? 'bg-system-fill text-secondary-label'
                                         : i === 2
                                           ? 'bg-orange-100 text-orange-700'
-                                          : 'bg-slate-50 text-slate-400'
+                                          : 'bg-system-fill text-tertiary-label'
                                   }`}
                                 >
                                   {i + 1}
                                 </span>
                               </td>
-                              <td className="py-2 px-2 font-medium text-slate-700 dark:text-slate-300">
+                              <td className="py-2 px-2 font-medium text-secondary-label">
                                 {name}
                                 {isSection && (
-                                  <span className="text-[10px] text-slate-400 ml-1">
+                                  <span className="text-caption-2 text-tertiary-label ml-1">
                                     ({entity.members || 0} members)
                                   </span>
                                 )}
                                 {isLeader && (
-                                  <span className="text-[10px] text-slate-400 ml-1">
+                                  <span className="text-caption-2 text-tertiary-label ml-1">
                                     ({entity.section_name})
                                   </span>
                                 )}
                               </td>
                               {mode === 'members' ? (
                                 <td className="py-2 px-2 text-right whitespace-nowrap">
-                                  <span className="text-emerald-600 font-bold">
+                                  <span className="text-emerald-600 font-semibold">
                                     {entity.present_count || 0}
                                   </span>
-                                  <span className="text-slate-400 mx-0.5">/</span>
-                                  <span className="text-rose-600 font-bold">
+                                  <span className="text-tertiary-label mx-0.5">/</span>
+                                  <span className="text-rose-600 font-semibold">
                                     {entity.absent_count || 0}
                                   </span>
-                                  <span className="text-slate-400 mx-0.5">/</span>
-                                  <span className="text-amber-600 font-bold">
+                                  <span className="text-tertiary-label mx-0.5">/</span>
+                                  <span className="text-amber-600 font-semibold">
                                     {entity.excused_count || 0}
                                   </span>
                                 </td>
                               ) : (
-                                <td className="py-2 px-2 text-right font-bold text-indigo-600">
+                                <td className="py-2 px-2 text-right font-semibold text-primary-700">
                                   {pct(entity.attendance_rate)}
                                 </td>
                               )}
-                              <td className="py-2 px-2 text-right text-slate-900 dark:text-white">
+                              <td className="py-2 px-2 text-right text-label">
                                 {entity.members || entity.assigned_members || '-'}
                               </td>
                               {mode !== 'members' && (
-                                <td className="py-2 px-2 text-right text-slate-900 dark:text-white">
+                                <td className="py-2 px-2 text-right text-label">
                                   {entity.present || '-'}
                                 </td>
                               )}
@@ -1148,24 +1166,24 @@ const ExecutiveComparison = () => {
           )}
 
           {view === 'rankings' && mode === 'members' && (
-            <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-              <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-indigo-500" />
+            <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+              <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-primary-600" />
                 Weekly Member Attendance Matrix
-                <span className="text-[10px] font-normal text-slate-400 ml-1">
+                <span className="text-caption-2 font-normal text-tertiary-label ml-1">
                   (per week: present / absent / excused)
                 </span>
               </h3>
               {memberMatrixLoading ? (
-                <div className="flex items-center justify-center py-8 text-slate-400 text-xs">
+                <div className="flex items-center justify-center py-8 text-tertiary-label text-caption-1">
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   Loading...
                 </div>
               ) : memberMatrix && memberMatrix.length > 0 ? (
                 <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                   <div className="min-w-max">
-                    <div className="flex bg-slate-50 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase text-slate-500">
-                      <div className="sticky left-0 z-10 bg-slate-50 dark:bg-slate-900/40 w-44 shrink-0 px-3 py-2">
+                    <div className="flex bg-system-grouped-background/40 border-b border-black/[0.06] dark:border-white/[0.08] text-caption-2 font-semibold uppercase text-secondary-label">
+                      <div className="sticky left-0 z-10 bg-system-grouped-background/40 w-44 shrink-0 px-3 py-2">
                         Member
                       </div>
                       <div className="w-28 shrink-0 px-3 py-2">Section</div>
@@ -1182,36 +1200,38 @@ const ExecutiveComparison = () => {
                       .map((m) => (
                         <div
                           key={m.member_id}
-                          className="flex border-b border-slate-100 dark:border-slate-700/50 text-xs hover:bg-slate-50/50 dark:hover:bg-slate-900/30"
+                          className="flex border-b border-separator/60 dark:border-white/[0.08] text-caption-1 hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03]"
                         >
-                          <div className="sticky left-0 z-10 bg-white dark:bg-slate-800 w-44 shrink-0 px-3 py-2.5 font-semibold text-slate-900 dark:text-white truncate">
+                          <div className="sticky left-0 z-10 bg-secondary-system-grouped-background w-44 shrink-0 px-3 py-2.5 font-semibold text-label truncate">
                             {m.full_name}
                           </div>
-                          <div className="w-28 shrink-0 px-3 py-2.5 text-slate-500 truncate">
+                          <div className="w-28 shrink-0 px-3 py-2.5 text-secondary-label truncate">
                             {m.section_name || '—'}
                           </div>
                           {asArray(m.weekly).map((status, wi) => (
                             <div key={wi} className="w-20 shrink-0 px-2 py-2 text-center">
                               {status === 'present' && (
-                                <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-200 px-2 py-1 rounded-full text-[10px] font-semibold">
+                                <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-200 px-2 py-1 rounded-full text-caption-2 font-semibold">
                                   <CheckCircle2 className="w-3 h-3" />
                                   Present
                                 </span>
                               )}
                               {status === 'absent' && (
-                                <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-200 px-2 py-1 rounded-full text-[10px] font-semibold">
+                                <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 dark:bg-rose-900/30 dark:text-rose-200 px-2 py-1 rounded-full text-caption-2 font-semibold">
                                   <XCircle className="w-3 h-3" />
                                   Absent
                                 </span>
                               )}
                               {status === 'excused' && (
-                                <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-200 px-2 py-1 rounded-full text-[10px] font-semibold">
+                                <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 dark:bg-amber-900/30 dark:text-amber-200 px-2 py-1 rounded-full text-caption-2 font-semibold">
                                   <HelpCircle className="w-3 h-3" />
                                   Excused
                                 </span>
                               )}
                               {!status && (
-                                <span className="text-slate-300 dark:text-slate-600">—</span>
+                                <span className="text-tertiary-label dark:text-secondary-label">
+                                  —
+                                </span>
                               )}
                             </div>
                           ))}
@@ -1220,7 +1240,7 @@ const ExecutiveComparison = () => {
                   </div>
                 </div>
               ) : (
-                <div className="py-8 text-center text-slate-400 text-xs">
+                <div className="py-8 text-center text-tertiary-label text-caption-1">
                   No weekly attendance data available.
                 </div>
               )}
@@ -1231,17 +1251,17 @@ const ExecutiveComparison = () => {
           {view === 'intelligence' && (
             <div className="space-y-6">
               {/* Trend Analysis */}
-              <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-indigo-500" />
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary-600" />
                   Attendance Trend Intelligence
                 </h3>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">
+                  <div className="bg-system-fill rounded-xl p-3">
+                    <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                       Classification
                     </span>
-                    <p className="text-lg font-bold mt-1 flex items-center gap-2">
+                    <p className="text-headline font-semibold mt-1 flex items-center gap-2">
                       {trends?.classification === 'growing' ? (
                         <>
                           <TrendingUp className="w-5 h-5 text-emerald-500" />
@@ -1258,34 +1278,34 @@ const ExecutiveComparison = () => {
                           <span className="text-blue-600">Stable</span>
                         </>
                       ) : (
-                        <span className="text-slate-600">
+                        <span className="text-secondary-label">
                           {trends?.classification || 'Analyzing...'}
                         </span>
                       )}
                     </p>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">
+                  <div className="bg-system-fill rounded-xl p-3">
+                    <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                       Direction
                     </span>
-                    <p className="text-lg font-bold mt-1 text-slate-900 dark:text-white">
+                    <p className="text-headline font-semibold mt-1 text-label">
                       {R(trends?.direction || 0)}%
                     </p>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">
+                  <div className="bg-system-fill rounded-xl p-3">
+                    <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                       Avg Rate
                     </span>
-                    <p className="text-lg font-bold mt-1 text-indigo-600">
+                    <p className="text-headline font-semibold mt-1 text-primary-700">
                       {pct(trends?.average_rate)}
                     </p>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3">
-                    <span className="text-[10px] font-semibold uppercase text-slate-400">
+                  <div className="bg-system-fill rounded-xl p-3">
+                    <span className="text-caption-2 font-semibold uppercase text-tertiary-label">
                       Momentum
                     </span>
                     <p
-                      className={`text-lg font-bold mt-1 ${(trends?.recent_momentum || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                      className={`text-headline font-semibold mt-1 ${(trends?.recent_momentum || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
                     >
                       {trends?.recent_momentum > 0 ? '+' : ''}
                       {R(trends?.recent_momentum || 0)}%
@@ -1295,7 +1315,7 @@ const ExecutiveComparison = () => {
 
                 {asArray(trends?.anomalies).length > 0 && (
                   <div className="mb-4">
-                    <h4 className="text-xs font-semibold text-slate-500 mb-2 flex items-center gap-1.5">
+                    <h4 className="text-caption-1 font-semibold text-secondary-label mb-2 flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                       Anomalies Detected
                     </h4>
@@ -1303,16 +1323,16 @@ const ExecutiveComparison = () => {
                       {asArray(trends?.anomalies).map((a, i) => (
                         <div
                           key={i}
-                          className="flex items-center gap-3 text-xs bg-amber-50 dark:bg-amber-900/10 rounded-lg px-3 py-2"
+                          className="flex items-center gap-3 text-caption-1 bg-amber-50 dark:bg-amber-900/10 rounded-lg px-3 py-2"
                         >
                           <Badge variant={a.type === 'positive' ? 'success' : 'danger'}>
                             {a.deviation > 0 ? '+' : ''}
                             {a.deviation}%
                           </Badge>
-                          <span className="text-slate-600 dark:text-slate-400">
+                          <span className="text-secondary-label">
                             {a.period}: {pct(a.rate)}
                           </span>
-                          <span className="text-slate-400 ml-auto">
+                          <span className="text-tertiary-label ml-auto">
                             {a.type === 'positive' ? 'Above average' : 'Below average'}
                           </span>
                         </div>
@@ -1324,14 +1344,12 @@ const ExecutiveComparison = () => {
 
               {/* Root Cause Analysis */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                  <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
                     <Brain className="w-4 h-4 text-violet-500" />
                     Root Cause Analysis
                   </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                    {rootCauses?.summary}
-                  </p>
+                  <p className="text-footnote text-secondary-label mb-3">{rootCauses?.summary}</p>
                   {asArray(rootCauses?.factors).length > 0 && (
                     <div className="space-y-2">
                       {asArray(rootCauses?.factors)
@@ -1339,24 +1357,24 @@ const ExecutiveComparison = () => {
                         .map((f, i) => (
                           <div
                             key={i}
-                            className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2"
+                            className="flex items-center justify-between text-caption-1 bg-system-fill/30 rounded-lg px-3 py-2"
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <Badge variant={f.type === 'section' ? 'info' : 'violet'}>
                                 {f.type}
                               </Badge>
-                              <span className="font-medium text-slate-700 dark:text-slate-300 truncate">
+                              <span className="font-medium text-secondary-label truncate">
                                 {f.name}
                               </span>
                             </div>
                             <div className="flex items-center gap-3">
                               <span
-                                className={`font-bold ${f.direction === 'positive' ? 'text-emerald-600' : 'text-rose-600'}`}
+                                className={`font-semibold ${f.direction === 'positive' ? 'text-emerald-600' : 'text-rose-600'}`}
                               >
                                 {f.impact > 0 ? '+' : ''}
                                 {f.impact}%
                               </span>
-                              <span className="text-slate-400">
+                              <span className="text-tertiary-label">
                                 ({Math.abs(f.contribution)}% contrib.)
                               </span>
                             </div>
@@ -1367,44 +1385,42 @@ const ExecutiveComparison = () => {
                 </div>
 
                 {/* Attendance Movement */}
-                <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                  <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
                     <Activity className="w-4 h-4 text-emerald-500" />
                     Attendance Movement Analysis
                   </h3>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2">
-                      <span className="text-slate-600 dark:text-slate-400">New Members</span>
-                      <span className="font-bold text-emerald-600">
+                    <div className="flex items-center justify-between text-caption-1 bg-system-fill/30 rounded-lg px-3 py-2">
+                      <span className="text-secondary-label">New Members</span>
+                      <span className="font-semibold text-emerald-600">
                         {latestOverall.new_members || 0}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2">
-                      <span className="text-slate-600 dark:text-slate-400">Returning Members</span>
-                      <span className="font-bold text-blue-600">
+                    <div className="flex items-center justify-between text-caption-1 bg-system-fill/30 rounded-lg px-3 py-2">
+                      <span className="text-secondary-label">Returning Members</span>
+                      <span className="font-semibold text-blue-600">
                         {latestOverall.returning_members ||
                           latestPeriod?.movement?.returning_members ||
                           0}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2">
-                      <span className="text-slate-600 dark:text-slate-400">Visitors Converted</span>
-                      <span className="font-bold text-indigo-600">
+                    <div className="flex items-center justify-between text-caption-1 bg-system-fill/30 rounded-lg px-3 py-2">
+                      <span className="text-secondary-label">Visitors Converted</span>
+                      <span className="font-semibold text-primary-700">
                         {latestPeriod?.movement?.visitors_converted || 0}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2">
-                      <span className="text-slate-600 dark:text-slate-400">Members Lost</span>
-                      <span className="font-bold text-rose-600">
+                    <div className="flex items-center justify-between text-caption-1 bg-system-fill/30 rounded-lg px-3 py-2">
+                      <span className="text-secondary-label">Members Lost</span>
+                      <span className="font-semibold text-rose-600">
                         {latestOverall.members_lost || latestPeriod?.movement?.members_lost || 0}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-700/30 rounded-lg px-3 py-2 border-t border-slate-200 dark:border-slate-700 mt-2 pt-2">
-                      <span className="font-semibold text-slate-700 dark:text-slate-300">
-                        Net Growth
-                      </span>
+                    <div className="flex items-center justify-between text-caption-1 bg-system-fill/30 rounded-lg px-3 py-2 border-t border-black/[0.06] dark:border-white/[0.08] mt-2 pt-2">
+                      <span className="font-semibold text-secondary-label">Net Growth</span>
                       <span
-                        className={`font-bold text-lg ${(latestOverall.net_growth || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                        className={`font-semibold text-lg ${(latestOverall.net_growth || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}
                       >
                         {(latestOverall.net_growth || 0) >= 0 ? '+' : ''}
                         {latestOverall.net_growth || 0}
@@ -1415,33 +1431,37 @@ const ExecutiveComparison = () => {
               </div>
 
               {/* Period-over-Period Performance Table */}
-              <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-slate-500" />
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-secondary-label" />
                   Period Performance History
                 </h3>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
+                  <table className="w-full text-caption-1">
                     <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th className="text-left py-2 px-2 font-semibold text-slate-500">Period</th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                        <th className="text-left py-2 px-2 font-semibold text-secondary-label">
+                          Period
+                        </th>
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                           Present
                         </th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500">Rate</th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
+                          Rate
+                        </th>
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                           New Members
                         </th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                           Retention
                         </th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                           Engagement
                         </th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                           Growth
                         </th>
-                        <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                        <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                           Status
                         </th>
                       </tr>
@@ -1472,29 +1492,27 @@ const ExecutiveComparison = () => {
                         return (
                           <tr
                             key={p.id}
-                            className={`border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30 ${
+                            className={`border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-fill/30 ${
                               isBest && i === dataPeriods.length - 1
                                 ? 'bg-emerald-50/50 dark:bg-emerald-900/5'
                                 : ''
                             }`}
                           >
-                            <td className="py-2 px-2 font-medium text-slate-700 dark:text-slate-300">
+                            <td className="py-2 px-2 font-medium text-secondary-label">
                               {p.label}
                             </td>
-                            <td className="py-2 px-2 text-right text-slate-900 dark:text-white">
-                              {num(o.present)}
-                            </td>
-                            <td className="py-2 px-2 text-right font-bold text-indigo-600">
+                            <td className="py-2 px-2 text-right text-label">{num(o.present)}</td>
+                            <td className="py-2 px-2 text-right font-semibold text-primary-700">
                               {pct(o.attendance_rate)}
                             </td>
-                            <td className="py-2 px-2 text-right text-slate-900 dark:text-white">
+                            <td className="py-2 px-2 text-right text-label">
                               {num(o.new_members)}
                             </td>
                             <td className="py-2 px-2 text-right">{pct(o.retention_rate)}</td>
                             <td className="py-2 px-2 text-right">{pct(o.engagement_score)}</td>
                             <td className="py-2 px-2 text-right">
                               <span
-                                className={`font-bold ${rateChange > 0 ? 'text-emerald-600' : rateChange < 0 ? 'text-rose-600' : 'text-slate-400'}`}
+                                className={`font-semibold ${rateChange > 0 ? 'text-emerald-600' : rateChange < 0 ? 'text-rose-600' : 'text-tertiary-label'}`}
                               >
                                 {rateChange > 0 ? '+' : ''}
                                 {R(rateChange)}%
@@ -1526,15 +1544,15 @@ const ExecutiveComparison = () => {
           {/* ── ACTIONS VIEW ─────────────────────────────────────────────── */}
           {view === 'actions' && (
             <div className="space-y-6">
-              <div className="rounded-2xl border border-slate-200/70 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-5 shadow-card">
+                <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
                   <Target className="w-4 h-4 text-rose-500" />
                   Priority Action Center
                 </h3>
                 {actions?.length === 0 ? (
                   <div className="text-center py-8">
                     <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-emerald-400" />
-                    <p className="text-sm text-slate-500">
+                    <p className="text-footnote text-secondary-label">
                       No critical actions required at this time.
                     </p>
                   </div>
@@ -1584,17 +1602,17 @@ const ExecutiveComparison = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                  <span className="text-caption-1 font-semibold text-label">
                                     {action.title}
                                   </span>
                                   <Badge variant={pc.badge}>{action.priority}</Badge>
                                 </div>
-                                <p className="text-[11px] text-slate-500 mb-2">
+                                <p className="text-caption-1 text-secondary-label mb-2">
                                   {action.description}
                                 </p>
-                                <div className="flex items-center gap-3 text-[10px]">
+                                <div className="flex items-center gap-3 text-caption-2">
                                   {asArray(action.affected).length > 0 && (
-                                    <span className="text-slate-400">
+                                    <span className="text-tertiary-label">
                                       <Users className="w-3 h-3 inline mr-1" />
                                       {asArray(action.affected).join(', ')}
                                     </span>
@@ -1617,28 +1635,28 @@ const ExecutiveComparison = () => {
               {asArray(latestPeriod?.memberEngagement).filter(
                 (m) => m.risk_level === 'high' || m.risk_level === 'critical'
               ).length > 0 && (
-                <div className="rounded-2xl border border-rose-200 dark:border-rose-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
-                  <h3 className="font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <div className="rounded-2xl border border-rose-200 dark:border-rose-700 bg-secondary-system-grouped-background p-5 shadow-card">
+                  <h3 className="font-semibold text-label mb-4 flex items-center gap-2">
                     <UserX className="w-4 h-4 text-rose-500" />
                     Members at Risk — Immediate Attention
                   </h3>
                   <div className="overflow-x-auto max-h-[300px] overflow-y-auto">
-                    <table className="w-full text-xs">
-                      <thead className="sticky top-0 bg-white dark:bg-slate-800">
-                        <tr className="border-b border-slate-200 dark:border-slate-700">
-                          <th className="text-left py-2 px-2 font-semibold text-slate-500">
+                    <table className="w-full text-caption-1">
+                      <thead className="sticky top-0 bg-secondary-system-grouped-background">
+                        <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                          <th className="text-left py-2 px-2 font-semibold text-secondary-label">
                             Member
                           </th>
-                          <th className="text-left py-2 px-2 font-semibold text-slate-500">
+                          <th className="text-left py-2 px-2 font-semibold text-secondary-label">
                             Section
                           </th>
-                          <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                          <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                             Rate
                           </th>
-                          <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                          <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                             Last Attendance
                           </th>
-                          <th className="text-right py-2 px-2 font-semibold text-slate-500">
+                          <th className="text-right py-2 px-2 font-semibold text-secondary-label">
                             Risk
                           </th>
                         </tr>
@@ -1653,16 +1671,16 @@ const ExecutiveComparison = () => {
                           .map((m) => (
                             <tr
                               key={m.id}
-                              className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/30"
+                              className="border-b border-separator/60 dark:border-white/[0.08] hover:bg-system-fill/30"
                             >
-                              <td className="py-2 px-2 font-medium text-slate-700 dark:text-slate-300">
+                              <td className="py-2 px-2 font-medium text-secondary-label">
                                 {m.full_name}
                               </td>
-                              <td className="py-2 px-2 text-slate-500">{m.section_name}</td>
+                              <td className="py-2 px-2 text-secondary-label">{m.section_name}</td>
                               <td className="py-2 px-2 text-right font-semibold">
                                 {pct(m.attendance_rate)}
                               </td>
-                              <td className="py-2 px-2 text-right text-slate-500">
+                              <td className="py-2 px-2 text-right text-secondary-label">
                                 {m.last_attendance === 'never' ? 'Never' : fdate(m.last_attendance)}
                               </td>
                               <td className="py-2 px-2 text-right">
