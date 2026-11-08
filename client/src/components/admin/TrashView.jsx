@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Clock,
   Phone,
-  Award
+  Award,
+  FileDown
 } from 'lucide-react';
 
 const asArray = (v) => (Array.isArray(v) ? v : []);
@@ -119,6 +120,146 @@ const TrashView = () => {
         .startsWith('archived')
   ).length;
 
+  const handleDownloadPdf = async () => {
+    if (members.length === 0) return;
+    setActionLoading('export');
+    try {
+      const [{ default: jsPDF }, autoTableModule] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable')
+      ]);
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 34;
+      const isArchived = (member) =>
+        String(member.status || '')
+          .toLowerCase()
+          .startsWith('archived');
+      const archivedCount = members.filter(isArchived).length;
+      const eligibleForReviewCount = members.filter(
+        (member) => R(member.days_inactive) >= 180 && !isArchived(member)
+      ).length;
+      const generatedAt = new Date();
+      const dateLabel = generatedAt.toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+
+      doc.setProperties({
+        title: 'Deleted Member Records',
+        subject: 'Shekina Church deleted and archived member records',
+        author: 'Shekina Church Operations'
+      });
+      doc.setFillColor(15, 28, 48);
+      doc.rect(0, 0, pageWidth, 88, 'F');
+      doc.setFillColor(20, 184, 166);
+      doc.rect(0, 85, pageWidth, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(19);
+      doc.text('Deleted Member Records', margin, 35);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(203, 213, 225);
+      doc.text(`Shekina Church · Complete Trash snapshot · Generated ${dateLabel}`, margin, 54);
+      doc.text(
+        `${members.length} records  ·  ${archivedCount} archived  ·  ${eligibleForReviewCount} eligible for deletion review`,
+        margin,
+        70
+      );
+
+      const rows = members.map((member) => {
+        const archived = isArchived(member);
+        const originalStatus = String(member.status || '')
+          .replace(/^archived\s*:\s*/i, '')
+          .trim();
+        const contact = [member.phone, member.email].filter(Boolean).join('\n') || '—';
+        const sectionAndLeader = [
+          member.section_name || 'Unassigned',
+          member.leader_name ? `Leader: ${member.leader_name}` : ''
+        ]
+          .filter(Boolean)
+          .join('\n');
+        return [
+          `${member.full_name || 'Unknown'}\n${member.membership_id || 'No member ID'}`,
+          sectionAndLeader,
+          contact,
+          archived ? `Archived${originalStatus ? ` · ${originalStatus}` : ''}` : 'Deleted',
+          fdatetime(member.soft_deleted_at),
+          `${R(member.days_inactive)} days`,
+          String(R(member.attendance_count))
+        ];
+      });
+
+      autoTableModule.default(doc, {
+        startY: 103,
+        margin: { top: 28, left: margin, right: margin, bottom: 32 },
+        head: [
+          [
+            'Member / ID',
+            'Section / Leader',
+            'Contact',
+            'Record type',
+            'Deleted on',
+            'In Trash',
+            'Attendance'
+          ]
+        ],
+        body: rows,
+        theme: 'grid',
+        styles: {
+          font: 'helvetica',
+          fontSize: 8,
+          cellPadding: 6,
+          textColor: [45, 55, 72],
+          lineColor: [226, 232, 240],
+          lineWidth: 0.4,
+          overflow: 'linebreak',
+          valign: 'middle'
+        },
+        headStyles: {
+          fillColor: [30, 48, 72],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: { fillColor: [246, 249, 252] },
+        columnStyles: {
+          0: { cellWidth: 132, fontStyle: 'bold' },
+          1: { cellWidth: 112 },
+          2: { cellWidth: 126 },
+          3: { cellWidth: 88 },
+          4: { cellWidth: 84 },
+          5: { cellWidth: 66, halign: 'right' },
+          6: { cellWidth: 68, halign: 'right' }
+        },
+        didDrawPage: () => {
+          const pageHeight = doc.internal.pageSize.getHeight();
+          doc.setDrawColor(226, 232, 240);
+          doc.line(margin, pageHeight - 24, pageWidth - margin, pageHeight - 24);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(120, 130, 145);
+          doc.text('Confidential membership record', margin, pageHeight - 11);
+          doc.text(
+            `Page ${doc.internal.getCurrentPageInfo().pageNumber}`,
+            pageWidth - margin,
+            pageHeight - 11,
+            { align: 'right' }
+          );
+        }
+      });
+
+      doc.save(`deleted_member_records_${generatedAt.toISOString().slice(0, 10)}.pdf`);
+      showMessage('success', `PDF downloaded with ${members.length} deleted member records`);
+    } catch (error) {
+      console.error('Deleted member PDF export failed:', error);
+      showMessage('error', 'Failed to create the deleted member PDF');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Message */}
@@ -141,20 +282,37 @@ const TrashView = () => {
             restored and are excluded from permanent deletion.
           </p>
         </div>
-        {removableMemberCount > 0 && (
-          <button
-            onClick={() => setConfirmEmpty(true)}
-            disabled={actionLoading === 'empty'}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption-1 font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-800 dark:hover:bg-rose-900/40 transition-colors"
-          >
-            {actionLoading === 'empty' ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Trash2 className="w-3.5 h-3.5" />
-            )}
-            Empty Trash
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {members.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={actionLoading !== null}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-primary-500/25 bg-primary-500/[0.08] px-3 py-1.5 text-caption-1 font-semibold text-primary-700 transition-colors hover:bg-primary-500/[0.14] disabled:cursor-wait disabled:opacity-60 dark:text-primary-300"
+            >
+              {actionLoading === 'export' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FileDown className="h-3.5 w-3.5" />
+              )}
+              {actionLoading === 'export' ? 'Preparing PDF…' : 'Download PDF'}
+            </button>
+          )}
+          {removableMemberCount > 0 && (
+            <button
+              onClick={() => setConfirmEmpty(true)}
+              disabled={actionLoading !== null}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-caption-1 font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-wait disabled:opacity-60 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-900/40"
+            >
+              {actionLoading === 'empty' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              Empty Trash
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
