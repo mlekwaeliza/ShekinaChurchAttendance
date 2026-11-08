@@ -116,6 +116,25 @@ async function syncChurchMemberHomeCell(memberId, cellId, userId) {
     ]
   );
 }
+
+function subtractDays(dateValue, days) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  date.setDate(date.getDate() - days);
+  return formatLocalDate(date);
+}
+
+function dateOnly(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  const match = String(value).match(/^\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : null;
+}
+
+async function getActingUserMemberId(req) {
+  const user = await get('SELECT member_id FROM users WHERE id = ?', [req.session.userId]);
+  return user?.member_id ? Number(user.member_id) : null;
+}
+
 // GET all sections
 router.get('/sections', async (req, res) => {
   try {
@@ -123,6 +142,103 @@ router.get('/sections', async (req, res) => {
     res.json(sections);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch sections' });
+  }
+});
+
+// GET member attendance summaries used by the directory's absence and at-risk filters.
+router.get('/members/attendance-insights', async (req, res) => {
+  try {
+    const today = formatLocalDate();
+    const currentPeriodStart = subtractDays(today, 89);
+    const previousPeriodStart = subtractDays(today, 179);
+    const previousPeriodEnd = subtractDays(today, 90);
+
+    const [summaries, expectedDays, recentStatuses] = await Promise.all([
+      all(
+        `SELECT m.id AS member_id,
+                m.section_id,
+                m.created_at,
+                MAX(CASE WHEN LOWER(a.status) = 'present' THEN a.date END) AS last_attendance_date,
+                SUM(CASE WHEN LOWER(a.status) = 'present' THEN 1 ELSE 0 END) AS total_attendance_count,
+                SUM(CASE WHEN LOWER(a.status) = 'present' AND a.date >= ? AND a.date <= ? THEN 1 ELSE 0 END) AS current_90_day_count,
+                SUM(CASE WHEN LOWER(a.status) = 'present' AND a.date >= ? AND a.date <= ? THEN 1 ELSE 0 END) AS previous_90_day_count
+         FROM members m
+         LEFT JOIN attendance a ON a.member_id = m.id
+         WHERE m.is_active = 1 AND m.soft_deleted_at IS NULL
+         GROUP BY m.id, m.section_id, m.created_at`,
+        [currentPeriodStart, today, previousPeriodStart, previousPeriodEnd]
+      ),
+      all(
+        `SELECT section_id, service_date
+         FROM (
+           SELECT section_id, date AS service_date
+           FROM submission_log
+           WHERE date >= ? AND date <= ?
+           UNION
+           SELECT m.section_id, a.date AS service_date
+           FROM attendance a
+           JOIN members m ON m.id = a.member_id
+           WHERE a.date >= ? AND a.date <= ?
+         ) expected
+         WHERE section_id IS NOT NULL
+         ORDER BY section_id, service_date DESC`,
+        [previousPeriodStart, today, previousPeriodStart, today]
+      ),
+      all(
+        `SELECT member_id, date, LOWER(status) AS status
+         FROM attendance
+         WHERE date >= ? AND date <= ?`,
+        [previousPeriodStart, today]
+      )
+    ]);
+
+    const datesBySection = new Map();
+    for (const row of expectedDays) {
+      const sectionId = String(row.section_id);
+      const serviceDate = dateOnly(row.service_date);
+      if (!serviceDate) continue;
+      const dates = datesBySection.get(sectionId) || [];
+      if (!dates.includes(serviceDate)) dates.push(serviceDate);
+      datesBySection.set(sectionId, dates);
+    }
+
+    const satisfiedDaysByMember = new Map();
+    for (const row of recentStatuses) {
+      if (row.status === 'present' || row.status === 'excused') {
+        const memberId = String(row.member_id);
+        const dates = satisfiedDaysByMember.get(memberId) || new Set();
+        const serviceDate = dateOnly(row.date);
+        if (serviceDate) dates.add(serviceDate);
+        satisfiedDaysByMember.set(memberId, dates);
+      }
+    }
+
+    const attendanceByMember = {};
+    for (const row of summaries) {
+      attendanceByMember[row.member_id] = {
+        last_attendance_date: dateOnly(row.last_attendance_date),
+        total_attendance_count: Number(row.total_attendance_count) || 0,
+        current_90_day_count: Number(row.current_90_day_count) || 0,
+        previous_90_day_count: Number(row.previous_90_day_count) || 0,
+        missed_last_three_expected_days: false
+      };
+    }
+
+    for (const member of summaries) {
+      const stats = attendanceByMember[member.member_id];
+      const joinedDate = dateOnly(member.created_at);
+      const expected = (datesBySection.get(String(member.section_id)) || [])
+        .filter((serviceDate) => !joinedDate || serviceDate >= joinedDate)
+        .slice(0, 3);
+      const satisfied = satisfiedDaysByMember.get(String(member.member_id)) || new Set();
+      stats.missed_last_three_expected_days =
+        expected.length === 3 && expected.every((serviceDate) => !satisfied.has(serviceDate));
+    }
+
+    res.json({ as_of_date: today, members: attendanceByMember });
+  } catch (error) {
+    console.error('Member attendance insights error:', error);
+    res.status(500).json({ error: 'Failed to load member attendance insights' });
   }
 });
 
@@ -447,14 +563,33 @@ router.delete('/members/:id', async (req, res) => {
           'Send { "confirm": "SOFT-DELETE" } in the request body to soft-delete a member. This sets is_active=0 and is recoverable via the restore endpoint.'
       });
     }
-    await run(
-      'UPDATE members SET is_active = 0, soft_deleted_at = CURRENT_TIMESTAMP, pending_deletion_at = NULL, deletion_confirmed_at = NULL, deletion_confirmed_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [req.params.id]
+    const memberId = Number(req.params.id);
+    if (!Number.isInteger(memberId) || memberId <= 0) {
+      return res.status(400).json({ error: 'Valid member ID required' });
+    }
+    const currentMemberId = await getActingUserMemberId(req);
+    if (currentMemberId === memberId) {
+      return res.status(400).json({ error: 'You cannot delete your own member profile' });
+    }
+    const archive = Boolean(req.body?.archive);
+    const result = await run(
+      `UPDATE members
+       SET is_active = 0,
+           status = CASE WHEN ? = 1 THEN 'Archived:' || COALESCE(NULLIF(status, ''), 'Active') ELSE status END,
+           soft_deleted_at = CURRENT_TIMESTAMP,
+           pending_deletion_at = NULL,
+           deletion_confirmed_at = NULL,
+           deletion_confirmed_by = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? AND is_active = 1`,
+      [archive ? 1 : 0, memberId]
     );
+    if (!result.changes) return res.status(404).json({ error: 'Active member not found' });
     invalidate('admin-');
     res.json({
-      message:
-        'Member deactivated; will be eligible for permanent deletion after 6 months of inactivity'
+      message: archive
+        ? 'Member archived and retained in Trash'
+        : 'Member moved to Trash; it can be permanently deleted after 6 months'
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete member' });
@@ -463,7 +598,7 @@ router.delete('/members/:id', async (req, res) => {
 
 // POST bulk soft-delete (selected members) — they will be flagged for permanent deletion after 6 months
 router.post('/members/bulk-soft-delete', async (req, res) => {
-  const { member_ids } = req.body || {};
+  const { member_ids, archive = false } = req.body || {};
   if (!Array.isArray(member_ids) || member_ids.length === 0) {
     return res.status(400).json({ error: 'member_ids array required' });
   }
@@ -472,22 +607,33 @@ router.post('/members/bulk-soft-delete', async (req, res) => {
     return res.status(400).json({ error: 'No valid member ids' });
   }
   try {
+    if (ids.length > 500)
+      return res.status(400).json({ error: 'Cannot delete more than 500 members at once' });
+    const currentMemberId = await getActingUserMemberId(req);
+    if (currentMemberId && ids.includes(currentMemberId)) {
+      return res
+        .status(400)
+        .json({ error: 'Remove your own member profile from the selection first' });
+    }
     const placeholders = ids.map(() => '?').join(',');
     const result = await run(
       `UPDATE members
        SET is_active = 0,
+           status = CASE WHEN ? = 1 THEN 'Archived:' || COALESCE(NULLIF(status, ''), 'Active') ELSE status END,
            soft_deleted_at = CURRENT_TIMESTAMP,
            pending_deletion_at = NULL,
            deletion_confirmed_at = NULL,
            deletion_confirmed_by = NULL,
            updated_at = CURRENT_TIMESTAMP
-       WHERE id IN (${placeholders})
+      WHERE id IN (${placeholders})
          AND is_active = 1`,
-      ids
+      [archive ? 1 : 0, ...ids]
     );
     invalidate('admin-');
     res.json({
-      message: `${result.changes || 0} member(s) deactivated; will be eligible for permanent deletion after 6 months of inactivity`,
+      message: archive
+        ? `${result.changes || 0} member(s) archived and retained in Trash`
+        : `${result.changes || 0} member(s) moved to Trash; they can be permanently deleted after 6 months`,
       deactivated: result.changes || 0
     });
   } catch (error) {
@@ -510,6 +656,7 @@ router.get('/members/pending-deletion', async (req, res) => {
       LEFT JOIN users u ON l.user_id = u.id
       WHERE m.is_active = 0
         AND m.soft_deleted_at IS NOT NULL
+        AND LOWER(COALESCE(m.status, '')) NOT LIKE 'archived%'
         AND m.deletion_confirmed_at IS NULL
         AND m.soft_deleted_at <= ${monthsAgo(6)}
       ORDER BY m.soft_deleted_at ASC
@@ -538,6 +685,12 @@ router.post('/members/confirm-deletion', async (req, res) => {
     return res.status(400).json({ error: 'No valid member ids' });
   }
   try {
+    const currentMemberId = await getActingUserMemberId(req);
+    if (currentMemberId && ids.includes(currentMemberId)) {
+      return res
+        .status(400)
+        .json({ error: 'Remove your own member profile from the selection first' });
+    }
     // Verify each member is actually pending deletion
     const placeholders = ids.map(() => '?').join(',');
     const pending = await all(
@@ -545,6 +698,7 @@ router.post('/members/confirm-deletion', async (req, res) => {
        WHERE id IN (${placeholders})
          AND is_active = 0
          AND soft_deleted_at IS NOT NULL
+         AND LOWER(COALESCE(status, '')) NOT LIKE 'archived%'
          AND deletion_confirmed_at IS NULL
          AND soft_deleted_at <= ${monthsAgo(6)}`,
       ids
@@ -600,6 +754,11 @@ router.post('/members/restore', async (req, res) => {
     const result = await run(
       `UPDATE members
        SET is_active = 1,
+           status = CASE
+             WHEN LOWER(COALESCE(status, '')) LIKE 'archived:%' THEN SUBSTR(status, 10)
+             WHEN LOWER(COALESCE(status, '')) = 'archived' THEN 'Active'
+             ELSE status
+           END,
            soft_deleted_at = NULL,
            pending_deletion_at = NULL,
            deletion_confirmed_at = NULL,
@@ -635,7 +794,7 @@ router.get('/members/trash', async (req, res) => {
       : `CAST(JULIANDAY(CURRENT_TIMESTAMP) - JULIANDAY(m.soft_deleted_at) AS INTEGER)`;
     const rows = await all(`
       SELECT m.id, m.membership_id, m.full_name, m.phone, m.email, m.gender,
-             m.age_group, m.soft_deleted_at, m.created_at,
+             m.age_group, m.status, m.soft_deleted_at, m.created_at,
              s.name AS section_name,
              u.full_name AS leader_name,
              (SELECT COUNT(*) FROM attendance WHERE member_id = m.id) AS attendance_count,
@@ -661,8 +820,14 @@ router.delete('/members/:id/permanent', async (req, res) => {
     if (!Number.isInteger(memberId) || memberId <= 0) {
       return res.status(400).json({ error: 'Valid member ID required' });
     }
+    const currentMemberId = await getActingUserMemberId(req);
+    if (currentMemberId === memberId) {
+      return res
+        .status(400)
+        .json({ error: 'You cannot permanently delete your own member profile' });
+    }
     const member = await get(
-      'SELECT id, full_name FROM members WHERE id = ? AND is_active = 0 AND soft_deleted_at IS NOT NULL',
+      "SELECT id, full_name FROM members WHERE id = ? AND is_active = 0 AND soft_deleted_at IS NOT NULL AND LOWER(COALESCE(status, '')) NOT LIKE 'archived%'",
       [memberId]
     );
     if (!member) {
@@ -690,11 +855,17 @@ router.delete('/members/:id/permanent', async (req, res) => {
 // POST empty trash (permanently delete ALL soft-deleted members)
 router.post('/members/empty-trash', async (req, res) => {
   try {
-    const rows = await all(
-      'SELECT id, full_name FROM members WHERE is_active = 0 AND soft_deleted_at IS NOT NULL'
-    );
+    const currentMemberId = await getActingUserMemberId(req);
+    const rows = (
+      await all(
+        "SELECT id, full_name FROM members WHERE is_active = 0 AND soft_deleted_at IS NOT NULL AND LOWER(COALESCE(status, '')) NOT LIKE 'archived%'"
+      )
+    ).filter((member) => Number(member.id) !== currentMemberId);
     if (rows.length === 0) {
-      return res.json({ message: 'Trash is already empty', deleted: 0 });
+      return res.json({
+        message: 'No removable members in Trash; archived members are retained',
+        deleted: 0
+      });
     }
     const ids = rows.map((r) => r.id);
     const placeholders = ids.map(() => '?').join(',');
@@ -712,7 +883,7 @@ router.post('/members/empty-trash', async (req, res) => {
     }
     await run(`DELETE FROM members WHERE id IN (${placeholders})`, ids);
     res.json({
-      message: `Trash emptied: ${rows.length} member(s) permanently deleted`,
+      message: `Trash emptied: ${rows.length} member(s) permanently deleted; archived members were retained`,
       deleted: rows.length
     });
   } catch (error) {
@@ -735,7 +906,19 @@ router.post('/members/:id/restore', async (req, res) => {
       return res.status(404).json({ error: 'Member not found in trash' });
     }
     await run(
-      `UPDATE members SET is_active = 1, soft_deleted_at = NULL, pending_deletion_at = NULL, deletion_confirmed_at = NULL, deletion_confirmed_by = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      `UPDATE members
+       SET is_active = 1,
+           status = CASE
+             WHEN LOWER(COALESCE(status, '')) LIKE 'archived:%' THEN SUBSTR(status, 10)
+             WHEN LOWER(COALESCE(status, '')) = 'archived' THEN 'Active'
+             ELSE status
+           END,
+           soft_deleted_at = NULL,
+           pending_deletion_at = NULL,
+           deletion_confirmed_at = NULL,
+           deletion_confirmed_by = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
       [memberId]
     );
     try {

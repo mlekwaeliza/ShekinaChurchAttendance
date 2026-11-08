@@ -112,6 +112,12 @@ const TrashView = () => {
 
   const totalAttendance = members.reduce((sum, m) => sum + R(m.attendance_count), 0);
   const oldestDays = members.reduce((max, m) => Math.max(max, R(m.days_inactive) || 0), 0);
+  const removableMemberCount = members.filter(
+    (member) =>
+      !String(member.status || '')
+        .toLowerCase()
+        .startsWith('archived')
+  ).length;
 
   return (
     <div className="space-y-4">
@@ -131,11 +137,11 @@ const TrashView = () => {
             <Trash2 className="w-5 h-5 text-secondary-label" /> Trash
           </h1>
           <p className="text-caption-1 text-secondary-label mt-0.5">
-            Soft-deleted members. Restore them or permanently delete them. Permanently deleted
-            members cannot be recovered.
+            Deleted members can be restored or permanently removed. Archived members stay here until
+            restored and are excluded from permanent deletion.
           </p>
         </div>
-        {members.length > 0 && (
+        {removableMemberCount > 0 && (
           <button
             onClick={() => setConfirmEmpty(true)}
             disabled={actionLoading === 'empty'}
@@ -231,6 +237,13 @@ const TrashView = () => {
                       <p className="text-footnote font-semibold text-label truncate">
                         {m.full_name}
                       </p>
+                      {String(m.status || '')
+                        .toLowerCase()
+                        .startsWith('archived') && (
+                        <span className="rounded-full bg-primary-500/[0.12] px-2 py-0.5 text-caption-2 font-semibold text-primary-700 dark:text-primary-300">
+                          Archived
+                        </span>
+                      )}
                       <span className="text-caption-2 text-tertiary-label font-mono">
                         #{m.membership_id}
                       </span>
@@ -287,19 +300,23 @@ const TrashView = () => {
                       )}
                       Restore
                     </button>
-                    <button
-                      onClick={() => setConfirmDelete(m)}
-                      disabled={actionLoading === `del-${m.id}`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-caption-1 font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-900/40 transition-colors border border-rose-200 dark:border-rose-800"
-                      title="Delete permanently"
-                    >
-                      {actionLoading === `del-${m.id}` ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <XCircle className="w-3 h-3" />
-                      )}
-                      Delete
-                    </button>
+                    {!String(m.status || '')
+                      .toLowerCase()
+                      .startsWith('archived') && (
+                      <button
+                        onClick={() => setConfirmDelete(m)}
+                        disabled={actionLoading === `del-${m.id}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-caption-1 font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-900/40 transition-colors border border-rose-200 dark:border-rose-800"
+                        title="Delete permanently"
+                      >
+                        {actionLoading === `del-${m.id}` ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <XCircle className="w-3 h-3" />
+                        )}
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

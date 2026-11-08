@@ -121,8 +121,12 @@ export const adminAPI = {
   updateSection: (id, name) => api.put(`/admin/sections/${id}`, { name }),
   deleteSection: (id) => api.delete(`/admin/sections/${id}`),
   getMembers: (filters = {}) => api.get('/admin/members', { params: filters }),
+  getMemberAttendanceInsights: () => api.get('/admin/members/attendance-insights'),
   updateMember: (id, data) => api.put(`/admin/members/${id}`, data),
-  deleteMember: (id) => api.delete(`/admin/members/${id}`, { data: { confirm: 'SOFT-DELETE' } }),
+  deleteMember: (id, options = {}) =>
+    api.delete(`/admin/members/${id}`, {
+      data: { confirm: 'SOFT-DELETE', archive: Boolean(options.archive) }
+    }),
   getAttendance: (filters = {}) => api.get('/admin/attendance', { params: filters }),
   getAttendanceTrends: (days = 90) => api.get('/admin/attendance-trends', { params: { days } }),
   updateAttendance: (id, status, reason) => api.put(`/admin/attendance/${id}`, { status, reason }),
@@ -146,8 +150,8 @@ export const adminAPI = {
   createMember: (data) => api.post('/admin/members', data),
   getSuggestAssignment: () => api.get('/admin/members/suggest-assignment'),
   getNextMembershipId: () => api.get('/admin/members/next-id'),
-  bulkSoftDelete: (memberIds) =>
-    api.post('/admin/members/bulk-soft-delete', { member_ids: memberIds }),
+  bulkSoftDelete: (memberIds, archive = false) =>
+    api.post('/admin/members/bulk-soft-delete', { member_ids: memberIds, archive }),
   getPendingDeletion: () => api.get('/admin/members/pending-deletion'),
   confirmDeletion: (memberIds) =>
     api.post('/admin/members/confirm-deletion', { member_ids: memberIds, confirm: true }),

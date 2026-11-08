@@ -180,6 +180,7 @@ router.post('/login', async (req, res) => {
       role: user.role,
       full_name: user.full_name,
       profile_picture: user.profile_picture,
+      member_id: user.member_id,
       is_head: user.is_head,
       is_new_member_leader: user.is_new_member_leader,
       section_name: user.section_name || null,
@@ -230,6 +231,7 @@ router.get('/me', async (req, res) => {
         if (user) {
           req.session.user.profile_picture = user.profile_picture;
           req.session.user.full_name = user.full_name;
+          req.session.user.member_id = user.member_id;
           req.session.user.is_head = user.is_head;
           req.session.user.is_new_member_leader = user.is_new_member_leader;
           req.session.user.section_name = user.section_name || null;
@@ -242,6 +244,12 @@ router.get('/me', async (req, res) => {
         res.json({ user: req.session.user });
       }
     } else {
+      try {
+        const user = await queries.findUserByUsername(req.session.user.username);
+        if (user) req.session.user.member_id = user.member_id;
+      } catch (_) {
+        // Keep the existing session available if this optional profile lookup fails.
+      }
       const user2FA = await queries.getUser2FA(req.session.userId);
       if (user2FA?.totp_enabled) {
         return res.json({ requires2FA: true, userId: req.session.userId });
@@ -301,6 +309,7 @@ router.post('/change-password', async (req, res) => {
       username: user.username,
       role: user.role,
       full_name: user.full_name,
+      member_id: user.member_id,
       is_new_member_leader: user.is_new_member_leader
     };
     req.session.createdAt = Date.now();

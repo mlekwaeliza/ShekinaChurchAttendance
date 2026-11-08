@@ -36,7 +36,7 @@ async function isAuthenticated(req, res, next) {
     // (handles stale sessions from previous logins or role changes).
     try {
       const dbUser = await get(
-        'SELECT id, username, role, full_name, is_new_member_leader, disabled FROM users WHERE id = ?',
+        'SELECT id, username, role, full_name, member_id, is_new_member_leader, disabled FROM users WHERE id = ?',
         [req.session.userId]
       );
       if (dbUser) {
@@ -52,6 +52,7 @@ async function isAuthenticated(req, res, next) {
           username: dbUser.username,
           role: dbUser.role,
           full_name: dbUser.full_name,
+          member_id: dbUser.member_id,
           is_new_member_leader: dbUser.is_new_member_leader
         };
       } else {
@@ -59,7 +60,7 @@ async function isAuthenticated(req, res, next) {
         const username = req.session.user?.username;
         if (username) {
           const byUsername = await get(
-            'SELECT id, username, role, full_name, is_new_member_leader, disabled FROM users WHERE username = ?',
+            'SELECT id, username, role, full_name, member_id, is_new_member_leader, disabled FROM users WHERE username = ?',
             [username]
           );
           if (byUsername) {
@@ -74,6 +75,7 @@ async function isAuthenticated(req, res, next) {
               username: byUsername.username,
               role: byUsername.role,
               full_name: byUsername.full_name,
+              member_id: byUsername.member_id,
               is_new_member_leader: byUsername.is_new_member_leader
             };
           }

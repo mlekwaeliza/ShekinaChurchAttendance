@@ -268,6 +268,7 @@ async function flagPendingPermanentDeletions() {
       WHERE is_active = 0
         AND deletion_confirmed_at IS NULL
         AND soft_deleted_at IS NOT NULL
+        AND LOWER(COALESCE(status, '')) NOT LIKE 'archived%'
         AND pending_deletion_at IS NULL
         AND soft_deleted_at <= ${monthsAgo(6)}
     `);

@@ -13,6 +13,7 @@ const toSessionUser = (user) => ({
   role: user.role,
   full_name: user.full_name,
   profile_picture: user.profile_picture,
+  member_id: user.member_id,
   is_head: user.is_head,
 });
 
@@ -142,7 +143,7 @@ router.post('/verify-login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid token' });
     }
 
-    const fullUser = await get('SELECT id, username, role, full_name, profile_picture, is_head FROM users WHERE id = ?', [pendingUserId]);
+    const fullUser = await get('SELECT id, username, role, full_name, profile_picture, member_id, is_head FROM users WHERE id = ?', [pendingUserId]);
     if (!fullUser) return res.status(404).json({ error: 'User not found' });
 
     if (consumedBackupCode) {

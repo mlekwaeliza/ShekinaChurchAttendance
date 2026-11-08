@@ -1,33 +1,48 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, AlertTriangle, Trash2 } from 'lucide-react';
+import { X, AlertTriangle, Archive, Trash2 } from 'lucide-react';
 import { adminAPI } from '../../services/api';
 import { useModalA11y } from '../../hooks/useModalA11y';
+import { useToast } from '../../context/ToastContext';
 
-const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh }) => {
-  const [selectedIds, setSelectedIds] = useState([]);
+const BulkDeleteModal = ({
+  members,
+  initialSelectedIds = [],
+  currentUserMemberId,
+  onClose,
+  onRefresh
+}) => {
+  const [selectedIds, setSelectedIds] = useState(() => {
+    const ownMemberId = Number(currentUserMemberId);
+    return initialSelectedIds.filter((id) => !ownMemberId || Number(id) !== ownMemberId);
+  });
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [confirmText, setConfirmText] = useState('');
+  const [archiveInstead, setArchiveInstead] = useState(false);
   const dialogRef = useRef(null);
+  const { showToast } = useToast();
   useModalA11y(dialogRef, true, onClose);
 
-  useEffect(() => {
-    setSelectedIds(initialSelectedIds);
-  }, [initialSelectedIds]);
-
-  const filteredMembers = members.filter(
+  const deletableMembers = members.filter(
+    (member) => !currentUserMemberId || Number(member.id) !== Number(currentUserMemberId)
+  );
+  const filteredMembers = deletableMembers.filter(
     (m) =>
       m.full_name?.toLowerCase().includes(search.toLowerCase()) ||
       m.membership_id?.toLowerCase().includes(search.toLowerCase())
   );
+  const allVisibleSelected =
+    filteredMembers.length > 0 &&
+    filteredMembers.every((member) => selectedIds.includes(member.id));
 
   const toggleAll = () => {
-    if (selectedIds.length === filteredMembers.length) {
-      setSelectedIds([]);
+    if (allVisibleSelected) {
+      const visibleIds = new Set(filteredMembers.map((member) => member.id));
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.has(id)));
     } else {
-      setSelectedIds(filteredMembers.map((m) => m.id));
+      setSelectedIds((prev) => [...new Set([...prev, ...filteredMembers.map((m) => m.id)])]);
     }
   };
 
@@ -40,9 +55,14 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
     setError('');
     setSubmitting(true);
     try {
-      const res = await adminAPI.bulkSoftDelete(selectedIds);
-      onRefresh();
-      onClose(res.data);
+      const res = await adminAPI.bulkSoftDelete(selectedIds, archiveInstead);
+      await onRefresh();
+      showToast({
+        type: 'success',
+        title: archiveInstead ? 'Members archived' : 'Members moved to Trash',
+        message: `${res.data?.deactivated ?? selectedIds.length} member(s) updated successfully.`
+      });
+      onClose();
     } catch (e) {
       console.error('Bulk soft-delete failed:', e);
       setError(e.response?.data?.error || 'Failed to soft-delete selected members.');
@@ -74,11 +94,11 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
             </div>
             <div>
               <h3 id="bulk-delete-title" className="text-headline font-semibold text-label">
-                Bulk Soft-Delete Members
+                Remove selected members
               </h3>
               <p className="text-caption-1 text-secondary-label">
-                Members will be hidden immediately. They become eligible for permanent deletion
-                after 6 months.
+                Review the selected members and choose whether to archive them or move them to
+                Trash.
               </p>
             </div>
           </div>
@@ -95,9 +115,9 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
             <div className="flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <div>
-                <strong>Heads up.</strong> This is a <em>soft delete</em> — members disappear from
-                lists immediately, and any attendance / follow-ups stay intact. After 6 months of
-                inactivity, they appear in the Pending Deletion list for permanent removal.
+                <strong>Recoverable removal.</strong> Attendance and follow-up history stay intact.
+                Members moved to Trash can be permanently deleted after 6 months; archived members
+                are retained until restored.
               </div>
             </div>
           </div>
@@ -115,9 +135,7 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={
-                    selectedIds.length === filteredMembers.length && filteredMembers.length > 0
-                  }
+                  checked={allVisibleSelected}
                   onChange={toggleAll}
                   className="h-4 w-4 rounded border-black/[0.12] text-violet-600 focus:ring-violet-500"
                 />
@@ -140,11 +158,41 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
                     className="h-4 w-4 rounded border-black/[0.12] text-violet-600 focus:ring-violet-500"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-footnote font-medium text-label truncate">
-                      {m.full_name}
-                    </div>
-                    <div className="text-caption-1 text-secondary-label truncate">
-                      {m.membership_id} · {m.section_name || '—'}
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-system-fill text-xs font-semibold text-secondary-label">
+                        {m.profile_picture ? (
+                          <img
+                            src={m.profile_picture}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          (m.full_name || '?')
+                            .split(/\s+/)
+                            .map((part) => part[0])
+                            .join('')
+                            .slice(0, 2)
+                            .toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-footnote font-medium text-label truncate">
+                          {m.full_name}
+                        </div>
+                        <div className="text-caption-1 text-secondary-label truncate">
+                          {m.membership_id} · {m.section_name || '—'}
+                        </div>
+                        <div className="mt-0.5 text-caption-2 text-tertiary-label">
+                          Last attended: {m.last_attendance_date || 'Never'}
+                          {m.days_since_last_attendance !== null &&
+                          m.days_since_last_attendance !== undefined
+                            ? ` · ${m.days_since_last_attendance} days ago`
+                            : m.last_attendance_date
+                              ? ''
+                              : ' · Never attended'}
+                          {` · ${Number(m.total_attendance_count) || 0} total`}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </li>
@@ -156,6 +204,23 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
               )}
             </ul>
           </div>
+
+          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-black/[0.06] p-3 text-footnote dark:border-white/[0.08]">
+            <input
+              type="checkbox"
+              checked={archiveInstead}
+              onChange={(event) => setArchiveInstead(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-black/[0.12] text-violet-600 focus:ring-violet-500"
+            />
+            <span>
+              <span className="flex items-center gap-1.5 font-semibold text-label">
+                <Archive className="h-4 w-4 text-secondary-label" /> Archive instead
+              </span>
+              <span className="mt-0.5 block text-caption-1 text-secondary-label">
+                Keep these members recoverable in Trash and exclude them from permanent deletion.
+              </span>
+            </span>
+          </label>
 
           {error && (
             <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-footnote text-rose-800 dark:border-rose-700 dark:bg-rose-900/20 dark:text-rose-200">
@@ -193,7 +258,13 @@ const BulkDeleteModal = ({ members, initialSelectedIds = [], onClose, onRefresh 
             className="inline-flex h-10 items-center gap-2 rounded-lg bg-rose-600 px-4 text-footnote font-semibold text-white shadow-card transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 className="w-4 h-4" />
-            {submitting ? 'Deactivating...' : `Soft-delete ${selectedIds.length}`}
+            {submitting
+              ? archiveInstead
+                ? 'Archiving...'
+                : 'Moving to Trash...'
+              : archiveInstead
+                ? `Archive ${selectedIds.length}`
+                : `Move ${selectedIds.length} to Trash`}
           </button>
         </div>
       </div>

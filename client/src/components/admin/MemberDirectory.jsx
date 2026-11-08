@@ -14,7 +14,10 @@ import {
   X,
   Check,
   Clock,
-  Award
+  Award,
+  CalendarDays,
+  Archive,
+  Loader2
 } from 'lucide-react';
 import Badge from '../ui/Badge';
 import BulkEditModal from './BulkEditModal';
@@ -34,6 +37,68 @@ const avatarColors = [
   'bg-system-teal',
   'bg-system-pink'
 ];
+
+const attendanceStatusOptions = [
+  { value: 'all', label: 'All Members' },
+  { value: '30', label: 'Not attended in 30+ days' },
+  { value: '60', label: 'Not attended in 60+ days' },
+  { value: '90', label: 'Not attended in 90+ days' },
+  { value: '6months', label: 'Not attended in 6+ months' },
+  { value: 'never', label: 'Never attended' },
+  { value: 'risk', label: 'At Risk (attendance declining)' }
+];
+
+const dateToUtc = (value) => {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+};
+
+const daysBetween = (from, to) => {
+  const fromUtc = dateToUtc(from);
+  const toUtc = dateToUtc(to);
+  return fromUtc === null || toUtc === null ? null : Math.floor((toUtc - fromUtc) / 86400000);
+};
+
+const sixMonthsBefore = (value) => {
+  const utc = dateToUtc(value);
+  if (utc === null) return '';
+  const date = new Date(utc);
+  const targetMonth = date.getUTCMonth() - 6;
+  const firstOfTargetMonth = new Date(Date.UTC(date.getUTCFullYear(), targetMonth, 1));
+  const lastDay = new Date(
+    Date.UTC(firstOfTargetMonth.getUTCFullYear(), firstOfTargetMonth.getUTCMonth() + 1, 0)
+  ).getUTCDate();
+  firstOfTargetMonth.setUTCDate(Math.min(date.getUTCDate(), lastDay));
+  return firstOfTargetMonth.toISOString().slice(0, 10);
+};
+
+const formatAttendanceDate = (value) => {
+  const utc = dateToUtc(value);
+  return utc === null
+    ? 'Never'
+    : new Date(utc).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        timeZone: 'UTC'
+      });
+};
+
+const isNotExpectedToAttend = (member) => {
+  const status = String(member.status || 'active')
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ');
+  return (
+    member.is_active === 0 ||
+    member.is_active === false ||
+    Boolean(member.soft_deleted_at) ||
+    /inactive|on leave|transferred|suspended|archived|deceased|retired|resigned|removed|relocated|not expected|non ?attending/.test(
+      status
+    )
+  );
+};
 
 // Member search + select component for the assign title modal
 function MemberSearchSelect({ members, selectedId, onChange }) {
@@ -170,8 +235,9 @@ const MemberDirectory = ({
   leaders,
   onEdit,
   onAdd,
-  onDelete,
   onRefresh,
+  canDelete = false,
+  currentUserMemberId = null,
   sectionFilter: externalSectionFilter,
   onSectionFilterChange,
   leaderFilter: externalLeaderFilter,
@@ -214,9 +280,15 @@ const MemberDirectory = ({
   const [showFilters, setShowFilters] = useState(false);
   const [ageGroupFilter, setAgeGroupFilter] = useState('all');
   const [genderFilter, setGenderFilter] = useState('all');
+  const [attendanceFilter, setAttendanceFilter] = useState('all');
+  const [attendanceStats, setAttendanceStats] = useState({});
+  const [attendanceAsOfDate, setAttendanceAsOfDate] = useState('');
+  const [attendanceStatsLoading, setAttendanceStatsLoading] = useState(true);
+  const [attendanceStatsError, setAttendanceStatsError] = useState('');
   const [sortField, setSortField] = useState('full_name');
   const [sortDir, setSortDir] = useState('asc');
   const [selectedMembers, setSelectedMembers] = useState(new Set());
+  const selectAllCheckboxRef = useRef(null);
   const [memberTitles, setMemberTitles] = useState({});
   const [allTitles, setAllTitles] = useState([]);
   const [titleAssignMember, setTitleAssignMember] = useState(null);
@@ -227,7 +299,31 @@ const MemberDirectory = ({
   const [viewHistoryFor, setViewHistoryFor] = useState(null);
   const [titleHistory, setTitleHistory] = useState([]);
   const [detailsMember, setDetailsMember] = useState(null);
+  const [deletingMember, setDeletingMember] = useState(null);
+  const [archiveInstead, setArchiveInstead] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const profileMemberId = Number(searchParams.get('profile'));
+
+  const fetchAttendanceInsights = useCallback(async () => {
+    setAttendanceStatsLoading(true);
+    setAttendanceStatsError('');
+    try {
+      const response = await adminAPI.getMemberAttendanceInsights();
+      setAttendanceStats(response.data?.members || {});
+      setAttendanceAsOfDate(response.data?.as_of_date || '');
+      return true;
+    } catch (error) {
+      console.error('Failed to load member attendance insights:', error);
+      setAttendanceStatsError('Attendance information is temporarily unavailable.');
+      return false;
+    } finally {
+      setAttendanceStatsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAttendanceInsights();
+  }, [fetchAttendanceInsights]);
 
   // Global search navigates here with ?profile=<member id>. Resolve that ID
   // once the directory data is available and open the profile immediately.
@@ -471,7 +567,26 @@ const MemberDirectory = ({
   }, [allMembers, sectionFilter]);
 
   const filteredMembers = useMemo(() => {
-    let result = [...allMembers];
+    const asOfDate = attendanceAsOfDate || new Date().toISOString().slice(0, 10);
+    const sixMonthCutoff = sixMonthsBefore(asOfDate);
+    let result = allMembers.map((member) => {
+      const stats = attendanceStats[member.id] || {};
+      const lastAttendanceDate = stats.last_attendance_date || null;
+      const daysSinceLastAttendance = lastAttendanceDate
+        ? daysBetween(lastAttendanceDate, asOfDate)
+        : null;
+      const joinedDate = member.created_at || member.visitor_date;
+      const daysSinceJoined = daysBetween(joinedDate, asOfDate);
+      return {
+        ...member,
+        ...stats,
+        last_attendance_date: lastAttendanceDate,
+        days_since_last_attendance: daysSinceLastAttendance,
+        total_attendance_count: Number(stats.total_attendance_count) || 0,
+        days_since_joined: daysSinceJoined,
+        is_six_month_absence: Boolean(lastAttendanceDate && lastAttendanceDate <= sixMonthCutoff)
+      };
+    });
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(
@@ -520,10 +635,55 @@ const MemberDirectory = ({
         return g === genderFilter;
       });
     }
-    // Sort
+
+    if (attendanceFilter !== 'all') {
+      result = result.filter((member) => {
+        if (
+          attendanceStatsLoading ||
+          attendanceStatsError ||
+          isNotExpectedToAttend(member) ||
+          member.days_since_joined === null ||
+          member.days_since_joined < 14
+        ) {
+          return false;
+        }
+        const daysAbsent = member.days_since_last_attendance;
+        const neverAttended = !member.last_attendance_date;
+        switch (attendanceFilter) {
+          case '30':
+            return !neverAttended && daysAbsent >= 30;
+          case '60':
+            return !neverAttended && daysAbsent >= 60;
+          case '90':
+            return !neverAttended && daysAbsent >= 90;
+          case '6months':
+            return !neverAttended && member.is_six_month_absence;
+          case 'never':
+            return neverAttended && member.days_since_joined > 14;
+          case 'risk': {
+            const currentCount = Number(member.current_90_day_count) || 0;
+            const previousCount = Number(member.previous_90_day_count) || 0;
+            return (
+              (previousCount > 0 && currentCount < previousCount * 0.5) ||
+              member.missed_last_three_expected_days
+            );
+          }
+          default:
+            return true;
+        }
+      });
+    }
+
+    const absenceFilters = ['30', '60', '90', '6months', 'never'];
     result.sort((a, b) => {
-      const aVal = (a[sortField] || '').toLowerCase();
-      const bVal = (b[sortField] || '').toLowerCase();
+      if (absenceFilters.includes(attendanceFilter)) {
+        if (attendanceFilter === 'never') return b.days_since_joined - a.days_since_joined;
+        const aDate = a.last_attendance_date || '9999-12-31';
+        const bDate = b.last_attendance_date || '9999-12-31';
+        return aDate.localeCompare(bDate);
+      }
+      const aVal = String(a[sortField] || '').toLowerCase();
+      const bVal = String(b[sortField] || '').toLowerCase();
       const cmp = aVal.localeCompare(bVal);
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -535,6 +695,11 @@ const MemberDirectory = ({
     leaderFilter,
     ageGroupFilter,
     genderFilter,
+    attendanceFilter,
+    attendanceStats,
+    attendanceAsOfDate,
+    attendanceStatsLoading,
+    attendanceStatsError,
     sortField,
     sortDir
   ]);
@@ -558,15 +723,78 @@ const MemberDirectory = ({
   };
 
   const toggleSelectAll = () => {
-    if (selectedMembers.size === filteredMembers.length) {
-      setSelectedMembers(new Set());
+    const allFilteredSelected =
+      filteredMembers.length > 0 &&
+      filteredMembers.every((member) => selectedMembers.has(member.id));
+    const visibleIds = new Set(filteredMembers.map((member) => member.id));
+    if (allFilteredSelected) {
+      setSelectedMembers((prev) => new Set([...prev].filter((id) => !visibleIds.has(id))));
     } else {
-      setSelectedMembers(new Set(filteredMembers.map((m) => m.id)));
+      setSelectedMembers((prev) => new Set([...prev, ...visibleIds]));
     }
   };
 
   const hasActiveFilters =
-    sectionFilter || leaderFilter || ageGroupFilter !== 'all' || genderFilter !== 'all';
+    sectionFilter ||
+    leaderFilter ||
+    ageGroupFilter !== 'all' ||
+    genderFilter !== 'all' ||
+    attendanceFilter !== 'all';
+
+  const selectedDeletableMembers = useMemo(() => {
+    const ownMemberId = Number(currentUserMemberId);
+    const asOfDate = attendanceAsOfDate || new Date().toISOString().slice(0, 10);
+    return allMembers
+      .filter(
+        (member) =>
+          selectedMembers.has(member.id) && (!ownMemberId || Number(member.id) !== ownMemberId)
+      )
+      .map((member) => {
+        const stats = attendanceStats[member.id] || {};
+        const lastDate = stats.last_attendance_date || null;
+        return {
+          ...member,
+          ...stats,
+          last_attendance_date: lastDate,
+          days_since_last_attendance: lastDate ? daysBetween(lastDate, asOfDate) : null,
+          total_attendance_count: Number(stats.total_attendance_count) || 0
+        };
+      });
+  }, [allMembers, selectedMembers, currentUserMemberId, attendanceStats, attendanceAsOfDate]);
+  const allVisibleMembersSelected =
+    filteredMembers.length > 0 && filteredMembers.every((member) => selectedMembers.has(member.id));
+
+  useEffect(() => {
+    if (!selectAllCheckboxRef.current) return;
+    const hasPartialSelection = filteredMembers.some((member) => selectedMembers.has(member.id));
+    selectAllCheckboxRef.current.indeterminate = hasPartialSelection && !allVisibleMembersSelected;
+  }, [filteredMembers, selectedMembers, allVisibleMembersSelected]);
+
+  const handleConfirmDelete = async () => {
+    if (!deletingMember || Number(deletingMember.id) === Number(currentUserMemberId)) return;
+    setDeleteLoading(true);
+    try {
+      await adminAPI.deleteMember(deletingMember.id, { archive: archiveInstead });
+      await onRefresh?.();
+      await fetchAttendanceInsights();
+      setSelectedMembers((prev) => new Set([...prev].filter((id) => id !== deletingMember.id)));
+      refreshPendingDeletionCount();
+      showToast({
+        type: 'success',
+        title: archiveInstead ? 'Member archived' : 'Member moved to Trash',
+        message: `${deletingMember.full_name} was ${archiveInstead ? 'archived' : 'moved to Trash'} successfully.`
+      });
+      setDeletingMember(null);
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'Could not remove member',
+        message: error.response?.data?.error || 'Please try again.'
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const exportPDF = async () => {
     const [{ default: jsPDF }, autoTableModule] = await Promise.all([
@@ -691,20 +919,6 @@ const MemberDirectory = ({
         </button>
         <button
           type="button"
-          onClick={() => setShowBulkDelete(true)}
-          disabled={selectedMembers.size === 0}
-          className="btn-danger btn-sm focus-ring"
-          title={
-            selectedMembers.size === 0
-              ? 'Select members to remove'
-              : 'Move selected members to pending deletion'
-          }
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          Bulk Delete
-        </button>
-        <button
-          type="button"
           onClick={() => setShowPendingDeletion(true)}
           className="btn btn-sm focus-ring bg-system-orange/15 text-amber-700 dark:text-system-orange hover:bg-system-orange/25"
           title="Review members awaiting permanent deletion"
@@ -758,7 +972,7 @@ const MemberDirectory = ({
 
       {/* Search & Filters */}
       <div className="card p-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary-label" />
             <input
@@ -769,10 +983,38 @@ const MemberDirectory = ({
               className="input pl-10 h-10 rounded-xl w-full"
             />
           </div>
+          <div className="w-full lg:w-64">
+            <label
+              htmlFor="member-attendance-filter"
+              className="mb-1 block text-[11px] font-semibold text-secondary-label"
+            >
+              Attendance Status
+            </label>
+            <div className="relative">
+              {attendanceStatsLoading ? (
+                <Loader2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-tertiary-label" />
+              ) : (
+                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
+              )}
+              <select
+                id="member-attendance-filter"
+                value={attendanceFilter}
+                onChange={(event) => setAttendanceFilter(event.target.value)}
+                disabled={attendanceStatsLoading || Boolean(attendanceStatsError)}
+                className="select h-10 w-full rounded-xl pl-10 text-sm disabled:cursor-wait disabled:opacity-60"
+              >
+                {attendanceStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <button
             type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className={`h-10 w-full sm:w-auto px-3 rounded-xl border flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
+            className={`h-10 w-full lg:w-auto px-3 rounded-xl border flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
               showFilters || hasActiveFilters
                 ? 'border-transparent bg-primary-500/[0.12] text-primary-700 dark:text-primary-300'
                 : 'border-separator/70 text-secondary-label hover:bg-system-fill hover:text-label dark:border-white/[0.1]'
@@ -787,7 +1029,8 @@ const MemberDirectory = ({
                     sectionFilter,
                     leaderFilter,
                     ageGroupFilter !== 'all' ? ageGroupFilter : null,
-                    genderFilter !== 'all' ? genderFilter : null
+                    genderFilter !== 'all' ? genderFilter : null,
+                    attendanceFilter !== 'all' ? attendanceFilter : null
                   ].filter(Boolean).length
                 }
               </span>
@@ -800,7 +1043,7 @@ const MemberDirectory = ({
             <select
               value={sectionFilter}
               onChange={(e) => handleSectionFilterChange(e.target.value)}
-              className="select w-auto text-sm h-9 rounded-lg"
+              className="select min-w-40 flex-1 text-sm h-9 rounded-lg"
             >
               <option value="">All Sections</option>
               {sections.map((s) => (
@@ -813,7 +1056,7 @@ const MemberDirectory = ({
             <select
               value={leaderFilter}
               onChange={(e) => handleLeaderFilterChange(e.target.value)}
-              className="select w-auto text-sm h-9 rounded-lg"
+              className="select min-w-40 flex-1 text-sm h-9 rounded-lg"
             >
               <option value="">All Leaders</option>
               {uniqueLeaders.map((name) => (
@@ -826,7 +1069,7 @@ const MemberDirectory = ({
             <select
               value={genderFilter}
               onChange={(e) => setGenderFilter(e.target.value)}
-              className="select w-auto text-sm h-9 rounded-lg font-medium"
+              className="select min-w-40 flex-1 text-sm h-9 rounded-lg font-medium"
             >
               <option value="all">All Genders</option>
               <option value="male">Male</option>
@@ -836,7 +1079,7 @@ const MemberDirectory = ({
             <select
               value={ageGroupFilter}
               onChange={(e) => setAgeGroupFilter(e.target.value)}
-              className="select w-auto text-sm h-9 rounded-lg"
+              className="select min-w-40 flex-1 text-sm h-9 rounded-lg"
             >
               <option value="all">All Ages</option>
               <option value="children">Children</option>
@@ -852,6 +1095,7 @@ const MemberDirectory = ({
                   handleLeaderFilterChange('');
                   setAgeGroupFilter('all');
                   setGenderFilter('all');
+                  setAttendanceFilter('all');
                 }}
                 className="flex items-center gap-1 text-sm font-medium text-rose-700 dark:text-system-red hover:text-rose-800 dark:hover:text-system-red"
               >
@@ -859,6 +1103,18 @@ const MemberDirectory = ({
                 Clear filters
               </button>
             )}
+          </div>
+        )}
+        {attendanceStatsError && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-caption-1 text-rose-700 dark:border-rose-800 dark:bg-rose-950/20 dark:text-rose-300">
+            <span>{attendanceStatsError}</span>
+            <button
+              type="button"
+              onClick={fetchAttendanceInsights}
+              className="font-semibold underline underline-offset-2"
+            >
+              Retry
+            </button>
           </div>
         )}
       </div>
@@ -906,19 +1162,55 @@ const MemberDirectory = ({
           </button>
         </div>
       )}
+      {attendanceFilter !== 'all' && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-system-orange/[0.12] px-4 py-3 text-sm text-amber-800 dark:text-system-orange">
+          <span className="font-semibold">Attendance status:</span>
+          <span>
+            {attendanceStatusOptions.find((option) => option.value === attendanceFilter)?.label}
+          </span>
+          <button
+            type="button"
+            onClick={() => setAttendanceFilter('all')}
+            className="ml-auto inline-flex items-center gap-1 rounded-lg bg-secondary-system-grouped-background px-2.5 py-1 text-xs font-bold text-amber-800 shadow-sm hover:bg-system-fill dark:bg-white/[0.08] dark:text-system-orange"
+          >
+            <X className="h-3 w-3" />
+            Clear
+          </button>
+        </div>
+      )}
 
       {/* Bulk selection bar */}
       {selectedMembers.size > 0 && (
-        <div className="flex items-center justify-between bg-primary-500/[0.12] rounded-xl px-4 py-2.5">
-          <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
-            {selectedMembers.size} member{selectedMembers.size > 1 ? 's' : ''} selected
-          </span>
-          <button
-            onClick={() => setSelectedMembers(new Set())}
-            className="text-sm font-semibold text-primary-700 dark:text-primary-300 hover:text-primary-800 dark:hover:text-primary-200"
-          >
-            Clear selection
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary-500/20 bg-primary-500/[0.08] px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-primary-700 dark:text-primary-300">
+              {selectedMembers.size} member{selectedMembers.size > 1 ? 's' : ''} selected
+            </p>
+            {canDelete && selectedDeletableMembers.length !== selectedMembers.size && (
+              <p className="mt-0.5 text-caption-1 text-secondary-label">
+                Your own member profile cannot be deleted.
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {canDelete && selectedDeletableMembers.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowBulkDelete(true)}
+                className="btn-danger btn-sm focus-ring"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete selected ({selectedDeletableMembers.length})
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedMembers(new Set())}
+              className="text-sm font-semibold text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
+            >
+              Clear selection
+            </button>
+          </div>
         </div>
       )}
 
@@ -945,23 +1237,24 @@ const MemberDirectory = ({
               matching members
             </span>
             <span className="text-xs text-tertiary-label">
-              Click a row to view the full profile
+              {attendanceAsOfDate
+                ? `Attendance as of ${formatAttendanceDate(attendanceAsOfDate)}`
+                : 'Click a row to view the full profile'}
             </span>
           </div>
           <div className="max-h-[68vh] overflow-auto scrollbar-thin">
-            <table className="w-full min-w-[860px]">
+            <table className="w-full min-w-[1120px]">
               <thead className="sticky top-0 z-10 bg-secondary-system-grouped-background/95 backdrop-blur-sm">
                 <tr className="border-b border-separator/60 dark:border-white/[0.08]">
                   <th className="w-10 px-4 py-3">
-                    <button
-                      onClick={toggleSelectAll}
-                      className="w-4 h-4 rounded border-2 border-system-gray-3 dark:border-white/[0.25] flex items-center justify-center transition-colors hover:border-primary-400"
-                    >
-                      {selectedMembers.size > 0 &&
-                        selectedMembers.size === filteredMembers.length && (
-                          <Check className="w-3 h-3 text-primary-600" />
-                        )}
-                    </button>
+                    <input
+                      ref={selectAllCheckboxRef}
+                      type="checkbox"
+                      aria-label="Select all visible members"
+                      checked={allVisibleMembersSelected}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4 rounded border-black/[0.12] text-primary-600 focus:ring-primary-500"
+                    />
                   </th>
                   <th className="w-16 px-4 py-3 text-left text-[11px] font-semibold text-secondary-label">
                     S/N
@@ -990,7 +1283,13 @@ const MemberDirectory = ({
                   <th className="px-4 py-3 text-left text-[11px] font-semibold text-secondary-label hidden md:table-cell">
                     {t('common.phone')}
                   </th>
-                  <th className="sticky right-0 z-20 min-w-[120px] w-32 bg-secondary-system-grouped-background/95 px-4 py-3 text-right text-[11px] font-semibold text-secondary-label backdrop-blur-sm">
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-secondary-label">
+                    Last attended
+                  </th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold text-secondary-label">
+                    Attendance
+                  </th>
+                  <th className="sticky right-0 z-20 min-w-[150px] w-40 bg-secondary-system-grouped-background/95 px-4 py-3 text-right text-[11px] font-semibold text-secondary-label backdrop-blur-sm">
                     {t('table.actions')}
                   </th>
                 </tr>
@@ -1003,31 +1302,38 @@ const MemberDirectory = ({
                   };
                   const avatarColor = getAvatarColor(member.full_name);
                   const isSelected = selectedMembers.has(member.id);
+                  const isCurrentUserMember = Number(member.id) === Number(currentUserMemberId);
                   const serialNumber = index + 1;
+                  const daysAbsent = member.days_since_last_attendance;
+                  const badgeIsRed = daysAbsent >= 90 || member.is_six_month_absence;
+                  const absenceBadgeClass = !member.last_attendance_date
+                    ? 'bg-system-fill text-secondary-label'
+                    : badgeIsRed
+                      ? 'bg-system-red/[0.12] text-rose-700 dark:text-system-red'
+                      : daysAbsent >= 60
+                        ? 'bg-system-orange/[0.14] text-amber-800 dark:text-system-orange'
+                        : daysAbsent >= 30
+                          ? 'bg-system-yellow/[0.18] text-amber-800 dark:text-system-yellow'
+                          : 'bg-system-green/[0.12] text-emerald-700 dark:text-system-green';
 
                   return (
                     <tr
                       key={member.id}
                       onClick={() => setDetailsMember(member)}
-                      className={`border-b border-separator/40 transition-colors hover:bg-system-grouped-background/70 cursor-pointer dark:border-white/[0.06] dark:hover:bg-white/[0.03] ${
+                      className={`group border-b border-separator/40 transition-colors hover:bg-system-grouped-background/70 cursor-pointer dark:border-white/[0.06] dark:hover:bg-white/[0.03] ${
                         isSelected ? 'bg-primary-500/[0.08]' : ''
                       }`}
                     >
                       {/* Checkbox */}
                       <td className="w-10 px-4 py-3">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleSelect(member.id);
-                          }}
-                          className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
-                            isSelected
-                              ? 'border-primary-500 bg-primary-500'
-                              : 'border-system-gray-3 dark:border-white/[0.25] hover:border-primary-400'
-                          }`}
-                        >
-                          {isSelected && <Check className="w-3 h-3 text-white" />}
-                        </button>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          aria-label={`Select ${member.full_name}`}
+                          onClick={(event) => event.stopPropagation()}
+                          onChange={() => toggleSelect(member.id)}
+                          className="h-4 w-4 rounded border-black/[0.12] text-primary-600 focus:ring-primary-500"
+                        />
                       </td>
                       {/* Serial Number */}
                       <td className="px-4 py-3">
@@ -1092,6 +1398,36 @@ const MemberDirectory = ({
                           )}
                         </div>
                       </td>
+                      {/* Attendance summary */}
+                      <td className="px-4 py-3">
+                        <span className="block text-sm font-medium text-label">
+                          {attendanceStatsLoading
+                            ? 'Loading…'
+                            : attendanceStatsError
+                              ? 'Unavailable'
+                              : formatAttendanceDate(member.last_attendance_date)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${absenceBadgeClass}`}
+                          >
+                            {attendanceStatsLoading
+                              ? 'Loading…'
+                              : attendanceStatsError
+                                ? 'Unavailable'
+                                : member.last_attendance_date
+                                  ? `${daysAbsent} days ago`
+                                  : 'Never attended'}
+                          </span>
+                          <span className="text-xs text-secondary-label">
+                            {attendanceStatsLoading || attendanceStatsError
+                              ? '—'
+                              : `${member.total_attendance_count} total`}
+                          </span>
+                        </div>
+                      </td>
                       {/* Actions */}
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5">
@@ -1117,16 +1453,20 @@ const MemberDirectory = ({
                           >
                             <Pencil className="w-5 h-5" />
                           </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(member);
-                            }}
-                            className="p-2 rounded-lg text-tertiary-label transition-colors hover:bg-system-red/15 hover:text-rose-700 dark:hover:text-system-red active:scale-90"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          {canDelete && !isCurrentUserMember && (
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setArchiveInstead(false);
+                                setDeletingMember(member);
+                              }}
+                              className="rounded-lg p-2 text-tertiary-label opacity-100 transition-colors hover:bg-system-red/15 hover:text-rose-700 focus-visible:opacity-100 active:scale-90 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 dark:hover:text-system-red"
+                              title="Delete member"
+                              aria-label={`Delete ${member.full_name}`}
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1141,17 +1481,148 @@ const MemberDirectory = ({
           <div className="w-16 h-16 rounded-2xl bg-system-fill flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-tertiary-label" />
           </div>
-          <h4 className="text-title-3 font-semibold text-label mb-1">No members found</h4>
+          <h4 className="text-title-3 font-semibold text-label mb-1">
+            {attendanceFilter !== 'all' && attendanceStatsLoading
+              ? 'Loading attendance history'
+              : 'No members found'}
+          </h4>
           <p className="text-footnote text-secondary-label max-w-sm text-center">
-            {searchTerm || hasActiveFilters
-              ? 'Try adjusting your search or filters.'
-              : 'Add your first member to get started.'}
+            {attendanceFilter !== 'all' && attendanceStatsLoading
+              ? 'Calculating attendance status for members…'
+              : searchTerm || hasActiveFilters
+                ? 'Try adjusting your search or filters.'
+                : 'Add your first member to get started.'}
           </p>
         </div>
       )}
 
       {/* Member Details Drawer */}
       <MemberDetailsDrawer member={detailsMember} isOpen={!!detailsMember} onClose={closeDetails} />
+
+      {deletingMember && canDelete && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => !deleteLoading && setDeletingMember(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-member-title"
+            className="w-full max-w-lg rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background shadow-modal dark:border-white/[0.08]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="border-b border-black/[0.06] px-5 py-4 dark:border-white/[0.08]">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300">
+                  <Trash2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 id="delete-member-title" className="text-headline font-semibold text-label">
+                    Remove member?
+                  </h3>
+                  <p className="mt-0.5 text-caption-1 text-secondary-label">
+                    This keeps their attendance history and can be restored from Trash.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div className="flex items-center gap-3 rounded-xl border border-black/[0.06] bg-system-fill/50 p-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-system-fill text-sm font-semibold text-secondary-label">
+                  {deletingMember.profile_picture ? (
+                    <img
+                      src={deletingMember.profile_picture}
+                      alt={deletingMember.full_name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    getInitials(deletingMember.full_name)
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-label">{deletingMember.full_name}</p>
+                  <p className="truncate text-caption-1 text-secondary-label">
+                    {deletingMember.membership_id || 'No member ID'} ·{' '}
+                    {deletingMember.section_name || 'Unassigned'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="rounded-lg bg-system-fill p-3 dark:bg-white/[0.04]">
+                  <p className="text-caption-2 font-semibold uppercase tracking-wide text-tertiary-label">
+                    Last attended
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-label">
+                    {formatAttendanceDate(deletingMember.last_attendance_date)}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-system-fill p-3 dark:bg-white/[0.04]">
+                  <p className="text-caption-2 font-semibold uppercase tracking-wide text-tertiary-label">
+                    Time away
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-label">
+                    {deletingMember.days_since_last_attendance === null
+                      ? 'Never attended'
+                      : `${deletingMember.days_since_last_attendance} days ago`}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-system-fill p-3 dark:bg-white/[0.04]">
+                  <p className="text-caption-2 font-semibold uppercase tracking-wide text-tertiary-label">
+                    Total attendance
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-label">
+                    {Number(deletingMember.total_attendance_count) || 0}
+                  </p>
+                </div>
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-black/[0.06] p-3 text-footnote dark:border-white/[0.08]">
+                <input
+                  type="checkbox"
+                  checked={archiveInstead}
+                  onChange={(event) => setArchiveInstead(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-black/[0.12] text-violet-600 focus:ring-violet-500"
+                />
+                <span>
+                  <span className="flex items-center gap-1.5 font-semibold text-label">
+                    <Archive className="h-4 w-4 text-secondary-label" /> Archive instead
+                  </span>
+                  <span className="mt-0.5 block text-caption-1 text-secondary-label">
+                    Retain this member in Trash and exclude them from permanent deletion.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-black/[0.06] px-5 py-4 dark:border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setDeletingMember(null)}
+                disabled={deleteLoading}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+                className="btn-danger"
+              >
+                {deleteLoading
+                  ? archiveInstead
+                    ? 'Archiving…'
+                    : 'Moving to Trash…'
+                  : archiveInstead
+                    ? 'Archive member'
+                    : 'Move to Trash'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bulk Edit Modal */}
       {showBulkEdit && (
@@ -1171,13 +1642,26 @@ const MemberDirectory = ({
       {/* Bulk Soft-Delete Modal */}
       {showBulkDelete && (
         <BulkDeleteModal
-          members={allMembers}
-          initialSelectedIds={Array.from(selectedMembers)}
+          members={allMembers.map((member) => {
+            const stats = attendanceStats[member.id] || {};
+            const lastDate = stats.last_attendance_date || null;
+            const asOfDate = attendanceAsOfDate || new Date().toISOString().slice(0, 10);
+            return {
+              ...member,
+              ...stats,
+              last_attendance_date: lastDate,
+              days_since_last_attendance: lastDate ? daysBetween(lastDate, asOfDate) : null,
+              total_attendance_count: Number(stats.total_attendance_count) || 0
+            };
+          })}
+          initialSelectedIds={selectedDeletableMembers.map((member) => member.id)}
+          currentUserMemberId={currentUserMemberId}
           onClose={() => setShowBulkDelete(false)}
-          onRefresh={() => {
+          onRefresh={async () => {
             setSelectedMembers(new Set());
-            refreshPendingDeletionCount();
-            onRefresh();
+            await refreshPendingDeletionCount();
+            await onRefresh?.();
+            await fetchAttendanceInsights();
           }}
         />
       )}

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { adminAPI } from '../services/api';
 import useAdminData from '../hooks/useAdminData';
 import { useBreadcrumbs } from '../context/BreadcrumbContext';
-import { CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, ShieldAlert } from 'lucide-react';
 
 // Admin has many large reporting and management surfaces. Load each surface
 // only when its tab is opened so the initial admin route stays responsive.
@@ -66,9 +66,6 @@ const AdminDashboard = () => {
   const [editingMember, setEditingMember] = useState(null);
   const [memberMode, setMemberMode] = useState('edit');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [deletingMember, setDeletingMember] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Member CRUD handlers
   const handleEditClick = (member) => {
@@ -96,26 +93,6 @@ const AdminDashboard = () => {
     } catch (error) {
       alert(`Failed to save: ${error.response?.data?.error || error.message}`);
       throw error;
-    }
-  };
-
-  const handleDeleteClick = (member) => {
-    setDeletingMember(member);
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deletingMember) return;
-    setDeleteLoading(true);
-    try {
-      await adminAPI.deleteMember(deletingMember.id);
-      data.loadCoreData();
-      data.showMessage('Member deleted successfully');
-      setShowDeleteConfirm(false);
-    } catch (error) {
-      alert(`Failed to delete: ${error.response?.data?.error || error.message}`);
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
@@ -220,8 +197,9 @@ const AdminDashboard = () => {
             onLeaderFilterChange={data.setMemberLeaderFilter}
             onEdit={handleEditClick}
             onAdd={handleAddClick}
-            onDelete={handleDeleteClick}
             onRefresh={data.loadCoreData}
+            canDelete={user?.role === 'admin'}
+            currentUserMemberId={user?.member_id}
             loading={data.loading}
           />
         );
@@ -487,39 +465,6 @@ const AdminDashboard = () => {
                   className="btn-danger flex-1"
                 >
                   {data.leaderSaving ? 'Removing...' : 'Confirm Remove'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation */}
-      {showDeleteConfirm && deletingMember && (
-        <div className="modal-overlay">
-          <div className="modal-content max-w-sm text-center">
-            <div className="p-5 sm:p-8">
-              <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-5">
-                <AlertTriangle className="w-7 h-7 text-rose-500" />
-              </div>
-              <h3 className="text-headline font-semibold text-label mb-2">Delete Member?</h3>
-              <p className="text-footnote text-secondary-label mb-8">
-                This action cannot be undone. Are you sure you want to remove{' '}
-                <strong className="text-label">{deletingMember.full_name}</strong>?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirmDelete}
-                  disabled={deleteLoading}
-                  className="btn-danger flex-1"
-                >
-                  {deleteLoading ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>
