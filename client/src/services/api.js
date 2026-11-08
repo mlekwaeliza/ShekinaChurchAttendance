@@ -159,7 +159,7 @@ export const adminAPI = {
   // Trash
   getTrash: () => api.get('/admin/members/trash'),
   permanentDelete: (id) => api.delete(`/admin/members/${id}/permanent`),
-  emptyTrash: () => api.post('/admin/members/empty-trash'),
+  emptyTrash: (confirm) => api.post('/admin/members/empty-trash', { confirm }),
   restoreFromTrash: (id) => api.post(`/admin/members/${id}/restore`),
   getHistory: (serviceId) => api.get('/admin/history', { params: { service_id: serviceId } }),
   getHistoryReminders: (date) => api.get('/admin/history/reminders', { params: { date } }),

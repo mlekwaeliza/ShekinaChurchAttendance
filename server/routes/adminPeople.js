@@ -855,6 +855,16 @@ router.delete('/members/:id/permanent', async (req, res) => {
 // POST empty trash (permanently delete ALL soft-deleted members)
 router.post('/members/empty-trash', async (req, res) => {
   try {
+    if (
+      String(req.body?.confirm || '')
+        .trim()
+        .toUpperCase() !== 'EMPTY'
+    ) {
+      return res.status(400).json({
+        error: 'Confirmation required',
+        details: 'Send { "confirm": "EMPTY" } to permanently delete members in Trash.'
+      });
+    }
     const currentMemberId = await getActingUserMemberId(req);
     const rows = (
       await all(

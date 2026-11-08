@@ -37,6 +37,7 @@ const TrashView = () => {
   const [search, setSearch] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
+  const [emptyTrashConfirmation, setEmptyTrashConfirmation] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
   const [message, setMessage] = useState(null);
 
@@ -90,11 +91,13 @@ const TrashView = () => {
   };
 
   const handleEmptyTrash = async () => {
+    if (emptyTrashConfirmation.trim().toUpperCase() !== 'EMPTY') return;
     setActionLoading('empty');
     try {
-      const res = await adminAPI.emptyTrash();
+      const res = await adminAPI.emptyTrash('EMPTY');
       showMessage('success', res.data?.message || 'Trash emptied');
       setConfirmEmpty(false);
+      setEmptyTrashConfirmation('');
       loadTrash();
     } catch (e) {
       showMessage('error', 'Failed to empty trash');
@@ -300,7 +303,10 @@ const TrashView = () => {
           )}
           {removableMemberCount > 0 && (
             <button
-              onClick={() => setConfirmEmpty(true)}
+              onClick={() => {
+                setEmptyTrashConfirmation('');
+                setConfirmEmpty(true);
+              }}
               disabled={actionLoading !== null}
               className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-caption-1 font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-wait disabled:opacity-60 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300 dark:hover:bg-rose-900/40"
             >
@@ -547,7 +553,9 @@ const TrashView = () => {
       {confirmEmpty && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setConfirmEmpty(false)}
+          onClick={() => {
+            if (actionLoading !== 'empty') setConfirmEmpty(false);
+          }}
         >
           <div
             className="bg-secondary-system-grouped-background rounded-2xl shadow-card max-w-md w-full"
@@ -563,23 +571,46 @@ const TrashView = () => {
                   <p className="text-caption-1 text-secondary-label mt-1">
                     You are about to{' '}
                     <strong className="text-rose-600">
-                      permanently delete {members.length} member(s)
+                      permanently delete {removableMemberCount} member(s)
                     </strong>
                     . This action <strong>cannot be undone</strong>. All their data will be lost
                     forever.
                   </p>
                 </div>
               </div>
+              <label
+                htmlFor="empty-trash-confirmation"
+                className="mb-1.5 block text-caption-1 font-semibold text-label"
+              >
+                Type <span className="font-mono text-rose-600">EMPTY</span> to confirm
+              </label>
+              <input
+                id="empty-trash-confirmation"
+                type="text"
+                value={emptyTrashConfirmation}
+                onChange={(event) => setEmptyTrashConfirmation(event.target.value)}
+                autoComplete="off"
+                disabled={actionLoading === 'empty'}
+                className="input mb-5 h-10 w-full rounded-lg"
+                placeholder="Type EMPTY"
+              />
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => setConfirmEmpty(false)}
+                  onClick={() => {
+                    setConfirmEmpty(false);
+                    setEmptyTrashConfirmation('');
+                  }}
+                  disabled={actionLoading === 'empty'}
                   className="text-caption-1 font-semibold px-4 py-2 rounded-lg text-secondary-label hover:bg-system-fill transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleEmptyTrash}
-                  disabled={actionLoading === 'empty'}
+                  disabled={
+                    actionLoading === 'empty' ||
+                    emptyTrashConfirmation.trim().toUpperCase() !== 'EMPTY'
+                  }
                   className="text-caption-1 font-semibold px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
                 >
                   {actionLoading === 'empty' ? (
