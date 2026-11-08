@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { adminAPI } from '../../services/api';
@@ -30,6 +30,21 @@ const STATUS_META = {
   present: { label: 'Present', icon: CheckCircle2, variant: 'success' },
   absent: { label: 'Absent', icon: XCircle, variant: 'danger' },
   excused: { label: 'Excused', icon: HelpCircle, variant: 'warning' }
+};
+
+const STATUS_CONTROL_STYLES = {
+  present: {
+    active: 'border-emerald-600 bg-emerald-600 text-white',
+    idle: 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/30'
+  },
+  absent: {
+    active: 'border-rose-600 bg-rose-600 text-white',
+    idle: 'border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-900/30'
+  },
+  excused: {
+    active: 'border-amber-500 bg-amber-500 text-white',
+    idle: 'border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/30'
+  }
 };
 
 const SUBMISSION_STATUS_META = {
@@ -345,31 +360,40 @@ const CORRECTION_REASONS = [
 
 const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMessage }) => {
   const modalRef = useRef(null);
-  useModalA11y(modalRef, true, onClose);
   const [members, setMembers] = useState([]);
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [reason, setReason] = useState(CORRECTION_REASONS[0]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [dataInfo, setDataInfo] = useState(null);
+  const [loadError, setLoadError] = useState('');
+  const handleClose = useCallback(() => {
+    if (!saving) onClose();
+  }, [onClose, saving]);
+  useModalA11y(modalRef, true, handleClose);
+
+  const loadMembers = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const res = await adminAPI.getLeaderMembers(leader.leader_id, date, serviceId);
+      setMembers(res.data.members || []);
+    } catch (error) {
+      setLoadError(
+        error.data?.details || error.data?.error || error.message || 'Could not load the roster.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [date, leader.leader_id, serviceId]);
 
   useEffect(() => {
-    if (!leader) return;
-    setLoading(true);
-    adminAPI
-      .getLeaderMembers(leader.leader_id, date, serviceId)
-      .then((res) => {
-        setMembers(res.data.members || []);
-        setDataInfo(res.data);
-      })
-      .catch(() => showMessage?.('Failed to load members.', 4000))
-      .finally(() => setLoading(false));
-  }, [leader, date, serviceId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (leader) loadMembers();
+  }, [leader, loadMembers]);
 
   const filteredMembers = useMemo(() => {
-    if (!memberSearch) return members;
-    const q = memberSearch.toLowerCase();
+    const q = memberSearch.trim().toLowerCase();
+    if (!q) return members;
     return members.filter(
       (m) => m.full_name?.toLowerCase().includes(q) || m.membership_id?.toLowerCase().includes(q)
     );
@@ -377,13 +401,17 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
 
   const recordedCount = members.filter((m) => m.status).length;
   const expectedCount = members.length;
-  const allHaveStatus = members.every((m) => m.status);
+  const allHaveStatus = expectedCount > 0 && members.every((m) => m.status);
+  const completionPercent = expectedCount ? Math.round((recordedCount / expectedCount) * 100) : 0;
   const summary = useMemo(() => {
     const p = members.filter((m) => m.status === 'present').length;
     const a = members.filter((m) => m.status === 'absent').length;
     const e = members.filter((m) => m.status === 'excused').length;
     return { present: p, absent: a, excused: e, total: p + a + e };
   }, [members]);
+  const allVisibleSelected =
+    filteredMembers.length > 0 &&
+    filteredMembers.every((member) => selectedIds.has(member.member_id));
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) => {
@@ -395,8 +423,14 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredMembers.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(filteredMembers.map((m) => m.member_id)));
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      filteredMembers.forEach((member) => {
+        if (allVisibleSelected) next.delete(member.member_id);
+        else next.add(member.member_id);
+      });
+      return next;
+    });
   };
 
   const bulkSetStatus = (newStatus) => {
@@ -431,7 +465,10 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
       });
       onSaved(summary.total);
     } catch (err) {
-      showMessage?.(err.response?.data?.error || 'Failed to save attendance.', 4000);
+      showMessage?.(
+        err.data?.details || err.data?.error || err.message || 'Failed to save attendance.',
+        4000
+      );
     } finally {
       setSaving(false);
     }
@@ -441,327 +478,419 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-[2px] sm:p-5"
+      onClick={handleClose}
     >
       <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
-        className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-secondary-system-grouped-background shadow-modal"
+        aria-labelledby="bulk-correction-title"
+        className="relative flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-black/[0.08] bg-secondary-system-grouped-background shadow-modal dark:border-white/[0.1]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-black/[0.06] bg-secondary-system-grouped-background px-6 py-4 dark:border-white/[0.08]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-600 dark:bg-primary-900/40 dark:text-primary-300">
+        <header className="shrink-0 border-b border-black/[0.06] px-4 py-4 dark:border-white/[0.08] sm:px-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-500/[0.12] text-primary-700 dark:text-primary-300">
               <ClipboardList className="h-5 w-5" />
             </div>
-            <div>
-              <h2 className="text-subheadline font-semibold text-label">
-                Mark Attendance — {leader.leader_name}
+            <div className="min-w-0 flex-1">
+              <p className="text-caption-2 font-semibold text-primary-700 dark:text-primary-300">
+                Attendance correction
+              </p>
+              <h2
+                id="bulk-correction-title"
+                className="mt-0.5 text-title-3 font-semibold text-label"
+              >
+                Mark attendance
               </h2>
-              <p className="text-caption-1 text-secondary-label">
-                {leader.section_name} &middot; {date} &middot;{' '}
-                {dataInfo?.leader?.section_name || ''}
+              <p className="mt-0.5 truncate text-footnote text-secondary-label">
+                For {leader.leader_name} · {leader.section_name}
               </p>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-lg p-1.5 text-tertiary-label transition-colors hover:bg-system-fill hover:text-secondary-label dark:hover:bg-white/[0.06] dark:hover:text-label"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-5">
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-tertiary-label text-footnote">
-              <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-              Loading members...
+            <div className="hidden shrink-0 flex-col items-end gap-1 pt-0.5 text-right sm:flex">
+              <span className="text-footnote font-semibold text-label">
+                {leader.service_name || 'Selected service'}
+              </span>
+              <span className="text-caption-1 text-secondary-label">{fdate(date)}</span>
             </div>
-          ) : (
-            <>
-              {/* Progress + Summary */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="rounded-xl bg-system-grouped-background/30 p-4">
-                  <p className="text-caption-2 font-semibold uppercase tracking-[0.06em] text-tertiary-label mb-2">
-                    Attendance Progress
-                  </p>
-                  <div className="w-full h-3 bg-system-gray-4 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                      style={{
-                        width: `${expectedCount > 0 ? (recordedCount / expectedCount) * 100 : 0}%`
-                      }}
-                    />
-                  </div>
-                  <p className="text-caption-1 text-secondary-label mt-1.5 font-semibold">
-                    {recordedCount} / {expectedCount} members recorded
-                    {recordedCount < expectedCount && (
-                      <span className="text-amber-600 ml-1">
-                        — {expectedCount - recordedCount} remaining
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-system-grouped-background/30 p-4">
-                  <div className="grid grid-cols-4 gap-3 text-center">
-                    <div>
-                      <p className="text-lg font-semibold text-emerald-600">{summary.present}</p>
-                      <p className="text-caption-2 uppercase text-tertiary-label">Present</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-rose-600">{summary.absent}</p>
-                      <p className="text-caption-2 uppercase text-tertiary-label">Absent</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-amber-600">{summary.excused}</p>
-                      <p className="text-caption-2 uppercase text-tertiary-label">Excused</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-label">{summary.total}</p>
-                      <p className="text-caption-2 uppercase text-tertiary-label">Total</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label="Close attendance correction"
+              disabled={saving}
+              className="rounded-lg p-2 text-tertiary-label transition-colors hover:bg-system-fill hover:text-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 sm:hidden">
+            <span className="rounded-lg bg-system-fill px-2.5 py-1 text-caption-2 font-medium text-secondary-label">
+              {leader.section_name}
+            </span>
+            <span className="rounded-lg bg-system-fill px-2.5 py-1 text-caption-2 font-medium text-secondary-label">
+              {leader.service_name || 'Selected service'}
+            </span>
+            <span className="rounded-lg bg-system-fill px-2.5 py-1 text-caption-2 font-medium text-secondary-label">
+              {fdate(date)}
+            </span>
+          </div>
+        </header>
 
-              {/* Search + Bulk Actions */}
-              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                <div className="relative flex-1 max-w-xs">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-tertiary-label" />
-                  <input
-                    value={memberSearch}
-                    onChange={(e) => setMemberSearch(e.target.value)}
-                    placeholder="Search members..."
-                    className="input h-9 w-full pl-9 text-caption-1"
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          {loading ? (
+            <div className="space-y-4" aria-live="polite" aria-busy="true">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="h-24 animate-pulse rounded-xl border border-black/[0.06] bg-system-fill/60 dark:border-white/[0.08]"
                   />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-caption-2 text-tertiary-label font-semibold">
-                    {selectedIds.size} selected
-                  </span>
-                  <button
-                    type="button"
-                    onClick={toggleSelectAll}
-                    className="text-caption-2 font-semibold text-primary-700 dark:text-primary-300 hover:underline"
-                  >
-                    {selectedIds.size === filteredMembers.length ? 'Deselect all' : 'Select all'}
-                  </button>
-                  <div className="w-px h-5 bg-system-gray-4" />
-                  {[
-                    {
-                      key: 'present',
-                      label: 'Present',
-                      icon: CheckCircle2,
-                      cls: 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-800'
-                    },
-                    {
-                      key: 'absent',
-                      label: 'Absent',
-                      icon: XCircle,
-                      cls: 'text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-200 dark:border-rose-800'
-                    },
-                    {
-                      key: 'excused',
-                      label: 'Excused',
-                      icon: HelpCircle,
-                      cls: 'text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800'
-                    }
-                  ].map((act) => {
-                    const Icon = act.icon;
-                    return (
-                      <button
-                        key={act.key}
-                        type="button"
-                        onClick={() => bulkSetStatus(act.key)}
-                        disabled={selectedIds.size === 0}
-                        className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1.5 text-caption-2 font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed ${act.cls}`}
-                      >
-                        <Icon className="w-3 h-3" />
-                        {act.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                ))}
               </div>
-
-              {/* Members Table */}
-              <div className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] overflow-hidden">
-                <div className="max-h-[320px] overflow-x-auto overflow-y-auto">
-                  <table className="min-w-[600px] text-caption-1">
-                    <thead className="bg-system-grouped-background/40 sticky top-0">
-                      <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
-                        <th className="w-10 px-3 py-2 text-left">
-                          <input
-                            type="checkbox"
-                            checked={
-                              filteredMembers.length > 0 &&
-                              selectedIds.size === filteredMembers.length
-                            }
-                            onChange={toggleSelectAll}
-                            className="rounded border-black/[0.12]"
-                          />
-                        </th>
-                        <th className="px-3 py-2 text-left text-caption-2 font-semibold uppercase text-secondary-label">
-                          Member
-                        </th>
-                        <th className="px-3 py-2 text-left text-caption-2 font-semibold uppercase text-secondary-label">
-                          Membership ID
-                        </th>
-                        <th className="px-3 py-2 text-center text-caption-2 font-semibold uppercase text-secondary-label">
-                          Current Status
-                        </th>
-                        <th className="px-3 py-2 text-center text-caption-2 font-semibold uppercase text-secondary-label">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-separator/50 dark:divide-white/[0.06]">
-                      {filteredMembers.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="px-3 py-8 text-center text-tertiary-label">
-                            No members found.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredMembers.map((m) => (
-                          <tr
-                            key={m.member_id}
-                            className={`hover:bg-system-grouped-background/60 dark:hover:bg-white/[0.03] [content-visibility:auto] [contain-intrinsic-size:auto_44px] ${m.status ? 'bg-system-fill/30' : 'bg-amber-50/20 dark:bg-amber-900/5'}`}
-                          >
-                            <td className="px-3 py-2">
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.has(m.member_id)}
-                                onChange={() => toggleSelect(m.member_id)}
-                                className="rounded border-black/[0.12]"
-                              />
-                            </td>
-                            <td className="px-3 py-2 font-medium text-label whitespace-nowrap">
-                              {m.full_name}
-                            </td>
-                            <td className="px-3 py-2 font-mono text-tertiary-label">
-                              {m.membership_id || '—'}
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              {m.status ? (
-                                <StatusBadge status={m.status} />
-                              ) : (
-                                <span className="text-caption-2 text-amber-600 font-semibold">
-                                  Not set
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <div className="inline-flex items-center gap-1 rounded-lg bg-system-fill p-0.5">
-                                {Object.entries(STATUS_META).map(([key, meta]) => {
-                                  const Icon = meta.icon;
-                                  const active = m.status === key;
-                                  return (
-                                    <button
-                                      key={key}
-                                      type="button"
-                                      onClick={() => setMemberStatus(m.member_id, key)}
-                                      className={`p-1 rounded-md transition-all ${active ? (key === 'present' ? 'bg-emerald-500 text-white' : key === 'absent' ? 'bg-rose-500 text-white' : 'bg-amber-500 text-white') : 'text-tertiary-label hover:text-secondary-label dark:hover:text-tertiary-label'}`}
-                                      title={meta.label}
-                                    >
-                                      <Icon className="w-3.5 h-3.5" />
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Correction Reason */}
-              <div>
-                <label className="mb-1.5 block text-caption-1 font-semibold uppercase tracking-[0.06em] text-secondary-label">
-                  Administrative Correction Reason
-                </label>
-                <select
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="input h-9 w-full max-w-xs text-caption-1"
-                >
-                  {CORRECTION_REASONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-caption-2 text-tertiary-label mt-1">
-                  This reason will be logged in the audit trail for every corrected record.
+              <div className="rounded-xl border border-black/[0.06] p-8 text-center dark:border-white/[0.08]">
+                <RefreshCw className="mx-auto h-5 w-5 animate-spin text-primary-600" />
+                <p className="mt-3 text-footnote font-medium text-secondary-label">
+                  Loading {leader.leader_name}&apos;s roster…
                 </p>
               </div>
+            </div>
+          ) : loadError ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-center dark:border-rose-900/60 dark:bg-rose-950/20">
+              <AlertTriangle className="mx-auto h-6 w-6 text-rose-600 dark:text-rose-300" />
+              <h3 className="mt-3 text-footnote font-semibold text-label">
+                Roster couldn&apos;t load
+              </h3>
+              <p className="mx-auto mt-1 max-w-lg text-caption-1 text-secondary-label">
+                {loadError}
+              </p>
+              <button
+                type="button"
+                onClick={loadMembers}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg bg-secondary-system-grouped-background px-3 py-2 text-caption-1 font-semibold text-label shadow-sm transition-colors hover:bg-system-fill"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Try again
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <section
+                className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+                aria-label="Attendance summary"
+              >
+                <div className="rounded-xl border border-black/[0.06] bg-system-grouped-background/30 p-4 dark:border-white/[0.08]">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-caption-1 font-semibold text-secondary-label">
+                      Roster progress
+                    </p>
+                    <span className="text-footnote font-semibold tabular-nums text-label">
+                      {completionPercent}%
+                    </span>
+                  </div>
+                  <div
+                    className="mt-3 h-2 overflow-hidden rounded-full bg-system-fill"
+                    role="progressbar"
+                    aria-label="Attendance roster completion"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={completionPercent}
+                  >
+                    <div
+                      className="h-full rounded-full bg-primary-600 transition-[width] duration-300"
+                      style={{ width: `${completionPercent}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-caption-2 tabular-nums text-tertiary-label">
+                    {recordedCount} of {expectedCount} members marked
+                  </p>
+                </div>
+                {[
+                  { key: 'present', value: summary.present },
+                  { key: 'absent', value: summary.absent },
+                  { key: 'excused', value: summary.excused }
+                ].map(({ key, value }) => {
+                  const meta = STATUS_META[key];
+                  const Icon = meta.icon;
+                  return (
+                    <div
+                      key={key}
+                      className="rounded-xl border border-black/[0.06] bg-system-grouped-background/30 p-4 dark:border-white/[0.08]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg ${
+                            key === 'present'
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                              : key === 'absent'
+                                ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300'
+                                : 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <p className="text-caption-1 font-semibold text-secondary-label">
+                          {meta.label}
+                        </p>
+                      </div>
+                      <p className="mt-2 text-title-3 font-semibold tabular-nums text-label">
+                        {value}
+                      </p>
+                    </div>
+                  );
+                })}
+              </section>
 
-              {/* Audit Summary */}
-              <div className="rounded-xl bg-primary-500/10 dark:bg-primary-500/[0.07] border border-primary-500/20 dark:border-primary-500/20 p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Info className="w-4 h-4 text-primary-600" />
-                  <span className="text-caption-1 font-semibold text-primary-700 dark:text-primary-300">
-                    Correction Audit
+              <section className="rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background p-4 dark:border-white/[0.08]">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
+                    <input
+                      value={memberSearch}
+                      onChange={(e) => setMemberSearch(e.target.value)}
+                      placeholder="Search this roster"
+                      aria-label="Search members in this roster"
+                      className="input h-10 w-full rounded-lg pl-9 pr-9 text-footnote"
+                    />
+                    {memberSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setMemberSearch('')}
+                        aria-label="Clear member search"
+                        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-tertiary-label transition-colors hover:bg-system-fill hover:text-label"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                    <span className="text-caption-1 tabular-nums text-secondary-label">
+                      {filteredMembers.length} {filteredMembers.length === 1 ? 'member' : 'members'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      disabled={filteredMembers.length === 0}
+                      className="rounded-lg border border-black/[0.08] px-3 py-2 text-caption-1 font-semibold text-secondary-label transition-colors hover:bg-system-fill hover:text-label disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.1]"
+                    >
+                      {allVisibleSelected ? 'Clear visible' : 'Select visible'}
+                    </button>
+                  </div>
+                </div>
+                {selectedIds.size > 0 && (
+                  <div className="mt-3 flex flex-col gap-3 rounded-lg bg-primary-500/[0.07] p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-caption-1 font-semibold text-primary-800 dark:text-primary-200">
+                      {selectedIds.size} selected
+                      <span className="ml-1 font-normal text-secondary-label">Set status to</span>
+                    </p>
+                    <div
+                      className="flex flex-wrap gap-2"
+                      role="group"
+                      aria-label="Set status for selected members"
+                    >
+                      {Object.entries(STATUS_META).map(([key, meta]) => {
+                        const Icon = meta.icon;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => bulkSetStatus(key)}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-caption-1 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${STATUS_CONTROL_STYLES[key].idle}`}
+                          >
+                            <Icon className="h-3.5 w-3.5" /> {meta.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <section className="overflow-hidden rounded-xl border border-black/[0.06] dark:border-white/[0.08]">
+                <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] px-4 py-3 dark:border-white/[0.08]">
+                  <div>
+                    <h3 className="text-footnote font-semibold text-label">Member roster</h3>
+                    <p className="mt-0.5 text-caption-2 text-tertiary-label">
+                      Set one attendance status for each member
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-system-fill px-2.5 py-1 text-caption-2 font-semibold tabular-nums text-secondary-label">
+                    {recordedCount}/{expectedCount} complete
                   </span>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-caption-2 text-primary-700 dark:text-primary-300">
-                  <div>
-                    <span className="text-primary-400">Original Leader:</span>{' '}
-                    <span className="font-semibold">{leader.leader_name}</span>
+                {filteredMembers.length === 0 ? (
+                  <div className="px-4 py-12 text-center">
+                    <Users className="mx-auto h-6 w-6 text-tertiary-label" />
+                    <p className="mt-3 text-footnote font-semibold text-label">
+                      {memberSearch ? 'No members match that search' : 'No members in this roster'}
+                    </p>
+                    <p className="mt-1 text-caption-1 text-secondary-label">
+                      {memberSearch
+                        ? 'Try a different name or membership ID.'
+                        : 'There are no active members assigned to this leader.'}
+                    </p>
                   </div>
-                  <div>
-                    <span className="text-primary-400">Correction Reason:</span>{' '}
-                    <span className="font-semibold">{reason}</span>
+                ) : (
+                  <div className="max-h-[390px] divide-y divide-separator/50 overflow-y-auto dark:divide-white/[0.06]">
+                    {filteredMembers.map((member) => {
+                      const initials =
+                        member.full_name
+                          ?.trim()
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((part) => part.charAt(0))
+                          .join('')
+                          .toUpperCase() || '?';
+                      return (
+                        <div
+                          key={member.member_id}
+                          className="flex flex-col gap-3 px-4 py-3 transition-colors hover:bg-system-grouped-background/40 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(member.member_id)}
+                              onChange={() => toggleSelect(member.member_id)}
+                              aria-label={`Select ${member.full_name} for bulk status changes`}
+                              className="h-4 w-4 shrink-0 rounded border-black/[0.16] accent-primary-600"
+                            />
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-system-fill text-caption-1 font-semibold text-secondary-label">
+                              {initials}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="truncate text-footnote font-semibold text-label">
+                                {member.full_name}
+                              </p>
+                              <p className="mt-0.5 truncate text-caption-1 text-tertiary-label">
+                                {member.membership_id || 'No membership ID'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2 sm:w-[410px] sm:flex-row sm:items-center sm:justify-end">
+                            <div className="sm:w-24 sm:text-right">
+                              {member.status ? (
+                                <StatusBadge status={member.status} />
+                              ) : (
+                                <Badge variant="warning" dot>
+                                  Not marked
+                                </Badge>
+                              )}
+                            </div>
+                            <div
+                              className="grid grid-cols-3 gap-1.5"
+                              role="group"
+                              aria-label={`Attendance status for ${member.full_name}`}
+                            >
+                              {Object.entries(STATUS_META).map(([key, meta]) => {
+                                const Icon = meta.icon;
+                                const active = member.status === key;
+                                return (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    onClick={() => setMemberStatus(member.member_id, key)}
+                                    aria-label={`${meta.label} for ${member.full_name}`}
+                                    aria-pressed={active}
+                                    className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2 py-2 text-caption-2 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 sm:px-2.5 ${
+                                      active
+                                        ? STATUS_CONTROL_STYLES[key].active
+                                        : STATUS_CONTROL_STYLES[key].idle
+                                    }`}
+                                  >
+                                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                                    {meta.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                )}
+              </section>
+
+              <section className="grid gap-4 rounded-xl border border-black/[0.06] bg-system-grouped-background/25 p-4 dark:border-white/[0.08] sm:grid-cols-[minmax(0,1fr)_260px] sm:items-center">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-500/[0.1] text-primary-700 dark:text-primary-300">
+                    <Info className="h-4 w-4" />
+                  </span>
                   <div>
-                    <span className="text-primary-400">Records:</span>{' '}
-                    <span className="font-semibold">{summary.total} members</span>
-                  </div>
-                  <div>
-                    <span className="text-primary-400">Date:</span>{' '}
-                    <span className="font-semibold">{date}</span>
+                    <p className="text-caption-1 font-semibold text-label">Correction audit</p>
+                    <p className="mt-1 text-caption-1 leading-relaxed text-secondary-label">
+                      This update will be recorded for {leader.leader_name} on {fdate(date)}.
+                    </p>
+                    <p className="mt-1 text-caption-2 text-tertiary-label">
+                      {summary.total} member records currently have a status.
+                    </p>
                   </div>
                 </div>
-              </div>
-            </>
+                <div>
+                  <label
+                    htmlFor="attendance-correction-reason"
+                    className="mb-1.5 block text-caption-1 font-semibold text-label"
+                  >
+                    Correction reason
+                  </label>
+                  <select
+                    id="attendance-correction-reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="input h-10 w-full rounded-lg text-caption-1"
+                  >
+                    {CORRECTION_REASONS.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </section>
+            </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-black/[0.06] bg-secondary-system-grouped-background px-6 py-4 dark:border-white/[0.08]">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background px-4 py-2 text-footnote font-semibold text-secondary-label transition-colors hover:bg-system-grouped-background/60 dark:border-white/[0.08] dark:text-label dark:hover:bg-white/[0.06]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={saving || !allHaveStatus || loading}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2 text-footnote font-semibold text-white shadow-card transition-all hover:bg-primary-700 disabled:opacity-50"
-          >
-            {saving ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" /> Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" /> Save Attendance
-              </>
-            )}
-          </button>
-        </div>
+        <footer className="shrink-0 border-t border-black/[0.06] bg-secondary-system-grouped-background px-4 py-3 dark:border-white/[0.08] sm:px-6 sm:py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-caption-1 text-secondary-label" aria-live="polite">
+              {loading
+                ? 'Loading roster…'
+                : loadError
+                  ? 'Resolve the roster issue before saving.'
+                  : expectedCount === 0
+                    ? 'No member records to save.'
+                    : allHaveStatus
+                      ? `All ${expectedCount} members have a status.`
+                      : `${expectedCount - recordedCount} ${expectedCount - recordedCount === 1 ? 'member needs' : 'members need'} a status.`}
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleClose}
+                disabled={saving}
+                className="rounded-lg border border-black/[0.08] px-4 py-2.5 text-footnote font-semibold text-secondary-label transition-colors hover:bg-system-fill disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.1]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={saving || !allHaveStatus || loading || Boolean(loadError)}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-footnote font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" /> Save Attendance
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
@@ -1595,47 +1724,67 @@ const AttendanceCorrections = ({ showMessage }) => {
       {activeTab === 'missing' && (
         <div className="space-y-4">
           {/* Date + Service Selector */}
-          <div className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background p-4 shadow-card dark:border-white/[0.08]">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-tertiary-label" />
-                <input
-                  type="date"
-                  value={mlsDate}
-                  onChange={(e) => setMlsDate(e.target.value)}
-                  className="input h-9 text-caption-1 cursor-pointer"
-                  onClick={(e) => e.currentTarget.showPicker?.()}
-                />
+          <section className="rounded-2xl border border-black/[0.06] bg-secondary-system-grouped-background p-4 shadow-card dark:border-white/[0.08] sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h3 className="text-footnote font-semibold text-label">Service details</h3>
+                <p className="mt-1 text-caption-1 text-secondary-label">
+                  Choose the date and service whose attendance you want to review.
+                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-tertiary-label" />
-                <select
-                  value={mlsServiceId}
-                  onChange={(e) => setMlsServiceId(Number(e.target.value))}
-                  className="input h-9 text-caption-1"
+              <div className="grid gap-3 sm:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_auto] sm:items-end">
+                <label className="min-w-0">
+                  <span className="mb-1.5 block text-caption-1 font-semibold text-secondary-label">
+                    Service date
+                  </span>
+                  <span className="relative block">
+                    <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
+                    <input
+                      type="date"
+                      value={mlsDate}
+                      onChange={(e) => setMlsDate(e.target.value)}
+                      className="input h-10 w-full cursor-pointer rounded-lg pl-9 text-footnote"
+                      onClick={(e) => e.currentTarget.showPicker?.()}
+                    />
+                  </span>
+                </label>
+                <label className="min-w-0">
+                  <span className="mb-1.5 block text-caption-1 font-semibold text-secondary-label">
+                    Service
+                  </span>
+                  <span className="relative block">
+                    <BarChart3 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tertiary-label" />
+                    <select
+                      value={mlsServiceId}
+                      onChange={(e) => setMlsServiceId(Number(e.target.value))}
+                      className="input h-10 w-full rounded-lg pl-9 text-footnote"
+                    >
+                      {(mlsServices.length > 0
+                        ? mlsServices
+                        : [
+                            { id: 1, name: 'Main' },
+                            { id: 2, name: 'Midweek' }
+                          ]
+                      ).map((service) => (
+                        <option key={service.id} value={service.id}>
+                          {service.name}
+                        </option>
+                      ))}
+                    </select>
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={loadMissingSubmissions}
+                  disabled={mlsLoading}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 text-footnote font-semibold text-white transition-colors hover:bg-primary-700 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {(mlsServices.length > 0
-                    ? mlsServices
-                    : [
-                        { id: 1, name: 'Main' },
-                        { id: 2, name: 'Midweek' }
-                      ]
-                  ).map((service) => (
-                    <option key={service.id} value={service.id}>
-                      {service.name}
-                    </option>
-                  ))}
-                </select>
+                  <RefreshCw className={`h-4 w-4 ${mlsLoading ? 'animate-spin' : ''}`} />
+                  {mlsLoading ? 'Loading…' : 'Load submissions'}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={loadMissingSubmissions}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary-600 px-4 h-9 text-caption-1 font-semibold text-white shadow-card hover:bg-primary-700"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${mlsLoading ? 'animate-spin' : ''}`} /> Load
-              </button>
             </div>
-          </div>
+          </section>
 
           {mlsLoading ? (
             <div className="flex items-center justify-center py-16 text-tertiary-label text-footnote">
@@ -1644,36 +1793,51 @@ const AttendanceCorrections = ({ showMessage }) => {
           ) : mlsData ? (
             <>
               {/* Summary Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {summaryCards.map((card) => {
                   const variantMap = {
-                    danger:
-                      'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/10 dark:border-rose-800 dark:text-rose-300',
-                    warning:
-                      'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/10 dark:border-amber-800 dark:text-amber-300',
-                    success:
-                      'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/10 dark:border-emerald-800 dark:text-emerald-300'
+                    danger: 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+                    warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+                    success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                   };
                   const Icon = card.icon;
                   return (
                     <div
                       key={card.label}
-                      className={`rounded-xl border p-4 ${variantMap[card.variant] || 'bg-system-fill border-black/[0.06] text-secondary-label'}`}
+                      className="rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background p-4 dark:border-white/[0.08]"
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-caption-2 font-semibold uppercase tracking-[0.06em] opacity-70">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={`flex h-8 w-8 items-center justify-center rounded-lg ${variantMap[card.variant] || 'bg-system-fill text-secondary-label'}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="text-caption-1 font-semibold text-secondary-label">
                           {card.label}
                         </span>
-                        <Icon className="w-4 h-4 opacity-60" />
                       </div>
-                      <p className="text-2xl font-semibold">{card.count}</p>
+                      <p className="mt-3 text-title-2 font-semibold tabular-nums text-label">
+                        {card.count}
+                      </p>
                     </div>
                   );
                 })}
               </div>
 
               {/* Leaders List */}
-              <div className="space-y-2">
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-end justify-between gap-2 px-1">
+                  <div>
+                    <h3 className="text-footnote font-semibold text-label">Leaders to review</h3>
+                    <p className="mt-0.5 text-caption-1 text-secondary-label">
+                      Open a leader&apos;s roster to record or correct attendance.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-system-fill px-2.5 py-1 text-caption-1 font-semibold tabular-nums text-secondary-label">
+                    {mlsData.leaders.filter((leader) => leader.status !== 'submitted').length}{' '}
+                    pending
+                  </span>
+                </div>
                 {mlsData.leaders.filter((l) => l.status !== 'submitted').length === 0 ? (
                   <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] p-10 text-center text-tertiary-label text-footnote">
                     {mlsData.leaders.length === 0
@@ -1684,53 +1848,67 @@ const AttendanceCorrections = ({ showMessage }) => {
                   mlsData.leaders
                     .filter((l) => l.status !== 'submitted')
                     .map((leader) => (
-                      <div
+                      <article
                         key={leader.leader_id}
-                        className="rounded-xl border border-black/[0.06] dark:border-white/[0.08] bg-secondary-system-grouped-background p-4 shadow-card hover:shadow-card transition-shadow"
+                        className="rounded-xl border border-black/[0.06] bg-secondary-system-grouped-background p-4 transition-colors hover:border-primary-500/30 dark:border-white/[0.08] dark:hover:border-primary-400/30"
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="flex items-start gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-xl bg-primary-500/15 dark:bg-primary-500/15 flex items-center justify-center text-primary-700 dark:text-primary-300 font-semibold shrink-0">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-system-fill text-footnote font-semibold text-secondary-label">
                               {leader.leader_name?.charAt(0) || '?'}
                             </div>
                             <div className="min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="text-footnote font-semibold text-label truncate">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="truncate text-footnote font-semibold text-label">
                                   {leader.leader_name}
                                 </h4>
                                 <SubmissionStatusBadge status={leader.status} />
                               </div>
-                              <p className="text-caption-1 text-secondary-label mt-0.5">
+                              <p className="mt-1 truncate text-caption-1 text-secondary-label">
                                 {leader.section_name}
                                 <span className="mx-1.5">&middot;</span>
                                 {leader.service_name}
-                                <span className="mx-1.5">&middot;</span>
-                                Expected:{' '}
-                                <span className="font-semibold text-secondary-label">
-                                  {leader.expected_members}
-                                </span>
-                                <span className="mx-1.5">/</span>
-                                Recorded:{' '}
-                                <span
-                                  className={`font-semibold ${leader.recorded_members > 0 ? 'text-emerald-600' : 'text-rose-500'}`}
-                                >
-                                  {leader.recorded_members}
-                                </span>
                               </p>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setBulkLeader(leader)}
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary-50 px-3.5 py-2 text-caption-1 font-semibold text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-200 dark:hover:bg-primary-900/50 shrink-0"
-                          >
-                            <ClipboardList className="w-3.5 h-3.5" /> Mark Attendance
-                          </button>
+                          <div className="flex flex-col gap-3 sm:w-[360px] sm:flex-row sm:items-center">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-3 text-caption-2">
+                                <span className="text-secondary-label">Members recorded</span>
+                                <span className="font-semibold tabular-nums text-label">
+                                  {leader.recorded_members} / {leader.expected_members}
+                                </span>
+                              </div>
+                              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-system-fill">
+                                <div
+                                  className="h-full rounded-full bg-primary-600"
+                                  style={{
+                                    width: `${
+                                      leader.expected_members > 0
+                                        ? Math.min(
+                                            100,
+                                            (leader.recorded_members / leader.expected_members) *
+                                              100
+                                          )
+                                        : 0
+                                    }%`
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setBulkLeader(leader)}
+                              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary-600 px-3.5 text-caption-1 font-semibold text-white transition-colors hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
+                            >
+                              <ClipboardList className="h-4 w-4" /> Mark attendance
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      </article>
                     ))
                 )}
-              </div>
+              </section>
             </>
           ) : (
             <div className="rounded-2xl border border-black/[0.06] dark:border-white/[0.08] p-10 text-center text-tertiary-label text-footnote">
