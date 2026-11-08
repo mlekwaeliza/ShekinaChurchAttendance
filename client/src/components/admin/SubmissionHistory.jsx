@@ -7,7 +7,8 @@ import {
   ChevronUp,
   Phone,
   MessageCircle,
-  Check
+  Check,
+  ClipboardList
 } from 'lucide-react';
 import {
   addDays,
@@ -20,6 +21,13 @@ import { openWhatsAppChat, toWhatsAppNumber } from '../../utils/phone';
 import { adminAPI } from '../../services/api';
 
 const reminderKey = (leaderId, serviceId) => `${leaderId}:${serviceId ?? 'all'}`;
+
+const normalizeHistoryDate = (value) => {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  return String(value || '').match(/^\d{4}-\d{2}-\d{2}/)?.[0] || '';
+};
 
 const buildReminderMessage = ({ leaderName, sectionName, serviceName, date }) => {
   const firstName = String(leaderName || '')
@@ -99,7 +107,7 @@ const SubmittedRow = ({ log }) => (
   </div>
 );
 
-const PendingRow = ({ leader, reminder, onWhatsApp }) => {
+const PendingRow = ({ leader, reminder, onWhatsApp, onMarkAttendance }) => {
   const whatsappNumber = toWhatsAppNumber(leader.phone);
   const remindedTitle = reminder
     ? reminder.created_at
@@ -127,6 +135,14 @@ const PendingRow = ({ leader, reminder, onWhatsApp }) => {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onMarkAttendance}
+            className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-primary-500/[0.12] px-3 py-1.5 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-500/[0.2] dark:text-primary-300"
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+            Mark Attendance
+          </button>
           {/* Reminded badge */}
           {reminder && (
             <span
@@ -176,10 +192,10 @@ const normalizeSectionName = (value) => {
   return name;
 };
 
-const DateSubmissionDetails = ({ logs, allLeaders, allSections }) => {
+const DateSubmissionDetails = ({ logs, allLeaders, allSections, onMarkAttendance }) => {
   const [activeTab, setActiveTab] = useState('submitted'); // 'submitted' or 'pending'
   const [reminderMap, setReminderMap] = useState({});
-  const date = logs[0]?.date;
+  const date = normalizeHistoryDate(logs[0]?.date);
 
   // Which pending leaders were already reminded on this date.
   useEffect(() => {
@@ -398,6 +414,9 @@ const DateSubmissionDetails = ({ logs, allLeaders, allSections }) => {
                             key={idx}
                             leader={leader}
                             reminder={reminderMap[reminderKey(leader.id, service.serviceId)]}
+                            onMarkAttendance={() =>
+                              onMarkAttendance?.(leader, date, service.serviceId)
+                            }
                             onWhatsApp={() =>
                               handleWhatsAppReminder(section.sectionName, { leader, service })
                             }
@@ -428,7 +447,8 @@ const SubmissionHistory = ({
   onServiceChange,
   loadHistory,
   leaders = [],
-  sections = []
+  sections = [],
+  onMarkAttendance
 }) => {
   const initializedServiceRef = useRef(false);
 
@@ -462,7 +482,8 @@ const SubmissionHistory = ({
 
     const groups = {};
     filtered.forEach((log) => {
-      const date = log.date;
+      const date = normalizeHistoryDate(log.date);
+      if (!date) return;
       if (!groups[date]) groups[date] = [];
       groups[date].push(log);
     });
@@ -621,7 +642,12 @@ const SubmissionHistory = ({
 
                 {/* Submissions List & Pending Details */}
                 {isExpanded && (
-                  <DateSubmissionDetails logs={logs} allLeaders={leaders} allSections={sections} />
+                  <DateSubmissionDetails
+                    logs={logs}
+                    allLeaders={leaders}
+                    allSections={sections}
+                    onMarkAttendance={onMarkAttendance}
+                  />
                 )}
               </div>
             );

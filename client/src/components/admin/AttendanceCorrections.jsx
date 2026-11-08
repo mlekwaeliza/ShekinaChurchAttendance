@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { adminAPI } from '../../services/api';
 import { formatLocalDate, addDays, fdate, fdatetime } from '../../utils/date';
@@ -768,7 +769,10 @@ const BulkCorrectionModal = ({ leader, date, serviceId, onClose, onSaved, showMe
 
 // ── Main Component ──
 const AttendanceCorrections = ({ showMessage }) => {
-  const [activeTab, setActiveTab] = useState('edit');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() =>
+    searchParams.get('tab') === 'missing' || searchParams.has('leader_id') ? 'missing' : 'edit'
+  );
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -782,8 +786,20 @@ const AttendanceCorrections = ({ showMessage }) => {
   const searchRef = useRef(null);
 
   // Missing submissions state
-  const [mlsDate, setMlsDate] = useState(formatLocalDate(new Date()));
-  const [mlsServiceId, setMlsServiceId] = useState(1);
+  const [mlsDate, setMlsDate] = useState(() => {
+    const requestedDate = searchParams.get('date');
+    return /^\d{4}-\d{2}-\d{2}$/.test(requestedDate || '')
+      ? requestedDate
+      : formatLocalDate(new Date());
+  });
+  const [mlsServiceId, setMlsServiceId] = useState(() => {
+    const requestedServiceId = Number(searchParams.get('service_id'));
+    return Number.isInteger(requestedServiceId) && requestedServiceId > 0 ? requestedServiceId : 1;
+  });
+  const [requestedLeaderId, setRequestedLeaderId] = useState(() => {
+    const leaderId = Number(searchParams.get('leader_id'));
+    return Number.isInteger(leaderId) && leaderId > 0 ? leaderId : null;
+  });
   const [mlsServices, setMlsServices] = useState([]);
   const [mlsData, setMlsData] = useState(null);
   const [mlsLoading, setMlsLoading] = useState(false);
@@ -1082,6 +1098,30 @@ const AttendanceCorrections = ({ showMessage }) => {
   useEffect(() => {
     if (activeTab === 'missing') loadMissingSubmissions();
   }, [activeTab, mlsDate, mlsServiceId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!requestedLeaderId || !mlsData || mlsLoading) return;
+    const leader = mlsData.leaders?.find((item) => Number(item.leader_id) === requestedLeaderId);
+    if (leader && leader.status !== 'submitted') {
+      setBulkLeader(leader);
+    } else {
+      showMessage?.(
+        leader
+          ? `${leader.leader_name} has already submitted for this service.`
+          : 'The selected leader was not found for this date and service.',
+        4000
+      );
+    }
+    setRequestedLeaderId(null);
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        next.delete('leader_id');
+        return next;
+      },
+      { replace: true }
+    );
+  }, [mlsData, mlsLoading, requestedLeaderId, setSearchParams, showMessage]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {

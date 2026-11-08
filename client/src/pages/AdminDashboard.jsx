@@ -295,6 +295,15 @@ const AdminDashboard = () => {
             loadHistory={data.loadHistory}
             leaders={data.leaders}
             sections={data.sections}
+            onMarkAttendance={(leader, date, serviceId) => {
+              const params = new URLSearchParams({
+                tab: 'missing',
+                date,
+                service_id: String(serviceId || 1),
+                leader_id: String(leader.id)
+              });
+              navigate(`/admin/attendance-corrections?${params.toString()}`);
+            }}
           />
         );
 
