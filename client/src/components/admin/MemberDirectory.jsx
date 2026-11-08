@@ -789,7 +789,7 @@ const MemberDirectory = ({
       showToast({
         type: 'error',
         title: 'Could not remove member',
-        message: error.response?.data?.error || 'Please try again.'
+        message: error.data?.details || error.data?.error || error.message || 'Please try again.'
       });
     } finally {
       setDeleteLoading(false);

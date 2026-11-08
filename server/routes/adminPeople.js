@@ -550,8 +550,8 @@ router.put('/members/:id', async (req, res) => {
   }
 });
 
-// DELETE member (soft delete) — will be flagged for permanent deletion after 6 months
-router.delete('/members/:id', async (req, res) => {
+// Soft-delete a member — will be flagged for permanent deletion after 6 months.
+async function softDeleteMember(req, res) {
   try {
     // H2-fix: defense-in-depth — require typed confirmation even for soft
     // delete. The member is recoverable via the restore endpoint, but a
@@ -592,9 +592,15 @@ router.delete('/members/:id', async (req, res) => {
         : 'Member moved to Trash; it can be permanently deleted after 6 months'
     });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete member' });
+    console.error('Member soft-delete error:', error);
+    res.status(500).json({ error: 'Failed to delete member', details: error.message });
   }
-});
+}
+
+router.post('/members/:id/soft-delete', softDeleteMember);
+// Keep the DELETE route for older clients; new clients use POST so confirmation
+// data is not dependent on intermediaries preserving a DELETE request body.
+router.delete('/members/:id', softDeleteMember);
 
 // POST bulk soft-delete (selected members) — they will be flagged for permanent deletion after 6 months
 router.post('/members/bulk-soft-delete', async (req, res) => {

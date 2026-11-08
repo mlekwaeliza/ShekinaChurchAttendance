@@ -124,8 +124,9 @@ export const adminAPI = {
   getMemberAttendanceInsights: () => api.get('/admin/members/attendance-insights'),
   updateMember: (id, data) => api.put(`/admin/members/${id}`, data),
   deleteMember: (id, options = {}) =>
-    api.delete(`/admin/members/${id}`, {
-      data: { confirm: 'SOFT-DELETE', archive: Boolean(options.archive) }
+    api.post(`/admin/members/${id}/soft-delete`, {
+      confirm: 'SOFT-DELETE',
+      archive: Boolean(options.archive)
     }),
   getAttendance: (filters = {}) => api.get('/admin/attendance', { params: filters }),
   getAttendanceTrends: (days = 90) => api.get('/admin/attendance-trends', { params: { days } }),
