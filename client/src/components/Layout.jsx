@@ -40,6 +40,7 @@ import {
   Home,
   Megaphone,
   ClipboardCheck,
+  Trash2,
   CheckSquare,
   Tag,
   UserPlus,
@@ -247,6 +248,11 @@ const Layout = ({ children, showNav = true }) => {
         section: t('nav.sections.peopleCare'),
         items: [
           { path: '/admin/members', label: t('nav.items.memberDirectory'), icon: Users },
+          {
+            path: '/admin/trash',
+            label: t('nav.items.deletedMembers', 'Deleted Members'),
+            icon: Trash2
+          },
           { path: '/admin/new-members', label: t('nav.items.newMembers'), icon: UserPlus },
           { path: '/admin/leaders', label: t('nav.items.leaders'), icon: Crown },
           { path: '/admin/children-leaders', label: t('nav.items.childrenLeaders'), icon: Baby },
