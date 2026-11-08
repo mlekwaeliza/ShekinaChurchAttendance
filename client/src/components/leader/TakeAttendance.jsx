@@ -148,6 +148,14 @@ const TakeAttendance = ({
   onStatusChange,
   onBulkMark,
   onSubmit,
+  autoSubmitPhase = 'idle',
+  autoSubmitSeconds = 0,
+  autoSubmitTotalSeconds = 5,
+  autoSubmitFailed = false,
+  autoSubmitted = false,
+  onHoldAutoSubmit,
+  onResumeAutoSubmit,
+  onAutoSubmitNow,
   isOnline,
   pendingCount = 0,
   syncing = false,
@@ -177,6 +185,9 @@ const TakeAttendance = ({
   const unmarked = members.filter((m) => !attendance[m.id]);
   const completed = members.filter((m) => attendance[m.id]);
   const progress = members.length > 0 ? (completed.length / members.length) * 100 : 0;
+  const isAutoCounting = autoSubmitPhase === 'counting';
+  const isAutoSubmitting = autoSubmitPhase === 'submitting';
+  const isAutoHeld = autoSubmitPhase === 'held';
   const todayStr = useMemo(() => formatLocalDate(new Date()), []);
   const canBulkEdit = isEditable && members.length > 0;
 
@@ -299,6 +310,9 @@ const TakeAttendance = ({
             style={{ width: `${progress}%` }}
           />
         </div>
+        {!submitted && !editMode && members.length > 0 && (
+          <p className="mt-2 text-caption-1 text-secondary-label">{t('attendance.autoSubmitOn')}</p>
+        )}
       </div>
 
       {/* Context & Selection */}
@@ -392,7 +406,10 @@ const TakeAttendance = ({
       )}
 
       {submitError && (
-        <div className="rounded-xl bg-system-red/10 px-4 py-3 text-footnote font-medium text-rose-700 dark:text-system-red">
+        <div
+          role="alert"
+          className="rounded-xl bg-system-red/10 px-4 py-3 text-footnote font-medium text-rose-700 dark:text-system-red"
+        >
           {submitError}
         </div>
       )}
@@ -550,42 +567,131 @@ const TakeAttendance = ({
             </div>
           )}
 
-          {/* All marked message & Submit Action */}
+          {/* All marked: automatic submission with a short review window */}
           {unmarked.length === 0 && members.length > 0 && !submitted && (
-            <div className="flex animate-scale-in flex-col items-center justify-center rounded-2xl border border-dashed border-system-green/30 bg-system-green/[0.06] px-6 py-12">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-system-green/15">
-                <CheckCircle2 className="w-8 h-8 text-emerald-700 dark:text-system-green" />
+            <div
+              className={`flex animate-scale-in flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-12 ${
+                autoSubmitFailed
+                  ? 'border-system-orange/40 bg-system-orange/[0.07]'
+                  : 'border-system-green/30 bg-system-green/[0.06]'
+              }`}
+            >
+              <div
+                className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl ${
+                  autoSubmitFailed ? 'bg-system-orange/15' : 'bg-system-green/15'
+                }`}
+              >
+                {submitting || isAutoSubmitting ? (
+                  <Loader2 className="h-8 w-8 animate-spin text-emerald-700 dark:text-system-green" />
+                ) : autoSubmitFailed ? (
+                  <Clock className="h-8 w-8 text-amber-700 dark:text-system-orange" />
+                ) : (
+                  <CheckCircle2 className="h-8 w-8 text-emerald-700 dark:text-system-green" />
+                )}
               </div>
-              <h3 className="text-center text-title-3 font-semibold text-emerald-800 dark:text-system-green">
-                Roster Complete!
+              <h3
+                className={`text-center text-title-3 font-semibold ${
+                  autoSubmitFailed
+                    ? 'text-amber-800 dark:text-system-orange'
+                    : 'text-emerald-800 dark:text-system-green'
+                }`}
+              >
+                {submitting || isAutoSubmitting
+                  ? t('attendance.autoSubmitSaving')
+                  : autoSubmitFailed
+                    ? t('attendance.autoSubmitFailedTitle')
+                    : isAutoCounting
+                      ? t('attendance.autoSubmitTitle')
+                      : 'Roster Complete!'}
               </h3>
-              <p className="mb-8 mt-2 max-w-xs text-center text-footnote text-secondary-label">
-                You've accounted for every member in your section. Ready to finalize the records?
+              <p className="mt-2 max-w-sm text-center text-footnote leading-relaxed text-secondary-label">
+                {autoSubmitFailed
+                  ? t('attendance.autoSubmitFailed')
+                  : submitting || isAutoSubmitting
+                    ? t('attendance.autoSubmitSavingFor', { service: serviceName })
+                    : isAutoCounting
+                      ? t('attendance.autoSubmitSoon', {
+                          seconds: autoSubmitSeconds,
+                          service: serviceName
+                        })
+                      : isAutoHeld
+                        ? t('attendance.autoSubmitPaused')
+                        : t('attendance.autoSubmitManual')}
               </p>
 
-              <button
-                onClick={requestSubmit}
-                disabled={submitting}
-                className={`h-12 w-full max-w-sm rounded-xl text-subheadline font-semibold text-white transition-colors ${
-                  confirmArmed || !isOnline ? 'bg-system-orange hover:bg-amber-600' : 'btn-primary'
-                } disabled:opacity-50`}
-              >
-                {submitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    {t('attendance.submitting')}
-                  </span>
-                ) : confirmArmed ? (
-                  confirmLabel
-                ) : !isOnline ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <CloudOff className="w-5 h-5" />
-                    {t('attendance.queuedOffline')}
-                  </span>
-                ) : (
-                  t('attendance.submit') + ' →'
+              {isAutoCounting && (
+                <div
+                  className="mt-4 h-1 w-full max-w-sm overflow-hidden rounded-full bg-system-green/15"
+                  aria-hidden="true"
+                >
+                  <div
+                    className="h-full bg-system-green transition-all duration-1000 ease-linear"
+                    style={{
+                      width: `${Math.max(
+                        0,
+                        Math.min(
+                          100,
+                          (autoSubmitSeconds / Math.max(1, autoSubmitTotalSeconds)) * 100
+                        )
+                      )}%`
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="mt-6 flex w-full max-w-sm flex-col gap-2 sm:flex-row">
+                <button
+                  onClick={isAutoCounting ? onAutoSubmitNow : requestSubmit}
+                  disabled={submitting}
+                  className={`h-12 flex-1 rounded-xl text-subheadline font-semibold text-white transition-colors ${
+                    confirmArmed || (!isOnline && !isAutoCounting)
+                      ? 'bg-system-orange hover:bg-amber-600'
+                      : 'btn-primary'
+                  } disabled:opacity-50`}
+                >
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      {t('attendance.submitting')}
+                    </span>
+                  ) : isAutoCounting ? (
+                    t('attendance.autoSubmitNow')
+                  ) : confirmArmed ? (
+                    confirmLabel
+                  ) : !isOnline ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <CloudOff className="w-5 h-5" />
+                      {t('attendance.queuedOffline')}
+                    </span>
+                  ) : (
+                    t('attendance.submit') + ' →'
+                  )}
+                </button>
+                {isAutoCounting && (
+                  <button
+                    type="button"
+                    onClick={onHoldAutoSubmit}
+                    className="btn-secondary h-12 shrink-0"
+                  >
+                    {t('attendance.autoSubmitReview')}
+                  </button>
                 )}
-              </button>
+                {isAutoHeld && !autoSubmitFailed && (
+                  <button
+                    type="button"
+                    onClick={onResumeAutoSubmit}
+                    className="btn-secondary h-12 shrink-0"
+                  >
+                    {t('attendance.autoSubmitResume')}
+                  </button>
+                )}
+              </div>
+
+              {isAutoCounting && (
+                <p className="sr-only" aria-live="polite">
+                  {t('attendance.autoSubmitAnnounce')}
+                </p>
+              )}
             </div>
           )}
 
@@ -662,6 +768,12 @@ const TakeAttendance = ({
                 Attendance for {attendanceLeaderName} has been{' '}
                 {isOfflineSubmit ? 'queued for sync' : 'successfully submitted'}.
               </p>
+              {autoSubmitted && (
+                <p className="mt-2 inline-flex items-center gap-1.5 text-caption-1 font-semibold text-emerald-700 dark:text-system-green">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {t('attendance.autoSubmittedNote')}
+                </p>
+              )}
               {isHead && (
                 <button
                   onClick={onToggleEdit}
@@ -679,8 +791,7 @@ const TakeAttendance = ({
             <div className="flex items-center justify-center gap-2.5 rounded-xl bg-system-orange/[0.08] px-4 py-3 text-amber-700 dark:text-system-orange">
               <Clock className="h-4 w-4 shrink-0 animate-pulse" />
               <p className="text-footnote font-medium">
-                Mark remaining <strong className="font-semibold">{unmarked.length}</strong> member
-                {unmarked.length === 1 ? '' : 's'} to unlock submission
+                {t('attendance.markRemaining', { count: unmarked.length })}
               </p>
             </div>
           )}
@@ -717,23 +828,32 @@ const TakeAttendance = ({
           </p>
           <button
             type="button"
-            onClick={requestSubmit}
+            onClick={isAutoCounting ? onAutoSubmitNow : requestSubmit}
             disabled={submitting || unmarked.length > 0}
             title={
               unmarked.length > 0
                 ? t('attendance.completeToSubmit')
-                : confirmArmed
-                  ? confirmLabel
-                  : t('attendance.submit')
+                : isAutoCounting
+                  ? t('attendance.autoSubmitNow')
+                  : confirmArmed
+                    ? confirmLabel
+                    : t('attendance.submit')
             }
             className={`inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-footnote font-semibold text-white transition-colors disabled:cursor-not-allowed ${
-              confirmArmed ? 'bg-system-orange hover:bg-amber-600' : 'btn-primary'
+              confirmArmed && !isAutoCounting
+                ? 'bg-system-orange hover:bg-amber-600'
+                : 'btn-primary'
             } disabled:bg-system-fill disabled:text-tertiary-label`}
           >
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 {t('attendance.submitting')}
+              </>
+            ) : isAutoCounting ? (
+              <>
+                {t('attendance.autoSubmitNow')}
+                <span className="tabular-nums opacity-80">· {autoSubmitSeconds}s</span>
               </>
             ) : confirmArmed ? (
               confirmLabel

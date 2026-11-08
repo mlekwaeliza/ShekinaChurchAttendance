@@ -27,6 +27,9 @@ const WEEKDAY_NAMES = [
 // roster owner + service + date so switching context keeps each draft.
 const DRAFT_PREFIX = 'attendance-draft:';
 const DRAFT_TTL_DAYS = 7;
+// Grace period before a completed roster submits itself. The leader still
+// sees the full roster and can change a mark or pause the countdown.
+const AUTO_SUBMIT_SECONDS = 5;
 const getDraftKey = (leaderId, serviceId, date) =>
   `${DRAFT_PREFIX}${leaderId || 'self'}:${serviceId}:${date}`;
 const readDraft = (key) => {
@@ -141,6 +144,20 @@ const useLeaderData = () => {
   const [submitting, setSubmitting] = useState(false);
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [leaderAssignments, setLeaderAssignments] = useState([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  // Auto-submit: a completed roster submits itself after a short review
+  // window so a leader can never finish marking and walk away unsaved.
+  const [hasMarked, setHasMarked] = useState(false);
+  const [loadedRosterKey, setLoadedRosterKey] = useState('');
+  const [autoSubmitPhase, setAutoSubmitPhase] = useState('idle');
+  const [autoSubmitSeconds, setAutoSubmitSeconds] = useState(AUTO_SUBMIT_SECONDS);
+  const [autoSubmitFailed, setAutoSubmitFailed] = useState(false);
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
+  const autoSubmitHoldRef = useRef(false);
+  const autoSubmitFiredRef = useRef(false);
+  const submitInFlightRef = useRef(false);
 
   // History
   const [history, setHistory] = useState([]);
@@ -248,10 +265,27 @@ const useLeaderData = () => {
     )
   );
 
+  // Identifies the roster currently on screen. `loadedRosterKey` is only set
+  // after a load finishes, so auto-submit can never fire against a roster
+  // from the previous date/service/leader.
+  const rosterContextKey = `${attendanceLeaderId || 'self'}:${selectedServiceId}:${selectedDate}`;
+  const rosterComplete =
+    eligibleMembers.length > 0 && eligibleMembers.every((member) => attendance[member.id]);
+  const autoSubmitReady =
+    !loading &&
+    !submitted &&
+    !editMode &&
+    !isUnauthorized &&
+    hasMarked &&
+    loadedRosterKey === rosterContextKey &&
+    rosterComplete;
+
   // --- Data Loaders ---
   const loadMembers = useCallback(async () => {
     const seq = ++membersLoadSeqRef.current;
     setLoading(true);
+    setHasMarked(false);
+    setAutoSubmitted(false);
     try {
       if (user?.is_new_member_leader) {
         const [newMembersRes, servicesRes] = await Promise.all([
@@ -305,6 +339,9 @@ const useLeaderData = () => {
         });
         setAttendance(attMap);
 
+        setLoadedRosterKey(
+          `${snapshot.attendanceLeaderId || 'self'}:${selectedServiceId}:${selectedDate}`
+        );
         setLoading(false);
         return;
       }
@@ -340,6 +377,9 @@ const useLeaderData = () => {
       setActingOnBehalf(snapshot.actingOnBehalf);
       setServiceTypes(snapshot.serviceTypes);
       setAttendance({});
+      setLoadedRosterKey(
+        `${snapshot.attendanceLeaderId || 'self'}:${selectedServiceId}:${selectedDate}`
+      );
       draftRestoredRef.current = '';
       writeLeaderCoreCache(snapshot.attendanceLeaderId || attendanceLeaderId, snapshot);
     } catch (error) {
@@ -355,6 +395,9 @@ const useLeaderData = () => {
         setAttendanceLeaderName(cached.attendanceLeaderName || cached.sectionInfo?.leader || '');
         setActingOnBehalf(Boolean(cached.actingOnBehalf));
         setServiceTypes(cached.serviceTypes || []);
+        setLoadedRosterKey(
+          `${cached.attendanceLeaderId || attendanceLeaderId || 'self'}:${selectedServiceId}:${selectedDate}`
+        );
         showMessage('Offline roster loaded. You can mark attendance and sync later.', 6000);
       } else {
         showMessage(
@@ -570,16 +613,18 @@ const useLeaderData = () => {
   }, [selectedDate, selectedServiceId, attendanceLeaderId, user]);
 
   // --- Attendance Handlers ---
-  const [editMode, setEditMode] = useState(false);
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState('');
-
   const handleStatusChange = useCallback(
     (memberId, status) => {
       if (submitted && !editMode) return;
+      setHasMarked(true);
+      // Editing a mark during the review window buys the leader a fresh
+      // countdown instead of submitting while they are still deciding.
+      if (autoSubmitPhase === 'counting') {
+        setAutoSubmitSeconds(AUTO_SUBMIT_SECONDS);
+      }
       setAttendance((prev) => ({ ...prev, [memberId]: status }));
     },
-    [submitted, editMode]
+    [submitted, editMode, autoSubmitPhase]
   );
 
   // Bulk-mark a set of roster members (e.g. "Mark all present") or clear
@@ -607,6 +652,9 @@ const useLeaderData = () => {
         if (Object.keys(next).length === 0) removeDraft(key);
         return;
       }
+      if (targets.length > 0 && autoSubmitPhase === 'counting') {
+        setAutoSubmitSeconds(AUTO_SUBMIT_SECONDS);
+      }
       setAttendance((prev) => {
         const next = { ...prev };
         targets.forEach((id) => {
@@ -614,6 +662,7 @@ const useLeaderData = () => {
         });
         return next;
       });
+      if (targets.length > 0) setHasMarked(true);
     },
     [
       submitted,
@@ -622,7 +671,8 @@ const useLeaderData = () => {
       attendance,
       attendanceLeaderId,
       selectedServiceId,
-      selectedDate
+      selectedDate,
+      autoSubmitPhase
     ]
   );
 
@@ -669,6 +719,7 @@ const useLeaderData = () => {
 
   const handleSubmit = useCallback(async () => {
     setSubmitError('');
+    if (submitInFlightRef.current) return false;
     if (submitted) {
       setSubmitError('Attendance already submitted for this date');
       return false;
@@ -677,13 +728,22 @@ const useLeaderData = () => {
       setSubmitError('No eligible members loaded to submit attendance for.');
       return false;
     }
-    if (Object.keys(attendance).length !== eligibleMembers.length) {
+    const unmarkedCount = eligibleMembers.filter((member) => !attendance[member.id]).length;
+    if (unmarkedCount > 0) {
       setSubmitError(
-        `Please mark attendance for all eligible members before submitting. You have marked ${Object.keys(attendance).length} out of ${eligibleMembers.length}.`
+        `Please mark attendance for all eligible members before submitting. You have marked ${eligibleMembers.length - unmarkedCount} out of ${eligibleMembers.length}.`
       );
       return false;
     }
 
+    // Submit exactly the eligible roster, in roster order. This ignores any
+    // stale marks left over from another service's eligibility rules.
+    const attendanceArray = eligibleMembers.map((member) => ({
+      member_id: Number(member.id),
+      status: attendance[member.id]
+    }));
+
+    submitInFlightRef.current = true;
     setSubmitting(true);
     try {
       if (user?.is_new_member_leader) {
@@ -693,9 +753,9 @@ const useLeaderData = () => {
         }
         const weekStart = getWeekStart(new Date(selectedDate));
         await Promise.all(
-          Object.entries(attendance).map(([memberId, status]) =>
+          attendanceArray.map(({ member_id, status }) =>
             newMemberLeaderAPI.recordAttendance(
-              parseInt(memberId),
+              member_id,
               weekStart,
               status === 'present' ? 1 : 0,
               ''
@@ -708,10 +768,6 @@ const useLeaderData = () => {
         return true;
       }
 
-      const attendanceArray = Object.entries(attendance).map(([member_id, status]) => ({
-        member_id: parseInt(member_id),
-        status
-      }));
       const draftKey = getDraftKey(attendanceLeaderId, selectedServiceId, selectedDate);
 
       if (!isOnline) {
@@ -735,8 +791,10 @@ const useLeaderData = () => {
           showMessage('Attendance saved offline — will sync when you reconnect');
           return true;
         } else if (result.reason === 'already_queued') {
-          setSubmitError('Attendance already queued for this date');
-          return false;
+          setQueuedForDate(selectedDate);
+          setSubmitted(true);
+          showMessage('Attendance is already queued and will sync when you reconnect');
+          return true;
         }
         return false;
       }
@@ -754,15 +812,26 @@ const useLeaderData = () => {
       showMessage('Attendance submitted successfully!');
       return true;
     } catch (error) {
-      setSubmitError(error.response?.data?.error || error.message);
+      const errorMessage = error.response?.data?.error || error.message;
+      // A retry after a timeout can hit the server's duplicate guard even
+      // though the roster is already saved. Reconcile instead of showing a
+      // false "not submitted" error.
+      if (/already submitted/i.test(errorMessage || '')) {
+        setSubmitted(true);
+        await checkSubmission();
+        showMessage('Attendance was already submitted for this service.');
+        return true;
+      }
+      setSubmitError(errorMessage);
       return false;
     } finally {
+      submitInFlightRef.current = false;
       setSubmitting(false);
     }
   }, [
     submitted,
     attendance,
-    eligibleMembers.length,
+    eligibleMembers,
     selectedDate,
     selectedServiceId,
     attendanceLeaderId,
@@ -770,6 +839,7 @@ const useLeaderData = () => {
     sectionInfo,
     loadHistory,
     loadMissedSubmissions,
+    checkSubmission,
     showMessage,
     isOnline,
     queueSubmission,
@@ -922,6 +992,7 @@ const useLeaderData = () => {
     );
     if (entries.length === 0) return;
     setAttendance(Object.fromEntries(entries));
+    setHasMarked(true);
     showMessage(
       `Restored ${entries.length} unsent mark${entries.length === 1 ? '' : 's'} from your last session.`
     );
@@ -948,6 +1019,86 @@ const useLeaderData = () => {
     if (Object.keys(attendance).length === 0) return;
     writeDraft(getDraftKey(attendanceLeaderId, selectedServiceId, selectedDate), attendance);
   }, [attendance, submitted, isUnauthorized, attendanceLeaderId, selectedServiceId, selectedDate]);
+
+  // --- Automatic submission ---
+  // Once the leader has marked every member, the roster submits itself after
+  // a short review window. The window is visible in the UI and can be paused;
+  // the manual submit button remains as a fallback.
+  const rosterContextRef = useRef(rosterContextKey);
+  rosterContextRef.current = rosterContextKey;
+  const loadedRosterKeyRef = useRef(loadedRosterKey);
+  loadedRosterKeyRef.current = loadedRosterKey;
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+
+  const fireAutoSubmit = useCallback(async () => {
+    if (autoSubmitFiredRef.current) return false;
+    if (submitInFlightRef.current) return false;
+    if (loadedRosterKeyRef.current !== rosterContextRef.current) return false;
+    autoSubmitFiredRef.current = true;
+    setAutoSubmitPhase('submitting');
+    setAutoSubmitFailed(false);
+    const success = await handleSubmitRef.current();
+    if (success) {
+      setAutoSubmitted(true);
+      setAutoSubmitPhase('idle');
+    } else {
+      setAutoSubmitFailed(true);
+      setAutoSubmitPhase('held');
+    }
+    return success;
+  }, []);
+
+  useEffect(() => {
+    if (!autoSubmitReady) {
+      autoSubmitHoldRef.current = false;
+      autoSubmitFiredRef.current = false;
+      setAutoSubmitFailed(false);
+      setAutoSubmitPhase('idle');
+      setAutoSubmitSeconds(AUTO_SUBMIT_SECONDS);
+      return;
+    }
+    if (autoSubmitHoldRef.current || autoSubmitFiredRef.current) return;
+    setAutoSubmitPhase('counting');
+    setAutoSubmitSeconds(AUTO_SUBMIT_SECONDS);
+  }, [autoSubmitReady]);
+
+  useEffect(() => {
+    if (autoSubmitPhase !== 'counting' || submitting) return;
+    if (loadedRosterKey !== rosterContextKey) return;
+    if (autoSubmitSeconds > 0) {
+      const timer = setTimeout(
+        () => setAutoSubmitSeconds((seconds) => Math.max(0, seconds - 1)),
+        1000
+      );
+      return () => clearTimeout(timer);
+    }
+    fireAutoSubmit();
+  }, [
+    autoSubmitPhase,
+    autoSubmitSeconds,
+    submitting,
+    loadedRosterKey,
+    rosterContextKey,
+    fireAutoSubmit
+  ]);
+
+  const handleHoldAutoSubmit = useCallback(() => {
+    autoSubmitHoldRef.current = true;
+    setAutoSubmitPhase('held');
+  }, []);
+
+  const handleResumeAutoSubmit = useCallback(() => {
+    autoSubmitHoldRef.current = false;
+    autoSubmitFiredRef.current = false;
+    setAutoSubmitFailed(false);
+    setAutoSubmitPhase('counting');
+    setAutoSubmitSeconds(AUTO_SUBMIT_SECONDS);
+  }, []);
+
+  const handleAutoSubmitNow = useCallback(() => {
+    fireAutoSubmit();
+  }, [fireAutoSubmit]);
 
   useEffect(() => {
     if (!isOnline) {
@@ -1030,6 +1181,15 @@ const useLeaderData = () => {
     handleSubmit,
     queuedForDate,
     submitError,
+    // Automatic submission
+    autoSubmitPhase,
+    autoSubmitSeconds,
+    autoSubmitTotalSeconds: AUTO_SUBMIT_SECONDS,
+    autoSubmitFailed,
+    autoSubmitted,
+    handleHoldAutoSubmit,
+    handleResumeAutoSubmit,
+    handleAutoSubmitNow,
     // Edit mode (head leaders)
     editMode,
     editSaving,

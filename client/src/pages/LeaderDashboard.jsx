@@ -126,6 +126,14 @@ const LeaderDashboard = () => {
             onStatusChange={data.handleStatusChange}
             onBulkMark={data.handleBulkMark}
             onSubmit={handleSubmitAndRedirect}
+            autoSubmitPhase={data.autoSubmitPhase}
+            autoSubmitSeconds={data.autoSubmitSeconds}
+            autoSubmitTotalSeconds={data.autoSubmitTotalSeconds}
+            autoSubmitFailed={data.autoSubmitFailed}
+            autoSubmitted={data.autoSubmitted}
+            onHoldAutoSubmit={data.handleHoldAutoSubmit}
+            onResumeAutoSubmit={data.handleResumeAutoSubmit}
+            onAutoSubmitNow={data.handleAutoSubmitNow}
             isOnline={data.isOnline}
             pendingCount={data.pendingCount}
             syncing={data.syncing}
@@ -274,7 +282,15 @@ const LeaderDashboard = () => {
                     {selectedService?.name || 'Main Service'} on {fdate(data.selectedDate)} ·{' '}
                     {unmarkedDashboardMembers.length > 0
                       ? `${unmarkedDashboardMembers.length} member${unmarkedDashboardMembers.length === 1 ? '' : 's'} still need to be marked.`
-                      : 'Roster is marked but the attendance has not been submitted.'}
+                      : data.autoSubmitPhase === 'counting'
+                        ? `Roster complete — submitting automatically in ${data.autoSubmitSeconds}s.`
+                        : data.autoSubmitPhase === 'submitting'
+                          ? 'Roster complete — submitting attendance now.'
+                          : data.autoSubmitFailed
+                            ? 'Roster complete, but automatic submission failed. Open attendance to try again.'
+                            : data.autoSubmitPhase === 'held'
+                              ? 'Roster complete — automatic submission is paused.'
+                              : 'Roster is marked but the attendance has not been submitted.'}
                   </p>
                 </div>
                 <button
