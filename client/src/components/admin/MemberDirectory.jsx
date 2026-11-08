@@ -1232,10 +1232,21 @@ const MemberDirectory = ({
       ) : filteredMembers.length > 0 ? (
         <div className="card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-separator/60 px-4 py-3 text-sm text-secondary-label dark:border-white/[0.08]">
-            <span>
-              Showing <span className="font-semibold text-label">{filteredMembers.length}</span>{' '}
-              matching members
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span>
+                Showing <span className="font-semibold text-label">{filteredMembers.length}</span>{' '}
+                of <span className="font-semibold text-label">{allMembers.length}</span> members
+              </span>
+              {attendanceFilter !== 'all' && (
+                <span className="inline-flex items-center rounded-full bg-system-orange/[0.14] px-2.5 py-1 text-xs font-semibold text-amber-800 dark:text-system-orange">
+                  Attendance Status:{' '}
+                  {
+                    attendanceStatusOptions.find((option) => option.value === attendanceFilter)
+                      ?.label
+                  }
+                </span>
+              )}
+            </div>
             <span className="text-xs text-tertiary-label">
               {attendanceAsOfDate
                 ? `Attendance as of ${formatAttendanceDate(attendanceAsOfDate)}`
@@ -1482,17 +1493,43 @@ const MemberDirectory = ({
             <Users className="w-8 h-8 text-tertiary-label" />
           </div>
           <h4 className="text-title-3 font-semibold text-label mb-1">
-            {attendanceFilter !== 'all' && attendanceStatsLoading
-              ? 'Loading attendance history'
-              : 'No members found'}
+            {attendanceFilter !== 'all' && attendanceStatsError
+              ? 'Attendance history unavailable'
+              : attendanceFilter !== 'all' && attendanceStatsLoading
+                ? 'Loading attendance history'
+                : attendanceFilter !== 'all'
+                  ? `No members match ${attendanceStatusOptions.find((option) => option.value === attendanceFilter)?.label}`
+                  : 'No members found'}
           </h4>
           <p className="text-footnote text-secondary-label max-w-sm text-center">
-            {attendanceFilter !== 'all' && attendanceStatsLoading
-              ? 'Calculating attendance status for members…'
-              : searchTerm || hasActiveFilters
-                ? 'Try adjusting your search or filters.'
-                : 'Add your first member to get started.'}
+            {attendanceFilter !== 'all' && attendanceStatsError
+              ? attendanceStatsError
+              : attendanceFilter !== 'all' && attendanceStatsLoading
+                ? 'Calculating attendance status for members…'
+                : attendanceFilter !== 'all'
+                  ? 'New members and members not expected to attend are excluded from attendance filters.'
+                  : searchTerm || hasActiveFilters
+                    ? 'Try adjusting your search or filters.'
+                    : 'Add your first member to get started.'}
           </p>
+          {attendanceFilter !== 'all' && attendanceStatsError && (
+            <button
+              type="button"
+              onClick={fetchAttendanceInsights}
+              className="mt-4 rounded-lg border border-separator/60 px-3 py-2 text-sm font-semibold text-secondary-label transition-colors hover:bg-system-fill hover:text-label dark:border-white/[0.1]"
+            >
+              Retry attendance load
+            </button>
+          )}
+          {attendanceFilter !== 'all' && !attendanceStatsLoading && !attendanceStatsError && (
+            <button
+              type="button"
+              onClick={() => setAttendanceFilter('all')}
+              className="mt-4 rounded-lg border border-separator/60 px-3 py-2 text-sm font-semibold text-secondary-label transition-colors hover:bg-system-fill hover:text-label dark:border-white/[0.1]"
+            >
+              Clear attendance filter
+            </button>
+          )}
         </div>
       )}
 
