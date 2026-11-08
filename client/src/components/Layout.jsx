@@ -235,6 +235,16 @@ const Layout = ({ children, showNav = true }) => {
         ]
       },
       {
+        section: t('nav.sections.recovery', 'RECORDS'),
+        items: [
+          {
+            path: '/admin/trash',
+            label: t('nav.items.deletedMembers', 'Trash / Deleted Members'),
+            icon: Trash2
+          }
+        ]
+      },
+      {
         section: t('nav.sections.ministries'),
         items: [
           { path: '/admin/sections', label: t('nav.items.sections'), icon: Layers },
@@ -248,14 +258,10 @@ const Layout = ({ children, showNav = true }) => {
         section: t('nav.sections.peopleCare'),
         items: [
           { path: '/admin/members', label: t('nav.items.memberDirectory'), icon: Users },
-          {
-            path: '/admin/trash',
-            label: t('nav.items.deletedMembers', 'Deleted Members'),
-            icon: Trash2
-          },
           { path: '/admin/new-members', label: t('nav.items.newMembers'), icon: UserPlus },
           { path: '/admin/leaders', label: t('nav.items.leaders'), icon: Crown },
           { path: '/admin/children-leaders', label: t('nav.items.childrenLeaders'), icon: Baby },
+          { path: '/admin/children', label: t('nav.items.childrenMinistry'), icon: Baby },
           { path: '/admin/birthdays', label: t('nav.items.birthdays'), icon: Cake },
           { path: '/admin/rewards', label: t('nav.items.recognition'), icon: Trophy }
         ]
@@ -321,6 +327,7 @@ const Layout = ({ children, showNav = true }) => {
         section: t('nav.sections.finance', 'OPERATIONS'),
         items: [
           { path: '/admin/finance', label: t('nav.items.financeOverview'), icon: Banknote },
+          { path: '/admin/contributions', label: t('nav.items.contributions'), icon: DollarSign },
           { path: '/admin/calendar', label: t('nav.items.calendar'), icon: Calendar },
           { path: '/admin/announcements', label: t('nav.items.announcements'), icon: Megaphone }
         ]
